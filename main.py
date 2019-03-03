@@ -19,7 +19,7 @@ class MainFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         self.SetSize((1400, 900))
 
-        self.dvh_data = None
+        self.dvh = None
 
         self.toolbar_keys = ['Open', 'Close', 'Save', 'Print', 'Export', 'Import', 'Settings', 'Database']
         self.toolbar_ids = {key: i+1000 for i, key in enumerate(self.toolbar_keys)}
@@ -193,7 +193,7 @@ class MainFrame(wx.Frame):
                                                 wx.BITMAP_TYPE_ANY))
         sizer_welcome.Add(bitmap_logo, 0, wx.ALIGN_CENTER | wx.LEFT | wx.RIGHT | wx.TOP, 100)
         text_welcome = wx.StaticText(self.notebook_welcome, wx.ID_ANY,
-                                     "Welcome to DVH Analytics.  If you already have a database built, design "
+                                     "\n\nWelcome to DVH Analytics.\nIf you already have a database built, design "
                                      "a query with the filters to the left.\n\n\n\nDVH Analytics is a software "
                                      "application to help radiation oncology departments build an in-house database "
                                      "of treatment planning data for the purpose of historical comparisons and "
@@ -214,7 +214,7 @@ class MainFrame(wx.Frame):
         self.notebook_dvhs.SetSizer(sizer_dvhs)
 
         sizer_endpoint = wx.BoxSizer(wx.VERTICAL)
-        self.endpoint = EndpointFrame(self.notebook_endpoints)
+        self.endpoint = EndpointFrame(self.notebook_endpoints, self.dvh)
         sizer_endpoint.Add(self.endpoint.layout, 0, wx.ALIGN_CENTER | wx.ALL, 50)
         self.notebook_endpoints.SetSizer(sizer_endpoint)
 
@@ -301,9 +301,10 @@ class MainFrame(wx.Frame):
         # condition = "physician_roi = '%s'" % 'brainstem'
         wait = wx.BusyCursor()
         uids, dvh_str = self.get_query()
-        self.dvh_data = DVH(dvh_condition=dvh_str, uid=uids)
-        self.text_summary.SetLabelText(self.dvh_data.get_summary())
-        self.plot.update_plot(self.dvh_data, x_axis_label='Dose (cGy)', y_axis_label='Relative Volume')
+        self.dvh = DVH(dvh_condition=dvh_str, uid=uids)
+        self.endpoint.update_dvh(self.dvh)
+        self.text_summary.SetLabelText(self.dvh.get_summary())
+        self.plot.update_plot(self.dvh, x_axis_label='Dose (cGy)', y_axis_label='Relative Volume')
         del wait
         self.notebook_main_view.SetSelection(1)
 

@@ -2,6 +2,7 @@ import wx
 import wx.html2
 from models.plot import plot, plot_stat_dvh
 from .layout import LayoutObj
+from copy import deepcopy
 
 
 class Text(LayoutObj):
@@ -104,10 +105,24 @@ class DataTable:
 
         self.layout = listctrl
 
-        self.data = data
+        self.data = deepcopy(data)
         self.columns = columns
 
         self.set_data_in_layout()
+
+    def set_data(self, data, columns):
+        delete_table_rows = bool(self.row_count)
+        self.data = deepcopy(data)
+        self.columns = columns
+        if delete_table_rows:
+            self.delete_all_rows(layout_only=True)
+        self.set_layout_columns()
+        self.set_data_in_layout()
+
+    def set_layout_columns(self):
+        self.layout.DeleteAllColumns()
+        for col in self.columns:
+            self.layout.AppendColumn(col)
 
     @property
     def keys(self):
@@ -123,27 +138,42 @@ class DataTable:
             return len(self.data[self.columns[0]])
         return 0
 
-    @staticmethod
-    def data_to_list_of_rows(data, columns):
-        if data and columns:
-            return [[data[col][row] for col in columns] for row in range(len(data[columns[0]]))]
+    def data_to_list_of_rows(self):
+        if self.data and self.keys:
+            return [[self.data[col][row] for col in self.columns] for row in range(self.row_count)]
         else:
             return []
+
+    def add_column(self, column):
+        if self.layout:
+            self.layout.AppendColumn(column)
+        self.columns.append(column)
+        self.data[column] = [''] * self.row_count
+
+    def del_column(self, column):
+        if column in self.keys:
+            index = self.columns.index(column)
+            if self.layout:
+                self.layout.DeleteColumn(index)
+            self.data.pop(column)
+            self.columns.pop(index)
 
     def row_to_initial_data(self, row_data):
         columns = self.keys
         self.data = {columns[i]: [value] for i, value in enumerate(row_data)}
 
     def set_data_in_layout(self):
-        row_data = self.data_to_list_of_rows(self.data, self.keys)
+        row_data = self.data_to_list_of_rows()
+
         for row in row_data:
             self.append_row(row)
 
     def append_row(self, row):
         self.append_row_to_data(row)
-        index = self.layout.InsertItem(50000, str(row[0]))
-        for i in range(len(row))[1:]:
-            self.layout.SetItem(index, i, str(row[i]))
+        if self.layout:
+            index = self.layout.InsertItem(50000, str(row[0]))
+            for i in range(len(row))[1:]:
+                self.layout.SetItem(index, i, str(row[i]))
 
     def append_row_to_data(self, row):
         if not self.data:
@@ -156,21 +186,31 @@ class DataTable:
         for i, key in enumerate(self.keys):
             self.data[key][index] = row[i]
 
-    def delete_row(self, index):
-        for key in self.keys:
-            self.data[key].pop(index)
-        self.layout.DeleteItem(index)
+    def delete_row(self, index, layout_only=False):
+        if not layout_only:
+            for key in self.keys:
+                self.data[key].pop(index)
+        if self.layout:
+            self.layout.DeleteItem(index)
+
+    def delete_all_rows(self, layout_only=False):
+        for i in list(range(self.row_count))[::-1]:
+            self.delete_row(i, layout_only=layout_only)
 
     def edit_row(self, row, index):
         self.edit_row_to_data(row, index)
-        for i in range(len(row))[1:]:
-            self.layout.SetItem(index, i, str(row[i]))
+        if self.layout:
+            for i in range(len(row))[1:]:
+                self.layout.SetItem(index, i, str(row[i]))
 
     def get_value(self, row, column):
         return self.data[self.keys[column]][row]
 
     def get_row(self, index):
         return [self.data[key][index] for key in self.keys]
+
+    def set_column_width(self, index, width):
+        self.layout.SetColumnWidth(index, width)
 
 
 class Plot:
