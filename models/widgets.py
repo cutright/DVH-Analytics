@@ -18,7 +18,7 @@ class Text(LayoutObj):
 
 
 class TextInput(LayoutObj):
-    def __init__(self, fp, title='Title', value='default value', id=wx.ID_ANY):
+    def __init__(self, fp, title='Title', value='', id=wx.ID_ANY):
         """
         :param fp: pointer to wx.Frame
         :param title: title of input widget
@@ -188,7 +188,7 @@ class Plot:
         self.y_axis_label = y_axis_label
         self.title = title
 
-        self.layout = wx.html2.WebView.New(fp, size=(800, 650))
+        self.layout = wx.html2.WebView.New(fp, size=(900, 650))
         self.plot_file_name = plot(x, y, x_axis_label=x_axis_label, y_axis_label=y_axis_label, title=title)
         self.layout.LoadURL(self.plot_file_name)
 
@@ -215,7 +215,7 @@ class PlotStatDVH:
         self.y_axis_label = y_axis_label
         self.title = title
 
-        self.layout = wx.html2.WebView.New(fp, size=(800, 650))
+        self.layout = wx.html2.WebView.New(fp, size=(875, 800))
         self.plot_file_name = plot(x, y, x_axis_label=x_axis_label, y_axis_label=y_axis_label, title=title)
         self.layout.LoadURL(self.plot_file_name)
 

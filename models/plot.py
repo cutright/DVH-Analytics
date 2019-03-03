@@ -44,8 +44,8 @@ def plot_stat_dvh(dvh_obj, file_name=os.path.join(PLOTS_DIR, 'plot.html'), x_axi
     p = figure(plot_width=750, plot_height=400, tools=tools, active_drag="box_zoom")
     p.xaxis.axis_label = x_axis_label
     p.yaxis.axis_label = y_axis_label
-    p.min_border_left = options.MIN_BORDER
-    p.min_border_bottom = options.MIN_BORDER
+    # p.min_border_left = options.MIN_BORDER
+    # p.min_border_bottom = options.MIN_BORDER
     p.add_tools(HoverTool(show_arrow=False, line_policy='next',
                           tooltips=[('Label', '@mrn @roi_name'),
                                     ('Dose', '$x'),
@@ -89,7 +89,7 @@ def plot_stat_dvh(dvh_obj, file_name=os.path.join(PLOTS_DIR, 'plot.html'), x_axi
                                  ("Mean", [stats_mean]),
                                  ("Min", [stats_min]),
                                  ("IQR", [iqr])],
-                          location=(25, 0))
+                          location=(10, 0))
 
     # Add the layout outside the plot, clicking legend item hides the line
     p.add_layout(legend_stats, 'right')
@@ -104,7 +104,7 @@ def plot_stat_dvh(dvh_obj, file_name=os.path.join(PLOTS_DIR, 'plot.html'), x_axi
                TableColumn(field="min_dose", title="Min Dose", width=80, formatter=NumberFormatter(format="0.00")),
                TableColumn(field="mean_dose", title="Mean Dose", width=80, formatter=NumberFormatter(format="0.00")),
                TableColumn(field="max_dose", title="Max Dose", width=80, formatter=NumberFormatter(format="0.00")),]
-    table = DataTable(source=source, columns=columns, height=200, width=750)
+    table = DataTable(source=source, columns=columns, height=275, width=750)
 
     output_file(file_name, title="Plot")
 

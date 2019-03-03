@@ -273,14 +273,22 @@ class DVH:
                    "ROI type count: %s" % len(set(self.roi_type)),
                    "Physician count: %s" % len(cnx.get_unique_values('Plans', 'physician',
                                                                      "study_instance_uid in ('%s')" % "','".join(self.uid))),
-                   "Rx dose range (Gy): %s to %s" % (min(self.rx_dose), max(self.rx_dose)),
-                   "Volume range (cc): %0.2f to %0.2f" % (min(self.volume), max(self.volume)),
-                   "Min dose range (Gy): %0.2f to %0.2f" % (min(self.min_dose), max(self.min_dose)),
-                   "Mean dose range (Gy): %0.2f to %0.2f" % (min(self.mean_dose), max(self.mean_dose)),
-                   "Max dose range (Gy): %0.2f to %0.2f" % (min(self.max_dose), max(self.max_dose)),
-                   "Avg Min dose (Gy): %0.2f" % (sum(self.min_dose) / self.count),
-                   "Avg Mean dose (Gy): %0.2f" % (sum(self.mean_dose) / self.count),
-                   "Avg Max dose (Gy): %0.2f" % (sum(self.max_dose) / self.count)]
+                   "\nMin, Mean, Max",
+                   "Rx dose (Gy): %0.2f, %0.2f, %0.2f" % (min(self.rx_dose),
+                                                          sum(self.rx_dose) / self.count,
+                                                          max(self.rx_dose)),
+                   "Volume (cc): %0.2f, %0.2f, %0.2f" % (min(self.volume),
+                                                         sum(self.volume) / self.count,
+                                                         max(self.volume)),
+                   "Min dose (Gy): %0.2f, %0.2f, %0.2f" % (min(self.min_dose),
+                                                           sum(self.min_dose) / self.count,
+                                                           max(self.min_dose)),
+                   "Mean dose (Gy): %0.2f, %0.2f, %0.2f" % (min(self.mean_dose),
+                                                            sum(self.mean_dose) / self.count,
+                                                            max(self.mean_dose)),
+                   "Max dose (Gy): %0.2f, %0.2f, %0.2f" % (min(self.max_dose),
+                                                           sum(self.max_dose) / self.count,
+                                                           max(self.max_dose))]
         return '\n'.join(summary)
 
 

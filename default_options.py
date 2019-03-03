@@ -9,7 +9,7 @@ import paths
 
 VERSION = '0.6'
 
-MIN_BORDER = 20
+MIN_BORDER = 5
 
 # These colors propagate to all tabs that visualize your two groups
 GROUP_1_COLOR = 'blue'

@@ -1,6 +1,6 @@
 import wx
 from categories import Categories
-from examples.widgets_old import Text, DropDown, TextInput
+from models.widgets import Text, DropDown, TextInput
 from db.sql_connector import DVH_SQL
 from models.layout import row, column
 
@@ -18,7 +18,7 @@ class QueryCategoryDialog(wx.Dialog):
         selector_options = list(self.selector_categories)
         selector_options.sort()
 
-        self.button_ok = wx.Button(self, label='Ok', id=wx.ID_OK)
+        self.button_ok = wx.Button(self, label='OK', id=wx.ID_OK)
         self.button_close = wx.Button(self, label='Cancel', id=wx.ID_CANCEL)
 
         self.select_category_1 = DropDown(self, title='Category 1:', options=selector_options, id=13,
@@ -83,7 +83,7 @@ class QueryRangeDialog(wx.Dialog):
         selector_options = list(self.range_categories)
         selector_options.sort()
 
-        self.button_ok = wx.Button(self, label='Ok', id=wx.ID_OK)
+        self.button_ok = wx.Button(self, label='OK', id=wx.ID_OK)
         self.button_close = wx.Button(self, label='Cancel', id=wx.ID_CANCEL)
 
         self.select_category = DropDown(self, title='Category:', options=selector_options, id=14, value='Rx Dose')

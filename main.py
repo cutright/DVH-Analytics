@@ -4,19 +4,25 @@
 
 import wx
 from dialogs.query import QueryCategoryDialog, QueryRangeDialog
+from dialogs.sql_settings import SQLSettingsDialog
 from categories import Categories
 from models.widgets import DataTable, PlotStatDVH
 from db.sql_connector import DVH_SQL
 from models.dvh import DVH
+from models.endpoint import EndpointFrame
+from db.sql_settings import write_sql_connection_settings, validate_sql_connection
 
 
 class MainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.SetSize((1400, 937))
+        self.SetSize((1400, 900))
 
         self.dvh_data = None
+
+        self.toolbar_keys = ['Open', 'Close', 'Save', 'Print', 'Export', 'Import', 'Settings', 'Database']
+        self.toolbar_ids = {key: i+1000 for i, key in enumerate(self.toolbar_keys)}
 
         # Get queryable variables
         categories = Categories()
@@ -51,8 +57,6 @@ class MainFrame(wx.Frame):
         self.frame_toolbar = wx.ToolBar(self, -1, style=wx.TB_HORIZONTAL | wx.TB_TEXT)
         self.SetToolBar(self.frame_toolbar)
 
-        keys = ['Open', 'Close', 'Save', 'Print', 'Export', 'Import', 'Settings', 'Database']
-
         files = {'Open': "icons/iconfinder_Open_1493293.png",
                  'Close': "icons/iconfinder_Close_1493281.png",
                  'Save': "icons/iconfinder_Save_1493294.png",
@@ -71,11 +75,14 @@ class MainFrame(wx.Frame):
                        'Settings': "Program preferences",
                        'Database': "Change SQL database connection settings"}
 
-        for key in keys:
-            self.frame_toolbar.AddTool(wx.ID_ANY, key, wx.Bitmap(files[key], wx.BITMAP_TYPE_ANY),
+        for key in self.toolbar_keys:
+            self.frame_toolbar.AddTool(self.toolbar_ids[key], key, wx.Bitmap(files[key], wx.BITMAP_TYPE_ANY),
                                        wx.NullBitmap, wx.ITEM_NORMAL, description[key], "")
+
             if key in {'Export', 'Database'}:
                 self.frame_toolbar.AddSeparator()
+
+        self.Bind(wx.EVT_TOOL, self.on_toolbar_database, id=self.toolbar_ids['Database'])
 
     def __add_menubar(self):
 
@@ -206,6 +213,11 @@ class MainFrame(wx.Frame):
         sizer_dvhs.Add(self.plot.layout, 0, wx.ALIGN_CENTER | wx.ALL, 50)
         self.notebook_dvhs.SetSizer(sizer_dvhs)
 
+        sizer_endpoint = wx.BoxSizer(wx.VERTICAL)
+        self.endpoint = EndpointFrame(self.notebook_endpoints)
+        sizer_endpoint.Add(self.endpoint.layout, 0, wx.ALIGN_CENTER | wx.ALL, 50)
+        self.notebook_endpoints.SetSizer(sizer_endpoint)
+
         self.notebook_main_view.AddPage(self.notebook_welcome, "Welcome")
         self.notebook_main_view.AddPage(self.notebook_dvhs, "DVHs")
         self.notebook_main_view.AddPage(self.notebook_endpoints, "Endpoints")
@@ -220,6 +232,19 @@ class MainFrame(wx.Frame):
         self.SetSizer(sizer_main)
         self.Layout()
         self.Centre()
+
+    @staticmethod
+    def on_toolbar_database(evt):
+        dlg = SQLSettingsDialog()
+        res = dlg.ShowModal()
+        if res == wx.ID_OK:
+            new_config = {key: dlg.input[key].GetValue() for key in dlg.keys if dlg.input[key].GetValue()}
+            if validate_sql_connection(new_config):
+                write_sql_connection_settings(new_config)
+            else:
+                print("Invalid SQL config")
+                print(new_config)
+        dlg.Destroy()
 
     def on_item_select_categorical(self, evt):
         self.selected_index_categorical = self.table_categorical.GetFirstSelected()
