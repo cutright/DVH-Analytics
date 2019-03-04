@@ -11,11 +11,12 @@ import itertools
 def plot(x, y, file_name=os.path.join(PLOTS_DIR, 'plot.html'),
          x_axis_label='X Axis', y_axis_label='Y Axis', title=''):
 
-    p = figure(title=title, plot_width=600, plot_height=500)
+    p = figure(title=title, plot_width=800, plot_height=500, x_axis_type='datetime')
     p.xaxis.axis_label = x_axis_label
     p.yaxis.axis_label = y_axis_label
 
-    p.multi_line(x, y, line_alpha=0.5, line_width=2)
+    # p.multi_line(x, y, line_alpha=0.5, line_width=2)
+    p.circle(x, y, size=5)
 
     output_file(file_name, title="Plot")
 

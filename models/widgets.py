@@ -100,9 +100,9 @@ class DropDown(LayoutObj):
 
 class DataTable:
 
-    def __init__(self, listctrl, data=None, columns=None):
+    def __init__(self, listctrl, data=None, columns=None, round=None):
         super().__init__()
-
+        self.round = round
         self.layout = listctrl
 
         self.data = deepcopy(data)
@@ -173,7 +173,11 @@ class DataTable:
         if self.layout:
             index = self.layout.InsertItem(50000, str(row[0]))
             for i in range(len(row))[1:]:
-                self.layout.SetItem(index, i, str(row[i]))
+                if isinstance(row[i], float) or isinstance(row[i], int) and self.round is not None:
+                    value = ("%%0.%sf" % self.round) % row[i]
+                else:
+                    value = str(row[i])
+                self.layout.SetItem(index, i, value)
 
     def append_row_to_data(self, row):
         if not self.data:
@@ -222,7 +226,7 @@ class Plot:
         :param y: y-axis values
         :type y: list of numbers
         """
-        super().__init__()
+        # super().__init__()
 
         self.x_axis_label = x_axis_label
         self.y_axis_label = y_axis_label
@@ -243,7 +247,7 @@ class Plot:
 
 class PlotStatDVH:
     def __init__(self, fp, dvh_obj=None, x_axis_label='Dose (cGy)', y_axis_label='Relative Volume', title=''):
-        super().__init__()
+        # super().__init__()
 
         if dvh_obj:
             x, y = self.get_plot_data()

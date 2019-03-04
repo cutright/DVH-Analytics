@@ -25,7 +25,7 @@ class EndpointFrame:
         self.table = wx.ListCtrl(self.parent, wx.ID_ANY,
                                  style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
         self.table.SetMinSize((1046, 800))
-        self.data_table = DataTable(self.table, columns=['mrn', 'roi_name', 'ep1'])
+        self.data_table = DataTable(self.table, columns=['mrn', 'roi_name', 'ep1'], round=2)
 
         self.endpoint_defs = DataTable(None, columns=ENDPOINT_DEF_COLUMNS)
 
@@ -67,24 +67,27 @@ class EndpointFrame:
         ep_defs = self.endpoint_defs.data
         for i, ep_name in enumerate(ep_defs['label']):
 
-            columns.append(ep_defs['label'][i])
+            if ep_name not in columns:
+                columns.append(ep_defs['label'][i])
 
-            if ep_name in current_labels:
-                ep[ep_name] = deepcopy(self.data_table.data[ep_name])
-
-            else:
-                endpoint_input = ['absolute', 'relative']['%' in ep_defs['units_in'][i]]
-                endpoint_output = ['absolute', 'relative']['%' in ep_defs['units_out'][i]]
-
-                x = float(ep_defs['input_value'][i])
-                if endpoint_input == 'relative':
-                    x /= 100.
-
-                if 'Dose' in ep_defs['output_type'][i]:
-                    ep[ep_name] = self.dvh.get_dose_to_volume(x, volume_scale=endpoint_input, dose_scale=endpoint_output)
+                if ep_name in current_labels:
+                    ep[ep_name] = deepcopy(self.data_table.data[ep_name])
 
                 else:
-                    ep[ep_name] = self.dvh.get_volume_of_dose(x, dose_scale=endpoint_input, volume_scale=endpoint_output)
+                    endpoint_input = ['absolute', 'relative']['%' in ep_defs['units_in'][i]]
+                    endpoint_output = ['absolute', 'relative']['%' in ep_defs['units_out'][i]]
+
+                    x = float(ep_defs['input_value'][i])
+                    if endpoint_input == 'relative':
+                        x /= 100.
+
+                    if 'Dose' in ep_defs['output_type'][i]:
+                        ep[ep_name] = self.dvh.get_volume_of_dose(x, volume_scale=endpoint_input,
+                                                                  dose_scale=endpoint_output)
+
+                    else:
+                        ep[ep_name] = self.dvh.get_dose_to_volume(x, dose_scale=endpoint_input,
+                                                                  volume_scale=endpoint_output)
 
         self.data_table.set_data(ep, columns)
         self.data_table.set_column_width(0, 150)
@@ -97,8 +100,6 @@ class EndpointFrame:
             if dlg.is_endpoint_valid:
                 self.endpoint_defs.append_row(dlg.endpoint_row)
                 self.calculate_endpoints()
-            else:
-                print('oh no!')
         dlg.Destroy()
 
     def update_dvh(self, dvh):

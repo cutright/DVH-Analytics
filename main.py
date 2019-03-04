@@ -10,7 +10,10 @@ from models.widgets import DataTable, PlotStatDVH
 from db.sql_connector import DVH_SQL
 from models.dvh import DVH
 from models.endpoint import EndpointFrame
+from models.rad_bio import RadBioFrame
+from models.time_series import TimeSeriesFrame
 from db.sql_settings import write_sql_connection_settings, validate_sql_connection
+from db.sql_to_python import QuerySQL
 
 
 class MainFrame(wx.Frame):
@@ -20,6 +23,8 @@ class MainFrame(wx.Frame):
         self.SetSize((1400, 900))
 
         self.dvh = None
+
+        self.data = {key: None for key in ['Plans', 'Beams', 'Rxs']}
 
         self.toolbar_keys = ['Open', 'Close', 'Save', 'Print', 'Export', 'Import', 'Settings', 'Database']
         self.toolbar_ids = {key: i+1000 for i, key in enumerate(self.toolbar_keys)}
@@ -218,6 +223,16 @@ class MainFrame(wx.Frame):
         sizer_endpoint.Add(self.endpoint.layout, 0, wx.ALIGN_CENTER | wx.ALL, 50)
         self.notebook_endpoints.SetSizer(sizer_endpoint)
 
+        sizer_radbio = wx.BoxSizer(wx.VERTICAL)
+        self.radbio = RadBioFrame(self.notebook_rad_bio, self.dvh)
+        sizer_radbio.Add(self.radbio.layout, 0, wx.ALIGN_CENTER | wx.ALL, 50)
+        self.notebook_rad_bio.SetSizer(sizer_radbio)
+
+        sizer_time_series = wx.BoxSizer(wx.VERTICAL)
+        self.time_series = TimeSeriesFrame(self.notebook_time_series, self.dvh, self.data)
+        sizer_time_series.Add(self.time_series.layout, 0, wx.ALIGN_CENTER | wx.ALL, 50)
+        self.notebook_time_series.SetSizer(sizer_time_series)
+
         self.notebook_main_view.AddPage(self.notebook_welcome, "Welcome")
         self.notebook_main_view.AddPage(self.notebook_dvhs, "DVHs")
         self.notebook_main_view.AddPage(self.notebook_endpoints, "Endpoints")
@@ -307,6 +322,8 @@ class MainFrame(wx.Frame):
         self.plot.update_plot(self.dvh, x_axis_label='Dose (cGy)', y_axis_label='Relative Volume')
         del wait
         self.notebook_main_view.SetSelection(1)
+        self.update_data()
+        self.time_series.update_data(self.dvh, self.data)
 
     def get_query(self):
 
@@ -365,6 +382,16 @@ class MainFrame(wx.Frame):
         dlg = wx.MessageDialog(self, "DVH Analytics \n in wxPython", "About Sample Editor", wx.OK)
         dlg.ShowModal()
         dlg.Destroy()
+
+    def update_data(self):
+        wait = wx.BusyCursor()
+        tables = ['Plans', 'Rxs', 'Beams']
+        if hasattr(self.dvh, 'study_instance_uid'):
+            condition_str = "study_instance_uid in ('%s')" % "','".join(self.dvh.study_instance_uid)
+            self.data = {key: QuerySQL(key, condition_str) for key in tables}
+        else:
+            self.data = {key: None for key in tables}
+        del wait
 
 
 class DVHApp(wx.App):
