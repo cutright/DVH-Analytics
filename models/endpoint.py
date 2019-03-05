@@ -68,7 +68,7 @@ class EndpointFrame:
         for i, ep_name in enumerate(ep_defs['label']):
 
             if ep_name not in columns:
-                columns.append(ep_defs['label'][i])
+                columns.append(ep_name)
 
                 if ep_name in current_labels:
                     ep[ep_name] = deepcopy(self.data_table.data[ep_name])
@@ -81,7 +81,7 @@ class EndpointFrame:
                     if endpoint_input == 'relative':
                         x /= 100.
 
-                    if 'Dose' in ep_defs['output_type'][i]:
+                    if 'V' in ep_name:
                         ep[ep_name] = self.dvh.get_volume_of_dose(x, volume_scale=endpoint_input,
                                                                   dose_scale=endpoint_output)
 

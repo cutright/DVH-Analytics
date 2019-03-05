@@ -80,11 +80,11 @@ class TimeSeriesFrame:
         if table == 'DVHs':
             y_data = getattr(self.dvh, var_name)
             uids = getattr(self.dvh, 'study_instance_uid')
+            mrn_data = self.dvh.mrn
         else:
             y_data = getattr(self.data[table], var_name)
             uids = getattr(self.data[table], 'study_instance_uid')
-
-        mrn_data = self.dvh.mrn
+            mrn_data = getattr(self.data[table], 'mrn')
 
         x_data = []
         for uid in uids:
@@ -107,3 +107,4 @@ class TimeSeriesFrame:
     def update_data(self, dvh, data):
         self.dvh = dvh
         self.data = data
+        self.update_plot()

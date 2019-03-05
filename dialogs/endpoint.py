@@ -73,8 +73,8 @@ class EndpointDialog(wx.Dialog):
         self.update_short_hand()
 
     def update_label_input(self):
-        new_label = "%s (%s):" % (['Input Dose ', 'Input Volume ']['Dose' in self.combo_box_output.GetValue()],
-                                 self.radio_box_units.GetItemLabel(self.radio_box_units.GetSelection()))
+        new_label = "%s (%s):" % (['Input Dose', 'Input Volume']['Dose' in self.combo_box_output.GetValue()],
+                                  self.radio_box_units.GetItemLabel(self.radio_box_units.GetSelection()))
         self.label_input_value.SetLabelText(new_label)
 
     def update_radio_box_choices(self):

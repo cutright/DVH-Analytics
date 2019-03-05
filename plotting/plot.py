@@ -153,7 +153,7 @@ class PlotTimeSeries:
                                         formatters={'x': 'datetime'}))
 
         self.figure.circle('x', 'y', source=self.source, size=options.TIME_SERIES_CIRCLE_SIZE,
-                           alpha=options.TIME_SERIES_CIRCLE_SIZE)
+                           alpha=options.TIME_SERIES_CIRCLE_ALPHA, color=options.PLOT_COLOR)
 
         tools = "pan,wheel_zoom,box_zoom,reset,crosshair,save"
         self.histograms = figure(plot_width=self.plot_width, plot_height=300, tools=tools, active_drag="box_zoom")
@@ -175,10 +175,13 @@ class PlotTimeSeries:
     def update_plot(self, x, y, mrn, y_axis_label='Y Axis'):
         self.figure.yaxis.axis_label = y_axis_label
         self.histograms.xaxis.axis_label = y_axis_label
-        self.source.data = {'x': x, 'y': y, 'mrn': mrn}
+        valid_indices = [i for i, value in enumerate(y) if value != 'None']
+        self.source.data = {'x': [value for i, value in enumerate(x) if i in valid_indices],
+                            'y': [value for i, value in enumerate(y) if i in valid_indices],
+                            'mrn': [value for i, value in enumerate(mrn) if i in valid_indices]}
 
         # histograms
-        bin_size = 10
+        bin_size = 20
         width_fraction = 0.9
 
         hist, bins = np.histogram(self.source.data['y'], bins=bin_size)
