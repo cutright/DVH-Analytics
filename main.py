@@ -15,6 +15,11 @@ from models.rad_bio import RadBioFrame
 from models.time_series import TimeSeriesFrame
 from db.sql_settings import write_sql_connection_settings, validate_sql_connection
 from db.sql_to_python import QuerySQL
+from bokeh.plotting import output_file
+from paths import PLOTS_PATH
+
+
+output_file(PLOTS_PATH)
 
 
 class MainFrame(wx.Frame):

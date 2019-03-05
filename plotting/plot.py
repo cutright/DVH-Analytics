@@ -1,4 +1,4 @@
-from bokeh.plotting import figure, output_file, save
+from bokeh.plotting import figure, save
 from paths import PLOTS_DIR
 import os
 from options import load_options
@@ -11,12 +11,13 @@ import wx
 import wx.html2
 import numpy as np
 from copy import deepcopy
+from paths import PLOTS_PATH
 
 
 options = load_options()
 
 
-def get_base_plot(parent, x_axis_label='X Axis', y_axis_label='Y Axis', title='', plot_width=800, plot_height=500,
+def get_base_plot(parent, x_axis_label='X Axis', y_axis_label='Y Axis', plot_width=800, plot_height=500,
                   frame_size=(900, 800), x_axis_type='linear'):
 
     wxlayout = wx.html2.WebView.New(parent, size=frame_size)
@@ -36,12 +37,10 @@ def get_base_plot(parent, x_axis_label='X Axis', y_axis_label='Y Axis', title=''
 
 
 class PlotStatDVH:
-    def __init__(self, parent, dvh, file_name=os.path.join(PLOTS_DIR, 'plot.html')):
-
-        self.file_name = file_name
+    def __init__(self, parent, dvh):
 
         self.figure, self.layout = get_base_plot(parent, x_axis_label='Dose (cGy)', y_axis_label='Relative Volume',
-                                                 title='DVHs', plot_width=750, plot_height=400)
+                                                 plot_width=750, plot_height=400)
 
         self.source = ColumnDataSource(data=dict(x=[], y=[], mrn=[], roi_name=[], roi_type=[], rx_dose=[], volume=[],
                                                  min_dose=[], mean_dose=[], max_dose=[]))
@@ -53,10 +52,18 @@ class PlotStatDVH:
         self.stat_dvhs = {key: np.array(0) for key in ['min', 'q1', 'mean', 'median', 'q3', 'max']}
         self.x = []
 
-        self.figure.add_tools(HoverTool(show_arrow=False, line_policy='next',
-                                        tooltips=[('Label', '@mrn @roi_name'),
-                                                  ('Dose', '$x'),
-                                                  ('Volume', '$y')]))
+        # Display only one tool tip (since many lines will overlap)
+        # https://stackoverflow.com/questions/36434562/displaying-only-one-tooltip-when-using-the-hovertool-tool?rq=1
+        custom_hover = HoverTool()
+        custom_hover.tooltips = """
+            <style>
+                .bk-tooltip>div:not(:first-child) {display:none;}
+            </style>
+
+            <b>Dose: </b> $x{i} cGy <br>
+            <b>Volume: </b> $y
+        """
+        self.figure.add_tools(custom_hover)
 
         self.figure.multi_line('x', 'y', source=self.source, selection_color='color', line_width=options.DVH_LINE_WIDTH,
                                alpha=0, line_dash=options.DVH_LINE_DASH, nonselection_alpha=0, selection_alpha=1)
@@ -111,6 +118,7 @@ class PlotStatDVH:
         data = dvh.get_cds_data()
         data['x'] = dvh.x_data
         data['y'] = dvh.y_data
+        data['mrn'] = dvh.mrn
         colors = itertools.cycle(palette)
         data['color'] = [color for j, color in zip(range(dvh.count), colors)]
         self.source.data = data
@@ -124,13 +132,12 @@ class PlotStatDVH:
         self.source_patch.data = {'x': self.x + self.x[::-1],
                                   'y': self.stat_dvhs['q3'].tolist() + self.stat_dvhs['q1'][::-1].tolist()}
 
-        output_file(self.file_name)
         save(column(self.figure, self.table))
-        self.layout.LoadURL(self.file_name)
+        self.layout.LoadURL(PLOTS_PATH)
 
 
 class PlotTimeSeries:
-    def __init__(self, parent, x=[], y=[], file_name=os.path.join(PLOTS_DIR, 'plot.html')):
+    def __init__(self, parent, x=[], y=[], mrn=[]):
         """
         :param fp: points to wx.Frame
         :param x: x-axis values
@@ -139,12 +146,16 @@ class PlotTimeSeries:
         :type y: list of numbers
         """
 
-        self.file_name = file_name
-
         self.figure, self.layout = get_base_plot(parent, x_axis_label='Simulation Date',
-                                                 title='Time Series', plot_width=750, plot_height=400)
+                                                 plot_width=750, plot_height=400, x_axis_type='datetime')
 
-        self.source = ColumnDataSource(data=dict(x=x, y=y))
+        self.source = ColumnDataSource(data=dict(x=x, y=y, mrn=mrn))
+
+        self.figure.add_tools(HoverTool(show_arrow=True,
+                                        tooltips=[('ID', '@mrn'),
+                                                  ('Date', '@x{%F}'),
+                                                  ('Value', '@y{0.2f}')],
+                                        formatters={'x': 'datetime'}))
 
         self.figure.circle('x', 'y', source=self.source, size=options.TIME_SERIES_CIRCLE_SIZE,
                            alpha=options.TIME_SERIES_CIRCLE_SIZE)
@@ -167,8 +178,9 @@ class PlotTimeSeries:
         #                                     tooltips=[('x', '@x{0.2f}'),
         #                                               ('Counts', '@top')]))
 
-    def update_plot(self, x, y):
-        self.source.data = {'x': x, 'y': y}
+    def update_plot(self, x, y, mrn, y_axis_label='Y Axis'):
+        self.figure.yaxis.axis_label = y_axis_label
+        self.source.data = {'x': x, 'y': y, 'mrn': mrn}
         # output_file(self.file_name)
         save(self.figure)
-        self.layout.LoadURL(self.file_name)
+        self.layout.LoadURL(PLOTS_PATH)

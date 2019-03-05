@@ -84,6 +84,8 @@ class TimeSeriesFrame:
             y_data = getattr(self.data[table], var_name)
             uids = getattr(self.data[table], 'study_instance_uid')
 
+        mrn_data = self.dvh.mrn
+
         x_data = []
         for uid in uids:
             if uid in self.data['Plans'].study_instance_uid:
@@ -93,13 +95,14 @@ class TimeSeriesFrame:
                 x_data.append(datetime.now())
 
         sort_index = sorted(range(len(x_data)), key=lambda k: x_data[k])
-        x_values_sorted, y_values_sorted = [], []
+        x_values_sorted, y_values_sorted, mrn_sorted = [], [], []
 
         for s in range(len(x_data)):
             x_values_sorted.append(parser.parse(x_data[sort_index[s]]))
             y_values_sorted.append(y_data[sort_index[s]])
+            mrn_sorted.append(mrn_data[sort_index[s]])
 
-        self.plot.update_plot(x_values_sorted, y_values_sorted)
+        self.plot.update_plot(x_values_sorted, y_values_sorted, mrn_sorted, self.combo_box_y_axis.GetValue())
 
     def update_data(self, dvh, data):
         self.dvh = dvh
