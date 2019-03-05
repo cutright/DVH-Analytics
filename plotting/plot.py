@@ -1,8 +1,7 @@
-from bokeh.plotting import figure, save
-from paths import PLOTS_DIR
-import os
+from bokeh.plotting import figure
+from bokeh.io.export import get_layout_html
 from options import load_options
-from bokeh.models import Legend, HoverTool, ColumnDataSource, DataTable, TableColumn, NumberFormatter
+from bokeh.models import Legend, HoverTool, ColumnDataSource, DataTable, TableColumn, NumberFormatter, Div
 from bokeh.layouts import column
 from bokeh.palettes import Colorblind8 as palette
 import itertools
@@ -10,7 +9,6 @@ import default_options as options
 import wx
 import wx.html2
 import numpy as np
-from copy import deepcopy
 from paths import PLOTS_PATH
 
 
@@ -18,7 +16,7 @@ options = load_options()
 
 
 def get_base_plot(parent, x_axis_label='X Axis', y_axis_label='Y Axis', plot_width=800, plot_height=500,
-                  frame_size=(900, 800), x_axis_type='linear'):
+                  frame_size=(900, 900), x_axis_type='linear'):
 
     wxlayout = wx.html2.WebView.New(parent, size=frame_size)
 
@@ -114,7 +112,7 @@ class PlotStatDVH:
         self.bokeh_layout = column(self.figure, self.table)
 
     def update_plot(self, dvh):
-        self.dvh = deepcopy(dvh)
+        self.dvh = dvh
         data = dvh.get_cds_data()
         data['x'] = dvh.x_data
         data['y'] = dvh.y_data
@@ -132,24 +130,21 @@ class PlotStatDVH:
         self.source_patch.data = {'x': self.x + self.x[::-1],
                                   'y': self.stat_dvhs['q3'].tolist() + self.stat_dvhs['q1'][::-1].tolist()}
 
-        save(column(self.figure, self.table))
+        bokeh_layout = column(self.figure, self.table)
+        save_bokeh_layout(bokeh_layout)
         self.layout.LoadURL(PLOTS_PATH)
 
 
 class PlotTimeSeries:
     def __init__(self, parent, x=[], y=[], mrn=[]):
-        """
-        :param fp: points to wx.Frame
-        :param x: x-axis values
-        :type x: list of numbers
-        :param y: y-axis values
-        :type y: list of numbers
-        """
+
+        self.plot_width = 750
 
         self.figure, self.layout = get_base_plot(parent, x_axis_label='Simulation Date',
-                                                 plot_width=750, plot_height=400, x_axis_type='datetime')
+                                                 plot_width=self.plot_width, plot_height=300, x_axis_type='datetime')
 
         self.source = ColumnDataSource(data=dict(x=x, y=y, mrn=mrn))
+        self.source_histogram = ColumnDataSource(data=dict(x=[], top=[], width=[]))
 
         self.figure.add_tools(HoverTool(show_arrow=True,
                                         tooltips=[('ID', '@mrn'),
@@ -160,27 +155,43 @@ class PlotTimeSeries:
         self.figure.circle('x', 'y', source=self.source, size=options.TIME_SERIES_CIRCLE_SIZE,
                            alpha=options.TIME_SERIES_CIRCLE_SIZE)
 
-        # histograms
-        # tools = "pan,wheel_zoom,box_zoom,reset,crosshair,save"
-        # self.histograms = figure(plot_width=800, plot_height=400, tools=tools, active_drag="box_zoom")
-        # self.histograms.xaxis.axis_label_text_font_size = options.PLOT_AXIS_LABEL_FONT_SIZE
-        # self.histograms.yaxis.axis_label_text_font_size = options.PLOT_AXIS_LABEL_FONT_SIZE
-        # self.histograms.xaxis.major_label_text_font_size = options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        # self.histograms.yaxis.major_label_text_font_size = options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        # self.histograms.min_border_left = options.MIN_BORDER
-        # self.histograms.min_border_bottom = options.MIN_BORDER
-        # self.vbar = self.histograms.vbar(x='x', width='width', bottom=0, top='top', source=sources.histogram_1,
-        #                                  color=options.PLOT_COLOR, alpha=options.HISTOGRAM_ALPHA)
-        #
-        # self.histograms.xaxis.axis_label = ""
-        # self.histograms.yaxis.axis_label = "Frequency"
-        # self.histograms.add_tools(HoverTool(show_arrow=True, line_policy='next',
-        #                                     tooltips=[('x', '@x{0.2f}'),
-        #                                               ('Counts', '@top')]))
+        tools = "pan,wheel_zoom,box_zoom,reset,crosshair,save"
+        self.histograms = figure(plot_width=self.plot_width, plot_height=300, tools=tools, active_drag="box_zoom")
+        self.histograms.xaxis.axis_label_text_font_size = options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.histograms.yaxis.axis_label_text_font_size = options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.histograms.xaxis.major_label_text_font_size = options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.histograms.yaxis.major_label_text_font_size = options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.histograms.min_border_left = options.MIN_BORDER
+        self.histograms.min_border_bottom = options.MIN_BORDER
+        self.vbar = self.histograms.vbar(x='x', width='width', bottom=0, top='top', source=self.source_histogram,
+                                         color=options.PLOT_COLOR, alpha=options.HISTOGRAM_ALPHA)
+
+        self.histograms.xaxis.axis_label = ""
+        self.histograms.yaxis.axis_label = "Frequency"
+        self.histograms.add_tools(HoverTool(show_arrow=True, line_policy='next',
+                                            tooltips=[('x', '@x{0.2f}'),
+                                                      ('Counts', '@top')]))
 
     def update_plot(self, x, y, mrn, y_axis_label='Y Axis'):
         self.figure.yaxis.axis_label = y_axis_label
+        self.histograms.xaxis.axis_label = y_axis_label
         self.source.data = {'x': x, 'y': y, 'mrn': mrn}
-        # output_file(self.file_name)
-        save(self.figure)
+
+        # histograms
+        bin_size = 10
+        width_fraction = 0.9
+
+        hist, bins = np.histogram(self.source.data['y'], bins=bin_size)
+        width = [width_fraction * (bins[1] - bins[0])] * bin_size
+        center = (bins[:-1] + bins[1:]) / 2.
+        self.source_histogram.data = {'x': center, 'top': hist, 'width': width}
+
+        bokeh_layout = column(self.figure, Div(text='<hr>', width=self.plot_width), self.histograms)
+        save_bokeh_layout(bokeh_layout)
         self.layout.LoadURL(PLOTS_PATH)
+
+
+def save_bokeh_layout(bokeh_layout):
+    html = get_layout_html(bokeh_layout)
+    with open(PLOTS_PATH, "w") as text_file:
+        text_file.write(html)
