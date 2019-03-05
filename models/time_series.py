@@ -3,7 +3,7 @@
 
 
 import wx
-from models.widgets import Plot
+from plotting.plot import PlotTimeSeries
 from categories import Categories
 from datetime import datetime
 from dateutil import parser
@@ -63,7 +63,7 @@ class TimeSeriesFrame:
         sizer_widgets.Add(sizer_percentile, 1, wx.EXPAND, 0)
         sizer_widgets.Add(self.button_update_plot, 0, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_widgets, 0, wx.ALL | wx.EXPAND, 5)
-        self.plot = Plot(self.parent)
+        self.plot = PlotTimeSeries(self.parent)
         sizer_plot.Add(self.plot.layout)
         sizer_wrapper.Add(sizer_plot, 1, wx.EXPAND, 0)
         self.layout = sizer_wrapper

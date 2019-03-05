@@ -6,7 +6,8 @@ import wx
 from dialogs.query import QueryCategoryDialog, QueryRangeDialog
 from dialogs.sql_settings import SQLSettingsDialog
 from categories import Categories
-from models.widgets import DataTable, PlotStatDVH
+from models.widgets import DataTable
+from plotting.plot import PlotStatDVH
 from db.sql_connector import DVH_SQL
 from models.dvh import DVH
 from models.endpoint import EndpointFrame
@@ -214,7 +215,7 @@ class MainFrame(wx.Frame):
         self.notebook_welcome.SetSizer(sizer_welcome)
 
         sizer_dvhs = wx.BoxSizer(wx.VERTICAL)
-        self.plot = PlotStatDVH(self.notebook_dvhs, x_axis_label='Dose (cGy)', y_axis_label='Relative Volume')
+        self.plot = PlotStatDVH(self.notebook_dvhs, self.dvh)
         sizer_dvhs.Add(self.plot.layout, 0, wx.ALIGN_CENTER | wx.ALL, 50)
         self.notebook_dvhs.SetSizer(sizer_dvhs)
 
@@ -319,7 +320,7 @@ class MainFrame(wx.Frame):
         self.dvh = DVH(dvh_condition=dvh_str, uid=uids)
         self.endpoint.update_dvh(self.dvh)
         self.text_summary.SetLabelText(self.dvh.get_summary())
-        self.plot.update_plot(self.dvh, x_axis_label='Dose (cGy)', y_axis_label='Relative Volume')
+        self.plot.update_plot(self.dvh)
         del wait
         self.notebook_main_view.SetSelection(1)
         self.update_data()

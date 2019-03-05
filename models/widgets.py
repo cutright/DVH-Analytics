@@ -1,6 +1,4 @@
 import wx
-import wx.html2
-from models.plot import plot, plot_stat_dvh
 from .layout import LayoutObj
 from copy import deepcopy
 
@@ -101,7 +99,6 @@ class DropDown(LayoutObj):
 class DataTable:
 
     def __init__(self, listctrl, data=None, columns=None, round=None):
-        super().__init__()
         self.round = round
         self.layout = listctrl
 
@@ -215,77 +212,3 @@ class DataTable:
 
     def set_column_width(self, index, width):
         self.layout.SetColumnWidth(index, width)
-
-
-class Plot:
-    def __init__(self, fp, x=[], y=[], x_axis_label='X Axis', y_axis_label='Y Axis', title=''):
-        """
-        :param fp: points to wx.Frame
-        :param x: x-axis values
-        :type x: list of numbers
-        :param y: y-axis values
-        :type y: list of numbers
-        """
-        # super().__init__()
-
-        self.x_axis_label = x_axis_label
-        self.y_axis_label = y_axis_label
-        self.title = title
-
-        self.layout = wx.html2.WebView.New(fp, size=(900, 650))
-        self.plot_file_name = plot(x, y, x_axis_label=x_axis_label, y_axis_label=y_axis_label, title=title)
-        self.layout.LoadURL(self.plot_file_name)
-
-    def update_plot(self, x, y, **kwargs):
-        for key in ['x_axis_label', 'y_axis_label', 'title']:
-            if key in kwargs:
-                setattr(self, key, kwargs[key])
-        self.plot_file_name = plot(x, y, x_axis_label=self.x_axis_label,
-                                   y_axis_label=self.y_axis_label, title=self.title)
-        self.layout.LoadURL(self.plot_file_name)
-
-
-class PlotStatDVH:
-    def __init__(self, fp, dvh_obj=None, x_axis_label='Dose (cGy)', y_axis_label='Relative Volume', title=''):
-        # super().__init__()
-
-        if dvh_obj:
-            x, y = self.get_plot_data()
-            self.update_plot(x, y)
-        else:
-            x, y = [], []
-
-        self.x_axis_label = x_axis_label
-        self.y_axis_label = y_axis_label
-        self.title = title
-
-        self.layout = wx.html2.WebView.New(fp, size=(875, 800))
-        self.plot_file_name = plot(x, y, x_axis_label=x_axis_label, y_axis_label=y_axis_label, title=title)
-        self.layout.LoadURL(self.plot_file_name)
-
-        self.dvh_obj = dvh_obj
-
-        if dvh_obj:
-            self.update_plot()
-
-    def get_plot_data(self):
-        keys = ['min', 'q1', 'median', 'mean', 'q3', 'max']
-        x = [list(range(self.dvh_obj.bin_count))] * len(keys)
-
-        dvhs = self.dvh_obj.get_standard_stat_dvh()
-        y = [dvhs[key] for key in keys]
-
-        return x, y
-
-    def update_plot(self, *dvh_obj, **kwargs):
-
-        if dvh_obj:
-            self.dvh_obj = dvh_obj[0]
-
-        for key in ['x_axis_label', 'y_axis_label', 'title']:
-            if key in kwargs:
-                setattr(self, key, kwargs[key])
-
-        self.plot_file_name = plot_stat_dvh(self.dvh_obj, x_axis_label=self.x_axis_label,
-                                            y_axis_label=self.y_axis_label, title=self.title)
-        self.layout.LoadURL(self.plot_file_name)
