@@ -108,3 +108,6 @@ class TimeSeriesFrame:
         self.dvh = dvh
         self.data = data
         self.update_plot()
+
+    def clear_data(self):
+        self.plot.update_plot([], [], [], '')

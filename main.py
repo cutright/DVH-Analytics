@@ -15,11 +15,11 @@ from models.rad_bio import RadBioFrame
 from models.time_series import TimeSeriesFrame
 from db.sql_settings import write_sql_connection_settings, validate_sql_connection
 from db.sql_to_python import QuerySQL
-from bokeh.plotting import output_file
-from paths import PLOTS_PATH
+from paths import LOGO_PATH
 
 
-output_file(PLOTS_PATH)
+COLUMNS = {'categorical': ['category_1', 'category_2', 'not'],
+           'numerical': ['category', 'min', 'max', 'not']}
 
 
 class MainFrame(wx.Frame):
@@ -49,14 +49,14 @@ class MainFrame(wx.Frame):
         self.__do_layout()
 
         self.data_table_categorical = DataTable(self.table_categorical,
-                                                columns=['category_1', 'category_2', 'not'])
+                                                columns=COLUMNS['categorical'])
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_item_select_categorical, self.table_categorical)
         self.Bind(wx.EVT_BUTTON, self.add_row_categorical, id=self.button_categorical_add.GetId())
         self.Bind(wx.EVT_BUTTON, self.del_row_categorical, id=self.button_categorical_del.GetId())
         self.Bind(wx.EVT_BUTTON, self.edit_row_categorical, id=self.button_categorical_edit.GetId())
 
         self.data_table_numerical = DataTable(self.table_numerical,
-                                              columns=['category', 'min', 'max', 'not'])
+                                              columns=COLUMNS['numerical'])
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_item_select_categorical, self.table_categorical)
         self.Bind(wx.EVT_BUTTON, self.add_row_numerical, id=self.button_numerical_add.GetId())
         self.Bind(wx.EVT_BUTTON, self.del_row_numerical, id=self.button_numerical_del.GetId())
@@ -94,6 +94,7 @@ class MainFrame(wx.Frame):
                 self.frame_toolbar.AddSeparator()
 
         self.Bind(wx.EVT_TOOL, self.on_toolbar_database, id=self.toolbar_ids['Database'])
+        self.Bind(wx.EVT_TOOL, self.OnClose, id=self.toolbar_ids['Close'])
 
     def __add_menubar(self):
 
@@ -102,6 +103,7 @@ class MainFrame(wx.Frame):
         fileMenu = wx.Menu()
         fileMenu.Append(wx.ID_NEW, '&New')
         menuOpen = fileMenu.Append(wx.ID_OPEN, '&Open\tCtrl+O')
+        menuClose = fileMenu.Append(wx.ID_ANY, '&Close\tCtrl+W')
         fileMenu.Append(wx.ID_SAVE, '&Save')
         menuAbout = fileMenu.Append(wx.ID_ANY, '&About\tCtrl+A')
         fileMenu.AppendSeparator()
@@ -117,6 +119,7 @@ class MainFrame(wx.Frame):
 
         self.Bind(wx.EVT_MENU, self.OnQuit, qmi)
         self.Bind(wx.EVT_MENU, self.OnOpen, menuOpen)
+        self.Bind(wx.EVT_MENU, self.OnClose, menuClose)
         self.Bind(wx.EVT_MENU, self.OnAbout, menuAbout)
 
         self.frame_menubar.Append(fileMenu, '&File')
@@ -200,8 +203,7 @@ class MainFrame(wx.Frame):
         panel_left.Add(sizer_summary, 1, wx.ALL | wx.EXPAND, 5)
         hbox_main.Add(panel_left, 0, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.TOP, 5)
         bitmap_logo = wx.StaticBitmap(self.notebook_welcome, wx.ID_ANY,
-                                      wx.Bitmap("/Users/nightowl/PycharmProjects/DVH-Analytics-Desktop/logo.png",
-                                                wx.BITMAP_TYPE_ANY))
+                                      wx.Bitmap(LOGO_PATH, wx.BITMAP_TYPE_ANY))
         sizer_welcome.Add(bitmap_logo, 0, wx.ALIGN_CENTER | wx.LEFT | wx.RIGHT | wx.TOP, 100)
         text_welcome = wx.StaticText(self.notebook_welcome, wx.ID_ANY,
                                      "\n\nWelcome to DVH Analytics.\nIf you already have a database built, design "
@@ -382,6 +384,22 @@ class MainFrame(wx.Frame):
         dlg = wx.DirDialog(self, "Choose input directory", "", wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:
             print(dlg.GetPath())
+        dlg.Destroy()
+
+    def OnClose(self, evt):
+        # dlg = CloseDialog(title="Close and clear data")
+        dlg = wx.MessageDialog(self, "Clear all data and plots?", caption='Close',
+                               style=wx.OK|wx.CANCEL|wx.CANCEL_DEFAULT|wx.CENTER|wx.ICON_EXCLAMATION)
+        wx.OK
+        dlg.Center()
+        res = dlg.ShowModal()
+        if res == wx.ID_OK:
+            self.data_table_categorical.delete_all_rows()
+            self.data_table_numerical.delete_all_rows()
+            self.plot.clear_plot()
+            self.endpoint.clear_data()
+            self.time_series.clear_data()
+            self.notebook_main_view.SetSelection(0)
         dlg.Destroy()
 
     def OnAbout(self, evt):

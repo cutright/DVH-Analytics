@@ -98,19 +98,19 @@ class DropDown(LayoutObj):
 
 class DataTable:
 
-    def __init__(self, listctrl, data=None, columns=None, round=None):
+    def __init__(self, listctrl, data=None, columns=None):
         self.round = round
         self.layout = listctrl
 
         self.data = deepcopy(data)
-        self.columns = columns
+        self.columns = deepcopy(columns)
 
         self.set_data_in_layout()
 
     def set_data(self, data, columns):
         delete_table_rows = bool(self.row_count)
         self.data = deepcopy(data)
-        self.columns = columns
+        self.columns = deepcopy(columns)
         if delete_table_rows:
             self.delete_all_rows(layout_only=True)
         self.set_layout_columns()
@@ -163,15 +163,16 @@ class DataTable:
         row_data = self.data_to_list_of_rows()
 
         for row in row_data:
-            self.append_row(row)
+            self.append_row(row, layout_only=True)
 
-    def append_row(self, row):
-        self.append_row_to_data(row)
+    def append_row(self, row, layout_only=False):
+        if not layout_only:
+            self.append_row_to_data(row)
         if self.layout:
             index = self.layout.InsertItem(50000, str(row[0]))
             for i in range(len(row))[1:]:
                 if isinstance(row[i], float) or isinstance(row[i], int) and self.round is not None:
-                    value = ("%%0.%sf" % self.round) % row[i]
+                    value = "%0.2f" % row[i]
                 else:
                     value = str(row[i])
                 self.layout.SetItem(index, i, value)
@@ -197,6 +198,7 @@ class DataTable:
     def delete_all_rows(self, layout_only=False):
         for i in list(range(self.row_count))[::-1]:
             self.delete_row(i, layout_only=layout_only)
+
 
     def edit_row(self, row, index):
         self.edit_row_to_data(row, index)

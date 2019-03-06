@@ -25,7 +25,7 @@ class EndpointFrame:
         self.table = wx.ListCtrl(self.parent, wx.ID_ANY,
                                  style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
         self.table.SetMinSize((1046, 800))
-        self.data_table = DataTable(self.table, columns=['mrn', 'roi_name', 'ep1'], round=2)
+        self.data_table = DataTable(self.table, columns=['mrn', 'roi_name', 'ep1'])
 
         self.endpoint_defs = DataTable(None, columns=ENDPOINT_DEF_COLUMNS)
 
@@ -104,3 +104,7 @@ class EndpointFrame:
 
     def update_dvh(self, dvh):
         self.dvh = dvh
+
+    def clear_data(self):
+        self.data_table.delete_all_rows()
+        self.endpoint_defs.delete_all_rows()

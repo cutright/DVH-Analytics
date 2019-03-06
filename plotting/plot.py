@@ -9,7 +9,6 @@ import default_options as options
 import wx
 import wx.html2
 import numpy as np
-from paths import PLOTS_PATH
 
 
 options = load_options()
@@ -130,9 +129,15 @@ class PlotStatDVH:
         self.source_patch.data = {'x': self.x + self.x[::-1],
                                   'y': self.stat_dvhs['q3'].tolist() + self.stat_dvhs['q1'][::-1].tolist()}
 
-        bokeh_layout = column(self.figure, self.table)
-        save_bokeh_layout(bokeh_layout)
-        self.layout.LoadURL(PLOTS_PATH)
+        html_str = get_layout_html(self.bokeh_layout)
+        self.layout.SetPage(html_str, "")
+
+    def clear_plot(self):
+        self.source.data = {key: [] for key in ['x', 'y', 'mrn', 'color']}
+        self.source_stats.data = {key: [] for key in ['x', 'max', 'median', 'mean', 'min']}
+        self.source_patch.data = {key: [] for key in ['x', 'y']}
+        html_str = get_layout_html(self.bokeh_layout)
+        self.layout.SetPage(html_str, "")
 
 
 class PlotTimeSeries:
@@ -172,6 +177,8 @@ class PlotTimeSeries:
                                             tooltips=[('x', '@x{0.2f}'),
                                                       ('Counts', '@top')]))
 
+        self.bokeh_layout = column(self.figure, Div(text='<hr>', width=self.plot_width), self.histograms)
+
     def update_plot(self, x, y, mrn, y_axis_label='Y Axis'):
         self.figure.yaxis.axis_label = y_axis_label
         self.histograms.xaxis.axis_label = y_axis_label
@@ -189,12 +196,5 @@ class PlotTimeSeries:
         center = (bins[:-1] + bins[1:]) / 2.
         self.source_histogram.data = {'x': center, 'top': hist, 'width': width}
 
-        bokeh_layout = column(self.figure, Div(text='<hr>', width=self.plot_width), self.histograms)
-        save_bokeh_layout(bokeh_layout)
-        self.layout.LoadURL(PLOTS_PATH)
-
-
-def save_bokeh_layout(bokeh_layout):
-    html = get_layout_html(bokeh_layout)
-    with open(PLOTS_PATH, "w") as text_file:
-        text_file.write(html)
+        html_str = get_layout_html(self.bokeh_layout)
+        self.layout.SetPage(html_str, "")
