@@ -6,7 +6,7 @@ import wx
 from dialogs.query import QueryCategoryDialog, QueryRangeDialog
 from dialogs.sql_settings import SQLSettingsDialog
 from categories import Categories
-from models.widgets import DataTable
+from models.datatable import DataTable
 from plotting.plot import PlotStatDVH
 from db.sql_connector import DVH_SQL
 from models.dvh import DVH
@@ -48,19 +48,19 @@ class MainFrame(wx.Frame):
         self.__set_properties()
         self.__do_layout()
 
-        self.data_table_categorical = DataTable(self.table_categorical,
-                                                columns=COLUMNS['categorical'])
+        self.data_table_categorical = DataTable(self.table_categorical, columns=COLUMNS['categorical'])
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_item_select_categorical, self.table_categorical)
         self.Bind(wx.EVT_BUTTON, self.add_row_categorical, id=self.button_categorical_add.GetId())
         self.Bind(wx.EVT_BUTTON, self.del_row_categorical, id=self.button_categorical_del.GetId())
         self.Bind(wx.EVT_BUTTON, self.edit_row_categorical, id=self.button_categorical_edit.GetId())
+        self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.doubleclick_categorial, self.table_categorical)
 
-        self.data_table_numerical = DataTable(self.table_numerical,
-                                              columns=COLUMNS['numerical'])
+        self.data_table_numerical = DataTable(self.table_numerical, columns=COLUMNS['numerical'])
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_item_select_categorical, self.table_categorical)
         self.Bind(wx.EVT_BUTTON, self.add_row_numerical, id=self.button_numerical_add.GetId())
         self.Bind(wx.EVT_BUTTON, self.del_row_numerical, id=self.button_numerical_del.GetId())
         self.Bind(wx.EVT_BUTTON, self.edit_row_numerical, id=self.button_numerical_edit.GetId())
+        self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.doubleclick_numerical, self.table_numerical)
 
         self.Bind(wx.EVT_BUTTON, self.exec_query, id=self.button_query_execute.GetId())
 
@@ -189,14 +189,14 @@ class MainFrame(wx.Frame):
         sizer_categorical_buttons.Add(self.button_categorical_edit, 0, wx.ALL, 5)
         sizer_query_categorical.Add(sizer_categorical_buttons, 0, wx.EXPAND, 0)
         sizer_query_categorical.Add(self.table_categorical, 1, wx.ALL | wx.EXPAND, 5)
-        panel_left.Add(sizer_query_categorical, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.SHAPED | wx.TOP, 5)
+        panel_left.Add(sizer_query_categorical, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.SHAPED | wx.TOP, 5)
         sizer_numerical_buttons.Add(self.button_numerical_add, 0, wx.ALL, 5)
         sizer_numerical_buttons.Add(self.button_numerical_del, 0, wx.ALL, 5)
         sizer_numerical_buttons.Add(self.button_numerical_edit, 0, wx.ALL, 5)
         sizer_query_numerical.Add(sizer_numerical_buttons, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_query_numerical.Add(self.table_numerical, 1, wx.ALL | wx.EXPAND, 5)
-        panel_left.Add(sizer_query_numerical, 1, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT | wx.SHAPED, 5)
-        panel_left.Add(self.button_query_execute, 0, wx.ALL | wx.EXPAND, 30)
+        sizer_query_numerical.Add(self.table_numerical, 1, wx.ALL | wx.EXPAND, 10)
+        panel_left.Add(sizer_query_numerical, 0, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT | wx.SHAPED, 5)
+        panel_left.Add(self.button_query_execute, 0, wx.ALIGN_CENTER | wx.LEFT | wx.RIGHT, 15)
 
         # sizer_summary.Add((0, 0), 0, 0, 0)
         sizer_summary.Add(self.text_summary)
@@ -276,10 +276,7 @@ class MainFrame(wx.Frame):
         dlg = QueryCategoryDialog(title='Add Categorical Filter')
         res = dlg.ShowModal()
         if res == wx.ID_OK:
-            new_row = [dlg.select_category_1.get_value(),
-                       dlg.select_category_2.get_value(),
-                       dlg.check_box_not.GetValue()]
-            self.data_table_categorical.append_row(new_row)
+            self.data_table_categorical.append_row(dlg.get_values())
         dlg.Destroy()
 
     def del_row_categorical(self, evt):
@@ -287,12 +284,12 @@ class MainFrame(wx.Frame):
         self.selected_index_categorical = None
 
     def edit_row_categorical(self, evt):
-        query = QueryCategoryDialog(title='Edit Categorical Filter')
-        query.set_values(self.data_table_categorical.get_row(self.selected_index_categorical))
-        res = query.ShowModal()
+        dlg = QueryCategoryDialog(title='Edit Categorical Filter')
+        dlg.set_values(self.data_table_categorical.get_row(self.selected_index_categorical))
+        res = dlg.ShowModal()
         if res == wx.ID_OK:
-            self.data_table_categorical.edit_row(query.get_values(), self.selected_index_categorical)
-        query.Destroy()
+            self.data_table_categorical.edit_row(dlg.get_values(), self.selected_index_categorical)
+        dlg.Destroy()
 
     def on_item_select_numerical(self, evt):
         self.selected_index_numerical = self.table_numerical.GetFirstSelected()
@@ -301,10 +298,10 @@ class MainFrame(wx.Frame):
         dlg = QueryRangeDialog()
         res = dlg.ShowModal()
         if res == wx.ID_OK:
-            new_row = [dlg.select_category.get_value(),
+            new_row = [dlg.combo_box_1.GetValue(),
                        dlg.validated_text('min'),
                        dlg.validated_text('max'),
-                       dlg.check_box_not.GetValue()]
+                       dlg.checkbox_1.GetValue()]
             self.data_table_numerical.append_row(new_row)
         dlg.Destroy()
 
@@ -389,17 +386,18 @@ class MainFrame(wx.Frame):
     def OnClose(self, evt):
         # dlg = CloseDialog(title="Close and clear data")
         dlg = wx.MessageDialog(self, "Clear all data and plots?", caption='Close',
-                               style=wx.OK|wx.CANCEL|wx.CANCEL_DEFAULT|wx.CENTER|wx.ICON_EXCLAMATION)
+                               style=wx.YES|wx.NO|wx.NO_DEFAULT|wx.CENTER|wx.ICON_EXCLAMATION)
         wx.OK
         dlg.Center()
         res = dlg.ShowModal()
-        if res == wx.ID_OK:
+        if res == wx.ID_YES:
             self.data_table_categorical.delete_all_rows()
             self.data_table_numerical.delete_all_rows()
             self.plot.clear_plot()
             self.endpoint.clear_data()
             self.time_series.clear_data()
             self.notebook_main_view.SetSelection(0)
+            self.text_summary.SetLabelText("")
         dlg.Destroy()
 
     def OnAbout(self, evt):
@@ -416,6 +414,14 @@ class MainFrame(wx.Frame):
         else:
             self.data = {key: None for key in tables}
         del wait
+
+    def doubleclick_categorial(self, evt):
+        self.selected_index_categorical = self.table_categorical.GetFirstSelected()
+        self.edit_row_categorical(None)
+
+    def doubleclick_numerical(self, evt):
+        self.selected_index_numerical = self.table_numerical.GetFirstSelected()
+        self.edit_row_numerical(None)
 
 
 class DVHApp(wx.App):

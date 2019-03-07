@@ -1,105 +1,10 @@
-import wx
-from .layout import LayoutObj
 from copy import deepcopy
-
-
-class Text(LayoutObj):
-    def __init__(self, fp, value=''):
-        super().__init__()
-
-        self.layout = wx.StaticText(fp, label=value)
-
-    def get_value(self):
-        return self.layout.GetLabel()
-
-    def set_value(self, value):
-        self.layout.SetLabel(value)
-
-
-class TextInput(LayoutObj):
-    def __init__(self, fp, title='Title', value='', id=wx.ID_ANY):
-        """
-        :param fp: pointer to wx.Frame
-        :param title: title of input widget
-        :type title: str
-        :param value: initial value
-        :type value: str
-        """
-        super().__init__()
-
-        self.layout = wx.BoxSizer(wx.VERTICAL)
-
-        self.title = wx.StaticText(fp, label=title)
-        self.text = wx.TextCtrl(fp, value=value, id=id, style=wx.TE_PROCESS_ENTER)
-        self.id = id
-
-        self.text_row = wx.BoxSizer(wx.HORIZONTAL)
-        self.text_row.Add(self.text, 1, wx.EXPAND, self.border)
-
-        self.layout.Add(self.title, 0, wx.EXPAND, self.border)
-        self.layout.AddSpacer(5)
-        self.layout.Add(self.text_row, 0, wx.EXPAND, self.border)
-
-    def get_value(self):
-        return self.text.GetValue()
-
-    def get_title(self):
-        return self.title.GetLabel()
-
-    def set_value(self, value):
-        self.text.SetValue(str(value))
-
-    def set_title(self, title):
-        self.title.SetLabelText(title)
-
-
-class DropDown(LayoutObj):
-    def __init__(self, fp, title='Title', value='', options=[''], id=wx.ID_ANY, width=200):
-        """
-        :param fp: pointer to wx.Frame
-        :param title: title of input widget
-        :type title: str
-        """
-        super().__init__()
-
-        self.id = id
-
-        self.layout = wx.BoxSizer(wx.VERTICAL)
-
-        self.title = wx.StaticText(fp, label=title)
-        self.text = wx.ComboBox(fp, choices=options, id=id, size=(width, 27), style=wx.CB_READONLY)
-
-        if value and value in options:
-            self.set_value(value)
-
-        self.text_row = wx.BoxSizer(wx.HORIZONTAL)
-        self.text_row.Add(self.text, 1, wx.EXPAND, self.border)
-
-        self.layout.Add(self.title, 0, wx.EXPAND, self.border)
-        self.layout.AddSpacer(5)
-        self.layout.Add(self.text_row, 0, wx.EXPAND, self.border)
-
-    def get_value(self):
-        return self.text.GetValue()
-
-    def get_title(self):
-        return self.title.GetLabelText()
-
-    def set_value(self, value):
-        self.text.SetValue(value)
-
-    def set_title(self, title):
-        self.title.SetLabelText(title)
-
-    def set_options(self, options):
-        self.text.Clear()
-        self.text.Append(options)
 
 
 class DataTable:
 
     def __init__(self, listctrl, data=None, columns=None):
-        self.round = round
+
         self.layout = listctrl
 
         self.data = deepcopy(data)
@@ -171,7 +76,7 @@ class DataTable:
         if self.layout:
             index = self.layout.InsertItem(50000, str(row[0]))
             for i in range(len(row))[1:]:
-                if isinstance(row[i], float) or isinstance(row[i], int) and self.round is not None:
+                if isinstance(row[i], float) or isinstance(row[i], int) and str(row[i]) not in {'True', 'False'}:
                     value = "%0.2f" % row[i]
                 else:
                     value = str(row[i])
@@ -198,7 +103,6 @@ class DataTable:
     def delete_all_rows(self, layout_only=False):
         for i in list(range(self.row_count))[::-1]:
             self.delete_row(i, layout_only=layout_only)
-
 
     def edit_row(self, row, index):
         self.edit_row_to_data(row, index)

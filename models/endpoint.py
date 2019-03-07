@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 import wx
-from models.widgets import DataTable
+from models.datatable import DataTable
 from dialogs.endpoint import EndpointDialog
 from copy import deepcopy
 
