@@ -365,6 +365,7 @@ class MainFrame(wx.Frame):
         self.notebook_main_view.SetSelection(1)
         self.update_data()
         self.time_series.update_data(self.dvh, self.data)
+        self.radbio.update_dvh_data(self.dvh)
 
         self.__enable_notebook_tabs()
 
@@ -406,11 +407,7 @@ class MainFrame(wx.Frame):
                 queries[table].append("(%s)" % ' OR '.join(queries_by_sql_column[table][col]))
             queries[table] = ' AND '.join(queries[table])
 
-        print(queries)
-
         uids = get_study_instance_uids(plans=queries['Plans'], rxs=queries['Rxs'], beams=queries['Beams'])['common']
-
-        print(queries['Plans'])
 
         return uids, queries['DVHs']
 

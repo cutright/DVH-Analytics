@@ -53,7 +53,7 @@ class DVH:
         # Add these properties to dvh_data since they aren't in the DVHs SQL table
         self.count = len(self.mrn)
         self.study_count = len(uid)
-        self.rx_dose = self.get_rx_doses()
+        self.rx_dose = self.get_plan_values('rx_dose')
         self.keys.append('rx_dose')
 
         self.bin_count = max([value.count(',') + 1 for value in self.dvh_string])
@@ -79,14 +79,29 @@ class DVH:
             except:
                 self.dth.append(np.array([0]))
 
-    def get_rx_doses(self):
+    def get_plan_values(self, plan_column):
         cnx = DVH_SQL()
         condition = "study_instance_uid in ('%s')" % "','".join(self.study_instance_uid)
-        data = cnx.query('Plans', 'study_instance_uid, rx_dose', condition)
+        data = cnx.query('Plans', 'study_instance_uid, %s' % plan_column, condition)
         cnx.close()
         uids = [row[0] for row in data]
-        rx_dose = [row[1] for row in data]
-        return [rx_dose[uids.index(uid)] for uid in self.study_instance_uid]
+        values = [row[1] for row in data]
+        return [values[uids.index(uid)] for uid in self.study_instance_uid]
+
+    def get_rx_values(self, rx_column):
+        cnx = DVH_SQL()
+        condition = "study_instance_uid in ('%s')" % "','".join(self.study_instance_uid)
+        data = cnx.query('Rxs', 'study_instance_uid, %s' % rx_column, condition)
+        cnx.close()
+        uids = [row[0] for row in data]
+        values = [row[1] for row in data]
+        final_values = {}
+        for i, uid in enumerate(uids):
+            if uid in list(values):
+                final_values[uid] = "%s,%s" % (final_values[uid], values[i])
+            else:
+                final_values[uid] = str(values[i])
+        return [final_values[uid] for uid in uids]
 
     @property
     def x_data(self):
