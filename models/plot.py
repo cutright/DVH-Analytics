@@ -37,7 +37,7 @@ class PlotStatDVH:
     def __init__(self, parent, dvh):
 
         self.figure, self.layout = get_base_plot(parent, x_axis_label='Dose (cGy)', y_axis_label='Relative Volume',
-                                                 plot_width=750, plot_height=350)
+                                                 plot_width=800, plot_height=400)
 
         self.source = ColumnDataSource(data=dict(x=[], y=[], mrn=[], roi_name=[], roi_type=[], rx_dose=[], volume=[],
                                                  min_dose=[], mean_dose=[], max_dose=[]))
@@ -143,10 +143,10 @@ class PlotStatDVH:
 class PlotTimeSeries:
     def __init__(self, parent, x=[], y=[], mrn=[]):
 
-        self.plot_width = 750
+        plot_width = 800  # store of histograms and divider bar
 
         self.figure, self.layout = get_base_plot(parent, x_axis_label='Simulation Date',
-                                                 plot_width=self.plot_width, plot_height=300, x_axis_type='datetime')
+                                                 plot_width=plot_width, plot_height=300, x_axis_type='datetime')
 
         self.source = ColumnDataSource(data=dict(x=x, y=y, mrn=mrn))
         self.source_histogram = ColumnDataSource(data=dict(x=[], top=[], width=[]))
@@ -161,7 +161,7 @@ class PlotTimeSeries:
                            alpha=options.TIME_SERIES_CIRCLE_ALPHA, color=options.PLOT_COLOR)
 
         tools = "pan,wheel_zoom,box_zoom,reset,crosshair,save"
-        self.histograms = figure(plot_width=self.plot_width, plot_height=300, tools=tools, active_drag="box_zoom")
+        self.histograms = figure(plot_width=plot_width, plot_height=300, tools=tools, active_drag="box_zoom")
         self.histograms.xaxis.axis_label_text_font_size = options.PLOT_AXIS_LABEL_FONT_SIZE
         self.histograms.yaxis.axis_label_text_font_size = options.PLOT_AXIS_LABEL_FONT_SIZE
         self.histograms.xaxis.major_label_text_font_size = options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
@@ -177,7 +177,7 @@ class PlotTimeSeries:
                                             tooltips=[('x', '@x{0.2f}'),
                                                       ('Counts', '@top')]))
 
-        self.bokeh_layout = column(self.figure, Div(text='<hr>', width=self.plot_width), self.histograms)
+        self.bokeh_layout = column(self.figure, Div(text='<hr>', width=plot_width), self.histograms)
 
     def update_plot(self, x, y, mrn, y_axis_label='Y Axis'):
         self.figure.yaxis.axis_label = y_axis_label

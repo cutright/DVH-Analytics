@@ -230,23 +230,23 @@ class MainFrame(wx.Frame):
 
         sizer_welcome = wx.BoxSizer(wx.VERTICAL)
         sizer_welcome.Add(bitmap_logo, 0, wx.ALIGN_CENTER | wx.LEFT | wx.RIGHT | wx.TOP, 100)
-        sizer_welcome.Add(text_welcome, 0, wx.ALIGN_CENTER | wx.ALL, 50)
+        sizer_welcome.Add(text_welcome, 0, wx.ALIGN_CENTER | wx.ALL, 25)
         self.notebook_tab['Welcome'].SetSizer(sizer_welcome)
 
         sizer_dvhs = wx.BoxSizer(wx.VERTICAL)
-        sizer_dvhs.Add(self.plot.layout, 0, wx.ALIGN_CENTER | wx.ALL, 50)
+        sizer_dvhs.Add(self.plot.layout, 0, wx.ALIGN_CENTER | wx.ALL, 25)
         self.notebook_tab['DVHs'].SetSizer(sizer_dvhs)
 
         sizer_endpoint = wx.BoxSizer(wx.VERTICAL)
-        sizer_endpoint.Add(self.endpoint.layout, 0, wx.ALIGN_CENTER | wx.ALL, 50)
+        sizer_endpoint.Add(self.endpoint.layout, 0, wx.ALIGN_CENTER | wx.ALL, 25)
         self.notebook_tab['Endpoints'].SetSizer(sizer_endpoint)
 
         sizer_rad_bio = wx.BoxSizer(wx.VERTICAL)
-        sizer_rad_bio.Add(self.radbio.layout, 0, wx.ALIGN_CENTER | wx.ALL, 50)
+        sizer_rad_bio.Add(self.radbio.layout, 0, wx.ALIGN_CENTER | wx.ALL, 25)
         self.notebook_tab['Rad Bio'].SetSizer(sizer_rad_bio)
 
         sizer_time_series = wx.BoxSizer(wx.VERTICAL)
-        sizer_time_series.Add(self.time_series.layout, 0, wx.ALIGN_CENTER | wx.ALL, 50)
+        sizer_time_series.Add(self.time_series.layout, 0, wx.ALIGN_CENTER | wx.ALL, 25)
         self.notebook_tab['Time Series'].SetSizer(sizer_time_series)
 
         for key in self.tab_keys:

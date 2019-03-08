@@ -17,10 +17,8 @@ class TimeSeriesFrame:
 
         self.y_axis_options = sql_columns.numerical
 
-        self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, choices=[],
-                                            style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.combo_box_lookback_units = wx.ComboBox(self.parent, wx.ID_ANY,
-                                                    choices=["Dates with a Sim", "Days"],
+        self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.combo_box_lookback_units = wx.ComboBox(self.parent, wx.ID_ANY, choices=["Dates with a Sim", "Days"],
                                                     style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.text_input_lookback_distance = wx.TextCtrl(self.parent, wx.ID_ANY, "1")
         self.text_inputs_percentile = wx.TextCtrl(self.parent, wx.ID_ANY, "90")
@@ -64,7 +62,7 @@ class TimeSeriesFrame:
         sizer_percentile.Add(self.text_inputs_percentile, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(sizer_percentile, 1, wx.EXPAND, 0)
         sizer_widgets.Add(self.button_update_plot, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_wrapper.Add(sizer_widgets, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_wrapper.Add(sizer_widgets, 0, wx.BOTTOM | wx.EXPAND, 5)
         self.plot = PlotTimeSeries(self.parent)
         sizer_plot.Add(self.plot.layout)
         sizer_wrapper.Add(sizer_plot, 1, wx.EXPAND, 0)

@@ -22,7 +22,7 @@ DVH_LINE_DASH = 'solid'
 IQR_ALPHA = 0.075
 
 # Adjust the plot font sizes
-PLOT_AXIS_LABEL_FONT_SIZE = "14pt"
+PLOT_AXIS_LABEL_FONT_SIZE = "12pt"
 PLOT_AXIS_MAJOR_LABEL_FONT_SIZE = "10pt"
 
 # Number of data points are reduced by this factor during dynamic plot interaction to speed-up visualizations
