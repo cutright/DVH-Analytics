@@ -158,8 +158,8 @@ class MainFrame(wx.Frame):
 
         self.frame_toolbar.Realize()
 
-        self.table_categorical.AppendColumn("Category1", format=wx.LIST_FORMAT_LEFT, width=150)
-        self.table_categorical.AppendColumn("Category2", format=wx.LIST_FORMAT_LEFT, width=180)
+        self.table_categorical.AppendColumn("Category1", format=wx.LIST_FORMAT_LEFT, width=180)
+        self.table_categorical.AppendColumn("Category2", format=wx.LIST_FORMAT_LEFT, width=150)
         self.table_categorical.AppendColumn("Apply Not", format=wx.LIST_FORMAT_LEFT, width=80)
 
         self.table_numerical.AppendColumn("Category", format=wx.LIST_FORMAT_LEFT, width=150)

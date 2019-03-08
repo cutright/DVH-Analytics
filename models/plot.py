@@ -85,15 +85,15 @@ class PlotStatDVH:
         iqr = self.figure.patch('x', 'y', source=self.source_patch, alpha=options.IQR_ALPHA, color=options.PLOT_COLOR)
 
         # Set the legend (for stat dvhs only)
-        legend_stats = Legend(items=[("Max", [stats_max]),
-                                     ("Median", [stats_median]),
-                                     ("Mean", [stats_mean]),
-                                     ("Min", [stats_min]),
-                                     ("IQR", [iqr])],
-                              location=(10, 0))
+        legend_stats = Legend(items=[("Max  ", [stats_max]),
+                                     ("Median  ", [stats_median]),
+                                     ("Mean  ", [stats_mean]),
+                                     ("Min  ", [stats_min]),
+                                     ("IQR  ", [iqr])],
+                              orientation='horizontal')
 
         # Add the layout outside the plot, clicking legend item hides the line
-        self.figure.add_layout(legend_stats, 'right')
+        self.figure.add_layout(legend_stats, 'above')
         self.figure.legend.click_policy = "hide"
 
         # DataTable
@@ -107,7 +107,7 @@ class PlotStatDVH:
                                formatter=NumberFormatter(format="0.00")),
                    TableColumn(field="max_dose", title="Max Dose", width=80,
                                formatter=NumberFormatter(format="0.00")), ]
-        self.table = DataTable(source=self.source, columns=columns, height=275, width=750)
+        self.table = DataTable(source=self.source, columns=columns, height=275, width=800)
 
         self.bokeh_layout = column(self.figure, self.table)
 
@@ -179,10 +179,10 @@ class PlotTimeSeries:
                                         formatters={'x': 'datetime'}))
 
         # Set the legend
-        legend_plot = Legend(items=[("Data", [self.plot_data]),
-                                    ("Series Average", [self.plot_avg]),
-                                    ("Rolling Average", [self.plot_trend]),
-                                    ("Percentile Region", [self.plot_patch])],
+        legend_plot = Legend(items=[("Data  ", [self.plot_data]),
+                                    ("Series Average  ", [self.plot_avg]),
+                                    ("Rolling Average  ", [self.plot_trend]),
+                                    ("Percentile Region  ", [self.plot_patch])],
                              orientation='horizontal')
 
         # Add the layout outside the plot, clicking legend item hides the line
