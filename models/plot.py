@@ -9,6 +9,7 @@ import default_options as options
 import wx
 import wx.html2
 import numpy as np
+from utilties import collapse_into_single_dates, moving_avg
 
 
 options = load_options()
@@ -146,10 +147,13 @@ class PlotTimeSeries:
         plot_width = 800  # store of histograms and divider bar
 
         self.figure, self.layout = get_base_plot(parent, x_axis_label='Simulation Date',
-                                                 plot_width=plot_width, plot_height=300, x_axis_type='datetime')
+                                                 plot_width=plot_width, plot_height=325, x_axis_type='datetime')
 
-        self.source = ColumnDataSource(data=dict(x=x, y=y, mrn=mrn))
-        self.source_histogram = ColumnDataSource(data=dict(x=[], top=[], width=[]))
+        self.source = {'plot': ColumnDataSource(data=dict(x=x, y=y, mrn=mrn)),
+                       'hist': ColumnDataSource(data=dict(x=[], top=[], width=[])),
+                       'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'bound': ColumnDataSource(data=dict(x=[], mrn=[], upper=[], avg=[], lower=[])),
+                       'patch': ColumnDataSource(data=dict(x=[], y=[]))}
 
         self.figure.add_tools(HoverTool(show_arrow=True,
                                         tooltips=[('ID', '@mrn'),
@@ -157,18 +161,43 @@ class PlotTimeSeries:
                                                   ('Value', '@y{0.2f}')],
                                         formatters={'x': 'datetime'}))
 
-        self.figure.circle('x', 'y', source=self.source, size=options.TIME_SERIES_CIRCLE_SIZE,
-                           alpha=options.TIME_SERIES_CIRCLE_ALPHA, color=options.PLOT_COLOR)
+        self.plot_data = self.figure.circle('x', 'y', source=self.source['plot'], size=options.TIME_SERIES_CIRCLE_SIZE,
+                                            alpha=options.TIME_SERIES_CIRCLE_ALPHA, color=options.PLOT_COLOR)
+
+        self.plot_trend = self.figure.line('x', 'y', color=options.PLOT_COLOR, source=self.source['trend'],
+                                           line_width=options.TIME_SERIES_TREND_LINE_WIDTH,
+                                           line_dash=options.TIME_SERIES_TREND_LINE_DASH)
+        self.plot_avg = self.figure.line('x', 'avg', color=options.PLOT_COLOR, source=self.source['bound'],
+                                         line_width=options.TIME_SERIES_AVG_LINE_WIDTH,
+                                         line_dash=options.TIME_SERIES_AVG_LINE_DASH)
+        self.plot_patch = self.figure.patch('x', 'y', color=options.PLOT_COLOR, source=self.source['patch'],
+                                            alpha=options.TIME_SERIES_PATCH_ALPHA)
+        self.figure.add_tools(HoverTool(show_arrow=True,
+                                        tooltips=[('ID', '@mrn'),
+                                                  ('Date', '@x{%F}'),
+                                                  ('Value', '@y{0.2f}')],
+                                        formatters={'x': 'datetime'}))
+
+        # Set the legend
+        legend_plot = Legend(items=[("Data", [self.plot_data]),
+                                    ("Series Average", [self.plot_avg]),
+                                    ("Rolling Average", [self.plot_trend]),
+                                    ("Percentile Region", [self.plot_patch])],
+                             orientation='horizontal')
+
+        # Add the layout outside the plot, clicking legend item hides the line
+        self.figure.add_layout(legend_plot, 'above')
+        self.figure.legend.click_policy = "hide"
 
         tools = "pan,wheel_zoom,box_zoom,reset,crosshair,save"
-        self.histograms = figure(plot_width=plot_width, plot_height=300, tools=tools, active_drag="box_zoom")
+        self.histograms = figure(plot_width=plot_width, plot_height=275, tools=tools, active_drag="box_zoom")
         self.histograms.xaxis.axis_label_text_font_size = options.PLOT_AXIS_LABEL_FONT_SIZE
         self.histograms.yaxis.axis_label_text_font_size = options.PLOT_AXIS_LABEL_FONT_SIZE
         self.histograms.xaxis.major_label_text_font_size = options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
         self.histograms.yaxis.major_label_text_font_size = options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
         self.histograms.min_border_left = options.MIN_BORDER
         self.histograms.min_border_bottom = options.MIN_BORDER
-        self.vbar = self.histograms.vbar(x='x', width='width', bottom=0, top='top', source=self.source_histogram,
+        self.vbar = self.histograms.vbar(x='x', width='width', bottom=0, top='top', source=self.source['hist'],
                                          color=options.PLOT_COLOR, alpha=options.HISTOGRAM_ALPHA)
 
         self.histograms.xaxis.axis_label = ""
@@ -179,22 +208,48 @@ class PlotTimeSeries:
 
         self.bokeh_layout = column(self.figure, Div(text='<hr>', width=plot_width), self.histograms)
 
-    def update_plot(self, x, y, mrn, y_axis_label='Y Axis'):
+    def update_plot(self, x, y, mrn, y_axis_label='Y Axis', avg_len=1, percentile=90.):
         self.figure.yaxis.axis_label = y_axis_label
         self.histograms.xaxis.axis_label = y_axis_label
         valid_indices = [i for i, value in enumerate(y) if value != 'None']
-        self.source.data = {'x': [value for i, value in enumerate(x) if i in valid_indices],
-                            'y': [value for i, value in enumerate(y) if i in valid_indices],
-                            'mrn': [value for i, value in enumerate(mrn) if i in valid_indices]}
+        self.source['plot'].data = {'x': [value for i, value in enumerate(x) if i in valid_indices],
+                                    'y': [value for i, value in enumerate(y) if i in valid_indices],
+                                    'mrn': [value for i, value in enumerate(mrn) if i in valid_indices]}
 
         # histograms
         bin_size = 20
         width_fraction = 0.9
 
-        hist, bins = np.histogram(self.source.data['y'], bins=bin_size)
+        hist, bins = np.histogram(self.source['plot'].data['y'], bins=bin_size)
         width = [width_fraction * (bins[1] - bins[0])] * bin_size
         center = (bins[:-1] + bins[1:]) / 2.
-        self.source_histogram.data = {'x': center, 'top': hist, 'width': width}
+        self.source['hist'].data = {'x': center, 'top': hist, 'width': width}
+
+        self.update_trend(avg_len, percentile)
 
         html_str = get_layout_html(self.bokeh_layout)
         self.layout.SetPage(html_str, "")
+
+    def update_trend(self, avg_len, percentile):
+
+        x = self.source['plot'].data['x']
+        y = self.source['plot'].data['y']
+        x_len = len(x)
+
+        data_collapsed = collapse_into_single_dates(x, y)
+        x_trend, y_trend = moving_avg(data_collapsed, avg_len)
+
+        y_np = np.array(self.source['plot'].data['y'])
+        upper_bound = float(np.percentile(y_np, 50. + percentile / 2.))
+        average = float(np.percentile(y_np, 50))
+        lower_bound = float(np.percentile(y_np, 50. - percentile / 2.))
+        self.source['trend'].data = {'x': x_trend,
+                                     'y': y_trend,
+                                     'mrn': ['Avg'] * len(x_trend)}
+        self.source['bound'].data = {'x': x,
+                                     'mrn': ['Bound'] * x_len,
+                                     'upper': [upper_bound] * x_len,
+                                     'avg': [average] * x_len,
+                                     'lower': [lower_bound] * x_len}
+        self.source['patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
+                                     'y': [upper_bound, upper_bound, lower_bound, lower_bound]}
