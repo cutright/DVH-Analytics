@@ -80,6 +80,7 @@ class RadBioFrame:
         label_published_values.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
         sizer_published_values.Add(label_published_values, 0, wx.ALL, 5)
         sizer_published_values.Add(self.table_published_values, 1, wx.ALL, 10)
+        sizer_published_values.SetMinSize((500, 335))
         sizer_main.Add(sizer_published_values, 1, wx.ALL | wx.EXPAND, 10)
         label_parameters = wx.StaticText(self.parent, wx.ID_ANY, "Parameters:")
         label_parameters.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
