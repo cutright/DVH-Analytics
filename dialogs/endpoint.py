@@ -5,7 +5,7 @@
 import wx
 
 
-class EndpointDialog(wx.Dialog):
+class AddEndpointDialog(wx.Dialog):
     def __init__(self, *args, **kwds):
         wx.Dialog.__init__(self, None, title=kwds['title'])
 

@@ -37,7 +37,7 @@ class PlotStatDVH:
     def __init__(self, parent, dvh):
 
         self.figure, self.layout = get_base_plot(parent, x_axis_label='Dose (cGy)', y_axis_label='Relative Volume',
-                                                 plot_width=750, plot_height=400)
+                                                 plot_width=750, plot_height=350)
 
         self.source = ColumnDataSource(data=dict(x=[], y=[], mrn=[], roi_name=[], roi_type=[], rx_dose=[], volume=[],
                                                  min_dose=[], mean_dose=[], max_dose=[]))

@@ -19,7 +19,8 @@ class RadBioFrame:
 
         self.__set_properties()
         self.__do_layout()
-        # end wxGlade
+
+        self.disable_buttons()
 
     def __set_properties(self):
         # begin wxGlade: MyFrame.__set_properties
@@ -107,3 +108,12 @@ class RadBioFrame:
         # # sizer_wrapper.Fit(self)
         # self.Layout()
         self.layout = sizer_wrapper
+
+    def enable_buttons(self):
+        self.button_apply_parameters.Enable()
+
+    def disable_buttons(self):
+        self.button_apply_parameters.Disable()
+
+    def enable_initial_buttons(self):
+        self.button_apply_parameters.Enable()

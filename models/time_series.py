@@ -4,7 +4,7 @@
 
 import wx
 from plotting.plot import PlotTimeSeries
-from categories import Categories
+from db import sql_columns
 from datetime import datetime
 from dateutil import parser
 
@@ -15,7 +15,7 @@ class TimeSeriesFrame:
         self.dvh = dvh
         self.data = data
 
-        self.y_axis_options = Categories().range
+        self.y_axis_options = sql_columns.numerical
 
         self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, choices=[],
                                             style=wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -30,6 +30,8 @@ class TimeSeriesFrame:
 
         self.__set_properties()
         self.__do_layout()
+
+        self.disable_buttons()
 
     def __set_properties(self):
         choices = list(self.y_axis_options)
@@ -111,3 +113,12 @@ class TimeSeriesFrame:
 
     def clear_data(self):
         self.plot.update_plot([], [], [], '')
+
+    def enable_buttons(self):
+        self.button_update_plot.Enable()
+
+    def disable_buttons(self):
+        self.button_update_plot.Disable()
+
+    def enable_initial_buttons(self):
+        self.button_update_plot.Enable()

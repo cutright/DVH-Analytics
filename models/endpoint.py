@@ -3,7 +3,7 @@
 
 import wx
 from models.datatable import DataTable
-from dialogs.endpoint import EndpointDialog
+from dialogs.endpoint import AddEndpointDialog
 from copy import deepcopy
 
 
@@ -16,11 +16,11 @@ class EndpointFrame:
         self.parent = parent
         self.dvh = dvh
 
-        self.button_add = wx.Button(self.parent, wx.ID_ANY, "Add Endpoint")
-        self.button_del = wx.Button(self.parent, wx.ID_ANY, "Delete Endpoint")
-        self.button_edit = wx.Button(self.parent, wx.ID_ANY, "Edit Endpoint")
+        self.button = {'add': wx.Button(self.parent, wx.ID_ANY, "Add Endpoint"),
+                       'del': wx.Button(self.parent, wx.ID_ANY, "Delete Endpoint"),
+                       'edit': wx.Button(self.parent, wx.ID_ANY, "Edit Endpoint")}
 
-        self.parent.Bind(wx.EVT_BUTTON, self.add_ep_button_click, id=self.button_add.GetId())
+        self.parent.Bind(wx.EVT_BUTTON, self.add_ep_button_click, id=self.button['add'].GetId())
 
         self.table = wx.ListCtrl(self.parent, wx.ID_ANY,
                                  style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
@@ -32,6 +32,8 @@ class EndpointFrame:
         self.__set_properties()
         self.__do_layout()
 
+        self.disable_buttons()
+
     def __set_properties(self):
         self.table.AppendColumn("MRN", format=wx.LIST_FORMAT_LEFT, width=150)
         self.table.AppendColumn("ROI Name", format=wx.LIST_FORMAT_LEFT, width=250)
@@ -41,9 +43,8 @@ class EndpointFrame:
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         vbox = wx.BoxSizer(wx.VERTICAL)
         hbox = wx.BoxSizer(wx.HORIZONTAL)
-        hbox.Add(self.button_add, 0, wx.ALL, 5)
-        hbox.Add(self.button_del, 0, wx.ALL, 5)
-        hbox.Add(self.button_edit, 0, wx.ALL, 5)
+        for key in ['add', 'del', 'edit']:
+            hbox.Add(self.button[key], 0, wx.ALL, 5)
         vbox.Add(hbox, 0, wx.ALL | wx.EXPAND, 5)
         vbox.Add(self.table, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(vbox, 1, wx.ALL | wx.EXPAND, 20)
@@ -94,12 +95,13 @@ class EndpointFrame:
         self.data_table.set_column_width(1, 250)
 
     def add_ep_button_click(self, evt):
-        dlg = EndpointDialog(title='Add Endpoint')
+        dlg = AddEndpointDialog(title='Add Endpoint')
         res = dlg.ShowModal()
         if res == wx.ID_OK:
             if dlg.is_endpoint_valid:
                 self.endpoint_defs.append_row(dlg.endpoint_row)
                 self.calculate_endpoints()
+                self.enable_buttons()
         dlg.Destroy()
 
     def update_dvh(self, dvh):
@@ -108,3 +110,15 @@ class EndpointFrame:
     def clear_data(self):
         self.data_table.delete_all_rows()
         self.endpoint_defs.delete_all_rows()
+        self.dvh = None
+
+    def enable_buttons(self):
+        for key in ['add', 'del', 'edit']:
+            self.button[key].Enable()
+
+    def disable_buttons(self):
+        for key in ['add', 'del', 'edit']:
+            self.button[key].Disable()
+
+    def enable_initial_buttons(self):
+        self.button['add'].Enable()

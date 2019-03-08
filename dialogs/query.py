@@ -1,15 +1,40 @@
 import wx
-from categories import Categories
+from db import sql_columns
 from db.sql_connector import DVH_SQL
+
+
+def query_dlg(parent, query_type, title=None, set_values=False):
+    dlg = {'categorical': QueryCategoryDialog,
+           'numerical': QueryNumericalDialog}[query_type](title=title)
+    data_table = {'categorical': parent.data_table_categorical,
+                  'numerical': parent.data_table_numerical}[query_type]
+    selected_index = {'categorical': parent.selected_index_categorical,
+                      'numerical': parent.selected_index_numerical}[query_type]
+    if set_values:
+        dlg.set_values(data_table.get_row(selected_index))
+
+    res = dlg.ShowModal()
+    if res == wx.ID_OK:
+        row = dlg.get_values()
+        if set_values:
+            data_table.edit_row(row, selected_index)
+        else:
+            data_table.append_row(row)
+        parent.enable_query_buttons(query_type)
+    dlg.Destroy()
 
 
 class QueryCategoryDialog(wx.Dialog):
 
     def __init__(self, *args, **kw):
-        wx.Dialog.__init__(self, None, title=kw['title'])
+        wx.Dialog.__init__(self, None)
 
-        categories = Categories()
-        self.selector_categories = categories.selector
+        if 'title' in kw and kw['title']:
+            self.SetTitle(kw['title'])
+        else:
+            self.SetTitle('Query by Categorical Data')
+
+        self.selector_categories = sql_columns.categorical
 
         selector_options = list(self.selector_categories)
         selector_options.sort()
@@ -20,7 +45,6 @@ class QueryCategoryDialog(wx.Dialog):
         self.button_OK = wx.Button(self, wx.ID_OK, "OK")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
-        self.__set_properties()
         self.__do_layout()
 
         self.combo_box_1.SetValue('ROI Institutional Category')
@@ -30,13 +54,7 @@ class QueryCategoryDialog(wx.Dialog):
         self.SetSize((500, 160))
         self.Center()
 
-    def __set_properties(self):
-        # begin wxGlade: MyFrame.__set_properties
-        self.SetTitle("Query by Categorical Data")
-        # end wxGlade
-
     def __do_layout(self):
-        # begin wxGlade: MyFrame.__do_layout
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_vbox = wx.BoxSizer(wx.VERTICAL)
         sizer_ok_cancel = wx.BoxSizer(wx.HORIZONTAL)
@@ -93,18 +111,22 @@ class QueryCategoryDialog(wx.Dialog):
                 self.checkbox_1.GetValue()]
 
 
-class QueryRangeDialog(wx.Dialog):
+class QueryNumericalDialog(wx.Dialog):
 
     def __init__(self, *args, **kw):
-        wx.Dialog.__init__(self, None, title="Add Range Filter")
+        wx.Dialog.__init__(self, None)
 
-        categories = Categories()
-        self.range_categories = categories.range
+        if 'title' in kw and kw['title']:
+            self.SetTitle(kw['title'])
+        else:
+            self.SetTitle('Query by Numerical Data')
 
-        selector_options = list(self.range_categories)
-        selector_options.sort()
+        self.numerical_categories = sql_columns.numerical
 
-        self.combo_box_1 = wx.ComboBox(self, wx.ID_ANY, choices=selector_options, style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        numerical_options = list(self.numerical_categories)
+        numerical_options.sort()
+
+        self.combo_box_1 = wx.ComboBox(self, wx.ID_ANY, choices=numerical_options, style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.text_ctrl_min = wx.TextCtrl(self, wx.ID_ANY, "")
         self.text_ctrl_max = wx.TextCtrl(self, wx.ID_ANY, "")
         self.checkbox_1 = wx.CheckBox(self, wx.ID_ANY, "Not")
@@ -116,13 +138,7 @@ class QueryRangeDialog(wx.Dialog):
 
         self.Bind(wx.EVT_COMBOBOX, self.update_range, id=self.combo_box_1.GetId())
 
-        self.__set_properties()
         self.__do_layout()
-
-    def __set_properties(self):
-        # begin wxGlade: MyFrame.__set_properties
-        self.SetTitle("Query by Numerical Data")
-        # end wxGlade
 
     def __do_layout(self):
         # begin wxGlade: MyFrame.__do_layout
@@ -159,9 +175,9 @@ class QueryRangeDialog(wx.Dialog):
     def update_range(self, evt):
         cnx = DVH_SQL()
         key = self.combo_box_1.GetValue()
-        table = self.range_categories[key]['table']
-        col = self.range_categories[key]['var_name']
-        units = self.range_categories[key]['units']
+        table = self.numerical_categories[key]['table']
+        col = self.numerical_categories[key]['var_name']
+        units = self.numerical_categories[key]['units']
         min_value = cnx.get_min_value(table, col)
         max_value = cnx.get_max_value(table, col)
         cnx.close()
@@ -208,8 +224,8 @@ class QueryRangeDialog(wx.Dialog):
         except ValueError:
             cnx = DVH_SQL()
             key = self.combo_box_1.GetValue()
-            table = self.range_categories[key]['table']
-            col = self.range_categories[key]['var_name']
+            table = self.numerical_categories[key]['table']
+            col = self.numerical_categories[key]['var_name']
             if input_type == 'min':
                 new_value = cnx.get_min_value(table, col)
             else:
