@@ -225,7 +225,10 @@ class PlotTimeSeries:
         center = (bins[:-1] + bins[1:]) / 2.
         self.source['hist'].data = {'x': center, 'top': hist, 'width': width}
 
-        self.update_trend(avg_len, percentile)
+        if x:
+            self.update_trend(avg_len, percentile)
+        else:
+            self.clear_additional_plot_sources()
 
         html_str = get_layout_html(self.bokeh_layout)
         self.layout.SetPage(html_str, "")
@@ -253,3 +256,8 @@ class PlotTimeSeries:
                                      'lower': [lower_bound] * x_len}
         self.source['patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
                                      'y': [upper_bound, upper_bound, lower_bound, lower_bound]}
+
+    def clear_additional_plot_sources(self):
+        self.source['trend'].data = {'x': [], 'y': [], 'mrn': []}
+        self.source['bound'].data = {'x': [], 'mrn': [], 'upper': [], 'avg': [], 'lower': []}
+        self.source['patch'].data = {'x': [], 'y': []}
