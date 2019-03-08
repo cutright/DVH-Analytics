@@ -15,8 +15,21 @@ def get_study_instance_uids(**kwargs):
 
 
 def is_uid_in_all_keys(uid, uids):
-    is_uid_in_table = {table: uid in table_uids for table, table_uids in uids.items()}
-    return all([list(is_uid_in_table.values())])
+    key_answer = {}
+    # Initialize a False value for each key
+    for key in list(uids):
+        key_answer[key] = False
+    # search for uid in each keyword fof uid_kwlist
+    for key, value in uids.items():
+        if uid in value:
+            key_answer[key] = True
+
+    final_answer = True
+    # Product of all answer[key] values (except 'unique')
+    for key, value in key_answer.items():
+        if key not in 'unique':
+            final_answer *= value
+    return final_answer
 
 
 def flatten_list_of_lists(some_list, remove_duplicates=False, sort=False):

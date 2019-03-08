@@ -53,8 +53,8 @@ class MainFrame(wx.Frame):
         self.button_query_execute.Disable()
         self.__disable_notebook_tabs()
 
-        columns = {'categorical': ['category_1', 'category_2', 'not'],
-                   'numerical': ['category', 'min', 'max', 'not']}
+        columns = {'categorical': ['category_1', 'category_2', 'Filt. Type'],
+                   'numerical': ['category', 'min', 'max', 'Filt. Type']}
         self.data_table_categorical = DataTable(self.table_categorical, columns=columns['categorical'])
         self.data_table_numerical = DataTable(self.table_numerical, columns=columns['numerical'])
 
@@ -160,12 +160,12 @@ class MainFrame(wx.Frame):
 
         self.table_categorical.AppendColumn("Category1", format=wx.LIST_FORMAT_LEFT, width=180)
         self.table_categorical.AppendColumn("Category2", format=wx.LIST_FORMAT_LEFT, width=150)
-        self.table_categorical.AppendColumn("Apply Not", format=wx.LIST_FORMAT_LEFT, width=80)
+        self.table_categorical.AppendColumn("Filt. Type", format=wx.LIST_FORMAT_LEFT, width=80)
 
         self.table_numerical.AppendColumn("Category", format=wx.LIST_FORMAT_LEFT, width=150)
         self.table_numerical.AppendColumn("Min", format=wx.LIST_FORMAT_LEFT, width=90)
         self.table_numerical.AppendColumn("Max", format=wx.LIST_FORMAT_LEFT, width=90)
-        self.table_numerical.AppendColumn("Apply Not", format=wx.LIST_FORMAT_LEFT, width=80)
+        self.table_numerical.AppendColumn("Filt. Type", format=wx.LIST_FORMAT_LEFT, width=80)
 
     def __set_tooltips(self):
         self.button_categorical['add'].SetToolTip("Add a categorical data filter.")
@@ -386,7 +386,7 @@ class MainFrame(wx.Frame):
                 value = self.data_table_categorical.data['category_2'][i]
                 if col not in queries_by_sql_column[table]:
                     queries_by_sql_column[table][col] = []
-                operator = ['=', '!='][bool(self.data_table_categorical.data['not'][i])]
+                operator = ['=', '!='][{'Include': 0, 'Exclude': 1}[self.data_table_categorical.data['Filt. Type'][i]]]
                 queries_by_sql_column[table][col].append("%s %s '%s'" % (col, operator, value))
 
         # Range filter
@@ -398,7 +398,7 @@ class MainFrame(wx.Frame):
                 value_high = self.data_table_numerical.data['max'][i]
                 if col not in queries_by_sql_column[table]:
                     queries_by_sql_column[table][col] = []
-                operator = ['BETWEEN', 'NOT BETWEEN'][bool(self.data_table_numerical.data['not'][i])]
+                operator = ['BETWEEN', 'NOT BETWEEN'][{'Include': 0, 'Exclude': 1}[self.data_table_numerical.data['Filt. Type'][i]]]
                 queries_by_sql_column[table][col].append("%s %s %s AND %s" % (col, operator, value_low, value_high))
 
         for table in queries:
@@ -406,7 +406,11 @@ class MainFrame(wx.Frame):
                 queries[table].append("(%s)" % ' OR '.join(queries_by_sql_column[table][col]))
             queries[table] = ' AND '.join(queries[table])
 
+        print(queries)
+
         uids = get_study_instance_uids(plans=queries['Plans'], rxs=queries['Rxs'], beams=queries['Beams'])['common']
+
+        print(queries['Plans'])
 
         return uids, queries['DVHs']
 

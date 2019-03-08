@@ -41,7 +41,7 @@ class QueryCategoryDialog(wx.Dialog):
 
         self.combo_box_1 = wx.ComboBox(self, wx.ID_ANY, choices=selector_options, style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_2 = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.checkbox_1 = wx.CheckBox(self, wx.ID_ANY, "Not")
+        self.checkbox_1 = wx.CheckBox(self, wx.ID_ANY, "Exclude")
         self.button_OK = wx.Button(self, wx.ID_OK, "OK")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
@@ -103,12 +103,12 @@ class QueryCategoryDialog(wx.Dialog):
     def set_values(self, values):
         self.set_category_1(values[0])
         self.set_category_2(values[1])
-        self.set_check_box_not(bool(values[2]))
+        self.set_check_box_not({'Include': False, 'Exclude': True}[values[2]])
 
     def get_values(self):
         return [self.combo_box_1.GetValue(),
                 self.combo_box_2.GetValue(),
-                self.checkbox_1.GetValue()]
+                ['Include', 'Exclude'][self.checkbox_1.GetValue()]]
 
 
 class QueryNumericalDialog(wx.Dialog):
@@ -129,7 +129,7 @@ class QueryNumericalDialog(wx.Dialog):
         self.combo_box_1 = wx.ComboBox(self, wx.ID_ANY, choices=numerical_options, style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.text_ctrl_min = wx.TextCtrl(self, wx.ID_ANY, "")
         self.text_ctrl_max = wx.TextCtrl(self, wx.ID_ANY, "")
-        self.checkbox_1 = wx.CheckBox(self, wx.ID_ANY, "Not")
+        self.checkbox_1 = wx.CheckBox(self, wx.ID_ANY, "Exclude")
         self.button_OK = wx.Button(self, wx.ID_OK, "OK")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
@@ -208,13 +208,13 @@ class QueryNumericalDialog(wx.Dialog):
         self.set_category(values[0])
         self.set_min_value(str(values[1]))
         self.set_max_value(str(values[2]))
-        self.set_check_box_not(bool(values[3]))
+        self.set_check_box_not({'Include': False, 'Exclude': True}[values[3]])
 
     def get_values(self):
         return [self.combo_box_1.GetValue(),
                 self.text_ctrl_min.GetValue(),
                 self.text_ctrl_max.GetValue(),
-                self.checkbox_1.GetValue()]
+                ['Include', 'Exclude'][self.checkbox_1.GetValue()]]
 
     def validated_text(self, input_type):
         old_value = {'min': self.text_ctrl_min.GetValue(), 'max': self.text_ctrl_max.GetValue()}[input_type]
