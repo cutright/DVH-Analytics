@@ -7,7 +7,7 @@ from dialogs.query import query_dlg
 from dialogs.sql_settings import SQLSettingsDialog
 from db import sql_columns
 from models.datatable import DataTable
-from plotting.plot import PlotStatDVH
+from models.plot import PlotStatDVH
 from models.dvh import DVH
 from models.endpoint import EndpointFrame
 from models.rad_bio import RadBioFrame

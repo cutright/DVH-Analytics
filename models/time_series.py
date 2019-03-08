@@ -3,7 +3,7 @@
 
 
 import wx
-from plotting.plot import PlotTimeSeries
+from models.plot import PlotTimeSeries
 from db import sql_columns
 from datetime import datetime
 from dateutil import parser
