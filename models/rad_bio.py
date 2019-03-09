@@ -12,17 +12,20 @@ class RadBioFrame:
         self.dvh = dvh
 
         self.table_published_values = wx.ListCtrl(self.parent, wx.ID_ANY,
-                                                  style=wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
+                                                  style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
         self.text_input_eud = wx.TextCtrl(self.parent, wx.ID_ANY, "")
         self.text_input_gamma_50 = wx.TextCtrl(self.parent, wx.ID_ANY, "")
         self.text_input_td_50 = wx.TextCtrl(self.parent, wx.ID_ANY, "")
         self.button_apply_parameters = wx.Button(self.parent, wx.ID_ANY, "Apply Parameters")
-        self.radio_box_apply = wx.RadioBox(self.parent, wx.ID_ANY, "Apply to:", choices=["All", "Selected"],
-                                           majorDimension=1, style=wx.RA_SPECIFY_ROWS)
-        self.table_rad_bio = wx.ListCtrl(self.parent, wx.ID_ANY, style=wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
+        self.table_rad_bio = wx.ListCtrl(self.parent, wx.ID_ANY,
+                                         style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
         self.columns = ['MRN', 'ROI Name', 'a', u'\u03b3_50', 'TD or TCD', 'EUD', 'NTCP or TCP', 'PTV Overlap',
                         'ROI Type', 'Rx Dose', 'Total Fxs', 'Fx Dose']
         self.data_table_rad_bio = DataTable(self.table_rad_bio, columns=self.columns)
+
+        # Adding wx.RadioBox prior to data table_rad_bio causes display glitch
+        self.radio_box_apply = wx.RadioBox(self.parent, wx.ID_ANY, "Apply to:", choices=["All", "Selected"],
+                                           majorDimension=1, style=wx.RA_SPECIFY_ROWS)
 
         self.__set_properties()
         self.__do_layout()
@@ -39,7 +42,7 @@ class RadBioFrame:
         self.table_published_values.AppendColumn("TD_50", format=wx.LIST_FORMAT_LEFT, width=-1)
         self.radio_box_apply.SetSelection(0)
 
-        width = [100, 150, 50, 50, -1, 80, -1, -1, -1, -1, -1, -1]
+        width = [100, 150, 50, 50, 80, 80, 80, 100, 100, 100, 100, 100]
         for i, col in enumerate(self.columns):
             self.table_rad_bio.AppendColumn(col, format=wx.LIST_FORMAT_LEFT, width=width[i])
 
@@ -101,8 +104,7 @@ class RadBioFrame:
         sizer_parameters_input.Add(self.radio_box_apply, 0, wx.EXPAND, 0)
         sizer_parameters.Add(sizer_parameters_input, 1, wx.ALL | wx.EXPAND, 5)
         sizer_main.Add(sizer_parameters, 0, wx.ALL | wx.EXPAND, 10)
-        self.table_rad_bio.SetMinSize((500, 335))
-        sizer_main.Add(self.table_rad_bio, 0, wx.ALL | wx.EXPAND, 10)
+        sizer_main.Add(self.table_rad_bio, 1, wx.ALL | wx.EXPAND, 10)
         self.layout = sizer_main
 
     def enable_buttons(self):
