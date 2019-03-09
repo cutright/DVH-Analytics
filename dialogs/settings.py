@@ -3,33 +3,57 @@
 
 
 import wx
-from options import get_settings, parse_settings_file
+import matplotlib.colors as plot_colors
+from options import load_options, get_settings, parse_settings_file
 
 
 class UserSettings(wx.Dialog):
     def __init__(self, *args, **kw):
         wx.Dialog.__init__(self, None, title="User Settings")
 
-        self.SetSize((747, 580))
+        self.options = load_options()
+
+        colors = list(plot_colors.cnames)
+        colors.sort()
+
+        color_variables = self.get_option_choices('COLOR')
+        size_variables = self.get_option_choices('SIZE')
+        width_variables = self.get_option_choices('LINE_WIDTH')
+        line_dash_variables = self.get_option_choices('LINE_DASH')
+        alpha_variables = self.get_option_choices('ALPHA')
+
+        line_style_options = ['solid', 'dashed', 'dotted', 'dotdash', 'dashdot']
+
+        self.SetSize((500, 580))
         self.text_ctrl_inbox = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_DONTWRAP)
         self.button_inbox = wx.Button(self, wx.ID_ANY, u"…")
         self.text_ctrl_imported = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_DONTWRAP)
         self.button_imported = wx.Button(self, wx.ID_ANY, u"…")
-        self.combo_box_colors_category = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.combo_box_colors_selection = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.combo_box_sizes_category = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.combo_box_colors_category = wx.ComboBox(self, wx.ID_ANY, choices=color_variables,
+                                                     style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.combo_box_colors_selection = wx.ComboBox(self, wx.ID_ANY, choices=colors,
+                                                      style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.combo_box_sizes_category = wx.ComboBox(self, wx.ID_ANY, choices=size_variables,
+                                                    style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.text_ctrl_sizes_input = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_DONTWRAP | wx.TE_PROCESS_ENTER)
-        self.combo_box_line_widths_category = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
+        self.combo_box_line_widths_category = wx.ComboBox(self, wx.ID_ANY, choices=width_variables,
+                                                          style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.text_ctrl_line_widths_input = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_PROCESS_ENTER)
-        self.combo_box_line_styles_category = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
-        self.combo_box_line_styles_selection = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
-        self.combo_box_alpha_category = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
+        self.combo_box_line_styles_category = wx.ComboBox(self, wx.ID_ANY, choices=line_dash_variables,
+                                                          style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.combo_box_line_styles_selection = wx.ComboBox(self, wx.ID_ANY, choices=line_style_options,
+                                                           style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.combo_box_alpha_category = wx.ComboBox(self, wx.ID_ANY, choices=alpha_variables,
+                                                    style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.text_ctrl_alpha_input = wx.TextCtrl(self, wx.ID_ANY, "")
         self.button_ok = wx.Button(self, wx.ID_OK, "OK")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
         self.__set_properties()
         self.__do_layout()
+
+        self.Bind(wx.EVT_BUTTON, self.inbox_dir_dlg, id=self.button_inbox.GetId())
+        self.Bind(wx.EVT_BUTTON, self.imported_dir_dlg, id=self.button_imported.GetId())
 
         self.Center()
 
@@ -41,13 +65,13 @@ class UserSettings(wx.Dialog):
         self.text_ctrl_imported.SetToolTip("Directory for post-processed DICOM files")
         self.button_imported.SetMinSize((40, 21))
         self.combo_box_colors_category.SetMinSize((250, 25))
-        self.combo_box_colors_selection.SetMinSize((250, 25))
+        self.combo_box_colors_selection.SetMinSize((145, 25))
         self.combo_box_sizes_category.SetMinSize((250, 25))
         self.text_ctrl_sizes_input.SetMinSize((50, 22))
         self.combo_box_line_widths_category.SetMinSize((250, 25))
         self.text_ctrl_line_widths_input.SetMinSize((50, 22))
         self.combo_box_line_styles_category.SetMinSize((250, 25))
-        self.combo_box_line_styles_selection.SetMinSize((250, 25))
+        self.combo_box_line_styles_selection.SetMinSize((145, 25))
         self.combo_box_alpha_category.SetMinSize((250, 25))
         self.text_ctrl_alpha_input.SetMinSize((50, 22))
         # end wxGlade
@@ -76,7 +100,7 @@ class UserSettings(wx.Dialog):
         sizer_inbox_input = wx.BoxSizer(wx.HORIZONTAL)
         label_inbox = wx.StaticText(self, wx.ID_ANY, "Inbox:")
         label_inbox.SetToolTip("Default directory for batch processing of incoming DICOM files")
-        sizer_inbox.Add(label_inbox, 0, 0, 0)
+        sizer_inbox.Add(label_inbox, 0, 0, 5)
         sizer_inbox_input.Add(self.text_ctrl_inbox, 1, wx.ALL, 5)
         sizer_inbox_input.Add(self.button_inbox, 0, wx.ALL, 5)
         sizer_inbox.Add(sizer_inbox_input, 1, wx.EXPAND, 0)
@@ -84,7 +108,7 @@ class UserSettings(wx.Dialog):
         sizer_dicom_directories.Add(sizer_inbox_wrapper, 1, wx.EXPAND, 0)
         label_imported = wx.StaticText(self, wx.ID_ANY, "Imported:")
         label_imported.SetToolTip("Directory for post-processed DICOM files")
-        sizer_imported.Add(label_imported, 0, 0, 0)
+        sizer_imported.Add(label_imported, 0, 0, 5)
         sizer_imported_input.Add(self.text_ctrl_imported, 1, wx.ALL, 5)
         sizer_imported_input.Add(self.button_imported, 0, wx.ALL, 5)
         sizer_imported.Add(sizer_imported_input, 1, wx.EXPAND, 0)
@@ -132,3 +156,28 @@ class UserSettings(wx.Dialog):
         sizer_wrapper.Add(sizer_ok_cancel, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
         self.SetSizer(sizer_wrapper)
         self.Layout()
+
+    def inbox_dir_dlg(self, evt):
+        dlg = wx.DirDialog(self, "Select inbox directory", "", wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.text_ctrl_inbox.SetValue(dlg.GetPath())
+        dlg.Destroy()
+
+    def imported_dir_dlg(self, evt):
+        dlg = wx.DirDialog(self, "Select imported directory", "", wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.text_ctrl_imported.SetValue(dlg.GetPath())
+        dlg.Destroy()
+
+    def get_option_choices(self, category):
+        choices = [self.clean_option_variable(c) for c in self.options.__dict__ if c.find(category) > -1]
+        choices.sort()
+        return choices
+
+    @staticmethod
+    def clean_option_variable(option_variable, inverse=False):
+        if inverse:
+            return option_variable.upper().replace(' ', '_')
+        else:
+            return option_variable.replace('_', ' ').title().replace('Dvh', 'DVH').replace('Iqr', 'IQR')
+
