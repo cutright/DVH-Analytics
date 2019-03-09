@@ -313,7 +313,9 @@ class MainFrame(wx.Frame):
         dlg = UserSettings()
         res = dlg.ShowModal()
         if res == wx.ID_OK:
-            print('OH YEAH')
+            dlg.save_options()
+        else:
+            dlg.revert_options()
         dlg.Destroy()
 
     # --------------------------------------------------------------------------------------------------------------

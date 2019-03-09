@@ -6,6 +6,7 @@ import wx
 import matplotlib.colors as plot_colors
 from options import load_options, save_options, get_settings, parse_settings_file
 from os.path import isdir
+from copy import deepcopy
 
 
 class UserSettings(wx.Dialog):
@@ -13,6 +14,7 @@ class UserSettings(wx.Dialog):
         wx.Dialog.__init__(self, None, title="User Settings")
 
         self.options = load_options()
+        self.initial_options = deepcopy(self.options)
 
         colors = list(plot_colors.cnames)
         colors.sort()
@@ -200,6 +202,9 @@ class UserSettings(wx.Dialog):
     def save_options(self):
         save_options(self.options)
 
+    def revert_options(self):
+        save_options(self.initial_options)
+
     def update_input_colors_var(self, evt):
         var = self.clean_option_variable(self.combo_box_colors_category.GetValue(), inverse=True)
         self.combo_box_colors_selection.SetValue(getattr(self.options, var))
@@ -208,7 +213,6 @@ class UserSettings(wx.Dialog):
         var = self.clean_option_variable(self.combo_box_colors_category.GetValue(), inverse=True)
         new = self.combo_box_colors_selection.GetValue()
         setattr(self.options, var, new)
-        self.save_options()
 
     def update_size_var(self, evt):
         var = self.clean_option_variable(self.combo_box_sizes_category.GetValue(), inverse=True)
@@ -232,7 +236,6 @@ class UserSettings(wx.Dialog):
 
         var = self.clean_option_variable(self.combo_box_sizes_category.GetValue(), inverse=True)
         setattr(self.options, var, size)
-        self.save_options()
 
     def update_line_width_var(self, evt):
         var = self.clean_option_variable(self.combo_box_line_widths_category.GetValue(), inverse=True)
@@ -246,7 +249,6 @@ class UserSettings(wx.Dialog):
             line_width = 1.
         var = self.clean_option_variable(self.combo_box_line_widths_category.GetValue(), inverse=True)
         setattr(self.options, var, line_width)
-        self.save_options()
 
     def update_line_style_var(self, evt):
         var = self.clean_option_variable(self.combo_box_line_styles_category.GetValue(), inverse=True)
@@ -256,7 +258,6 @@ class UserSettings(wx.Dialog):
         var = self.clean_option_variable(self.combo_box_line_styles_category.GetValue(), inverse=True)
         new = self.combo_box_line_styles_selection.GetValue()
         setattr(self.options, var, new)
-        self.save_options()
 
     def update_alpha_var(self, evt):
         var = self.clean_option_variable(self.combo_box_alpha_category.GetValue(), inverse=True)
@@ -270,7 +271,6 @@ class UserSettings(wx.Dialog):
             alpha = 1.
         var = self.clean_option_variable(self.combo_box_alpha_category.GetValue(), inverse=True)
         setattr(self.options, var, alpha)
-        self.save_options()
 
     def load_options(self):
         self.update_alpha_var(None)
