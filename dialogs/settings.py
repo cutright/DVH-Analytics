@@ -4,7 +4,8 @@
 
 import wx
 import matplotlib.colors as plot_colors
-from options import load_options, get_settings, parse_settings_file
+from options import load_options, save_options, get_settings, parse_settings_file
+from os.path import isdir
 
 
 class UserSettings(wx.Dialog):
@@ -54,6 +55,15 @@ class UserSettings(wx.Dialog):
 
         self.Bind(wx.EVT_BUTTON, self.inbox_dir_dlg, id=self.button_inbox.GetId())
         self.Bind(wx.EVT_BUTTON, self.imported_dir_dlg, id=self.button_imported.GetId())
+
+        self.Bind(wx.EVT_COMBOBOX, self.update_input_colors_var, id=self.combo_box_colors_category.GetId())
+        self.Bind(wx.EVT_COMBOBOX, self.update_size_var, id=self.combo_box_sizes_category.GetId())
+        self.Bind(wx.EVT_COMBOBOX, self.update_line_width_var, id=self.combo_box_line_widths_category.GetId())
+        self.Bind(wx.EVT_COMBOBOX, self.update_line_style_var, id=self.combo_box_line_styles_category.GetId())
+        self.Bind(wx.EVT_COMBOBOX, self.update_alpha_var, id=self.combo_box_alpha_category.GetId())
+
+        self.load_options()
+        self.load_paths()
 
         self.Center()
 
@@ -158,13 +168,19 @@ class UserSettings(wx.Dialog):
         self.Layout()
 
     def inbox_dir_dlg(self, evt):
-        dlg = wx.DirDialog(self, "Select inbox directory", "", wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
+        starting_dir = self.text_ctrl_inbox.GetValue()
+        if not isdir(starting_dir):
+            starting_dir = ""
+        dlg = wx.DirDialog(self, "Select inbox directory", starting_dir, wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:
             self.text_ctrl_inbox.SetValue(dlg.GetPath())
         dlg.Destroy()
 
     def imported_dir_dlg(self, evt):
-        dlg = wx.DirDialog(self, "Select imported directory", "", wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
+        starting_dir = self.text_ctrl_imported.GetValue()
+        if not isdir(starting_dir):
+            starting_dir = ""
+        dlg = wx.DirDialog(self, "Select imported directory", starting_dir, wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:
             self.text_ctrl_imported.SetValue(dlg.GetPath())
         dlg.Destroy()
@@ -181,3 +197,90 @@ class UserSettings(wx.Dialog):
         else:
             return option_variable.replace('_', ' ').title().replace('Dvh', 'DVH').replace('Iqr', 'IQR')
 
+    def save_options(self):
+        save_options(self.options)
+
+    def update_input_colors_var(self, evt):
+        var = self.clean_option_variable(self.combo_box_colors_category.GetValue(), inverse=True)
+        self.combo_box_colors_selection.SetValue(getattr(self.options, var))
+
+    def update_input_colors_val(self, evt):
+        var = self.clean_option_variable(self.combo_box_colors_category.GetValue(), inverse=True)
+        new = self.combo_box_colors_selection.GetValue()
+        setattr(self.options, var, new)
+        self.save_options()
+
+    def update_size_var(self, evt):
+        var = self.clean_option_variable(self.combo_box_sizes_category.GetValue(), inverse=True)
+        try:
+            self.text_ctrl_sizes_input.SetValue(getattr(self.options, var).replace('pt', ''))
+        except AttributeError:
+            self.text_ctrl_sizes_input.SetValue(str(getattr(self.options, var)))
+
+    def update_size_val(self, evt):
+        new = self.text_ctrl_sizes_input.GetValue()
+        if 'FONT' in self.combo_box_sizes_category.GetValue():
+            try:
+                size = str(int(new)) + 'pt'
+            except ValueError:
+                size = '10pt'
+        else:
+            try:
+                size = float(new)
+            except ValueError:
+                size = 1.
+
+        var = self.clean_option_variable(self.combo_box_sizes_category.GetValue(), inverse=True)
+        setattr(self.options, var, size)
+        self.save_options()
+
+    def update_line_width_var(self, evt):
+        var = self.clean_option_variable(self.combo_box_line_widths_category.GetValue(), inverse=True)
+        self.text_ctrl_line_widths_input.SetValue(str(getattr(self.options, var)))
+
+    def update_line_width_val(self, evt):
+        new = self.text_ctrl_line_widths_input.GetValue()
+        try:
+            line_width = float(new)
+        except ValueError:
+            line_width = 1.
+        var = self.clean_option_variable(self.combo_box_line_widths_category.GetValue(), inverse=True)
+        setattr(self.options, var, line_width)
+        self.save_options()
+
+    def update_line_style_var(self, evt):
+        var = self.clean_option_variable(self.combo_box_line_styles_category.GetValue(), inverse=True)
+        self.combo_box_line_styles_selection.SetValue(getattr(self.options, var))
+
+    def update_line_style_val(self, evt):
+        var = self.clean_option_variable(self.combo_box_line_styles_category.GetValue(), inverse=True)
+        new = self.combo_box_line_styles_selection.GetValue()
+        setattr(self.options, var, new)
+        self.save_options()
+
+    def update_alpha_var(self, evt):
+        var = self.clean_option_variable(self.combo_box_alpha_category.GetValue(), inverse=True)
+        self.text_ctrl_alpha_input.SetValue(str(getattr(self.options, var)))
+
+    def update_alpha_val(self, evt):
+        new = self.text_ctrl_line_widths_input.GetValue()
+        try:
+            alpha = float(new)
+        except ValueError:
+            alpha = 1.
+        var = self.clean_option_variable(self.combo_box_alpha_category.GetValue(), inverse=True)
+        setattr(self.options, var, alpha)
+        self.save_options()
+
+    def load_options(self):
+        self.update_alpha_var(None)
+        self.update_input_colors_var(None)
+        self.update_line_style_var(None)
+        self.update_line_width_var(None)
+        self.update_size_var(None)
+
+    def load_paths(self):
+        abs_file_path = get_settings('import')
+        paths = parse_settings_file(abs_file_path)
+        self.text_ctrl_inbox.SetValue(paths['inbox'])
+        self.text_ctrl_imported.SetValue(paths['imported'])
