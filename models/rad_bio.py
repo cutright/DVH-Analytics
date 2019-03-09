@@ -3,6 +3,20 @@
 
 import wx
 from models.datatable import DataTable
+from models.dvh import calc_eud, calc_tcp
+import wx.lib.mixins.listctrl as listmix
+from copy import deepcopy
+
+
+class EditableListCtrl(wx.ListCtrl, listmix.TextEditMixin):
+    ''' TextEditMixin allows any column to be edited. '''
+
+    # ----------------------------------------------------------------------
+    def __init__(self, parent, ID=wx.ID_ANY, pos=wx.DefaultPosition,
+                 size=wx.DefaultSize, style=0):
+        """Constructor"""
+        wx.ListCtrl.__init__(self, parent, ID, pos, size, style)
+        listmix.TextEditMixin.__init__(self)
 
 
 class RadBioFrame:
@@ -13,24 +27,25 @@ class RadBioFrame:
 
         self.table_published_values = wx.ListCtrl(self.parent, wx.ID_ANY,
                                                   style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
-        self.text_input_eud = wx.TextCtrl(self.parent, wx.ID_ANY, "")
+        self.text_input_eud_a = wx.TextCtrl(self.parent, wx.ID_ANY, "")
         self.text_input_gamma_50 = wx.TextCtrl(self.parent, wx.ID_ANY, "")
         self.text_input_td_50 = wx.TextCtrl(self.parent, wx.ID_ANY, "")
         self.button_apply_parameters = wx.Button(self.parent, wx.ID_ANY, "Apply Parameters")
-        self.table_rad_bio = wx.ListCtrl(self.parent, wx.ID_ANY,
-                                         style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
+        self.table_rad_bio = EditableListCtrl(self.parent, ID= wx.ID_ANY, style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
         self.columns = ['MRN', 'ROI Name', 'a', u'\u03b3_50', 'TD or TCD', 'EUD', 'NTCP or TCP', 'PTV Overlap',
                         'ROI Type', 'Rx Dose', 'Total Fxs', 'Fx Dose']
-        self.data_table_rad_bio = DataTable(self.table_rad_bio, columns=self.columns)
+        self.width = [100, 175, 50, 50, 80, 80, 80, 100, 100, 100, 100, 100]
+        self.data_table_rad_bio = DataTable(self.table_rad_bio, columns=self.columns, widths=self.width)
 
         # Adding wx.RadioBox prior to data table_rad_bio causes display glitch
-        self.radio_box_apply = wx.RadioBox(self.parent, wx.ID_ANY, "Apply to:", choices=["All", "Selected"],
-                                           majorDimension=1, style=wx.RA_SPECIFY_ROWS)
+        # self.radio_box_apply = wx.RadioBox(self.parent, wx.ID_ANY, "Apply to:", choices=["All", "Selected"],
+        #                                    majorDimension=1, style=wx.RA_SPECIFY_ROWS)
 
         self.__set_properties()
         self.__do_layout()
 
         parent.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_parameter_select, self.table_published_values)
+        parent.Bind(wx.EVT_BUTTON, self.apply_parameters, id=self.button_apply_parameters.GetId())
 
         self.disable_buttons()
 
@@ -40,11 +55,10 @@ class RadBioFrame:
         self.table_published_values.AppendColumn("a", format=wx.LIST_FORMAT_LEFT, width=-1)
         self.table_published_values.AppendColumn(u"\u03b3_50", format=wx.LIST_FORMAT_LEFT, width=-1)
         self.table_published_values.AppendColumn("TD_50", format=wx.LIST_FORMAT_LEFT, width=-1)
-        self.radio_box_apply.SetSelection(0)
+        # self.radio_box_apply.SetSelection(0)
 
-        width = [100, 150, 50, 50, 80, 80, 80, 100, 100, 100, 100, 100]
         for i, col in enumerate(self.columns):
-            self.table_rad_bio.AppendColumn(col, format=wx.LIST_FORMAT_LEFT, width=width[i])
+            self.table_rad_bio.AppendColumn(col, format=wx.LIST_FORMAT_LEFT, width=self.width[i])
 
         self.published_data = [['Brain', 'Necrosis', 5, 3, 60],
                                ['Brainstem', 'Necrosis', 7, 3, 65],
@@ -89,7 +103,7 @@ class RadBioFrame:
         sizer_parameters.Add(label_parameters, 0, 0, 0)
         label_eud = wx.StaticText(self.parent, wx.ID_ANY, "EUD a-value:")
         sizer_eud.Add(label_eud, 0, 0, 0)
-        sizer_eud.Add(self.text_input_eud, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_eud.Add(self.text_input_eud_a, 0, wx.ALL | wx.EXPAND, 5)
         sizer_parameters_input.Add(sizer_eud, 1, wx.EXPAND, 0)
         label_gamma_50 = wx.StaticText(self.parent, wx.ID_ANY, u"\u03b3_50:")
         sizer_gamma_50.Add(label_gamma_50, 0, 0, 0)
@@ -101,7 +115,7 @@ class RadBioFrame:
         sizer_parameters_input.Add(sizer_td_50, 1, wx.EXPAND, 0)
         sizer_button.Add(self.button_apply_parameters, 1, wx.ALL | wx.EXPAND, 15)
         sizer_parameters_input.Add(sizer_button, 1, wx.EXPAND, 0)
-        sizer_parameters_input.Add(self.radio_box_apply, 0, wx.EXPAND, 0)
+        # sizer_parameters_input.Add(self.radio_box_apply, 0, wx.EXPAND, 0)
         sizer_parameters.Add(sizer_parameters_input, 1, wx.ALL | wx.EXPAND, 5)
         sizer_main.Add(sizer_parameters, 0, wx.ALL | wx.EXPAND, 10)
         sizer_main.Add(self.table_rad_bio, 1, wx.ALL | wx.EXPAND, 10)
@@ -119,7 +133,7 @@ class RadBioFrame:
     def on_parameter_select(self, evt):
         index = self.table_published_values.GetFirstSelected()
 
-        self.text_input_eud.SetValue(str(self.published_data[index][2]))
+        self.text_input_eud_a.SetValue(str(self.published_data[index][2]))
         self.text_input_gamma_50.SetValue(str(self.published_data[index][3]))
         self.text_input_td_50.SetValue(str(self.published_data[index][4]))
 
@@ -138,3 +152,30 @@ class RadBioFrame:
                 'Total Fxs': self.dvh.get_plan_values('fxs'),
                 'Fx Dose': self.dvh.get_rx_values('fx_dose')}
         self.data_table_rad_bio.set_data(data, self.columns)
+
+    def apply_parameters(self, evt):
+        selected_indices = get_selected_items(self.table_rad_bio)
+        if not selected_indices:
+            selected_indices = range(self.data_table_rad_bio.row_count)
+        for i in selected_indices:
+            current_row = self.data_table_rad_bio.get_row(i)
+            new_row = deepcopy(current_row)
+            new_row[2] = self.text_input_eud_a.GetValue()
+            new_row[3] = self.text_input_gamma_50.GetValue()
+            new_row[4] = self.text_input_td_50.GetValue()
+            new_row[5] = round(calc_eud(self.dvh.dvh[:, i], float(new_row[2])), 2)
+            new_row[6] = round(calc_tcp(float(new_row[3]), float(new_row[4]), float(new_row[5])), 3)
+            self.data_table_rad_bio.edit_row(new_row, i)
+
+
+def get_selected_items(list_control):
+    selection = []
+
+    index_current = -1
+    while True:
+        index_next = list_control.GetNextItem(index_current, wx.LIST_NEXT_ALL, wx.LIST_STATE_SELECTED)
+        if index_next == -1:
+            return selection
+
+        selection.append(index_next)
+        index_current = index_next

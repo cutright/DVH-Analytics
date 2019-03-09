@@ -360,3 +360,7 @@ def calc_eud(dvh, a):
     eud = np.round(eud, 2) * 0.01
 
     return eud
+
+
+def calc_tcp(gamma_50, td_tcd, eud):
+    return 1 / (1 + (td_tcd / eud) ** (4. * gamma_50))

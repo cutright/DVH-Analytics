@@ -3,23 +3,27 @@ from copy import deepcopy
 
 class DataTable:
 
-    def __init__(self, listctrl, data=None, columns=None):
+    def __init__(self, listctrl, data=None, columns=None, widths=None):
 
         self.layout = listctrl
 
         self.data = deepcopy(data)
         self.columns = deepcopy(columns)
+        self.widths = widths
 
         self.set_data_in_layout()
 
     def set_data(self, data, columns):
-        delete_table_rows = bool(self.row_count)
+        delete_rows = bool(self.row_count)
         self.data = deepcopy(data)
         self.columns = deepcopy(columns)
-        if delete_table_rows:
+        if delete_rows:
             self.delete_all_rows(layout_only=True)
         self.set_layout_columns()
         self.set_data_in_layout()
+
+        if self.widths:
+            self.set_column_widths()
 
     def set_layout_columns(self):
         self.layout.DeleteAllColumns()
@@ -118,3 +122,7 @@ class DataTable:
 
     def set_column_width(self, index, width):
         self.layout.SetColumnWidth(index, width)
+
+    def set_column_widths(self):
+        for i, width in enumerate(self.widths):
+            self.set_column_width(i, width)
