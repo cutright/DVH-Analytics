@@ -18,16 +18,20 @@ class TimeSeriesFrame:
         self.y_axis_options = sql_columns.numerical
 
         self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.combo_box_lookback_units = wx.ComboBox(self.parent, wx.ID_ANY, choices=["Dates with a Sim", "Days"],
-                                                    style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.text_input_lookback_distance = wx.TextCtrl(self.parent, wx.ID_ANY, "1")
-        self.text_inputs_percentile = wx.TextCtrl(self.parent, wx.ID_ANY, "90")
+        self.text_input_bin_size = wx.TextCtrl(self.parent, wx.ID_ANY, "10", style=wx.TE_PROCESS_ENTER)
+        self.text_input_lookback_distance = wx.TextCtrl(self.parent, wx.ID_ANY, "1", style=wx.TE_PROCESS_ENTER)
+        self.text_inputs_percentile = wx.TextCtrl(self.parent, wx.ID_ANY, "90", style=wx.TE_PROCESS_ENTER)
         self.button_update_plot = wx.Button(self.parent, wx.ID_ANY, "Update Plot")
 
         self.parent.Bind(wx.EVT_COMBOBOX, self.combo_box_y_axis_ticker, id=self.combo_box_y_axis.GetId())
+        self.parent.Bind(wx.EVT_TEXT_ENTER, self.update_plot_ticker, id=self.text_input_bin_size.GetId())
+        self.parent.Bind(wx.EVT_TEXT_ENTER, self.update_plot_ticker, id=self.text_input_lookback_distance.GetId())
+        self.parent.Bind(wx.EVT_TEXT_ENTER, self.update_plot_ticker, id=self.text_inputs_percentile.GetId())
 
         self.__set_properties()
         self.__do_layout()
+
+        self.parent.Bind(wx.EVT_BUTTON, self.update_plot_ticker, id=self.button_update_plot.GetId())
 
         self.disable_buttons()
 
@@ -43,16 +47,15 @@ class TimeSeriesFrame:
         sizer_widgets = wx.StaticBoxSizer(wx.StaticBox(self.parent, wx.ID_ANY, ""), wx.HORIZONTAL)
         sizer_percentile = wx.BoxSizer(wx.VERTICAL)
         sizer_lookback_distance = wx.BoxSizer(wx.VERTICAL)
-        sizer_lookback_units = wx.BoxSizer(wx.VERTICAL)
+        sizer_histogram_bins = wx.BoxSizer(wx.VERTICAL)
         sizer_y_axis = wx.BoxSizer(wx.VERTICAL)
         label_y_axis = wx.StaticText(self.parent, wx.ID_ANY, "Y Axis:")
         sizer_y_axis.Add(label_y_axis, 0, wx.LEFT, 5)
         sizer_y_axis.Add(self.combo_box_y_axis, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(sizer_y_axis, 1, wx.EXPAND, 0)
-        label_lookback_units = wx.StaticText(self.parent, wx.ID_ANY, "Lookback unts:")
-        sizer_lookback_units.Add(label_lookback_units, 0, wx.LEFT, 5)
-        sizer_lookback_units.Add(self.combo_box_lookback_units, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_widgets.Add(sizer_lookback_units, 1, wx.EXPAND, 0)
+        label_histogram_bins = wx.StaticText(self.parent, wx.ID_ANY, "Histogram Bins:")
+        sizer_histogram_bins.Add(label_histogram_bins, 0, wx.LEFT, 5)
+        sizer_histogram_bins.Add(self.text_input_bin_size, 0, wx.ALL | wx.EXPAND, 5)
         label_lookback_distance = wx.StaticText(self.parent, wx.ID_ANY, "Lookback Distance:")
         sizer_lookback_distance.Add(label_lookback_distance, 0, wx.LEFT, 5)
         sizer_lookback_distance.Add(self.text_input_lookback_distance, 0, wx.ALL | wx.EXPAND, 5)
@@ -61,6 +64,7 @@ class TimeSeriesFrame:
         sizer_percentile.Add(label_percentile, 0, wx.LEFT, 5)
         sizer_percentile.Add(self.text_inputs_percentile, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(sizer_percentile, 1, wx.EXPAND, 0)
+        sizer_widgets.Add(sizer_histogram_bins, 1, wx.EXPAND, 0)
         sizer_widgets.Add(self.button_update_plot, 0, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_widgets, 0, wx.BOTTOM | wx.EXPAND, 5)
         self.plot = PlotTimeSeries(self.parent)
@@ -102,7 +106,27 @@ class TimeSeriesFrame:
             y_values_sorted.append(y_data[sort_index[s]])
             mrn_sorted.append(mrn_data[sort_index[s]])
 
-        self.plot.update_plot(x_values_sorted, y_values_sorted, mrn_sorted, self.combo_box_y_axis.GetValue())
+        try:
+            hist_bins = int(self.text_input_bin_size.GetValue())
+        except ValueError:
+            self.text_input_bin_size.SetValue('10')
+            hist_bins = 10
+
+        try:
+            avg_len = int(self.text_input_lookback_distance.GetValue())
+        except ValueError:
+            self.text_input_lookback_distance.SetValue('1')
+            avg_len = 1
+
+        try:
+            percentile = float(self.text_inputs_percentile.GetValue())
+        except ValueError:
+            self.text_inputs_percentile.SetValue('90')
+            percentile = 90.
+
+        self.plot.update_plot(x_values_sorted, y_values_sorted, mrn_sorted,
+                              y_axis_label=self.combo_box_y_axis.GetValue(), avg_len=avg_len,
+                              percentile=percentile, bin_size=hist_bins)
 
     def update_data(self, dvh, data):
         self.dvh = dvh
@@ -120,3 +144,6 @@ class TimeSeriesFrame:
 
     def enable_initial_buttons(self):
         self.button_update_plot.Enable()
+
+    def update_plot_ticker(self, evt):
+        self.update_plot()

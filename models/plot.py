@@ -208,7 +208,7 @@ class PlotTimeSeries:
 
         self.bokeh_layout = column(self.figure, Div(text='<hr>', width=plot_width), self.histograms)
 
-    def update_plot(self, x, y, mrn, y_axis_label='Y Axis', avg_len=1, percentile=90.):
+    def update_plot(self, x, y, mrn, y_axis_label='Y Axis', avg_len=1, percentile=90., bin_size=10):
         self.figure.yaxis.axis_label = y_axis_label
         self.histograms.xaxis.axis_label = y_axis_label
         valid_indices = [i for i, value in enumerate(y) if value != 'None']
@@ -217,7 +217,6 @@ class PlotTimeSeries:
                                     'mrn': [value for i, value in enumerate(mrn) if i in valid_indices]}
 
         # histograms
-        bin_size = 20
         width_fraction = 0.9
 
         hist, bins = np.histogram(self.source['plot'].data['y'], bins=bin_size)
