@@ -5,6 +5,7 @@
 import wx
 from dialogs.query import query_dlg
 from dialogs.sql_settings import SQLSettingsDialog
+from dialogs.settings import UserSettings
 from db import sql_columns
 from models.datatable import DataTable
 from models.plot import PlotStatDVH
@@ -88,6 +89,7 @@ class MainFrame(wx.Frame):
                 self.frame_toolbar.AddSeparator()
 
         self.Bind(wx.EVT_TOOL, self.on_toolbar_database, id=self.toolbar_ids['Database'])
+        self.Bind(wx.EVT_TOOL, self.on_toolbar_settings, id=self.toolbar_ids['Settings'])
         self.Bind(wx.EVT_TOOL, self.OnClose, id=self.toolbar_ids['Close'])
 
     def __add_menubar(self):
@@ -304,6 +306,14 @@ class MainFrame(wx.Frame):
             else:
                 print("Invalid SQL config")
                 print(new_config)
+        dlg.Destroy()
+
+    @staticmethod
+    def on_toolbar_settings(evt):
+        dlg = UserSettings()
+        res = dlg.ShowModal()
+        if res == wx.ID_OK:
+            print('OH YEAH')
         dlg.Destroy()
 
     # --------------------------------------------------------------------------------------------------------------
