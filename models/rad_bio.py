@@ -4,19 +4,20 @@
 import wx
 from models.datatable import DataTable
 from models.dvh import calc_eud, calc_tcp
-import wx.lib.mixins.listctrl as listmix
+# import wx.lib.mixins.listctrl as listmix
 from copy import deepcopy
+from utilties import convert_value_to_str
 
 
-class EditableListCtrl(wx.ListCtrl, listmix.TextEditMixin):
-    ''' TextEditMixin allows any column to be edited. '''
-
-    # ----------------------------------------------------------------------
-    def __init__(self, parent, ID=wx.ID_ANY, pos=wx.DefaultPosition,
-                 size=wx.DefaultSize, style=0):
-        """Constructor"""
-        wx.ListCtrl.__init__(self, parent, ID, pos, size, style)
-        listmix.TextEditMixin.__init__(self)
+# class EditableListCtrl(wx.ListCtrl, listmix.TextEditMixin):
+#     ''' TextEditMixin allows any column to be edited. '''
+#
+#     # ----------------------------------------------------------------------
+#     def __init__(self, parent, ID=wx.ID_ANY, pos=wx.DefaultPosition,
+#                  size=wx.DefaultSize, style=0):
+#         """Constructor"""
+#         wx.ListCtrl.__init__(self, parent, ID, pos, size, style)
+#         listmix.TextEditMixin.__init__(self)
 
 
 class RadBioFrame:
@@ -31,11 +32,15 @@ class RadBioFrame:
         self.text_input_gamma_50 = wx.TextCtrl(self.parent, wx.ID_ANY, "")
         self.text_input_td_50 = wx.TextCtrl(self.parent, wx.ID_ANY, "")
         self.button_apply_parameters = wx.Button(self.parent, wx.ID_ANY, "Apply Parameters")
-        self.table_rad_bio = EditableListCtrl(self.parent, ID= wx.ID_ANY, style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
+        self.table_rad_bio = wx.ListCtrl(self.parent, wx.ID_ANY, style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
         self.columns = ['MRN', 'ROI Name', 'a', u'\u03b3_50', 'TD or TCD', 'EUD', 'NTCP or TCP', 'PTV Overlap',
                         'ROI Type', 'Rx Dose', 'Total Fxs', 'Fx Dose']
         self.width = [100, 175, 50, 50, 80, 80, 80, 100, 100, 100, 100, 100]
-        self.data_table_rad_bio = DataTable(self.table_rad_bio, columns=self.columns, widths=self.width)
+        formats = [wx.LIST_FORMAT_RIGHT] * len(self.columns)
+        formats[0] = wx.LIST_FORMAT_LEFT
+        formats[1] = wx.LIST_FORMAT_LEFT
+        self.data_table_rad_bio = DataTable(self.table_rad_bio, columns=self.columns,
+                                            widths=self.width, formats=formats)
 
         # Adding wx.RadioBox prior to data table_rad_bio causes display glitch
         # self.radio_box_apply = wx.RadioBox(self.parent, wx.ID_ANY, "Apply to:", choices=["All", "Selected"],
@@ -58,7 +63,7 @@ class RadBioFrame:
         # self.radio_box_apply.SetSelection(0)
 
         for i, col in enumerate(self.columns):
-            self.table_rad_bio.AppendColumn(col, format=wx.LIST_FORMAT_LEFT, width=self.width[i])
+            self.table_rad_bio.AppendColumn(col, width=self.width[i])
 
         self.published_data = [['Brain', 'Necrosis', 5, 3, 60],
                                ['Brainstem', 'Necrosis', 7, 3, 65],
@@ -139,6 +144,9 @@ class RadBioFrame:
 
     def update_dvh_data(self, dvh):
         self.dvh = dvh
+        total_fxs = [convert_value_to_str(v, round=0) for v in self.dvh.get_plan_values('fxs')]
+        fx_dose = [convert_value_to_str(v, round=2) for v in self.dvh.get_rx_values('fx_dose')]
+        ptv_overlap = [convert_value_to_str(v, round=2) for v in self.dvh.ptv_overlap]
         data = {'MRN': self.dvh.mrn,
                 'ROI Name': self.dvh.roi_name,
                 'a': [''] * self.dvh.count,
@@ -146,11 +154,11 @@ class RadBioFrame:
                 'TD or TCD': [''] * self.dvh.count,
                 'EUD': [''] * self.dvh.count,
                 'NTCP or TCP': [''] * self.dvh.count,
-                'PTV Overlap': self.dvh.ptv_overlap,
+                'PTV Overlap': ptv_overlap,
                 'ROI Type': self.dvh.roi_type,
                 'Rx Dose': self.dvh.rx_dose,
-                'Total Fxs': self.dvh.get_plan_values('fxs'),
-                'Fx Dose': self.dvh.get_rx_values('fx_dose')}
+                'Total Fxs': total_fxs,
+                'Fx Dose': fx_dose}
         self.data_table_rad_bio.set_data(data, self.columns)
 
     def apply_parameters(self, evt):
@@ -159,12 +167,14 @@ class RadBioFrame:
             selected_indices = range(self.data_table_rad_bio.row_count)
         for i in selected_indices:
             current_row = self.data_table_rad_bio.get_row(i)
+            current_row[7] = convert_value_to_str(current_row[7])
+            current_row[9] = convert_value_to_str(current_row[9])
             new_row = deepcopy(current_row)
             new_row[2] = self.text_input_eud_a.GetValue()
             new_row[3] = self.text_input_gamma_50.GetValue()
             new_row[4] = self.text_input_td_50.GetValue()
-            new_row[5] = round(calc_eud(self.dvh.dvh[:, i], float(new_row[2])), 2)
-            new_row[6] = round(calc_tcp(float(new_row[3]), float(new_row[4]), float(new_row[5])), 3)
+            new_row[5] = "%0.2f" % round(calc_eud(self.dvh.dvh[:, i], float(new_row[2])), 2)
+            new_row[6] = "%0.2f" % round(calc_tcp(float(new_row[3]), float(new_row[4]), float(new_row[5])), 3)
             self.data_table_rad_bio.edit_row(new_row, i)
 
 

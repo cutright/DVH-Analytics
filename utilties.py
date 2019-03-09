@@ -81,3 +81,11 @@ def moving_avg(xyw, avg_len):
     x_final = [xyw['x'][i] for i in range(avg_len - 1, len(xyw['x']))]
 
     return x_final, moving_aves
+
+
+def convert_value_to_str(value, round=2):
+    try:
+        formatter = "%%0.%df" % round
+        return formatter % value
+    except TypeError:
+        return value

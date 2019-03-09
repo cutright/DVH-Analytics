@@ -1,15 +1,20 @@
 from copy import deepcopy
+import wx
 
 
 class DataTable:
 
-    def __init__(self, listctrl, data=None, columns=None, widths=None):
+    def __init__(self, listctrl, data=None, columns=None, widths=None, formats=None):
 
         self.layout = listctrl
 
         self.data = deepcopy(data)
         self.columns = deepcopy(columns)
         self.widths = widths
+        if formats:
+            self.formats = formats
+        else:
+            self.formats = [wx.LIST_FORMAT_LEFT] * len(self.columns)
 
         self.set_data_in_layout()
 
@@ -27,8 +32,8 @@ class DataTable:
 
     def set_layout_columns(self):
         self.layout.DeleteAllColumns()
-        for col in self.columns:
-            self.layout.AppendColumn(col)
+        for i, col in enumerate(self.columns):
+            self.layout.AppendColumn(col, format=self.formats[i])
 
     @property
     def keys(self):
@@ -50,9 +55,9 @@ class DataTable:
         else:
             return []
 
-    def add_column(self, column):
+    def add_column(self, column, format=wx.LIST_FORMAT_LEFT):
         if self.layout:
-            self.layout.AppendColumn(column)
+            self.layout.AppendColumn(column, format=format)
         self.columns.append(column)
         self.data[column] = [''] * self.row_count
 
