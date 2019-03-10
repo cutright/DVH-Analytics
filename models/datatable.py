@@ -18,7 +18,11 @@ class DataTable:
 
         self.set_data_in_layout()
 
-    def set_data(self, data, columns):
+    def set_data(self, data, columns, formats=None):
+        if formats:
+            self.formats = formats
+        elif len(columns) != len(self.formats):
+            self.formats = [wx.LIST_FORMAT_LEFT] * len(columns)
         delete_rows = bool(self.row_count)
         self.data = deepcopy(data)
         self.columns = deepcopy(columns)
@@ -61,7 +65,7 @@ class DataTable:
         self.columns.append(column)
         self.data[column] = [''] * self.row_count
 
-    def del_column(self, column):
+    def delete_column(self, column):
         if column in self.keys:
             index = self.columns.index(column)
             if self.layout:

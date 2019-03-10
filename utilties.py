@@ -1,3 +1,4 @@
+import wx
 from db.sql_connector import DVH_SQL
 
 
@@ -89,3 +90,16 @@ def convert_value_to_str(value, round=2):
         return formatter % value
     except TypeError:
         return value
+
+
+def get_selected_listctrl_items(list_control):
+    selection = []
+
+    index_current = -1
+    while True:
+        index_next = list_control.GetNextItem(index_current, wx.LIST_NEXT_ALL, wx.LIST_STATE_SELECTED)
+        if index_next == -1:
+            return selection
+
+        selection.append(index_next)
+        index_current = index_next

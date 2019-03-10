@@ -55,6 +55,7 @@ class DVH:
         self.study_count = len(uid)
         self.rx_dose = self.get_plan_values('rx_dose')
         self.keys.append('rx_dose')
+        self.endpoints = {}
 
         self.bin_count = max([value.count(',') + 1 for value in self.dvh_string])
 

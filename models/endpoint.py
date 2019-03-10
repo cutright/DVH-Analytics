@@ -3,7 +3,7 @@
 
 import wx
 from models.datatable import DataTable
-from dialogs.endpoint import AddEndpointDialog
+from dialogs.endpoint import AddEndpointDialog, DelEndpointDialog
 from copy import deepcopy
 
 
@@ -17,10 +17,10 @@ class EndpointFrame:
         self.dvh = dvh
 
         self.button = {'add': wx.Button(self.parent, wx.ID_ANY, "Add Endpoint"),
-                       'del': wx.Button(self.parent, wx.ID_ANY, "Delete Endpoint"),
-                       'edit': wx.Button(self.parent, wx.ID_ANY, "Edit Endpoint")}
+                       'del': wx.Button(self.parent, wx.ID_ANY, "Delete Endpoint")}
 
         self.parent.Bind(wx.EVT_BUTTON, self.add_ep_button_click, id=self.button['add'].GetId())
+        self.parent.Bind(wx.EVT_BUTTON, self.del_ep_button_click, id=self.button['del'].GetId())
 
         self.table = wx.ListCtrl(self.parent, wx.ID_ANY,
                                  style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
@@ -37,13 +37,13 @@ class EndpointFrame:
     def __set_properties(self):
         self.table.AppendColumn("MRN", format=wx.LIST_FORMAT_LEFT, width=150)
         self.table.AppendColumn("ROI Name", format=wx.LIST_FORMAT_LEFT, width=250)
-        self.table.AppendColumn("EP1", format=wx.LIST_FORMAT_LEFT, width=-1)
+        # self.table.AppendColumn("EP1", format=wx.LIST_FORMAT_LEFT, width=-1)
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         vbox = wx.BoxSizer(wx.VERTICAL)
         hbox = wx.BoxSizer(wx.HORIZONTAL)
-        for key in ['add', 'del', 'edit']:
+        for key in ['add', 'del']:
             hbox.Add(self.button[key], 0, wx.ALL, 5)
         vbox.Add(hbox, 0, wx.ALL | wx.EXPAND, 5)
         vbox.Add(self.table, 1, wx.EXPAND, 0)
@@ -56,14 +56,14 @@ class EndpointFrame:
 
     def calculate_endpoints(self):
 
-        columns = ['mrn', 'roi_name']
+        columns = ['MRN', 'ROI Name']
         if self.data_table.data:
             current_labels = [key for key in list(self.data_table.data) if key not in columns]
         else:
             current_labels = []
 
-        ep = {'mrn': self.dvh.mrn,
-              'roi_name': self.dvh.roi_name}
+        ep = {'MRN': self.dvh.mrn,
+              'ROI Name': self.dvh.roi_name}
 
         ep_defs = self.endpoint_defs.data
         for i, ep_name in enumerate(ep_defs['label']):
@@ -104,6 +104,19 @@ class EndpointFrame:
                 self.enable_buttons()
         dlg.Destroy()
 
+    def del_ep_button_click(self, evt):
+        dlg = DelEndpointDialog(self.data_table.columns, title='Delete Endpoint')
+        res = dlg.ShowModal()
+        if res == wx.ID_OK:
+            for value in dlg.selected_values:
+                self.data_table.delete_column(value)
+                endpoint_def_row = self.endpoint_defs.data['label'].index(value)
+                self.endpoint_defs.delete_row(endpoint_def_row)
+        dlg.Destroy()
+
+        if self.data_table.column_count == 2:
+            self.button['del'].Disable()
+
     def update_dvh(self, dvh):
         self.dvh = dvh
 
@@ -113,11 +126,11 @@ class EndpointFrame:
         self.dvh = None
 
     def enable_buttons(self):
-        for key in ['add', 'del', 'edit']:
+        for key in ['add', 'del']:
             self.button[key].Enable()
 
     def disable_buttons(self):
-        for key in ['add', 'del', 'edit']:
+        for key in ['add', 'del']:
             self.button[key].Disable()
 
     def enable_initial_buttons(self):

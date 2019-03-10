@@ -6,7 +6,7 @@ from models.datatable import DataTable
 from models.dvh import calc_eud, calc_tcp
 # import wx.lib.mixins.listctrl as listmix
 from copy import deepcopy
-from utilties import convert_value_to_str
+from utilties import convert_value_to_str, get_selected_listctrl_items
 
 
 # class EditableListCtrl(wx.ListCtrl, listmix.TextEditMixin):
@@ -126,6 +126,9 @@ class RadBioFrame:
         sizer_main.Add(self.table_rad_bio, 1, wx.ALL | wx.EXPAND, 10)
         self.layout = sizer_main
 
+    def __set_tooltips(self):
+        self.button_apply_parameters.SetToolTip("Shift or Ctrl click for targeted application.")
+
     def enable_buttons(self):
         self.button_apply_parameters.Enable()
 
@@ -162,7 +165,7 @@ class RadBioFrame:
         self.data_table_rad_bio.set_data(data, self.columns)
 
     def apply_parameters(self, evt):
-        selected_indices = get_selected_items(self.table_rad_bio)
+        selected_indices = get_selected_listctrl_items(self.table_rad_bio)
         if not selected_indices:
             selected_indices = range(self.data_table_rad_bio.row_count)
         for i in selected_indices:
@@ -176,16 +179,3 @@ class RadBioFrame:
             new_row[5] = "%0.2f" % round(calc_eud(self.dvh.dvh[:, i], float(new_row[2])), 2)
             new_row[6] = "%0.2f" % round(calc_tcp(float(new_row[3]), float(new_row[4]), float(new_row[5])), 3)
             self.data_table_rad_bio.edit_row(new_row, i)
-
-
-def get_selected_items(list_control):
-    selection = []
-
-    index_current = -1
-    while True:
-        index_next = list_control.GetNextItem(index_current, wx.LIST_NEXT_ALL, wx.LIST_STATE_SELECTED)
-        if index_next == -1:
-            return selection
-
-        selection.append(index_next)
-        index_current = index_next

@@ -3,6 +3,7 @@
 
 
 import wx
+from utilties import get_selected_listctrl_items
 
 
 class AddEndpointDialog(wx.Dialog):
@@ -132,3 +133,69 @@ class AddEndpointDialog(wx.Dialog):
                 self.input_value,
                 self.units_in,
                 self.units_out]
+
+
+class DelEndpointDialog(wx.Dialog):
+    def __init__(self, endpoints, *args, **kwds):
+        wx.Dialog.__init__(self, None, title='Delete Endpoint')
+
+        self.endpoints = endpoints
+
+        self.list_ctrl_endpoints = wx.ListCtrl(self, wx.ID_ANY, style=wx.LC_REPORT)
+        self.button_select_all = wx.Button(self, wx.ID_ANY, "Select All")
+        self.button_deselect_all = wx.Button(self, wx.ID_ANY, "Deselect All")
+        self.button_ok = wx.Button(self, wx.ID_OK, "OK")
+        self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+
+        self.Bind(wx.EVT_BUTTON, self.select_all, id=self.button_select_all.GetId())
+        self.Bind(wx.EVT_BUTTON, self.deselect_all, id=self.button_deselect_all.GetId())
+
+        self.__set_properties()
+        self.__do_layout()
+
+    def __set_properties(self):
+        self.list_ctrl_endpoints.AppendColumn("Endpoint", format=wx.LIST_FORMAT_LEFT, width=200)
+
+        for ep in self.endpoints:
+            if ep not in {'MRN', 'ROI Name'}:
+                self.list_ctrl_endpoints.InsertItem(50000, ep)
+
+    def __do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_ok_cancel = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_select = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
+        sizer_select_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_select.Add(self.list_ctrl_endpoints, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_select_buttons.Add(self.button_select_all, 0, wx.ALL, 5)
+        sizer_select_buttons.Add(self.button_deselect_all, 0, wx.ALL, 5)
+        sizer_select.Add(sizer_select_buttons, 0, wx.ALIGN_CENTER | wx.ALL, 0)
+        sizer_wrapper.Add(sizer_select, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_ok_cancel.Add(self.button_ok, 0, wx.ALL, 5)
+        sizer_ok_cancel.Add(self.button_cancel, 0, wx.ALL, 5)
+        sizer_wrapper.Add(sizer_ok_cancel, 0, wx.ALIGN_CENTER | wx.ALL, 5)
+        self.SetSizer(sizer_wrapper)
+        sizer_wrapper.Fit(self)
+        self.Layout()
+
+    @property
+    def selected_indices(self):
+        return get_selected_listctrl_items(self.list_ctrl_endpoints)
+
+    @property
+    def selected_values(self):
+        return [self.list_ctrl_endpoints.GetItem(i, 0).GetText() for i in self.selected_indices]
+
+    @property
+    def endpoint_count(self):
+        return len(self.endpoints)-2
+
+    def select_all(self, evt):
+        self.apply_global_selection()
+
+    def deselect_all(self, evt):
+        self.apply_global_selection(on=0)
+
+    def apply_global_selection(self, on=1):
+        for i in range(self.endpoint_count):
+            self.list_ctrl_endpoints.Select(i, on=on)
+
