@@ -465,6 +465,7 @@ class MainFrame(wx.Frame):
             for key in ['categorical', 'numerical']:
                 self.disable_query_buttons(key)
             self.button_query_execute.Disable()
+            self.time_series.initialize_y_axis_options()
         dlg.Destroy()
 
     def OnAbout(self, evt):

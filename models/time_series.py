@@ -179,3 +179,14 @@ class TimeSeriesFrame:
             if current_choice not in self.choices:
                 current_choice = 'ROI Max Dose'
             self.combo_box_y_axis.SetValue(current_choice)
+
+    def initialize_y_axis_options(self):
+        for i in range(len(self.choices))[::-1]:
+            c = self.choices[i]
+            if c[0:2] in {'D_', 'V_'} or c in {'EUD', 'NTCP or TCP'}:
+                self.choices.pop(i)
+        self.choices.sort()
+        self.combo_box_y_axis.SetItems(self.choices)
+        self.combo_box_y_axis.SetValue('ROI Max Dose')
+
+
