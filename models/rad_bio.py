@@ -21,10 +21,11 @@ from utilties import convert_value_to_str, get_selected_listctrl_items
 
 
 class RadBioFrame:
-    def __init__(self, parent, dvh, *args, **kwds):
+    def __init__(self, parent, dvh, time_series, *args, **kwds):
 
         self.parent = parent
         self.dvh = dvh
+        self.time_series = time_series
 
         self.table_published_values = wx.ListCtrl(self.parent, wx.ID_ANY,
                                                   style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
@@ -179,3 +180,10 @@ class RadBioFrame:
             new_row[5] = "%0.2f" % round(calc_eud(self.dvh.dvh[:, i], float(new_row[2])), 2)
             new_row[6] = "%0.2f" % round(calc_tcp(float(new_row[3]), float(new_row[4]), float(new_row[5])), 3)
             self.data_table_rad_bio.edit_row(new_row, i)
+
+        self.dvh.eud = [float(eud) for eud in self.data_table_rad_bio.data['EUD']]
+        self.dvh.ntcp_or_tcp = [float(ntcp_or_tcp) for ntcp_or_tcp in self.data_table_rad_bio.data['NTCP or TCP']]
+
+        self.time_series.update_y_axis_options()
+        if self.time_series.combo_box_y_axis.GetValue() in ['EUD', 'NTCP or TCP']:
+            self.time_series.update_plot()

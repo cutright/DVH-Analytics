@@ -57,6 +57,8 @@ class DVH:
         self.keys.append('rx_dose')
         self.endpoints = {'data': None,
                           'defs': None}
+        self.eud = None
+        self.ntcp_or_tcp = None
 
         self.bin_count = max([value.count(',') + 1 for value in self.dvh_string])
 

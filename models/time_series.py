@@ -79,10 +79,12 @@ class TimeSeriesFrame:
 
     def update_plot(self):
         y_axis_selection = self.combo_box_y_axis.GetValue()
+        uids = getattr(self.dvh, 'study_instance_uid')
+        mrn_data = self.dvh.mrn
         if y_axis_selection.split('_')[0] in {'D', 'V'}:
             y_data = self.dvh.endpoints['data'][y_axis_selection]
-            uids = getattr(self.dvh, 'study_instance_uid')
-            mrn_data = self.dvh.mrn
+        elif y_axis_selection in ['EUD', 'NTCP or TCP']:
+            y_data = getattr(self.dvh, y_axis_selection.lower().replace(' ', '_'))
         else:
             data_info = self.y_axis_options[self.combo_box_y_axis.GetValue()]
             table = data_info['table']
@@ -90,8 +92,6 @@ class TimeSeriesFrame:
 
             if table == 'DVHs':
                 y_data = getattr(self.dvh, var_name)
-                uids = getattr(self.dvh, 'study_instance_uid')
-                mrn_data = self.dvh.mrn
             else:
                 y_data = getattr(self.data[table], var_name)
                 uids = getattr(self.data[table], 'study_instance_uid')
@@ -156,17 +156,22 @@ class TimeSeriesFrame:
         self.update_plot()
 
     def update_y_axis_options(self):
-        if self.dvh and self.dvh.endpoints['defs']:
-            current_choice = self.combo_box_y_axis.GetValue()
+        current_choice = self.combo_box_y_axis.GetValue()
+        if self.dvh:
+            if self.dvh.endpoints['defs']:
+                for choice in self.dvh.endpoints['defs']['label']:
+                    if choice not in self.choices:
+                        self.choices.append(choice)
 
-            for choice in self.dvh.endpoints['defs']['label']:
-                if choice not in self.choices:
-                    self.choices.append(choice)
+                for i in range(len(self.choices))[::-1]:
+                    if self.choices[i][0:2] in {'D_', 'V_'}:
+                        if self.choices[i] not in self.dvh.endpoints['defs']['label']:
+                            self.choices.pop(i)
 
-            for i in range(len(self.choices))[::-1]:
-                if self.choices[i][0:2] in {'D_', 'V_'}:
-                    if self.choices[i] not in self.dvh.endpoints['defs']['label']:
-                        self.choices.pop(i)
+            if self.dvh.eud and 'EUD' not in self.choices:
+                self.choices.append('EUD')
+            if self.dvh.ntcp_or_tcp and 'NTCP or TCP' not in self.choices:
+                self.choices.append('NTCP or TCP')
 
             self.choices.sort()
 
