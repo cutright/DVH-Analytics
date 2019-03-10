@@ -17,7 +17,8 @@ class TimeSeriesFrame:
 
         self.y_axis_options = sql_columns.numerical
 
-        self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, choices=[],
+                                            style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.text_input_bin_size = wx.TextCtrl(self.parent, wx.ID_ANY, "10", style=wx.TE_PROCESS_ENTER)
         self.text_input_lookback_distance = wx.TextCtrl(self.parent, wx.ID_ANY, "1", style=wx.TE_PROCESS_ENTER)
         self.text_inputs_percentile = wx.TextCtrl(self.parent, wx.ID_ANY, "90", style=wx.TE_PROCESS_ENTER)
@@ -36,9 +37,9 @@ class TimeSeriesFrame:
         self.disable_buttons()
 
     def __set_properties(self):
-        choices = list(self.y_axis_options)
-        choices.sort()
-        self.combo_box_y_axis.AppendItems(choices)
+        self.choices = list(self.y_axis_options)
+        self.choices.sort()
+        self.combo_box_y_axis.AppendItems(self.choices)
         self.combo_box_y_axis.SetLabelText('ROI Max Dose')
 
     def __do_layout(self):
@@ -77,18 +78,24 @@ class TimeSeriesFrame:
             self.update_plot()
 
     def update_plot(self):
-        data_info = self.y_axis_options[self.combo_box_y_axis.GetValue()]
-        table = data_info['table']
-        var_name = data_info['var_name']
-
-        if table == 'DVHs':
-            y_data = getattr(self.dvh, var_name)
+        y_axis_selection = self.combo_box_y_axis.GetValue()
+        if y_axis_selection.split('_')[0] in {'D', 'V'}:
+            y_data = self.dvh.endpoints['data'][y_axis_selection]
             uids = getattr(self.dvh, 'study_instance_uid')
             mrn_data = self.dvh.mrn
         else:
-            y_data = getattr(self.data[table], var_name)
-            uids = getattr(self.data[table], 'study_instance_uid')
-            mrn_data = getattr(self.data[table], 'mrn')
+            data_info = self.y_axis_options[self.combo_box_y_axis.GetValue()]
+            table = data_info['table']
+            var_name = data_info['var_name']
+
+            if table == 'DVHs':
+                y_data = getattr(self.dvh, var_name)
+                uids = getattr(self.dvh, 'study_instance_uid')
+                mrn_data = self.dvh.mrn
+            else:
+                y_data = getattr(self.data[table], var_name)
+                uids = getattr(self.data[table], 'study_instance_uid')
+                mrn_data = getattr(self.data[table], 'mrn')
 
         x_data = []
         for uid in uids:
@@ -147,3 +154,23 @@ class TimeSeriesFrame:
 
     def update_plot_ticker(self, evt):
         self.update_plot()
+
+    def update_y_axis_options(self):
+        if self.dvh and self.dvh.endpoints['defs']:
+            current_choice = self.combo_box_y_axis.GetValue()
+
+            for choice in self.dvh.endpoints['defs']['label']:
+                if choice not in self.choices:
+                    self.choices.append(choice)
+
+            for i in range(len(self.choices))[::-1]:
+                if self.choices[i][0:2] in {'D_', 'V_'}:
+                    if self.choices[i] not in self.dvh.endpoints['defs']['label']:
+                        self.choices.pop(i)
+
+            self.choices.sort()
+
+            self.combo_box_y_axis.SetItems(self.choices)
+            if current_choice not in self.choices:
+                current_choice = 'ROI Max Dose'
+            self.combo_box_y_axis.SetValue(current_choice)

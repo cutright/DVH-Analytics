@@ -11,10 +11,11 @@ ENDPOINT_DEF_COLUMNS = ['label', 'output_type', 'input_type', 'input_value', 'un
 
 
 class EndpointFrame:
-    def __init__(self, parent, dvh, *args, **kwds):
+    def __init__(self, parent, dvh, times_series, *args, **kwds):
 
         self.parent = parent
         self.dvh = dvh
+        self.time_series = times_series
 
         self.button = {'add': wx.Button(self.parent, wx.ID_ANY, "Add Endpoint"),
                        'del': wx.Button(self.parent, wx.ID_ANY, "Delete Endpoint")}
@@ -28,6 +29,10 @@ class EndpointFrame:
         self.data_table = DataTable(self.table, columns=['mrn', 'roi_name', 'ep1'])
 
         self.endpoint_defs = DataTable(None, columns=ENDPOINT_DEF_COLUMNS)
+
+        if dvh:
+            self.dvh.endpoints['data'] = self.data_table.data
+            self.dvh.endpoints['defs'] = self.endpoint_defs.data
 
         self.__set_properties()
         self.__do_layout()
@@ -97,11 +102,12 @@ class EndpointFrame:
     def add_ep_button_click(self, evt):
         dlg = AddEndpointDialog(title='Add Endpoint')
         res = dlg.ShowModal()
-        if res == wx.ID_OK:
-            if dlg.is_endpoint_valid:
-                self.endpoint_defs.append_row(dlg.endpoint_row)
-                self.calculate_endpoints()
-                self.enable_buttons()
+        if res == wx.ID_OK and dlg.is_endpoint_valid:
+            self.endpoint_defs.append_row(dlg.endpoint_row)
+            self.calculate_endpoints()
+            self.enable_buttons()
+            self.update_endpoints_in_dvh()
+            self.time_series.update_y_axis_options()
         dlg.Destroy()
 
     def del_ep_button_click(self, evt):
@@ -111,7 +117,9 @@ class EndpointFrame:
             for value in dlg.selected_values:
                 self.data_table.delete_column(value)
                 endpoint_def_row = self.endpoint_defs.data['label'].index(value)
+                self.update_endpoints_in_dvh()
                 self.endpoint_defs.delete_row(endpoint_def_row)
+            self.time_series.update_y_axis_options()
         dlg.Destroy()
 
         if self.data_table.column_count == 2:
@@ -119,11 +127,17 @@ class EndpointFrame:
 
     def update_dvh(self, dvh):
         self.dvh = dvh
+        self.update_endpoints_in_dvh()
+
+    def update_endpoints_in_dvh(self):
+        if self.dvh:
+            self.dvh.endpoints['data'] = self.data_table.data
+            self.dvh.endpoints['defs'] = self.endpoint_defs.data
 
     def clear_data(self):
         self.data_table.delete_all_rows()
         self.endpoint_defs.delete_all_rows()
-        self.dvh = None
+        # self.dvh = None
 
     def enable_buttons(self):
         for key in ['add', 'del']:

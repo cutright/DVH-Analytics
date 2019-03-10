@@ -181,9 +181,9 @@ class MainFrame(wx.Frame):
 
     def __add_notebook_frames(self):
         self.plot = PlotStatDVH(self.notebook_tab['DVHs'], self.dvh)
-        self.endpoint = EndpointFrame(self.notebook_tab['Endpoints'], self.dvh)
         self.radbio = RadBioFrame(self.notebook_tab['Rad Bio'], self.dvh)
         self.time_series = TimeSeriesFrame(self.notebook_tab['Time Series'], self.dvh, self.data)
+        self.endpoint = EndpointFrame(self.notebook_tab['Endpoints'], self.dvh, self.time_series)
 
     def __do_layout(self):
         sizer_summary = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Summary"), wx.HORIZONTAL)
