@@ -187,3 +187,6 @@ class RadBioFrame:
         self.time_series.update_y_axis_options()
         if self.time_series.combo_box_y_axis.GetValue() in ['EUD', 'NTCP or TCP']:
             self.time_series.update_plot()
+
+    def clear_data(self):
+        self.data_table_rad_bio.delete_all_rows()

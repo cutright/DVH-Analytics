@@ -114,13 +114,17 @@ class DataTable:
             self.layout.DeleteItem(index)
 
     def delete_all_rows(self, layout_only=False):
-        for i in list(range(self.row_count))[::-1]:
-            self.delete_row(i, layout_only=layout_only)
+        if self.layout:
+            self.layout.DeleteAllItems()
+            if not layout_only:
+                if self.data:
+                    for key in self.keys:
+                        self.data[key] = []
 
     def edit_row(self, row, index):
         self.edit_row_to_data(row, index)
         if self.layout:
-            for i in range(len(row))[1:]:
+            for i in range(len(row)):
                 self.layout.SetItem(index, i, str(row[i]))
 
     def get_value(self, row, column):

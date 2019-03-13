@@ -49,3 +49,11 @@ def get_unique_list(input_list):
             rtn_list_unique.append(value)
 
     return rtn_list_unique
+
+
+def get_database_tree():
+    cnx = DVH_SQL()
+    tree = {table: cnx.get_column_names(table) for table in cnx.tables}
+    cnx.close()
+    return tree
+

@@ -4,8 +4,8 @@
 
 import wx
 from dialogs.query import query_dlg
-from dialogs.sql_settings import SQLSettingsDialog
 from dialogs.settings import UserSettings
+from dialogs.database_editor import DatabaseEditorDialog
 from db import sql_columns
 from models.datatable import DataTable
 from models.plot import PlotStatDVH
@@ -78,8 +78,8 @@ class MainFrame(wx.Frame):
                        'Print': "Print a report",
                        'Export': "Export data to CSV",
                        'Import': "DICOM import wizard",
-                       'Settings': "Program preferences",
-                       'Database': "Change SQL database connection settings"}
+                       'Settings': "User Settings",
+                       'Database': "Database Administrator Tools"}
 
         for key in self.toolbar_keys:
             self.frame_toolbar.AddTool(self.toolbar_ids[key], key, wx.Bitmap(files[key], wx.BITMAP_TYPE_ANY),
@@ -101,6 +101,7 @@ class MainFrame(wx.Frame):
         menu_open = file_menu.Append(wx.ID_OPEN, '&Open\tCtrl+O')
         menu_close = file_menu.Append(wx.ID_ANY, '&Close\tCtrl+W')
         file_menu.Append(wx.ID_SAVE, '&Save')
+        menu_pref = file_menu.Append(wx.ID_PREFERENCES)
         menu_about = file_menu.Append(wx.ID_ANY, '&About\tCtrl+A')
         file_menu.AppendSeparator()
 
@@ -116,6 +117,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnQuit, qmi)
         self.Bind(wx.EVT_MENU, self.OnOpen, menu_open)
         self.Bind(wx.EVT_MENU, self.OnClose, menu_close)
+        self.Bind(wx.EVT_MENU, self.OnPref, menu_pref)
         self.Bind(wx.EVT_MENU, self.OnAbout, menu_about)
 
         self.frame_menubar.Append(file_menu, '&File')
@@ -297,26 +299,15 @@ class MainFrame(wx.Frame):
     # --------------------------------------------------------------------------------------------------------------
     @staticmethod
     def on_toolbar_database(evt):
-        dlg = SQLSettingsDialog()
-        res = dlg.ShowModal()
-        if res == wx.ID_OK:
-            new_config = {key: dlg.input[key].GetValue() for key in dlg.keys if dlg.input[key].GetValue()}
-            if validate_sql_connection(new_config):
-                write_sql_connection_settings(new_config)
-            else:
-                print("Invalid SQL config")
-                print(new_config)
-        dlg.Destroy()
+        frame = DatabaseEditorDialog()
+        frame.Show()
+        # res = dlg.ShowModal()
+        # if res == wx.ID_OK:
+        #     pass
+        # dlg.Destroy()
 
-    @staticmethod
-    def on_toolbar_settings(evt):
-        dlg = UserSettings()
-        res = dlg.ShowModal()
-        if res == wx.ID_OK:
-            dlg.save_options()
-        else:
-            dlg.revert_options()
-        dlg.Destroy()
+    def on_toolbar_settings(self, evt):
+        self.OnPref(None)
 
     # --------------------------------------------------------------------------------------------------------------
     # Query event functions
@@ -368,6 +359,14 @@ class MainFrame(wx.Frame):
 
     def exec_query(self, evt):
         wait = wx.BusyCursor()
+
+        self.dvh = None
+        self.plot.clear_plot()
+        self.endpoint.clear_data()
+        self.time_series.clear_data()
+        self.time_series.initialize_y_axis_options()
+        self.radbio.clear_data()
+
         uids, dvh_str = self.get_query()
         self.dvh = DVH(dvh_condition=dvh_str, uid=uids)
         self.endpoint.update_dvh(self.dvh)
@@ -448,34 +447,45 @@ class MainFrame(wx.Frame):
         dlg.Destroy()
 
     def OnClose(self, evt):
-        dlg = wx.MessageDialog(self, "Clear all data and plots?", caption='Close',
-                               style=wx.YES | wx.NO | wx.NO_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
-        dlg.Center()
-        res = dlg.ShowModal()
-        if res == wx.ID_YES:
-            self.dvh = None
-            self.data_table_categorical.delete_all_rows()
-            self.data_table_numerical.delete_all_rows()
-            self.plot.clear_plot()
-            self.endpoint.clear_data()
-            self.time_series.clear_data()
-            self.notebook_main_view.SetSelection(0)
-            self.text_summary.SetLabelText("")
-            self.__disable_notebook_tabs()
-            for key in ['categorical', 'numerical']:
-                self.disable_query_buttons(key)
-            self.button_query_execute.Disable()
-            self.time_series.initialize_y_axis_options()
-        dlg.Destroy()
+        if self.dvh:
+            dlg = wx.MessageDialog(self, "Clear all data and plots?", caption='Close',
+                                   style=wx.YES | wx.NO | wx.NO_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
+            dlg.Center()
+            res = dlg.ShowModal()
+            if res == wx.ID_YES:
+                self.dvh = None
+                self.data_table_categorical.delete_all_rows()
+                self.data_table_numerical.delete_all_rows()
+                self.plot.clear_plot()
+                self.endpoint.clear_data()
+                self.time_series.clear_data()
+                self.notebook_main_view.SetSelection(0)
+                self.text_summary.SetLabelText("")
+                self.__disable_notebook_tabs()
+                for key in ['categorical', 'numerical']:
+                    self.disable_query_buttons(key)
+                self.button_query_execute.Disable()
+                self.time_series.initialize_y_axis_options()
+            dlg.Destroy()
 
     def OnAbout(self, evt):
         dlg = wx.MessageDialog(self, "DVH Analytics \n in wxPython", "About Sample Editor", wx.OK)
         dlg.ShowModal()
         dlg.Destroy()
 
+    def OnPref(self, evt):
+        dlg = UserSettings()
+        res = dlg.ShowModal()
+        if res == wx.ID_OK:
+            dlg.save_options()
+        # else:
+        #     dlg.revert_options()
+        dlg.Destroy()
+
 
 class DVHApp(wx.App):
     def OnInit(self):
+        self.SetAppName('DVH Analytics')
         self.frame = MainFrame(None, wx.ID_ANY, "")
         self.SetTopWindow(self.frame)
         self.frame.Show()
