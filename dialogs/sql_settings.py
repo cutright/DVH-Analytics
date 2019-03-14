@@ -1,5 +1,6 @@
 import wx
 from options import get_settings, parse_settings_file
+from db.sql_connector import DVH_SQL
 
 
 class SQLSettingsDialog(wx.Dialog):
@@ -7,12 +8,14 @@ class SQLSettingsDialog(wx.Dialog):
         wx.Dialog.__init__(self, None, title="SQL Connection Settings")
 
         self.keys = ['host', 'port', 'dbname', 'user', 'password']
-        self.SetSize((300, 240))
 
         self.input = {key: wx.TextCtrl(self, wx.ID_ANY, "") for key in self.keys if key != 'password'}
         self.input['password'] = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_PASSWORD)
         self.button = {'ok': wx.Button(self, wx.ID_OK, "OK"),
-                       'cancel': wx.Button(self, wx.ID_CANCEL, "Cancel")}
+                       'cancel': wx.Button(self, wx.ID_CANCEL, "Cancel"),
+                       'echo': wx.Button(self, wx.ID_ANY, "Echo")}
+
+        self.Bind(wx.EVT_BUTTON, self.button_echo, id=self.button['echo'].GetId())
 
         self.__set_properties()
         self.__do_layout()
@@ -25,6 +28,7 @@ class SQLSettingsDialog(wx.Dialog):
 
     def __do_layout(self):
         sizer_frame = wx.BoxSizer(wx.VERTICAL)
+        sizer_echo = wx.BoxSizer(wx.HORIZONTAL)
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
         grid_sizer = wx.GridSizer(5, 2, 5, 10)
 
@@ -35,12 +39,15 @@ class SQLSettingsDialog(wx.Dialog):
             grid_sizer.Add(label[key], 0, wx.ALL, 0)
             grid_sizer.Add(self.input[key], 0, wx.ALL | wx.EXPAND, 0)
 
-        sizer_frame.Add(grid_sizer, 0, wx.ALL, 20)
+        sizer_frame.Add(grid_sizer, 0, wx.ALL, 10)
         sizer_buttons.Add(self.button['ok'], 1, wx.ALL | wx.EXPAND, 5)
         sizer_buttons.Add(self.button['cancel'], 1, wx.ALL | wx.EXPAND, 5)
+        sizer_echo.Add(self.button['echo'], 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
+        sizer_frame.Add(sizer_echo, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
         sizer_frame.Add(sizer_buttons, 0, wx.ALL | wx.EXPAND, 5)
 
         self.SetSizer(sizer_frame)
+        self.Fit()
         self.Layout()
 
     def load_sql_settings(self):
@@ -51,38 +58,18 @@ class SQLSettingsDialog(wx.Dialog):
             if input_type in config:
                 self.input[input_type].SetValue(config[input_type])
 
+    def button_echo(self, evt):
+        if self.valid_sql_settings:
+            wx.MessageBox('Success!', 'Echo SQL Database', wx.OK | wx.ICON_INFORMATION)
+        else:
+            wx.MessageBox('Invalid credentials!', 'Echo SQL Database', wx.OK | wx.ICON_WARNING)
 
-# class SQLSettingsDialog(wx.Dialog):
-#
-#     def __init__(self, *args, **kw):
-#         wx.Dialog.__init__(self, None, title="SQL Connection Settings")
-#
-#         self.button_ok = wx.Button(self, label='OK', id=wx.ID_OK)
-#         self.button_cancel = wx.Button(self, label='Cancel', id=wx.ID_CANCEL)
-#
-#         self.host = TextInput(self, title='Host:')
-#         self.port = TextInput(self, title='Port:')
-#         self.dbname = TextInput(self, title='Database Name:')
-#         self.user = TextInput(self, title='User Name:')
-#         self.password = TextInput(self, title='Password:')
-#
-#         layout = column(row(self.host),
-#                         row(self.port),
-#                         row(self.dbname),
-#                         row(self.user),
-#                         row(self.password),
-#                         row(self.button_ok, self.button_cancel))
-#
-#         self.load_sql_settings()
-#
-#         self.SetSizer(layout)
-#         self.SetSize((500, 400))
-#         self.Center()
-#
-#     def load_sql_settings(self):
-#         abs_file_path = get_settings('sql')
-#         config = parse_settings_file(abs_file_path)
-#
-#         for input_type in ['host', 'port', 'dbname', 'user', 'password']:
-#             if input_type in config:
-#                 getattr(self, input_type).set_value(config[input_type])
+    @property
+    def valid_sql_settings(self):
+        try:
+            config = {key: self.input[key].GetValue() for key in self.keys if self.input[key].GetValue()}
+            cnx = DVH_SQL(config)
+            cnx.close()
+            return True
+        except:
+            return False
