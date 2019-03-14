@@ -139,3 +139,7 @@ class DataTable:
     def set_column_widths(self):
         for i, width in enumerate(self.widths):
             self.set_column_width(i, width)
+
+    def clear(self):
+        self.delete_all_rows()
+        self.layout.DeleteAllColumns()

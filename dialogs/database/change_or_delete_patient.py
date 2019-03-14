@@ -60,4 +60,4 @@ class ChangePatientIdentifierDialog(BaseClass):
 
 class DeletePatientDialog(BaseClass):
     def __init__(self, *args, **kw):
-        BaseClass.__init__(self, 'Patient Identifier:', 'Type "delete" to authorize:', 'Delete', "Delete Patient")
+        BaseClass.__init__(self, 'Delete:', 'Type "delete" to authorize:', 'Delete', "Delete Patient")

@@ -6,7 +6,7 @@ class ReimportDialog(wx.Dialog):
         wx.Dialog.__init__(self, None, title="Reimport from DICOM")
 
         self.text_ctrl_mrn = wx.TextCtrl(self, wx.ID_ANY, "")
-        self.radio_box_delete_from_db = wx.RadioBox(self, wx.ID_ANY, "", choices=["Delete from DB", "Keep in DB"],
+        self.radio_box_delete_from_db = wx.RadioBox(self, wx.ID_ANY, "Current Data", choices=["Delete from DB", "Keep in DB"],
                                                     majorDimension=2, style=wx.RA_SPECIFY_ROWS)
         self.combo_box_study_date = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_uid = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)

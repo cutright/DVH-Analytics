@@ -2,23 +2,27 @@
 # -*- coding: UTF-8 -*-
 
 import wx
+from db.sql_connector import DVH_SQL
 
 
 class EditDatabaseDialog(wx.Dialog):
     def __init__(self, *args, **kw):
         wx.Dialog.__init__(self, None, title="Edit Database Values")
 
-        # self.SetSize((570, 250))
-        self.combo_box_table = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
-        self.combo_box_column = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
+        self.combo_box_table = wx.ComboBox(self, wx.ID_ANY, choices=self.get_tables(),
+                                           style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.combo_box_column = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.text_ctrl_value = wx.TextCtrl(self, wx.ID_ANY, "")
         self.text_ctrl_condition = wx.TextCtrl(self, wx.ID_ANY, "")
         self.button_ok = wx.Button(self, wx.ID_OK, "Update")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
+        self.Bind(wx.EVT_COMBOBOX, self.OnTable, id=self.combo_box_table.GetId())
+
         self.__set_properties()
         self.__do_layout()
-        # end wxGlade
+
+        self.update_columns()
 
     def __set_properties(self):
         # begin wxGlade: MyFrame.__set_properties
@@ -63,3 +67,22 @@ class EditDatabaseDialog(wx.Dialog):
         sizer_wrapper.Fit(self)
         self.Layout()
         self.Center()
+
+    @staticmethod
+    def get_tables():
+        cnx = DVH_SQL()
+        tables = cnx.tables
+        cnx.close()
+        return tables
+
+    def update_columns(self):
+        table = self.combo_box_table.GetValue()
+        cnx = DVH_SQL()
+        columns = cnx.get_column_names(table)
+        cnx.close()
+        self.combo_box_column.SetItems(columns)
+        if self.combo_box_column.GetValue() not in columns:
+            self.combo_box_column.SetValue(columns[0])
+
+    def OnTable(self, evt):
+        self.update_columns()

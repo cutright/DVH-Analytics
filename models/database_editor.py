@@ -35,6 +35,7 @@ class DatabaseEditorDialog(wx.Frame):
         self.window_pane_query = wx.Panel(self.window_db_editor, wx.ID_ANY, style=wx.BORDER_SUNKEN | wx.TAB_TRAVERSAL)
         self.text_ctrl_condition = wx.TextCtrl(self.window_pane_query, wx.ID_ANY, "")
         self.button_query = wx.Button(self.window_pane_query, wx.ID_ANY, "Query")
+        self.button_clear = wx.Button(self.window_pane_query, wx.ID_ANY, "Clear")
         self.button_download = wx.Button(self.window_pane_query, wx.ID_ANY, "Download")
         self.list_ctrl_query_results = wx.ListCtrl(self.window_pane_query, wx.ID_ANY,
                                                    style=wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
@@ -45,6 +46,7 @@ class DatabaseEditorDialog(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnSQLSettings, id=self.button_sql_connection.GetId())
         # self.Bind(wx.EVT_TREE_SEL_CHANGED, self.OnTreeAdd, self.tree_ctrl_db, id=self.tree_ctrl_db.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnQuery, id=self.button_query.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnClear, id=self.button_clear.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnPostImportCalc, id=self.button_post_import_calc.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnEditDB, id=self.button_edit_db.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnReimport, id=self.button_reimport.GetId())
@@ -88,6 +90,7 @@ class DatabaseEditorDialog(wx.Frame):
                                               wx.VERTICAL)
         sizer_condition_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_download_button = wx.BoxSizer(wx.VERTICAL)
+        sizer_clear_button = wx.BoxSizer(wx.VERTICAL)
         sizer_query_button = wx.BoxSizer(wx.VERTICAL)
         sizer_condition = wx.BoxSizer(wx.VERTICAL)
         sizer_combo_box = wx.BoxSizer(wx.VERTICAL)
@@ -117,8 +120,12 @@ class DatabaseEditorDialog(wx.Frame):
         sizer_condition_buttons.Add(sizer_query_button, 0, wx.ALL, 5)
         label_spacer_2 = wx.StaticText(self.window_pane_query, wx.ID_ANY, "")
         sizer_download_button.Add(label_spacer_2, 0, wx.BOTTOM, 5)
-        sizer_download_button.Add(self.button_download, 0, wx.ALL, 5)
+        sizer_download_button.Add(self.button_download, 0, wx.TOP | wx.BOTTOM, 5)
         sizer_condition_buttons.Add(sizer_download_button, 0, wx.ALL, 5)
+        label_spacer_3 = wx.StaticText(self.window_pane_query, wx.ID_ANY, "")
+        sizer_clear_button.Add(label_spacer_3, 0, wx.BOTTOM, 5)
+        sizer_clear_button.Add(self.button_clear, 0, wx.ALL, 5)
+        sizer_condition_buttons.Add(sizer_clear_button, 0, wx.ALL, 5)
         sizer_query.Add(sizer_condition_buttons, 0, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_query_table.Add(self.list_ctrl_query_results, 1, wx.EXPAND, 0)
         sizer_query.Add(sizer_query_table, 1, wx.ALL | wx.EXPAND, 5)
@@ -170,6 +177,9 @@ class DatabaseEditorDialog(wx.Frame):
         self.data_query_results.set_data(data, columns)
         cnx.close()
         del wait
+
+    def OnClear(self, evt):
+        self.data_query_results.clear()
 
     @staticmethod
     def get_db_tree():
