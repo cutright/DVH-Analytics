@@ -4,8 +4,8 @@
 
 import wx
 from dialogs.database.sql_settings import SQLSettingsDialog
-from dialogs.database.change_patient_identifier import ChangePatientIdentifierDialog
-from dialogs.database.delete_patient import DeletePatientDialog
+from dialogs.database.change_or_delete_patient import ChangePatientIdentifierDialog, DeletePatientDialog
+from dialogs.database.reimport import ReimportDialog
 from db.sql_settings import write_sql_connection_settings, validate_sql_connection
 from db.sql_to_python import get_database_tree
 from db.sql_connector import DVH_SQL
@@ -44,6 +44,7 @@ class DatabaseEditorDialog(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnSQLSettings, id=self.button_sql_connection.GetId())
         # self.Bind(wx.EVT_TREE_SEL_CHANGED, self.OnTreeAdd, self.tree_ctrl_db, id=self.tree_ctrl_db.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnQuery, id=self.button_query.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnReimport, id=self.button_reimport.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnDeletePatient, id=self.button_delete_study.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnChangePatientIdentifier, id=self.button_change_mrn_uid.GetId())
 
@@ -190,6 +191,13 @@ class DatabaseEditorDialog(wx.Frame):
 
     def OnDeletePatient(self, evt):
         dlg = DeletePatientDialog()
+        res = dlg.ShowModal()
+        if res == wx.ID_OK:
+            pass
+        dlg.Destroy()
+
+    def OnReimport(self, evt):
+        dlg = ReimportDialog()
         res = dlg.ShowModal()
         if res == wx.ID_OK:
             pass
