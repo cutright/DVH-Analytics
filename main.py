@@ -3,9 +3,9 @@
 #
 
 import wx
-from dialogs.query import query_dlg
-from dialogs.settings import UserSettings
-from dialogs.database_editor import DatabaseEditorDialog
+from dialogs.main.query import query_dlg
+from dialogs.main.settings import UserSettings
+from models.database_editor import DatabaseEditorDialog
 from db import sql_columns
 from models.datatable import DataTable
 from models.plot import PlotStatDVH
@@ -13,7 +13,6 @@ from models.dvh import DVH
 from models.endpoint import EndpointFrame
 from models.rad_bio import RadBioFrame
 from models.time_series import TimeSeriesFrame
-from db.sql_settings import write_sql_connection_settings, validate_sql_connection
 from db.sql_to_python import QuerySQL
 from paths import LOGO_PATH
 from utilties import get_study_instance_uids

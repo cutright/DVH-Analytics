@@ -3,7 +3,7 @@
 
 import wx
 from models.datatable import DataTable
-from dialogs.endpoint import AddEndpointDialog, DelEndpointDialog
+from dialogs.main.endpoint import AddEndpointDialog, DelEndpointDialog
 from copy import deepcopy
 
 

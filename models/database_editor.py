@@ -3,7 +3,9 @@
 
 
 import wx
-from dialogs.sql_settings import SQLSettingsDialog
+from dialogs.database.sql_settings import SQLSettingsDialog
+from dialogs.database.change_patient_identifier import ChangePatientIdentifierDialog
+from dialogs.database.delete_patient import DeletePatientDialog
 from db.sql_settings import write_sql_connection_settings, validate_sql_connection
 from db.sql_to_python import get_database_tree
 from db.sql_connector import DVH_SQL
@@ -42,6 +44,8 @@ class DatabaseEditorDialog(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnSQLSettings, id=self.button_sql_connection.GetId())
         # self.Bind(wx.EVT_TREE_SEL_CHANGED, self.OnTreeAdd, self.tree_ctrl_db, id=self.tree_ctrl_db.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnQuery, id=self.button_query.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnDeletePatient, id=self.button_delete_study.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnChangePatientIdentifier, id=self.button_change_mrn_uid.GetId())
 
         self.__set_properties()
         self.__do_layout()
@@ -176,3 +180,17 @@ class DatabaseEditorDialog(wx.Frame):
             self.selected_tables[table] = self.tree_ctrl_db.IsSelected(table_item)
             for column, column_item in self.column_nodes[table].items():
                 self.selected_columns[table][column] = self.tree_ctrl_db.IsSelected(column_item)
+
+    def OnChangePatientIdentifier(self, evt):
+        dlg = ChangePatientIdentifierDialog()
+        res = dlg.ShowModal()
+        if res == wx.ID_OK:
+            pass
+        dlg.Destroy()
+
+    def OnDeletePatient(self, evt):
+        dlg = DeletePatientDialog()
+        res = dlg.ShowModal()
+        if res == wx.ID_OK:
+            pass
+        dlg.Destroy()
