@@ -6,6 +6,7 @@ import wx
 from dialogs.database.sql_settings import SQLSettingsDialog
 from dialogs.database.change_or_delete_patient import ChangePatientIdentifierDialog, DeletePatientDialog
 from dialogs.database.reimport import ReimportDialog
+from dialogs.database.edit_db import EditDatabaseDialog
 from db.sql_settings import write_sql_connection_settings, validate_sql_connection
 from db.sql_to_python import get_database_tree
 from db.sql_connector import DVH_SQL
@@ -23,7 +24,7 @@ class DatabaseEditorDialog(wx.Frame):
         self.button_import_inbox = wx.Button(self, wx.ID_ANY, "Import Inbox")
         self.button_rebuild_db = wx.Button(self, wx.ID_ANY, "Rebuild Database")
         self.button_post_import_calc = wx.Button(self, wx.ID_ANY, "Post-Import Calculations")
-        self.button_update_db = wx.Button(self, wx.ID_ANY, "Update Database")
+        self.button_edit_db = wx.Button(self, wx.ID_ANY, "Update Database")
         self.button_reimport = wx.Button(self, wx.ID_ANY, "Reimport from DICOM")
         self.button_delete_study = wx.Button(self, wx.ID_ANY, "Delete Study")
         self.button_change_mrn_uid = wx.Button(self, wx.ID_ANY, "Change MRN/UID")
@@ -44,6 +45,7 @@ class DatabaseEditorDialog(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnSQLSettings, id=self.button_sql_connection.GetId())
         # self.Bind(wx.EVT_TREE_SEL_CHANGED, self.OnTreeAdd, self.tree_ctrl_db, id=self.tree_ctrl_db.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnQuery, id=self.button_query.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnEditDB, id=self.button_edit_db.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnReimport, id=self.button_reimport.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnDeletePatient, id=self.button_delete_study.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnChangePatientIdentifier, id=self.button_change_mrn_uid.GetId())
@@ -94,7 +96,7 @@ class DatabaseEditorDialog(wx.Frame):
         sizer_dialog_buttons.Add(self.button_import_inbox, 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button_rebuild_db, 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button_post_import_calc, 0, wx.ALL, 5)
-        sizer_dialog_buttons.Add(self.button_update_db, 0, wx.ALL, 5)
+        sizer_dialog_buttons.Add(self.button_edit_db, 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button_reimport, 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button_delete_study, 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button_change_mrn_uid, 0, wx.ALL, 5)
@@ -198,6 +200,13 @@ class DatabaseEditorDialog(wx.Frame):
 
     def OnReimport(self, evt):
         dlg = ReimportDialog()
+        res = dlg.ShowModal()
+        if res == wx.ID_OK:
+            pass
+        dlg.Destroy()
+
+    def OnEditDB(self, evt):
+        dlg = EditDatabaseDialog()
         res = dlg.ShowModal()
         if res == wx.ID_OK:
             pass
