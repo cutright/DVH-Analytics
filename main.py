@@ -27,7 +27,7 @@ class MainFrame(wx.Frame):
         self.dvh = None
         self.data = {key: None for key in ['Plans', 'Beams', 'Rxs']}
 
-        self.toolbar_keys = ['Open', 'Close', 'Save', 'Print', 'Export', 'Import', 'Database', 'Settings']
+        self.toolbar_keys = ['Open', 'Close', 'Save', 'Print', 'Export', 'Import', 'Database', 'ROI Map', 'Settings']
         self.toolbar_ids = {key: i+1000 for i, key in enumerate(self.toolbar_keys)}
 
         # sql_columns.py contains dictionaries of all queryable variables along with their
@@ -69,7 +69,8 @@ class MainFrame(wx.Frame):
                  'Export': "icons/iconfinder_csv_file_database_extension_data_3876336.png",
                  'Import': "icons/iconfinder_import_4168538.png",
                  'Settings': "icons/iconfinder_Settings_1493289.png",
-                 'Database': "icons/iconfinder_data_115746.png"}
+                 'Database': "icons/iconfinder_data_115746.png",
+                 'ROI Map': "icons/iconfinder_icon-map_211858.png"}
 
         description = {'Open': "Open previously queried data",
                        'Close': "Clear queried data",
@@ -78,13 +79,14 @@ class MainFrame(wx.Frame):
                        'Export': "Export data to CSV",
                        'Import': "DICOM import wizard",
                        'Settings': "User Settings",
-                       'Database': "Database Administrator Tools"}
+                       'Database': "Database Administrator Tools",
+                       'ROI Map': "Define ROI name aliases"}
 
         for key in self.toolbar_keys:
             self.frame_toolbar.AddTool(self.toolbar_ids[key], key, wx.Bitmap(files[key], wx.BITMAP_TYPE_ANY),
                                        wx.NullBitmap, wx.ITEM_NORMAL, description[key], "")
 
-            if key in {'Close', 'Export', 'Database'}:
+            if key in {'Close', 'Export', 'ROI Map'}:
                 self.frame_toolbar.AddSeparator()
 
         self.Bind(wx.EVT_TOOL, self.on_toolbar_database, id=self.toolbar_ids['Database'])
