@@ -69,7 +69,7 @@ class MainFrame(wx.Frame):
                  'Export': "icons/iconfinder_csv_file_database_extension_data_3876336.png",
                  'Import': "icons/iconfinder_import_4168538.png",
                  'Settings': "icons/iconfinder_Settings_1493289.png",
-                 'Database': "icons/iconfinder_data_115746.png",
+                 'Database': "icons/iconfinder_data_115746_black.png",
                  'ROI Map': "icons/iconfinder_icon-map_211858.png"}
 
         description = {'Open': "Open previously queried data",
