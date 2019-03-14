@@ -6,7 +6,6 @@ Created on Sat Mar  4 11:33:10 2017
 @author: Dan Cutright, PhD
 """
 
-from __future__ import print_function
 import os
 import psycopg2
 from datetime import datetime

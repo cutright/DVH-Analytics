@@ -7,16 +7,15 @@ Created on Sun Feb 26 11:06:28 2017
 @author: Dan Cutright, PhD
 """
 
-from __future__ import print_function
 from dicompylercore import dicomparser, dvhcalc
 from dateutil.relativedelta import relativedelta  # python-dateutil
 import numpy as np
 import pydicom as dicom
-from .....tools.roi.name_manager import DatabaseROIs, clean_name
-from .....tools.utilities import datetime_str_to_obj, change_angle_origin, date_str_to_obj, calc_stats
-from .....tools.roi.formatter import dicompyler_roi_coord_to_db_string, get_planes_from_string
-from .....tools.roi import geometry as roi_calc
-from .....tools.mlc_analyzer import Beam as mlca
+from tools.roi_name_manager import DatabaseROIs, clean_name
+from tools.utilities import datetime_str_to_obj, change_angle_origin, date_str_to_obj, calc_stats
+from tools.roi_formatter import dicompyler_roi_coord_to_db_string, get_planes_from_string
+from tools import roi_geometry as roi_calc
+from tools.mlc_analyzer import Beam as mlca
 
 
 class DVHRow:

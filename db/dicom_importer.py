@@ -6,7 +6,6 @@ Created on Thu Mar  2 22:15:52 2017
 @author: nightowl
 """
 
-from __future__ import print_function
 import os
 import shutil
 from datetime import datetime

@@ -1,6 +1,7 @@
 import wx
 from db.sql_connector import DVH_SQL
 from datetime import datetime
+import numpy as np
 
 
 def get_study_instance_uids(**kwargs):
@@ -151,3 +152,52 @@ def date_str_to_obj(date_str):
     day = int(date_str[6:8])
 
     return datetime(year, month, day)
+
+
+def change_angle_origin(angles, max_positive_angle):
+    """
+    :param angles: a list of angles
+    :param max_positive_angle: the maximum positive angle, angles greater than this will be shifted to negative angles
+    :return: list of the same angles, but none exceed the max
+    :rtype: list
+    """
+    if len(angles) == 1:
+        if angles[0] > max_positive_angle:
+            return [angles[0] - 360]
+        else:
+            return angles
+    new_angles = []
+    for angle in angles:
+        if angle > max_positive_angle:
+            new_angles.append(angle - 360)
+        elif angle == max_positive_angle:
+            if angle == angles[0] and angles[1] > max_positive_angle:
+                new_angles.append(angle - 360)
+            elif angle == angles[-1] and angles[-2] > max_positive_angle:
+                new_angles.append(angle - 360)
+            else:
+                new_angles.append(angle)
+        else:
+            new_angles.append(angle)
+    return new_angles
+
+
+def calc_stats(data):
+    """
+    :param data: a list or numpy 1D array of numbers
+    :return: a standard list of stats (max, 75%, median, mean, 25%, and min)
+    :rtype: list
+    """
+    data = [x for x in data if x != 'None']
+    try:
+        data_np = np.array(data)
+        rtn_data = [np.max(data_np),
+                    np.percentile(data_np, 75),
+                    np.median(data_np),
+                    np.mean(data_np),
+                    np.percentile(data_np, 25),
+                    np.min(data_np)]
+    except:
+        rtn_data = [0, 0, 0, 0, 0, 0]
+        print("calc_stats() received non-numerical data")
+    return rtn_data
