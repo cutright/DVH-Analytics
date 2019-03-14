@@ -22,7 +22,6 @@ class DatabaseEditorDialog(wx.Frame):
 
         self.SetSize((1330, 820))
         self.button_sql_connection = wx.Button(self, wx.ID_ANY, "SQL Connection")
-        self.button_import_inbox = wx.Button(self, wx.ID_ANY, "Import Inbox")
         self.button_rebuild_db = wx.Button(self, wx.ID_ANY, "Rebuild Database")
         self.button_post_import_calc = wx.Button(self, wx.ID_ANY, "Post-Import Calculations")
         self.button_edit_db = wx.Button(self, wx.ID_ANY, "Edit Database")
@@ -95,7 +94,6 @@ class DatabaseEditorDialog(wx.Frame):
         sizer_db_tree = wx.BoxSizer(wx.HORIZONTAL)
         sizer_dialog_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_dialog_buttons.Add(self.button_sql_connection, 0, wx.ALL, 5)
-        sizer_dialog_buttons.Add(self.button_import_inbox, 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button_rebuild_db, 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button_post_import_calc, 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button_edit_db, 0, wx.ALL, 5)
