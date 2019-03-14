@@ -47,6 +47,7 @@ class DatabaseEditorDialog(wx.Frame):
         # self.Bind(wx.EVT_TREE_SEL_CHANGED, self.OnTreeAdd, self.tree_ctrl_db, id=self.tree_ctrl_db.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnQuery, id=self.button_query.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnClear, id=self.button_clear.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnRebuildDB, id=self.button_rebuild_db.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnPostImportCalc, id=self.button_post_import_calc.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnEditDB, id=self.button_edit_db.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnReimport, id=self.button_reimport.GetId())
@@ -227,4 +228,14 @@ class DatabaseEditorDialog(wx.Frame):
         res = dlg.ShowModal()
         if res == wx.ID_OK:
             pass
+        dlg.Destroy()
+
+    def OnRebuildDB(self, evt):
+        dlg = wx.MessageDialog(self, "Are you sure?", "Rebuild Database from DICOM",
+                               wx.ICON_WARNING | wx.OK | wx.CANCEL | wx.CANCEL_DEFAULT)
+        res = dlg.ShowModal()
+        if res == wx.ID_OK:
+            cnx = DVH_SQL()
+            cnx.reinitialize_database()
+            cnx.close()
         dlg.Destroy()

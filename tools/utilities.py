@@ -1,5 +1,6 @@
 import wx
 from db.sql_connector import DVH_SQL
+from datetime import datetime
 
 
 def get_study_instance_uids(**kwargs):
@@ -103,3 +104,50 @@ def get_selected_listctrl_items(list_control):
 
         selection.append(index_next)
         index_current = index_next
+
+
+def print_run_time(start_time, end_time, calc_title):
+    total_time = end_time - start_time
+    seconds = total_time.seconds
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    if h:
+        print("%s took %dhrs %02dmin %02dsec to complete" %
+              (calc_title, h, m, s))
+    elif m:
+        print("%s took %02dmin %02dsec to complete" % (calc_title, m, s))
+    else:
+        print("%s took %02dsec to complete" % (calc_title, s))
+
+
+def datetime_str_to_obj(datetime_str):
+    """
+    :param datetime_str: a string representation of a datetime as formatted in DICOM (YYYYMMDDHHMMSS)
+    :return: a datetime object
+    :rtype: datetime
+    """
+
+    year = int(datetime_str[0:4])
+    month = int(datetime_str[4:6])
+    day = int(datetime_str[6:8])
+    hour = int(datetime_str[8:10])
+    minute = int(datetime_str[10:12])
+    second = int(datetime_str[12:14])
+
+    datetime_obj = datetime(year, month, day, hour, minute, second)
+
+    return datetime_obj
+
+
+def date_str_to_obj(date_str):
+    """
+    :param date_str: a string representation of a date as formatted in DICOM (YYYYMMDD)
+    :return: a datetime object
+    :rtype: datetime
+    """
+
+    year = int(date_str[0:4])
+    month = int(date_str[4:6])
+    day = int(date_str[6:8])
+
+    return datetime(year, month, day)

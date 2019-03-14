@@ -15,7 +15,7 @@ from models.rad_bio import RadBioFrame
 from models.time_series import TimeSeriesFrame
 from db.sql_to_python import QuerySQL
 from paths import LOGO_PATH
-from utilties import get_study_instance_uids
+from tools.utilities import get_study_instance_uids
 
 
 class MainFrame(wx.Frame):

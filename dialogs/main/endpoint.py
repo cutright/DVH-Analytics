@@ -3,7 +3,7 @@
 
 
 import wx
-from utilties import get_selected_listctrl_items
+from tools.utilities import get_selected_listctrl_items
 
 
 class AddEndpointDialog(wx.Dialog):

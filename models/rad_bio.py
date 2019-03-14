@@ -6,7 +6,7 @@ from models.datatable import DataTable
 from models.dvh import calc_eud, calc_tcp
 # import wx.lib.mixins.listctrl as listmix
 from copy import deepcopy
-from utilties import convert_value_to_str, get_selected_listctrl_items
+from tools.utilities import convert_value_to_str, get_selected_listctrl_items
 
 
 # class EditableListCtrl(wx.ListCtrl, listmix.TextEditMixin):

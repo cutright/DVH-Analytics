@@ -9,7 +9,7 @@ import default_options as options
 import wx
 import wx.html2
 import numpy as np
-from utilties import collapse_into_single_dates, moving_avg
+from tools.utilities import collapse_into_single_dates, moving_avg
 
 
 options = load_options()
