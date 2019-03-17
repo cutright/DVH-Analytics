@@ -224,8 +224,8 @@ class DICOM_Parser:
                 'import_time_stamp': [None, 'timestamp']}
 
         # over-ride values if dummy roi's are used to store rx data in rt_structure
-        if self.pinnacle_rx_data and rx_index+1 in list(self.pinnacle_rx_data):
-            for key, value in self.pinnacle_rx_data[rx_index+1].items():
+        if self.pinnacle_rx_data and rx.fx_grp_number in list(self.pinnacle_rx_data):
+            for key, value in self.pinnacle_rx_data[rx.fx_grp_number].items():
                 data[key] = value
 
         return data
