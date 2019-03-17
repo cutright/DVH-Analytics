@@ -41,6 +41,11 @@ class DVH_SQL:
                 self.cursor.execute(line)
         self.cnx.commit()
 
+    def execute_str(self, command_str):
+        for line in command_str.split('\n'):
+            self.cursor.execute(line)
+        self.cnx.commit()
+
     def check_table_exists(self, table_name):
 
         self.cursor.execute("""
@@ -173,6 +178,28 @@ class DVH_SQL:
         print('DVHs imported')
 
         write_import_errors(dvh_table)
+
+    # Used in DVHA >0.6
+    def insert_row(self, table, row):
+        """
+        :param table: SQL table name
+        :param row: data returned from DICOM_Parser.get_blank_row()
+        """
+        columns = list(row)
+
+        values = []
+        for column in columns:
+            if row[column][0] is None:
+                values.append("(NULL)")
+            else:
+                if 'varchar' in row[column][1]:
+                    max_length = int(row[column][1].replace('varchar(', '').replace(')', ''))
+                    values.append("'%s'" % truncate_string(row[column][0], max_length))
+                else:
+                    values.append("'%s'" % row[column][0])
+
+        cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (table, ','.join(columns), ",".join(values))
+        self.execute_str(cmd)
 
     def insert_plan(self, plan):
         file_path = 'insert_plan_' + plan.mrn + '.sql'

@@ -18,7 +18,7 @@ ALTER TABLE Plans ADD COLUMN IF NOT EXISTS toxicity_grades text;
 ALTER TABLE DVHs ADD COLUMN IF NOT EXISTS toxicity_scale text;
 ALTER TABLE DVHs ADD COLUMN IF NOT EXISTS toxicity_grade smallint;
 ALTER TABLE Plans ADD COLUMN IF NOT EXISTS protocol text;
--- The following columns have been added as of DVH Analytics 0.5.3
+-- The following columns have been dropped as of DVH Analytics 0.5.3
 ALTER TABLE Plans DROP COLUMN IF EXISTS toxicity_scales;
 ALTER TABLE DVHs DROP COLUMN IF EXISTS toxicity_scale;
 -- The following columns have been added as of DVH Analytics 0.5.4
@@ -45,3 +45,5 @@ ALTER TABLE Beams ADD COLUMN IF NOT EXISTS cp_mu_max real;
 ALTER TABLE Plans ADD COLUMN IF NOT EXISTS complexity real;
 -- The following columns have been added as of DVH Analytics 0.5.5
 ALTER TABLE Beams ADD COLUMN IF NOT EXISTS complexity real;
+-- The following columns have been added as of DVH Analytics 0.6
+ALTER TABLE Beams ADD COLUMN IF NOT EXISTS tx_modality real;
