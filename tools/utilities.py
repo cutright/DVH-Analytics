@@ -113,12 +113,11 @@ def print_run_time(start_time, end_time, calc_title):
     m, s = divmod(seconds, 60)
     h, m = divmod(m, 60)
     if h:
-        print("%s took %dhrs %02dmin %02dsec to complete" %
-              (calc_title, h, m, s))
+        print("%s. This took %dhrs %02dmin %02dsec to complete" % (calc_title, h, m, s))
     elif m:
-        print("%s took %02dmin %02dsec to complete" % (calc_title, m, s))
+        print("%s. This took %02dmin %02dsec to complete" % (calc_title, m, s))
     else:
-        print("%s took %02dsec to complete" % (calc_title, s))
+        print("%s. This took %02dsec to complete" % (calc_title, s))
 
 
 def datetime_str_to_obj(datetime_str):

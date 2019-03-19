@@ -492,6 +492,12 @@ class DVH_SQL:
     def update_sql_tables(self):
         self.get_column_names('DVHs')
 
+    def is_uid_imported(self, uid):
+        for table in self.tables:
+            if self.is_study_instance_uid_in_table(table, uid):
+                return True
+        return False
+
 
 def write_import_errors(obj):
     detail_col = [c for c in ['beam_name', 'roi_name', 'plan_name'] if hasattr(obj, c)]
