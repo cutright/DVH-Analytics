@@ -13,7 +13,13 @@ SCRIPT_DIR = os.path.dirname(__file__)
 
 
 class DICOM_Directory:
-    def __init__(self, start_path):
+    def __init__(self, start_path, wx_list_ctrl):
+        self.wx_tree_ctrl = wx_list_ctrl
+        self.wx_tree_ctrl.DeleteAllItems()
+        self.root = self.wx_tree_ctrl.AddRoot('Studies')
+        self.wx_tree_ctrl.Expand(self.root)
+        self.study_nodes = {}
+        self.rt_file_nodes = {}
         self.start_path = start_path
         self.file_paths = self.get_file_paths()
         self.current_index = 0
@@ -52,10 +58,12 @@ class DICOM_Directory:
                 if uid not in list(self.file_tree):
                     self.file_tree[uid] = self.get_base_study_file_set()
                     self.file_tree[uid]['mrn'] = dicom_file.PatientID
-                    self.file_tree[uid]['node_title'] = "%s: %s" % (dicom_file.PatientID, 'uid')
+                    self.file_tree[uid]['node_title'] = "%s: %s" % (dicom_file.PatientID, uid)
 
                 self.file_tree[uid][file_type]['file_path'].append(file_path)
                 self.file_tree[uid][file_type]['timestamp'].append(timestamp)
+
+                self.append_file_to_tree(uid, dicom_file.PatientID, file_type)
 
             self.current_index += 1
 
@@ -82,15 +90,24 @@ class DICOM_Directory:
                 return False
         return True
 
-    def build_wx_tree_ctrl(self, wx_tree_ctrl):
-        root = wx_tree_ctrl.AddRoot('Studies')
-        study_nodes = {uid: wx_tree_ctrl.AppendItem(root, study['node_title']) for uid, study in self.file_tree.items()}
-        rt_file_nodes = {uid: {} for uid in list(self.file_tree)}
+    def append_file_to_tree(self, uid, mrn, file_type):
+        if uid not in self.study_nodes:
+            self.study_nodes[uid] = self.wx_tree_ctrl.AppendItem(self.root, "%s: %s" % (mrn, uid))
+
+        if uid not in self.rt_file_nodes:
+            self.rt_file_nodes[uid] = {}
+
+        self.rt_file_nodes[uid][file_type] = self.wx_tree_ctrl.AppendItem(self.study_nodes[uid], file_type)
+
+    def rebuild_wx_tree_ctrl(self):
+        self.wx_tree_ctrl.DeleteAllItems()
+        self.study_nodes = {uid: self.wx_tree_ctrl.AppendItem(self.root, study['node_title']) for uid, study in self.file_tree.items()}
+        self.rt_file_nodes = {uid: {} for uid in list(self.file_tree)}
         for uid in list(self.file_tree):
             for rt_file in self.file_types:
-                rt_file_nodes[uid][rt_file] = wx_tree_ctrl.AppendItem(study_nodes[uid], rt_file)
+                self.rt_file_nodes[uid][rt_file] = self.wx_tree_ctrl.AppendItem(self.study_nodes[uid], rt_file)
 
-        return {'root': root, 'study': study_nodes, 'files': rt_file_nodes}
+        self.wx_tree_ctrl.Expand(self.root)
 
 
 def rank_ptvs_by_D95(dvhs):

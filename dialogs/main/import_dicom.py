@@ -11,22 +11,24 @@ class ImportDialog(wx.Dialog):
         abs_file_path = get_settings('import')
         start_path = parse_settings_file(abs_file_path)['inbox']
 
-        self.SetSize((550, 600))
+        self.SetSize((650, 600))
         self.text_ctrl_directory = wx.TextCtrl(self, wx.ID_ANY, start_path, style=wx.TE_READONLY)
         self.button_browse = wx.Button(self, wx.ID_ANY, u"Browse…")
         self.checkbox_subfolders = wx.CheckBox(self, wx.ID_ANY, "Search within subfolders")
-        self.panel_study_tree = wx.Panel(self, wx.ID_ANY)
+        self.panel_study_tree = wx.Panel(self, wx.ID_ANY, style=wx.BORDER_SUNKEN)
         self.gauge = wx.Gauge(self, -1, 100)
         self.button_import_all = wx.Button(self, wx.ID_ANY, "Import All")
         self.button_import_selected = wx.Button(self, wx.ID_ANY, "Import Selected")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+
+        self.tree_ctrl_import = wx.TreeCtrl(self.panel_study_tree, wx.ID_ANY, style=wx.TR_HAS_BUTTONS | wx.TR_MULTIPLE)
 
         self.Bind(wx.EVT_BUTTON, self.on_browse, id=self.button_browse.GetId())
 
         self.__set_properties()
         self.__do_layout()
 
-        self.dicom_dir = DICOM_Directory(start_path)
+        self.dicom_dir = DICOM_Directory(start_path, self.tree_ctrl_import)
         self.parse_directory()
 
     def __set_properties(self):
@@ -38,6 +40,7 @@ class ImportDialog(wx.Dialog):
         # begin wxGlade: MyFrame.__do_layout
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_db_tree = wx.BoxSizer(wx.HORIZONTAL)
         sizer_studies = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Studies"), wx.VERTICAL)
         sizer_progress = wx.BoxSizer(wx.HORIZONTAL)
         sizer_dicom_import_directory = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY,
@@ -55,6 +58,8 @@ class ImportDialog(wx.Dialog):
         label_note.SetFont(wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         sizer_studies.Add(label_note, 0, wx.ALL, 5)
         sizer_studies.Add(self.panel_study_tree, 1, wx.ALL | wx.EXPAND, 5)
+        sizer_db_tree.Add(self.tree_ctrl_import, 1, wx.EXPAND, 0)
+        self.panel_study_tree.SetSizer(sizer_db_tree)
         label_progress = wx.StaticText(self, wx.ID_ANY, "Progress: Status message")
         label_progress.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         sizer_progress.Add(label_progress, 1, 0, 0)
@@ -67,6 +72,7 @@ class ImportDialog(wx.Dialog):
         sizer_wrapper.Add(sizer_buttons, 0, wx.ALIGN_RIGHT | wx.BOTTOM | wx.LEFT | wx.RIGHT, 10)
         self.SetSizer(sizer_wrapper)
         self.Layout()
+        self.Center()
 
     def parse_directory(self):
         self.gauge.Show()
@@ -76,6 +82,7 @@ class ImportDialog(wx.Dialog):
             self.gauge.SetValue(int(100 * self.dicom_dir.current_index / file_count))
             wx.Yield()
         self.gauge.Hide()
+        # self.dicom_dir.build_wx_tree_ctrl(self.tree_ctrl_db)
 
     def on_browse(self, evt):
         starting_dir = self.text_ctrl_directory.GetValue()
@@ -86,5 +93,5 @@ class ImportDialog(wx.Dialog):
             self.text_ctrl_directory.SetValue(dlg.GetPath())
         dlg.Destroy()
 
-        self.dicom_dir = DICOM_Directory(self.text_ctrl_directory.GetValue())
+        self.dicom_dir = DICOM_Directory(self.text_ctrl_directory.GetValue(), self.tree_ctrl_import)
         self.parse_directory()
