@@ -5,6 +5,7 @@
 import wx
 from dialogs.main.query import query_dlg
 from dialogs.main.settings import UserSettings
+from dialogs.main.import_dicom import ImportDialog
 from models.database_editor import DatabaseEditorDialog
 from db import sql_columns
 from models.datatable import DataTable
@@ -92,6 +93,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.on_toolbar_database, id=self.toolbar_ids['Database'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_settings, id=self.toolbar_ids['Settings'])
         self.Bind(wx.EVT_TOOL, self.OnClose, id=self.toolbar_ids['Close'])
+        self.Bind(wx.EVT_TOOL, self.OnImport, id=self.toolbar_ids['Import'])
 
     def __add_menubar(self):
 
@@ -479,6 +481,15 @@ class MainFrame(wx.Frame):
         res = dlg.ShowModal()
         if res == wx.ID_OK:
             dlg.save_options()
+        # else:
+        #     dlg.revert_options()
+        dlg.Destroy()
+
+    def OnImport(self, evt):
+        dlg = ImportDialog()
+        res = dlg.ShowModal()
+        # if res == wx.ID_OK:
+        #     dlg.save_options()
         # else:
         #     dlg.revert_options()
         dlg.Destroy()
