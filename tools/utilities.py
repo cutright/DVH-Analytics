@@ -2,6 +2,21 @@ import wx
 from db.sql_connector import DVH_SQL
 from datetime import datetime
 import numpy as np
+from os import walk, listdir
+from os.path import join, isfile
+import os
+import shutil
+
+
+def get_file_paths(start_path, search_subfolders=False):
+    if search_subfolders:
+        file_paths = []
+        for root, dirs, files in walk(start_path, topdown=False):
+            for name in files:
+                file_paths.append(join(root, name))
+        return file_paths
+
+    return [join(start_path, f) for f in listdir(start_path) if isfile(join(start_path, f))]
 
 
 def get_study_instance_uids(**kwargs):
@@ -200,3 +215,54 @@ def calc_stats(data):
         rtn_data = [0, 0, 0, 0, 0, 0]
         print("calc_stats() received non-numerical data")
     return rtn_data
+
+
+def move_files_to_new_path(files, new_dir):
+    for file_path in files:
+        file_name = os.path.basename(file_path)
+        new = os.path.join(new_dir, file_name)
+        try:
+            shutil.move(file_path, new)
+        except:
+            os.mkdir(new_dir)
+            shutil.move(file_path, new)
+
+
+# def remove_empty_folders(start_path):
+#     if start_path[0:2] == './':
+#         rel_path = start_path[2:]
+#         start_path = os.path.join(SCRIPT_DIR, rel_path)
+#
+#     for (path, dirs, files) in os.walk(start_path, topdown=False):
+#         if files:
+#             continue
+#         try:
+#             if path != start_path:
+#                 os.rmdir(path)
+#         except OSError:
+#             pass
+
+
+def move_all_files(new_dir, old_dir):
+    """
+    This function will move all files from the old to new directory, it will ignore all files in subdirectories
+    :param new_dir: absolute directory path
+    :param old_dir: absolute directory path
+    """
+    initial_path = os.path.dirname(os.path.realpath(__file__))
+
+    os.chdir(old_dir)
+
+    file_paths = [f for f in os.listdir(old_dir) if os.path.isfile(os.path.join(old_dir, f))]
+
+    misc_path = os.path.join(new_dir, 'misc')
+    if not os.path.isdir(misc_path):
+        os.mkdir(misc_path)
+
+    for f in file_paths:
+        file_name = os.path.basename(f)
+        new = os.path.join(misc_path, file_name)
+        shutil.move(f, new)
+
+    os.chdir(initial_path)
+

@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import os
-import shutil
 import pydicom as dicom
 from pydicom.errors import InvalidDicomError
 from db.sql_connector import DVH_SQL
+import wx
+from tools.utilities import get_file_paths
 
 
 FILE_TYPES = {'rtplan', 'rtstruct', 'rtdose'}
@@ -13,63 +14,136 @@ SCRIPT_DIR = os.path.dirname(__file__)
 
 
 class DICOM_Directory:
-    def __init__(self, start_path, wx_list_ctrl):
+    def __init__(self, start_path, wx_list_ctrl, search_subfolders=True):
+        self.start_path = start_path
         self.wx_tree_ctrl = wx_list_ctrl
         self.wx_tree_ctrl.DeleteAllItems()
-        self.root = self.wx_tree_ctrl.AddRoot('Studies')
-        self.wx_tree_ctrl.Expand(self.root)
+        self.root = None
+        self.count = {key: 0 for key in ['patient', 'study', 'file']}
+        self.patient_nodes = {}
         self.study_nodes = {}
         self.rt_file_nodes = {}
-        self.start_path = start_path
-        self.file_paths = self.get_file_paths()
+        self.file_paths = get_file_paths(start_path, search_subfolders)
         self.current_index = 0
         self.file_count = len(self.file_paths)
         self.file_types = ['rtplan', 'rtstruct', 'rtdose']
         self.file_tree = {}
 
-    def get_file_paths(self):
-        file_paths = []
-        for root, dirs, files in os.walk(self.start_path, topdown=False):
-            for name in files:
-                file_paths.append(os.path.join(root, name))
-        return file_paths
+        self.image_list = wx.ImageList(16, 16)
+        self.images = {'rtplan': self.image_list.Add(wx.Image("icons/chart_bar.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
+                       'rtstruct': self.image_list.Add(wx.Image("icons/pencil.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
+                       'rtdose': self.image_list.Add(wx.Image("icons/chart_curve.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
+                       'other': self.image_list.Add( wx.Image("icons/error.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
+                       'studies': self.image_list.Add(wx.Image("icons/group.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
+                       'study': self.image_list.Add(wx.Image("icons/book.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
+                       'patient': self.image_list.Add(wx.Image("icons/user.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())}
+        self.wx_tree_ctrl.AssignImageList(self.image_list)
+
+    def initialize_root(self):
+        self.root = self.wx_tree_ctrl.AddRoot('Studies', ct_type=1)
+        # self.root.Set3State(True)
+        self.wx_tree_ctrl.Expand(self.root)
+        self.wx_tree_ctrl.SetPyData(self.root, None)
+        self.wx_tree_ctrl.SetItemImage(self.root, self.images['studies'], wx.TreeItemIcon_Normal)
 
     @staticmethod
-    def get_base_study_file_set():
-        base_file_dict = {key: [] for key in ['file_path', 'timestamp', 'latest_file_index']}
-        return {key: base_file_dict for key in ['rtplan', 'rtstruct', 'rtdose', 'other']}
+    def get_base_file_dict():
+        return {key: [] for key in ['file_path', 'timestamp', 'latest_file_index']}
+
+    def get_base_study_file_set(self):
+        base_study_file_set = {key: self.get_base_file_dict() for key in ['rtplan', 'rtstruct', 'rtdose', 'other']}
+
+        return base_study_file_set
+
+    @staticmethod
+    def read_dicom_file(file_path):
+        try:
+            return dicom.read_file(file_path, specific_tags=['StudyInstanceUID', 'Modality',
+                                                             'PatientID', 'PatientName'])
+        except InvalidDicomError:
+            return None
+
+    @staticmethod
+    def get_file_type(dicom_file):
+        file_type = dicom_file.Modality.lower()
+        if file_type not in FILE_TYPES:
+            return 'other'
+        return file_type
 
     def append_next_file_to_tree(self):
         if self.current_index < self.file_count:
             file_path = self.file_paths[self.current_index]
-            try:
-                dicom_file = dicom.read_file(file_path, specific_tags=['StudyInstanceUID', 'Modality', 'PatientID'])
-            except InvalidDicomError:
-                dicom_file = None
+            file_name = os.path.basename(file_path)
+            dicom_file = self.read_dicom_file(file_path)
 
             if dicom_file:
                 uid = dicom_file.StudyInstanceUID
-                file_type = dicom_file.Modality.lower()  # rtplan, rtstruct, rtdose
+                mrn = dicom_file.PatientID
+                name = dicom_file.PatientName
+                file_type = self.get_file_type(dicom_file)  # rtplan, rtstruct, rtdose
                 timestamp = os.path.getmtime(file_path)
 
-                if file_type not in FILE_TYPES:
-                    file_type = 'other'
+                # patient level
+                if mrn not in list(self.file_tree):
+                    self.file_tree[mrn] = {}
+                if mrn not in self.patient_nodes:
+                    self.add_patient_node(mrn, name)
 
-                if uid not in list(self.file_tree):
-                    self.file_tree[uid] = self.get_base_study_file_set()
-                    self.file_tree[uid]['mrn'] = dicom_file.PatientID
-                    self.file_tree[uid]['node_title'] = "%s: %s" % (dicom_file.PatientID, uid)
+                # study level
+                if uid not in list(self.file_tree[mrn]):
+                    self.file_tree[mrn][uid] = self.get_base_study_file_set()
+                if uid not in self.study_nodes:
+                    self.add_study_node(mrn, uid)
+                if uid not in self.rt_file_nodes:
+                    self.rt_file_nodes[uid] = {}
 
-                self.file_tree[uid][file_type]['file_path'].append(file_path)
-                self.file_tree[uid][file_type]['timestamp'].append(timestamp)
+                # file level
+                self.add_rt_file_node(uid, file_type, file_name)
+                self.append_file(mrn, uid, file_type, file_path, timestamp)
 
-                self.append_file_to_tree(uid, dicom_file.PatientID, file_type)
+                # if study contains rtplan, rtstruct, and rtdose, remove yellow highlight
+                if self.is_study_file_set_complete(mrn, uid):
+                    self.wx_tree_ctrl.SetItemBackgroundColour(self.study_nodes[uid], None)
+                    if self.is_patient_file_set_complete(mrn, list(self.file_tree[mrn])):
+                        self.wx_tree_ctrl.SetItemBackgroundColour(self.patient_nodes[mrn], None)
 
             self.current_index += 1
 
-    def process_remaining_files(self):
-        while self.current_index < self.file_count:
-            self.append_next_file_to_tree()
+    def append_file(self, mrn, uid, file_type, file_path, timestamp):
+        self.file_tree[mrn][uid][file_type]['file_path'].append(file_path)
+        self.file_tree[mrn][uid][file_type]['timestamp'].append(timestamp)
+
+    def add_rt_file_node(self, uid, file_type, file_name):
+        self.count['file'] += 1
+
+        self.rt_file_nodes[uid][file_type] = self.wx_tree_ctrl.AppendItem(self.study_nodes[uid],
+                                                                          "%s - %s" % (file_type, file_name))
+
+        self.wx_tree_ctrl.SetPyData(self.rt_file_nodes[uid][file_type], None)
+        self.wx_tree_ctrl.SetItemImage(self.rt_file_nodes[uid][file_type], self.images[file_type],
+                                       wx.TreeItemIcon_Normal)
+        self.wx_tree_ctrl.SortChildren(self.study_nodes[uid])
+
+    def add_patient_node(self, mrn, name):
+        self.count['patient'] += 1
+        self.patient_nodes[mrn] = self.wx_tree_ctrl.AppendItem(self.root, "%s - %s" % (name, mrn), ct_type=1)
+        # self.patient_nodes[mrn].Set3State(True)
+        self.wx_tree_ctrl.SetPyData(self.patient_nodes[mrn], None)
+        self.wx_tree_ctrl.SetItemImage(self.patient_nodes[mrn], self.images['patient'],
+                                       wx.TreeItemIcon_Normal)
+        self.wx_tree_ctrl.SortChildren(self.root)
+        self.wx_tree_ctrl.Expand(self.patient_nodes[mrn])
+
+    def add_study_node(self, mrn, uid):
+        self.count['study'] += 1
+        self.study_nodes[uid] = self.wx_tree_ctrl.AppendItem(self.patient_nodes[mrn], uid, ct_type=1)
+        # self.study_nodes[uid].Set3State(True)
+        self.wx_tree_ctrl.SetPyData(self.study_nodes[uid], None)
+        self.wx_tree_ctrl.SetItemImage(self.study_nodes[uid], self.images['study'],
+                                       wx.TreeItemIcon_Normal)
+        self.wx_tree_ctrl.SetItemBackgroundColour(self.study_nodes[uid], wx.Colour(255, 255, 0))
+        self.wx_tree_ctrl.SetItemBackgroundColour(self.patient_nodes[mrn], wx.Colour(255, 255, 0))
+        self.wx_tree_ctrl.SortChildren(self.patient_nodes[mrn])
 
     def update_latest_index(self):
         for study in self.file_tree:
@@ -84,20 +158,17 @@ class DICOM_Directory:
     def incomplete_patients(self):
         return [uid for uid, study in self.file_tree.items() if not self.is_study_file_set_complete(study)]
 
-    def is_study_file_set_complete(self, patient):
+    def is_study_file_set_complete(self, mrn, uid):
         for file_type in self.file_types:
-            if not patient[file_type]:
+            if not self.file_tree[mrn][uid][file_type]['file_path']:
                 return False
         return True
 
-    def append_file_to_tree(self, uid, mrn, file_type):
-        if uid not in self.study_nodes:
-            self.study_nodes[uid] = self.wx_tree_ctrl.AppendItem(self.root, "%s: %s" % (mrn, uid))
-
-        if uid not in self.rt_file_nodes:
-            self.rt_file_nodes[uid] = {}
-
-        self.rt_file_nodes[uid][file_type] = self.wx_tree_ctrl.AppendItem(self.study_nodes[uid], file_type)
+    def is_patient_file_set_complete(self, mrn, uids):
+        for uid in uids:
+            if not self.is_study_file_set_complete(mrn, uid):
+                return False
+        return True
 
     def rebuild_wx_tree_ctrl(self):
         self.wx_tree_ctrl.DeleteAllItems()
@@ -137,56 +208,6 @@ def get_dose_to_volume(dvhs, indices, roi_fraction):
         doses.append(dose)
 
     return doses
-
-
-def move_files_to_new_path(files, new_dir):
-    for file_path in files:
-        file_name = os.path.basename(file_path)
-        new = os.path.join(new_dir, file_name)
-        try:
-            shutil.move(file_path, new)
-        except:
-            os.mkdir(new_dir)
-            shutil.move(file_path, new)
-
-
-def remove_empty_folders(start_path):
-    if start_path[0:2] == './':
-        rel_path = start_path[2:]
-        start_path = os.path.join(SCRIPT_DIR, rel_path)
-
-    for (path, dirs, files) in os.walk(start_path, topdown=False):
-        if files:
-            continue
-        try:
-            if path != start_path:
-                os.rmdir(path)
-        except OSError:
-            pass
-
-
-def move_all_files(new_dir, old_dir):
-    """
-    This function will move all files from the old to new directory, it will ignore all files in subdirectories
-    :param new_dir: absolute directory path
-    :param old_dir: absolute directory path
-    """
-    initial_path = os.path.dirname(os.path.realpath(__file__))
-
-    os.chdir(old_dir)
-
-    file_paths = [f for f in os.listdir(old_dir) if os.path.isfile(os.path.join(old_dir, f))]
-
-    misc_path = os.path.join(new_dir, 'misc')
-    if not os.path.isdir(misc_path):
-        os.mkdir(misc_path)
-
-    for f in file_paths:
-        file_name = os.path.basename(f)
-        new = os.path.join(misc_path, file_name)
-        shutil.move(f, new)
-
-    os.chdir(initial_path)
 
 
 def update_dicom_catalogue(mrn, uid, dir_path, plan_file, struct_file, dose_file):
