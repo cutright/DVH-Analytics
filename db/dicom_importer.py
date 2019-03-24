@@ -3,6 +3,7 @@
 
 import os
 import pydicom as dicom
+from dicompylercore import dicomparser
 from pydicom.errors import InvalidDicomError
 from db.sql_connector import DVH_SQL
 import wx
@@ -13,17 +14,20 @@ FILE_TYPES = {'rtplan', 'rtstruct', 'rtdose'}
 SCRIPT_DIR = os.path.dirname(__file__)
 
 
-class DICOM_Directory:
-    def __init__(self, start_path, wx_list_ctrl, search_subfolders=True):
+class DICOM_Importer:
+    def __init__(self, start_path, tree_ctrl_files, tree_ctrl_rois, tree_ctrl_roi_root, search_subfolders=True):
         self.start_path = start_path
-        self.wx_tree_ctrl = wx_list_ctrl
-        self.wx_tree_ctrl.DeleteAllItems()
-        self.root = None
+        self.tree_ctrl_files = tree_ctrl_files
+        self.tree_ctrl_files.DeleteAllItems()
+        self.tree_ctrl_rois = tree_ctrl_rois
+        self.root_files = None
+        self.root_rois = tree_ctrl_roi_root
         self.count = {key: 0 for key in ['patient', 'study', 'file']}
         self.patient_nodes = {}
         self.study_nodes = {}
         self.rt_file_nodes = {}
         self.file_paths = get_file_paths(start_path, search_subfolders)
+        self.dicom_file_paths = {}
         self.current_index = 0
         self.file_count = len(self.file_paths)
         self.file_types = ['rtplan', 'rtstruct', 'rtdose']
@@ -37,14 +41,14 @@ class DICOM_Directory:
                        'studies': self.image_list.Add(wx.Image("icons/group.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
                        'study': self.image_list.Add(wx.Image("icons/book.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
                        'patient': self.image_list.Add(wx.Image("icons/user.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())}
-        self.wx_tree_ctrl.AssignImageList(self.image_list)
+        self.tree_ctrl_files.AssignImageList(self.image_list)
 
-    def initialize_root(self):
-        self.root = self.wx_tree_ctrl.AddRoot('Studies', ct_type=1)
+    def initialize_file_tree_root(self):
+        self.root_files = self.tree_ctrl_files.AddRoot('Studies', ct_type=1)
         # self.root.Set3State(True)
-        self.wx_tree_ctrl.Expand(self.root)
-        self.wx_tree_ctrl.SetPyData(self.root, None)
-        self.wx_tree_ctrl.SetItemImage(self.root, self.images['studies'], wx.TreeItemIcon_Normal)
+        self.tree_ctrl_files.Expand(self.root_files)
+        self.tree_ctrl_files.SetPyData(self.root_files, None)
+        self.tree_ctrl_files.SetItemImage(self.root_files, self.images['studies'], wx.TreeItemIcon_Normal)
 
     @staticmethod
     def get_base_file_dict():
@@ -83,6 +87,13 @@ class DICOM_Directory:
                 file_type = self.get_file_type(dicom_file)  # rtplan, rtstruct, rtdose
                 timestamp = os.path.getmtime(file_path)
 
+                if uid not in self.dicom_file_paths:
+                    self.dicom_file_paths[uid] = {ft: {'file_path': None, 'timestamp': None} for ft in self.file_types}
+
+                if self.dicom_file_paths[uid][file_type]['file_path'] is None or \
+                        self.dicom_file_paths[uid][file_type]['timestamp'] < timestamp:
+                    self.dicom_file_paths[uid][file_type]['file_path'] = file_path
+
                 # patient level
                 if mrn not in list(self.file_tree):
                     self.file_tree[mrn] = {}
@@ -103,9 +114,9 @@ class DICOM_Directory:
 
                 # if study contains rtplan, rtstruct, and rtdose, remove yellow highlight
                 if self.is_study_file_set_complete(mrn, uid):
-                    self.wx_tree_ctrl.SetItemBackgroundColour(self.study_nodes[uid], None)
+                    self.tree_ctrl_files.SetItemBackgroundColour(self.study_nodes[uid], None)
                     if self.is_patient_file_set_complete(mrn, list(self.file_tree[mrn])):
-                        self.wx_tree_ctrl.SetItemBackgroundColour(self.patient_nodes[mrn], None)
+                        self.tree_ctrl_files.SetItemBackgroundColour(self.patient_nodes[mrn], None)
 
             self.current_index += 1
 
@@ -116,34 +127,34 @@ class DICOM_Directory:
     def add_rt_file_node(self, uid, file_type, file_name):
         self.count['file'] += 1
 
-        self.rt_file_nodes[uid][file_type] = self.wx_tree_ctrl.AppendItem(self.study_nodes[uid],
+        self.rt_file_nodes[uid][file_type] = self.tree_ctrl_files.AppendItem(self.study_nodes[uid],
                                                                           "%s - %s" % (file_type, file_name))
 
-        self.wx_tree_ctrl.SetPyData(self.rt_file_nodes[uid][file_type], None)
-        self.wx_tree_ctrl.SetItemImage(self.rt_file_nodes[uid][file_type], self.images[file_type],
-                                       wx.TreeItemIcon_Normal)
-        self.wx_tree_ctrl.SortChildren(self.study_nodes[uid])
+        self.tree_ctrl_files.SetPyData(self.rt_file_nodes[uid][file_type], None)
+        self.tree_ctrl_files.SetItemImage(self.rt_file_nodes[uid][file_type], self.images[file_type],
+                                          wx.TreeItemIcon_Normal)
+        self.tree_ctrl_files.SortChildren(self.study_nodes[uid])
 
     def add_patient_node(self, mrn, name):
         self.count['patient'] += 1
-        self.patient_nodes[mrn] = self.wx_tree_ctrl.AppendItem(self.root, "%s - %s" % (name, mrn), ct_type=1)
+        self.patient_nodes[mrn] = self.tree_ctrl_files.AppendItem(self.root_files, "%s - %s" % (name, mrn), ct_type=1)
         # self.patient_nodes[mrn].Set3State(True)
-        self.wx_tree_ctrl.SetPyData(self.patient_nodes[mrn], None)
-        self.wx_tree_ctrl.SetItemImage(self.patient_nodes[mrn], self.images['patient'],
-                                       wx.TreeItemIcon_Normal)
-        self.wx_tree_ctrl.SortChildren(self.root)
-        self.wx_tree_ctrl.Expand(self.patient_nodes[mrn])
+        self.tree_ctrl_files.SetPyData(self.patient_nodes[mrn], None)
+        self.tree_ctrl_files.SetItemImage(self.patient_nodes[mrn], self.images['patient'],
+                                          wx.TreeItemIcon_Normal)
+        self.tree_ctrl_files.SortChildren(self.root_files)
+        self.tree_ctrl_files.Expand(self.patient_nodes[mrn])
 
     def add_study_node(self, mrn, uid):
         self.count['study'] += 1
-        self.study_nodes[uid] = self.wx_tree_ctrl.AppendItem(self.patient_nodes[mrn], uid, ct_type=1)
+        self.study_nodes[uid] = self.tree_ctrl_files.AppendItem(self.patient_nodes[mrn], uid, ct_type=1)
         # self.study_nodes[uid].Set3State(True)
-        self.wx_tree_ctrl.SetPyData(self.study_nodes[uid], None)
-        self.wx_tree_ctrl.SetItemImage(self.study_nodes[uid], self.images['study'],
-                                       wx.TreeItemIcon_Normal)
-        self.wx_tree_ctrl.SetItemBackgroundColour(self.study_nodes[uid], wx.Colour(255, 255, 0))
-        self.wx_tree_ctrl.SetItemBackgroundColour(self.patient_nodes[mrn], wx.Colour(255, 255, 0))
-        self.wx_tree_ctrl.SortChildren(self.patient_nodes[mrn])
+        self.tree_ctrl_files.SetPyData(self.study_nodes[uid], None)
+        self.tree_ctrl_files.SetItemImage(self.study_nodes[uid], self.images['study'],
+                                          wx.TreeItemIcon_Normal)
+        self.tree_ctrl_files.SetItemBackgroundColour(self.study_nodes[uid], wx.Colour(255, 255, 0))
+        self.tree_ctrl_files.SetItemBackgroundColour(self.patient_nodes[mrn], wx.Colour(255, 255, 0))
+        self.tree_ctrl_files.SortChildren(self.patient_nodes[mrn])
 
     def update_latest_index(self):
         for study in self.file_tree:
@@ -170,15 +181,34 @@ class DICOM_Directory:
                 return False
         return True
 
-    def rebuild_wx_tree_ctrl(self):
-        self.wx_tree_ctrl.DeleteAllItems()
-        self.study_nodes = {uid: self.wx_tree_ctrl.AppendItem(self.root, study['node_title']) for uid, study in self.file_tree.items()}
+    def rebuild_tree_ctrl_files(self):
+        self.tree_ctrl_files.DeleteAllItems()
+        self.study_nodes = {uid: self.tree_ctrl_files.AppendItem(self.root_files, study['node_title']) for uid, study in self.file_tree.items()}
         self.rt_file_nodes = {uid: {} for uid in list(self.file_tree)}
         for uid in list(self.file_tree):
             for rt_file in self.file_types:
-                self.rt_file_nodes[uid][rt_file] = self.wx_tree_ctrl.AppendItem(self.study_nodes[uid], rt_file)
+                self.rt_file_nodes[uid][rt_file] = self.tree_ctrl_files.AppendItem(self.study_nodes[uid], rt_file)
 
-        self.wx_tree_ctrl.Expand(self.root)
+        self.tree_ctrl_files.Expand(self.root_files)
+
+    def rebuild_tree_ctrl_rois(self):
+        uid = list(self.rt_file_nodes)[0]
+        # self.tree_ctrl_rois.DeleteAllItems()
+        # self.tree_ctrl_rois.AddRoot('RT Structures')
+        dicom_rt_struct = dicomparser.DicomParser(self.dicom_file_paths[uid]['rtstruct']['file_path'])
+        structures = dicom_rt_struct.GetStructures()
+        rois = [structures[key]['name'] for key in list(structures)]
+        print(rois)
+        for roi in rois:
+            self.tree_ctrl_rois.AppendItem(self.root_rois, roi)
+
+    @property
+    def checked_studies(self):
+        studies = {}
+        for uid, study_node in self.study_nodes.items():
+            if self.tree_ctrl_files.IsItemChecked(study_node):
+                studies[uid] = {file_type: file_path for file_type, file_path in self.rt_file_nodes[uid].items()}
+        return studies
 
 
 def rank_ptvs_by_D95(dvhs):
