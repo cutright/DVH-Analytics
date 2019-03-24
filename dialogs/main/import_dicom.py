@@ -41,11 +41,13 @@ class ImportDICOM_Dialog(wx.Dialog):
         cnx = DVH_SQL()
         choices = cnx.get_unique_values('Plans', 'physician')
         self.combo_box_physician = wx.ComboBox(self, wx.ID_ANY, choices=choices, style=wx.CB_DROPDOWN)
+        self.combo_box_physician.SetValue('')
         self.checkbox_physician_1 = wx.CheckBox(self, wx.ID_ANY, "Apply to all studies")
         self.checkbox_physician_2 = wx.CheckBox(self, wx.ID_ANY, "If missing")
         choices = cnx.get_unique_values('Plans', 'tx_site')
         cnx.close()
         self.combo_box_tx_site = wx.ComboBox(self, wx.ID_ANY, choices=choices, style=wx.CB_DROPDOWN)
+        self.combo_box_tx_site.SetValue('')
         self.checkbox_tx_site_1 = wx.CheckBox(self, wx.ID_ANY, "Apply to all studies")
         self.checkbox_tx_site_2 = wx.CheckBox(self, wx.ID_ANY, "If missing")
         self.text_ctrl_rx = wx.TextCtrl(self, wx.ID_ANY, "")
@@ -68,9 +70,12 @@ class ImportDICOM_Dialog(wx.Dialog):
 
         self.Bind(wx.EVT_BUTTON, self.on_browse, id=self.button_browse.GetId())
         self.Bind(wx.EVT_TREE_SEL_CHANGED, self.on_file_tree_select, id=self.tree_ctrl_import.GetId())
+        self.Bind(wx.EVT_TEXT, self.on_physician_change, id=self.combo_box_physician.GetId())
 
         self.__set_properties()
         self.__do_layout()
+
+        self.on_physician_change(None)
 
         self.dicom_dir = DICOM_Importer(start_path, self.tree_ctrl_import, self.tree_ctrl_roi, self.tree_ctrl_roi_root)
         self.parse_directory()
@@ -108,6 +113,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.checkbox_rx_2.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
 
     def __do_layout(self):
+        self.label = {}
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_main = wx.BoxSizer(wx.HORIZONTAL)
@@ -164,56 +170,56 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_browse_and_tree.Add(sizer_studies, 1, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
         sizer_main.Add(sizer_browse_and_tree, 1, wx.EXPAND, 0)
 
-        label_mrn = wx.StaticText(self, wx.ID_ANY, "MRN:")
-        sizer_mrn.Add(label_mrn, 0, 0, 0)
+        self.label['mrn'] = wx.StaticText(self, wx.ID_ANY, "MRN:")
+        sizer_mrn.Add(self.label['mrn'], 0, 0, 0)
         sizer_mrn.Add(self.text_ctrl_mrn, 0, wx.EXPAND, 0)
         sizer_mrn_checkbox.Add(self.checkbox_mrn_1, 0, wx.RIGHT, 20)
         sizer_mrn_checkbox.Add(self.checkbox_mrn_2, 0, 0, 0)
         sizer_mrn.Add(sizer_mrn_checkbox, 1, wx.EXPAND, 0)
 
         sizer_plan_data.Add(sizer_mrn, 1, wx.ALL | wx.EXPAND, 5)
-        label_uid = wx.StaticText(self, wx.ID_ANY, "Study Instance UID:")
-        sizer_uid.Add(label_uid, 0, 0, 0)
+        self.label['uid'] = wx.StaticText(self, wx.ID_ANY, "Study Instance UID:")
+        sizer_uid.Add(self.label['uid'], 0, 0, 0)
         sizer_uid.Add(self.text_ctrl_uid, 0, wx.EXPAND, 0)
         sizer_uid_checkbox.Add(self.checkbox_uid_1, 0, wx.RIGHT, 20)
         sizer_uid_checkbox.Add(self.checkbox_uid_2, 0, 0, 0)
         sizer_uid.Add(sizer_uid_checkbox, 1, wx.EXPAND, 0)
 
         sizer_plan_data.Add(sizer_uid, 1, wx.ALL | wx.EXPAND, 5)
-        label_birthdate = wx.StaticText(self, wx.ID_ANY, "Birthdate:")
-        sizer_birthdate.Add(label_birthdate, 0, 0, 0)
+        self.label['birthdate'] = wx.StaticText(self, wx.ID_ANY, "Birthdate:")
+        sizer_birthdate.Add(self.label['birthdate'], 0, 0, 0)
         sizer_birthdate.Add(self.datepicker_birthdate, 0, 0, 0)
         sizer_birthdate_checkbox.Add(self.checkbox_birthdate_1, 0, wx.RIGHT, 20)
         sizer_birthdate_checkbox.Add(self.checkbox_birthdate_2, 0, 0, 0)
         sizer_birthdate.Add(sizer_birthdate_checkbox, 1, wx.EXPAND, 0)
         sizer_plan_data.Add(sizer_birthdate, 1, wx.ALL | wx.EXPAND, 5)
 
-        label_sim_study_date = wx.StaticText(self, wx.ID_ANY, "Sim Study Date:")
-        sizer_sim_study_date.Add(label_sim_study_date, 0, 0, 0)
+        self.label['sim_study_date'] = wx.StaticText(self, wx.ID_ANY, "Sim Study Date:")
+        sizer_sim_study_date.Add(self.label['sim_study_date'], 0, 0, 0)
         sizer_sim_study_date.Add(self.datepicker_sim_study_date, 0, 0, 0)
         sizer_sim_study_date_checkbox.Add(self.checkbox_sim_study_date_1, 0, wx.RIGHT, 20)
         sizer_sim_study_date_checkbox.Add(self.checkbox_sim_study_date_2, 0, 0, 0)
         sizer_sim_study_date.Add(sizer_sim_study_date_checkbox, 1, wx.EXPAND, 0)
         sizer_plan_data.Add(sizer_sim_study_date, 1, wx.ALL | wx.EXPAND, 5)
 
-        label_physician = wx.StaticText(self, wx.ID_ANY, "Physician:")
-        sizer_physician.Add(label_physician, 0, 0, 0)
+        self.label['physician'] = wx.StaticText(self, wx.ID_ANY, "Physician:")
+        sizer_physician.Add(self.label['physician'], 0, 0, 0)
         sizer_physician.Add(self.combo_box_physician, 0, 0, 0)
         sizer_physician_checkbox.Add(self.checkbox_physician_1, 0, wx.RIGHT, 20)
         sizer_physician_checkbox.Add(self.checkbox_physician_2, 0, 0, 0)
         sizer_physician.Add(sizer_physician_checkbox, 1, wx.EXPAND, 0)
         sizer_plan_data.Add(sizer_physician, 1, wx.ALL | wx.EXPAND, 5)
 
-        label_tx_site = wx.StaticText(self, wx.ID_ANY, "Tx Site:")
-        sizer_tx_site.Add(label_tx_site, 0, 0, 0)
+        self.label['tx_site'] = wx.StaticText(self, wx.ID_ANY, "Tx Site:")
+        sizer_tx_site.Add(self.label['tx_site'], 0, 0, 0)
         sizer_tx_site.Add(self.combo_box_tx_site, 0, wx.EXPAND, 0)
         sizer_tx_site_checkbox.Add(self.checkbox_tx_site_1, 0, wx.RIGHT, 20)
         sizer_tx_site_checkbox.Add(self.checkbox_tx_site_2, 0, 0, 0)
         sizer_tx_site.Add(sizer_tx_site_checkbox, 1, wx.EXPAND, 0)
         sizer_plan_data.Add(sizer_tx_site, 1, wx.ALL | wx.EXPAND, 5)
 
-        label_rx = wx.StaticText(self, wx.ID_ANY, "Rx Dose (Gy):")
-        sizer_rx.Add(label_rx, 0, 0, 0)
+        self.label['rx'] = wx.StaticText(self, wx.ID_ANY, "Rx Dose (Gy):")
+        sizer_rx.Add(self.label['rx'], 0, 0, 0)
         sizer_rx.Add(self.text_ctrl_rx, 0, 0, 0)
         sizer_checkbox_rx.Add(self.checkbox_rx_1, 0, wx.RIGHT, 20)
         sizer_checkbox_rx.Add(self.checkbox_rx_2, 0, 0, 0)
@@ -313,6 +319,19 @@ class ImportDICOM_Dialog(wx.Dialog):
             self.combo_box_tx_site.SetValue(data.tx_site)
             self.text_ctrl_rx.SetValue(str(data.rx_dose))
             del wait
+        else:
+            self.clear_plan_data()
+
+    def clear_plan_data(self):
+        self.text_ctrl_mrn.SetValue('')
+        self.text_ctrl_uid.SetValue('')
+        self.datepicker_birthdate.SetValue('')
+        self.datepicker_sim_study_date.SetValue('')
+        self.combo_box_physician.SetValue('')
+        self.combo_box_tx_site.SetValue('')
+        self.text_ctrl_rx.SetValue('')
+
+        self.reset_label_colors()
 
     def get_file_tree_item_uid(self, item):
 
@@ -329,3 +348,17 @@ class ImportDICOM_Dialog(wx.Dialog):
                     break
 
         return selected_uid
+
+    def on_physician_change(self, evt):
+        self.label_error_color(self.label['physician'], self.combo_box_physician.GetValue())
+
+    @staticmethod
+    def label_error_color(static_text, value):
+        if value:
+            static_text.SetForegroundColour(wx.Colour(0, 0, 0))
+        else:
+            static_text.SetForegroundColour(wx.Colour(255, 0, 0))
+
+    def reset_label_colors(self):
+        for label in self.label.values():
+            label.SetForegroundColour(wx.Colour(0, 0, 0))
