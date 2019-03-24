@@ -1,6 +1,7 @@
 import wx
 import wx.adv
 from db.dicom_importer import DICOM_Importer
+from db.dicom_parser import DICOM_Parser
 from os.path import isdir
 from options import get_settings, parse_settings_file
 from wx.lib.agw.customtreectrl import CustomTreeCtrl
@@ -60,6 +61,7 @@ class ImportDICOM_Dialog(wx.Dialog):
 
         self.Bind(wx.EVT_BUTTON, self.on_browse, id=self.button_browse.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_apply_roi, id=self.button_apply_roi.GetId())
+        self.Bind(wx.EVT_TREE_SEL_CHANGED, self.on_file_tree_select, id=self.tree_ctrl_import.GetId())
 
         self.__set_properties()
         self.__do_layout()
@@ -150,7 +152,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.label_progress = wx.StaticText(self, wx.ID_ANY, "Progress: Status message")
         self.label_progress.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         sizer_progress.Add(self.label_progress, 1, 0, 0)
-        sizer_progress.Add(self.gauge, 1, wx.ALL | wx.EXPAND, 5)
+        sizer_progress.Add(self.gauge, 1, wx.LEFT | wx.EXPAND, 40)
         sizer_studies.Add(sizer_progress, 0, wx.EXPAND, 0)
         sizer_browse_and_tree.Add(sizer_studies, 1, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
         sizer_main.Add(sizer_browse_and_tree, 1, wx.EXPAND, 0)
@@ -277,3 +279,27 @@ class ImportDICOM_Dialog(wx.Dialog):
 
     def on_apply_roi(self, evt):
         self.dicom_dir.rebuild_tree_ctrl_rois()
+
+    def on_file_tree_select(self, evt):
+        uid = self.get_file_tree_item_uid(evt.GetItem())
+        if uid is not None:
+            data = DICOM_Parser(plan=self.dicom_dir.dicom_file_paths[uid]['rtplan']['file_path'],
+                                structure=self.dicom_dir.dicom_file_paths[uid]['rtstruct']['file_path'],
+                                dose=self.dicom_dir.dicom_file_paths[uid]['rtdose']['file_path'])
+            print(data.mrn)
+
+    def get_file_tree_item_uid(self, item):
+
+        selected_mrn, selected_uid = None, None
+        for mrn, node in self.dicom_dir.patient_nodes.items():
+            if item == node:
+                selected_uid = list(self.dicom_dir.file_tree[mrn])[0]
+                break
+
+        if selected_uid is None:
+            for uid, node in self.dicom_dir.study_nodes.items():
+                if item == node:
+                    selected_uid = uid
+                    break
+
+        return selected_uid

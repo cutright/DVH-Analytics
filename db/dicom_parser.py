@@ -43,15 +43,25 @@ class DICOM_Parser:
 
         self.database_rois = DatabaseROIs()
 
+        beam_num = 0
         self.rx_data = []
-        self.beam_data = {}
-        for i, fx_grp in enumerate(self.rt_data['plan'].FractionGroupSequence):
+        self.beam_data = []
+        self.ref_beam_data = []
+        for fx_grp_index, fx_grp_seq in enumerate(self.rt_data['plan'].FractionGroupSequence):
             self.rx_data.append(RxParser(self.rt_data['plan'],
                                          self.dicompyler_rt_plan,
-                                         self.rt_data['structure'], i))
-            self.beam_data[i] = []
-            for j, beam in enumerate(self.beam_sequence):
-                self.beam_data[i].append(BeamParser(self.rt_data['plan'], i, j))
+                                         self.rt_data['structure'], fx_grp_index))
+
+            for fx_grp_beam in range(int(fx_grp_seq.NumberOfBeams)):
+
+                beam_number = self.beam_sequence[beam_num].BeamNumber
+                beam_seq = self.beam_sequence[beam_num]
+                cp_seq = self.get_cp_sequence(self.beam_sequence[beam_num])
+                ref_beam_seq_index = self.get_referenced_beam_sequence_index(fx_grp_seq, beam_number)
+                ref_beam_seq = fx_grp_seq.ReferencedBeamSequence[ref_beam_seq_index]
+                self.beam_data.append(BeamParser(beam_seq, ref_beam_seq, cp_seq))
+
+                beam_num += 1
 
         # these properties are not inherently stored in DICOM
         self.non_dicom_properties = {'Plans': ['baseline', 'protocol', 'toxicity_grades'],
@@ -134,6 +144,15 @@ class DICOM_Parser:
     def get_required_plan_data(self):
         data = self.get_plan_row()
         return {key: data[key] for key in list(self.over_rides)}
+
+    @staticmethod
+    def get_referenced_beam_sequence_index(fx_grp_seq, beam_number):
+        for i, ref_beam_seq in enumerate(fx_grp_seq.ReferencedBeamSequence):
+            if ref_beam_seq.ReferencedBeamNumber == beam_number:
+                return i
+        print('ERROR: Failed to find a matching reference beam in '
+              'ReferencedBeamSequence for beam number %s' % beam_number)
+        return None
 
     def get_beam_rows(self):
         beam_rows = []
@@ -239,6 +258,10 @@ class DICOM_Parser:
         if self.pinnacle_rx_data and rx.fx_grp_number in list(self.pinnacle_rx_data):
             for key, value in self.pinnacle_rx_data[rx.fx_grp_number].items():
                 data[key] = value
+
+        for key in self.over_rides:
+            if key in data:
+                data[key] = self.over_rides[key]
 
         return data
 
@@ -431,6 +454,13 @@ class DICOM_Parser:
             return self.rt_data['plan'].IonBeamSequence
         return None
 
+    def get_cp_sequence(self, beam_seq):
+        if hasattr(beam_seq, 'ControlPointSequence'):
+            return beam_seq.ControlPointSequence
+        elif hasattr(beam_seq, 'IonControlPointSequence'):
+            return beam_seq.IonControlPointSequence
+        return None
+
     @property
     def photon(self):
         return self.is_photon_or_electron('photon')
@@ -598,28 +628,10 @@ class DICOM_Parser:
 
 
 class BeamParser:
-    def __init__(self, rt_plan, fx_grp_index, beam_index):
-        self.rt_plan = rt_plan
-        self.fx_grp_index = fx_grp_index
-        self.fx_grp_data = rt_plan.FractionGroupSequence[fx_grp_index]
-        self.beam_index = beam_index
-        self.ref_beam_index = self.get_ref_beam_index()
-
-        self.cp_seq = None
-        if hasattr(rt_plan, 'BeamSequence'):
-            self.beam_data = rt_plan.BeamSequence[beam_index]  # Photons and electrons
-            if hasattr(self.beam_data, 'ControlPointSequence'):
-                self.cp_seq = self.beam_data.ControlPointSequence
-        elif hasattr(rt_plan, 'IonBeamSequence'):
-            self.beam_data = rt_plan.IonBeamSequence[beam_index]  # Protons
-            if hasattr(self.beam_data, 'IonControlPointSequence'):
-                self.cp_seq = self.beam_data.IonControlPointSequence
-        else:
-            print('ERROR: BeamSequence nor IonBeamSequence found in fx_grp_number %s, beam_index %s' %
-                  (fx_grp_index, beam_index))
-            self.beam_data = None
-
-        self.ref_beam_data = self.fx_grp_data.ReferencedBeamSequence[self.ref_beam_index]
+    def __init__(self, beam_data, ref_beam_data, cp_seq):
+        self.beam_data = beam_data
+        self.ref_beam_data = ref_beam_data
+        self.cp_seq = cp_seq
 
     @property
     def beam_number(self):
@@ -628,17 +640,6 @@ class BeamParser:
     @property
     def beam_name(self):
         return self.beam_data.BeamDescription
-
-    def get_ref_beam_index(self):
-        ref_beam_seq = self.rt_plan.FractionGroupSequence[self.fx_grp_index].ReferencedBeamSequence
-        for i, ref_beam in enumerate(ref_beam_seq):
-            if ref_beam.ReferencedBeamNumber == self.beam_number:
-                return i
-        print('ERROR: Failed to find a matching reference beam in '
-              'ReferencedBeamSequence for beam number %s' % self.beam_number)
-        print('WARNING: Assuming reference beam index is equal to beam number may lead to incorrect'
-              ' MUs and beam doses reported in SQL database.  Please verify')
-        return self.beam_number
 
     @property
     def treatment_machine(self):
@@ -849,9 +850,10 @@ class RxParser:
         return hasattr(self.rt_plan, 'DoseReferenceSequence')
 
     def get_dose_ref_seq_index(self):
-        for i, dose_ref in enumerate(self.rt_plan.DoseReferenceSequence):
-            if dose_ref.DoseReferenceNumber == self.fx_grp_number:
-                return i
+        if self.has_dose_ref:
+            for i, dose_ref in enumerate(self.rt_plan.DoseReferenceSequence):
+                if dose_ref.DoseReferenceNumber == self.fx_grp_number:
+                    return i
         print('WARNING: DoseReference not found, verification of rx dose attributes recommended')
         return None
 

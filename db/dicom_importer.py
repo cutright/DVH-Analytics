@@ -44,7 +44,7 @@ class DICOM_Importer:
         self.tree_ctrl_files.AssignImageList(self.image_list)
 
     def initialize_file_tree_root(self):
-        self.root_files = self.tree_ctrl_files.AddRoot('Studies', ct_type=1)
+        self.root_files = self.tree_ctrl_files.AddRoot('Patients', ct_type=1)
         # self.root.Set3State(True)
         self.tree_ctrl_files.Expand(self.root_files)
         self.tree_ctrl_files.SetPyData(self.root_files, None)
@@ -62,7 +62,7 @@ class DICOM_Importer:
     @staticmethod
     def read_dicom_file(file_path):
         try:
-            return dicom.read_file(file_path, specific_tags=['StudyInstanceUID', 'Modality',
+            return dicom.read_file(file_path, specific_tags=['StudyInstanceUID', 'Modality', 'StudyDate',
                                                              'PatientID', 'PatientName'])
         except InvalidDicomError:
             return None
@@ -90,10 +90,6 @@ class DICOM_Importer:
                 if uid not in self.dicom_file_paths:
                     self.dicom_file_paths[uid] = {ft: {'file_path': None, 'timestamp': None} for ft in self.file_types}
 
-                if self.dicom_file_paths[uid][file_type]['file_path'] is None or \
-                        self.dicom_file_paths[uid][file_type]['timestamp'] < timestamp:
-                    self.dicom_file_paths[uid][file_type]['file_path'] = file_path
-
                 # patient level
                 if mrn not in list(self.file_tree):
                     self.file_tree[mrn] = {}
@@ -104,13 +100,24 @@ class DICOM_Importer:
                 if uid not in list(self.file_tree[mrn]):
                     self.file_tree[mrn][uid] = self.get_base_study_file_set()
                 if uid not in self.study_nodes:
-                    self.add_study_node(mrn, uid)
+                    self.add_study_node(mrn, uid, dicom_file.StudyDate)
                 if uid not in self.rt_file_nodes:
                     self.rt_file_nodes[uid] = {}
 
                 # file level
-                self.add_rt_file_node(uid, file_type, file_name)
-                self.append_file(mrn, uid, file_type, file_path, timestamp)
+                if self.dicom_file_paths[uid][file_type]['file_path'] is None:
+                    self.dicom_file_paths[uid][file_type]['file_path'] = file_path
+                    self.add_rt_file_node(uid, file_type, file_name)
+                    self.append_file(mrn, uid, file_type, file_path, timestamp)
+
+                elif self.dicom_file_paths[uid][file_type]['timestamp'] < timestamp:
+                    self.dicom_file_paths[uid][file_type]['file_path'] = file_path
+                    study_date = dicom_file.StudyDate
+                    if study_date and len(study_date) == 8:
+                        title = "%s.%s.%s - %s" % (study_date[0:4], study_date[4:6], study_date[6:], uid)
+                    else:
+                        title = "Date Unknown - %s" % uid
+                    self.tree_ctrl_files.SetItemText(self.rt_file_nodes[uid][file_type], title)
 
                 # if study contains rtplan, rtstruct, and rtdose, remove yellow highlight
                 if self.is_study_file_set_complete(mrn, uid):
@@ -145,9 +152,13 @@ class DICOM_Importer:
         self.tree_ctrl_files.SortChildren(self.root_files)
         self.tree_ctrl_files.Expand(self.patient_nodes[mrn])
 
-    def add_study_node(self, mrn, uid):
+    def add_study_node(self, mrn, uid, study_date):
         self.count['study'] += 1
-        self.study_nodes[uid] = self.tree_ctrl_files.AppendItem(self.patient_nodes[mrn], uid, ct_type=1)
+        if study_date and len(study_date) == 8:
+            title = "%s.%s.%s - %s" % (study_date[0:4], study_date[4:6], study_date[6:], uid)
+        else:
+            title = "Date Unknown - %s" % uid
+        self.study_nodes[uid] = self.tree_ctrl_files.AppendItem(self.patient_nodes[mrn], title, ct_type=1)
         # self.study_nodes[uid].Set3State(True)
         self.tree_ctrl_files.SetPyData(self.study_nodes[uid], None)
         self.tree_ctrl_files.SetItemImage(self.study_nodes[uid], self.images['study'],
@@ -156,14 +167,14 @@ class DICOM_Importer:
         self.tree_ctrl_files.SetItemBackgroundColour(self.patient_nodes[mrn], wx.Colour(255, 255, 0))
         self.tree_ctrl_files.SortChildren(self.patient_nodes[mrn])
 
-    def update_latest_index(self):
-        for study in self.file_tree:
-            for file_type in study:
-                latest_time = None
-                for i, ts in enumerate(file_type['timestamp']):
-                    if not latest_time or ts > latest_time:
-                        latest_time = ts
-                        file_type['latest_file'] = file_type['file_path'][i]
+    # def update_latest_index(self):
+    #     for study in self.file_tree:
+    #         for file_type in study:
+    #             latest_time = None
+    #             for i, ts in enumerate(file_type['timestamp']):
+    #                 if not latest_time or ts > latest_time:
+    #                     latest_time = ts
+    #                     file_type['latest_file'] = file_type['file_path'][i]
 
     @property
     def incomplete_patients(self):
