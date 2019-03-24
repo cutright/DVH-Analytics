@@ -56,7 +56,7 @@ class ImportDICOM_Dialog(wx.Dialog):
 
         self.tree_ctrl_roi = CustomTreeCtrl(self.panel_roi_tree, wx.ID_ANY, agwStyle=styles)
         self.tree_ctrl_roi.SetBackgroundColour(wx.WHITE)
-        self.tree_ctrl_roi_root = self.tree_ctrl_roi.AddRoot('RT Structures')
+        self.tree_ctrl_roi_root = self.tree_ctrl_roi.AddRoot('RT Structures', ct_type=1)
 
         self.Bind(wx.EVT_BUTTON, self.on_browse, id=self.button_browse.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_apply_roi, id=self.button_apply_roi.GetId())

@@ -198,9 +198,8 @@ class DICOM_Importer:
         dicom_rt_struct = dicomparser.DicomParser(self.dicom_file_paths[uid]['rtstruct']['file_path'])
         structures = dicom_rt_struct.GetStructures()
         rois = [structures[key]['name'] for key in list(structures)]
-        print(rois)
         for roi in rois:
-            self.tree_ctrl_rois.AppendItem(self.root_rois, roi)
+            self.tree_ctrl_rois.AppendItem(self.root_rois, roi, ct_type=1)
 
     @property
     def checked_studies(self):
