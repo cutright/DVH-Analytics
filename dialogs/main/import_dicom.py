@@ -6,6 +6,8 @@ from os.path import isdir
 from options import get_settings, parse_settings_file
 from wx.lib.agw.customtreectrl import CustomTreeCtrl
 from wx.lib.agw.customtreectrl import TR_AUTO_CHECK_CHILD, TR_AUTO_CHECK_PARENT, TR_DEFAULT_STYLE
+from tools.utilities import datetime_to_date_string
+from db.sql_connector import DVH_SQL
 
 
 class ImportDICOM_Dialog(wx.Dialog):
@@ -30,16 +32,20 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.text_ctrl_uid = wx.TextCtrl(self, wx.ID_ANY, "")
         self.checkbox_uid_1 = wx.CheckBox(self, wx.ID_ANY, "Apply to all studies")
         self.checkbox_uid_2 = wx.CheckBox(self, wx.ID_ANY, "If missing")
-        self.datepicker_birthdate = wx.adv.DatePickerCtrl(self, wx.ID_ANY)
+        self.datepicker_birthdate = wx.TextCtrl(self, wx.ID_ANY, "")
         self.checkbox_birthdate_1 = wx.CheckBox(self, wx.ID_ANY, "Apply to all studies")
         self.checkbox_birthdate_2 = wx.CheckBox(self, wx.ID_ANY, "If missing")
-        self.datepicker_sim_study_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY)
+        self.datepicker_sim_study_date = wx.TextCtrl(self, wx.ID_ANY, "")
         self.checkbox_sim_study_date_1 = wx.CheckBox(self, wx.ID_ANY, "Apply to all studies")
         self.checkbox_sim_study_date_2 = wx.CheckBox(self, wx.ID_ANY, "If missing")
-        self.combo_box_physician = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
+        cnx = DVH_SQL()
+        choices = cnx.get_unique_values('Plans', 'physician')
+        self.combo_box_physician = wx.ComboBox(self, wx.ID_ANY, choices=choices, style=wx.CB_DROPDOWN)
         self.checkbox_physician_1 = wx.CheckBox(self, wx.ID_ANY, "Apply to all studies")
         self.checkbox_physician_2 = wx.CheckBox(self, wx.ID_ANY, "If missing")
-        self.combo_box_tx_site = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
+        choices = cnx.get_unique_values('Plans', 'tx_site')
+        cnx.close()
+        self.combo_box_tx_site = wx.ComboBox(self, wx.ID_ANY, choices=choices, style=wx.CB_DROPDOWN)
         self.checkbox_tx_site_1 = wx.CheckBox(self, wx.ID_ANY, "Apply to all studies")
         self.checkbox_tx_site_2 = wx.CheckBox(self, wx.ID_ANY, "If missing")
         self.text_ctrl_rx = wx.TextCtrl(self, wx.ID_ANY, "")
@@ -49,6 +55,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.panel_roi_tree = wx.Panel(self, wx.ID_ANY, style=wx.BORDER_SUNKEN)
         self.combo_box_institutional_roi = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
         self.combo_box_physician_roi = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
+        self.combo_box_roi_type = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
         self.button_apply_roi = wx.Button(self, wx.ID_ANY, "Apply")
 
         styles = TR_AUTO_CHECK_CHILD | TR_AUTO_CHECK_PARENT | TR_DEFAULT_STYLE
@@ -60,7 +67,6 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.tree_ctrl_roi_root = self.tree_ctrl_roi.AddRoot('RT Structures', ct_type=1)
 
         self.Bind(wx.EVT_BUTTON, self.on_browse, id=self.button_browse.GetId())
-        self.Bind(wx.EVT_BUTTON, self.on_apply_roi, id=self.button_apply_roi.GetId())
         self.Bind(wx.EVT_TREE_SEL_CHANGED, self.on_file_tree_select, id=self.tree_ctrl_import.GetId())
 
         self.__set_properties()
@@ -108,6 +114,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_roi_map_wrapper = wx.BoxSizer(wx.HORIZONTAL)
         sizer_roi_map = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "ROI Mapping for Selected Study"), wx.VERTICAL)
         sizer_selected_roi = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Map for Selected ROI"), wx.VERTICAL)
+        sizer_roi_type = wx.BoxSizer(wx.VERTICAL)
         sizer_physician_roi = wx.BoxSizer(wx.VERTICAL)
         sizer_institutional_roi = wx.BoxSizer(wx.VERTICAL)
         sizer_roi_tree = wx.BoxSizer(wx.HORIZONTAL)
@@ -222,13 +229,18 @@ class ImportDICOM_Dialog(wx.Dialog):
         label_institutional_roi = wx.StaticText(self, wx.ID_ANY, "Institutional ROI:")
         sizer_institutional_roi.Add(label_institutional_roi, 0, 0, 0)
         sizer_institutional_roi.Add(self.combo_box_institutional_roi, 0, wx.EXPAND, 0)
-        sizer_selected_roi.Add(sizer_institutional_roi, 1, wx.ALL | wx.EXPAND, 5)
 
         label_physician_roi = wx.StaticText(self, wx.ID_ANY, "Physician ROI:")
         sizer_physician_roi.Add(label_physician_roi, 0, 0, 0)
         sizer_physician_roi.Add(self.combo_box_physician_roi, 0, wx.EXPAND, 0)
 
+        label_roi_type = wx.StaticText(self, wx.ID_ANY, "ROI Type:")
+        sizer_roi_type.Add(label_roi_type, 0, 0, 0)
+        sizer_roi_type.Add(self.combo_box_roi_type, 0, wx.EXPAND, 0)
+
+        sizer_selected_roi.Add(sizer_institutional_roi, 1, wx.ALL | wx.EXPAND, 5)
         sizer_selected_roi.Add(sizer_physician_roi, 1, wx.ALL | wx.EXPAND, 5)
+        sizer_selected_roi.Add(sizer_roi_type, 1, wx.ALL | wx.EXPAND, 5)
         sizer_selected_roi.Add(self.button_apply_roi, 0, wx.ALL | wx.EXPAND, 5)
 
         sizer_roi_map.Add(sizer_selected_roi, 0, wx.EXPAND, 0)
@@ -277,16 +289,30 @@ class ImportDICOM_Dialog(wx.Dialog):
                                           self.dicom_dir.count['study'],
                                           self.dicom_dir.count['file']))
 
-    def on_apply_roi(self, evt):
-        self.dicom_dir.rebuild_tree_ctrl_rois()
-
     def on_file_tree_select(self, evt):
         uid = self.get_file_tree_item_uid(evt.GetItem())
         if uid is not None:
+            wait = wx.BusyCursor()
+            self.dicom_dir.rebuild_tree_ctrl_rois(uid)
+            self.tree_ctrl_roi.ExpandAll()
             data = DICOM_Parser(plan=self.dicom_dir.dicom_file_paths[uid]['rtplan']['file_path'],
                                 structure=self.dicom_dir.dicom_file_paths[uid]['rtstruct']['file_path'],
                                 dose=self.dicom_dir.dicom_file_paths[uid]['rtdose']['file_path'])
-            print(data.mrn)
+
+            self.text_ctrl_mrn.SetValue(data.mrn)
+            self.text_ctrl_uid.SetValue(data.study_instance_uid)
+            if data.birth_date is None or data.birth_date == '':
+                self.datepicker_birthdate.SetValue('')
+            else:
+                self.datepicker_birthdate.SetValue(datetime_to_date_string(data.birth_date))
+            if data.sim_study_date is None or data.sim_study_date == '':
+                self.datepicker_sim_study_date.SetValue('')
+            else:
+                self.datepicker_sim_study_date.SetValue(datetime_to_date_string(data.sim_study_date))
+            self.combo_box_physician.SetValue(data.physician)
+            self.combo_box_tx_site.SetValue(data.tx_site)
+            self.text_ctrl_rx.SetValue(str(data.rx_dose))
+            del wait
 
     def get_file_tree_item_uid(self, item):
 

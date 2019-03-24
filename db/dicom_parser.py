@@ -326,6 +326,8 @@ class DICOM_Parser:
     def rx_dose(self):
         if self.over_rides['rx_dose'] is not None:
             return self.over_rides['rx_dose']
+        if self.pinnacle_rx_data:
+            return sum([rx['rx_dose'] for rx in self.pinnacle_rx_data.values()])
         return sum([rx.rx_dose for rx in self.rx_data if rx.rx_dose])
 
     @property
@@ -359,13 +361,13 @@ class DICOM_Parser:
     def sim_study_date(self):
         if self.over_rides['sim_study_date'] is not None:
             return self.over_rides['sim_study_date']
-        return self.get_date('plan', 'StudyDate')
+        return self.get_attribute('plan', 'StudyDate')
 
     @property
     def birth_date(self):
         if self.over_rides['birth_date'] is not None:
             return self.over_rides['birth_date']
-        return self.get_date('plan', 'PatientBirthDate')
+        return self.get_attribute('plan', 'PatientBirthDate')
 
     @property
     def age(self):
@@ -379,7 +381,7 @@ class DICOM_Parser:
     def physician(self):
         if self.over_rides['physician'] is not None:
             return self.over_rides['physician']
-        return self.get_attribute('plan', ['PhysiciansOfRecord', 'ReferringPhysicianName'])
+        return str(self.get_attribute('plan', ['PhysiciansOfRecord', 'ReferringPhysicianName'])).upper()
 
     @property
     def fxs(self):
@@ -582,29 +584,6 @@ class DICOM_Parser:
         for attribute in pydicom_attribute:
             if hasattr(self.rt_data[rt_type], attribute):
                 return getattr(self.rt_data[rt_type], attribute)
-        return None
-
-    def get_date(self, rt_type, pydicom_attribute, include_time=False):
-        """
-        :param rt_type: plan. dose, or structure
-        :type rt_type: str
-        :param pydicom_attribute: attribute as specified in pydicom
-        :type pydicom_attribute: str
-        :param include_time: if true, include timestamp, otherwise year, month, date
-        :type include_time: bool
-        :return: datetime object of pydicom string
-        :rtype: datetime
-        """
-        ans = self.get_attribute(rt_type, pydicom_attribute)
-        if ans:
-            try:
-                if include_time:
-                    return datetime_str_to_obj(ans)
-                return date_str_to_obj(ans)
-            except ValueError:
-                print('ValueError: Could not parse %s to datetime' % ans)
-            finally:
-                print('Could not parse %s to datetime' % ans)
         return None
 
     def get_time_stamp(self, rt_type, date_attribute, time_attribute, round_seconds=False):
@@ -854,7 +833,6 @@ class RxParser:
             for i, dose_ref in enumerate(self.rt_plan.DoseReferenceSequence):
                 if dose_ref.DoseReferenceNumber == self.fx_grp_number:
                     return i
-        print('WARNING: DoseReference not found, verification of rx dose attributes recommended')
         return None
 
     @property

@@ -43,6 +43,9 @@ class DICOM_Importer:
                        'patient': self.image_list.Add(wx.Image("icons/user.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())}
         self.tree_ctrl_files.AssignImageList(self.image_list)
 
+        self.roi_map = {}
+        self.roi_nodes = {}
+
     def initialize_file_tree_root(self):
         self.root_files = self.tree_ctrl_files.AddRoot('Patients', ct_type=1)
         # self.root.Set3State(True)
@@ -193,8 +196,9 @@ class DICOM_Importer:
         return True
 
     def rebuild_tree_ctrl_files(self):
-        self.tree_ctrl_files.DeleteAllItems()
-        self.study_nodes = {uid: self.tree_ctrl_files.AppendItem(self.root_files, study['node_title']) for uid, study in self.file_tree.items()}
+        self.tree_ctrl_files.DeleteChildren(self.root_files)
+        self.study_nodes = {uid: self.tree_ctrl_files.AppendItem(self.root_files, study['node_title'])
+                            for uid, study in self.file_tree.items()}
         self.rt_file_nodes = {uid: {} for uid in list(self.file_tree)}
         for uid in list(self.file_tree):
             for rt_file in self.file_types:
@@ -202,15 +206,16 @@ class DICOM_Importer:
 
         self.tree_ctrl_files.Expand(self.root_files)
 
-    def rebuild_tree_ctrl_rois(self):
-        uid = list(self.rt_file_nodes)[0]
-        # self.tree_ctrl_rois.DeleteAllItems()
-        # self.tree_ctrl_rois.AddRoot('RT Structures')
+    def rebuild_tree_ctrl_rois(self, uid):
+        self.tree_ctrl_rois.DeleteChildren(self.root_rois)
         dicom_rt_struct = dicomparser.DicomParser(self.dicom_file_paths[uid]['rtstruct']['file_path'])
         structures = dicom_rt_struct.GetStructures()
-        rois = [structures[key]['name'] for key in list(structures)]
+        self.roi_map = {structures[key]['name']: key for key in list(structures) if structures[key]['type'] != 'MARKER'}
+        self.roi_nodes = {}
+        rois = list(self.roi_map)
+        rois.sort()
         for roi in rois:
-            self.tree_ctrl_rois.AppendItem(self.root_rois, roi, ct_type=1)
+            self.roi_nodes[roi] = self.tree_ctrl_rois.AppendItem(self.root_rois, roi, ct_type=1)
 
     @property
     def checked_studies(self):

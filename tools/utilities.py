@@ -168,6 +168,14 @@ def date_str_to_obj(date_str):
     return datetime(year, month, day)
 
 
+def datetime_to_date_string(datetime_obj):
+    date_str = str(datetime_obj)
+    year = int(date_str[0:4])
+    month = int(date_str[4:6])
+    day = int(date_str[6:8])
+    return "%s/%s/%s" % (month, day, year)
+
+
 def change_angle_origin(angles, max_positive_angle):
     """
     :param angles: a list of angles
