@@ -8,6 +8,7 @@ from pydicom.errors import InvalidDicomError
 from db.sql_connector import DVH_SQL
 import wx
 from tools.utilities import get_file_paths
+from tools.roi_name_manager import DatabaseROIs
 
 
 FILE_TYPES = {'rtplan', 'rtstruct', 'rtdose'}
@@ -43,7 +44,7 @@ class DICOM_Importer:
                        'patient': self.image_list.Add(wx.Image("icons/user.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())}
         self.tree_ctrl_files.AssignImageList(self.image_list)
 
-        self.roi_map = {}
+        self.roi_name_map = {}
         self.roi_nodes = {}
 
     def initialize_file_tree_root(self):
@@ -210,9 +211,10 @@ class DICOM_Importer:
         self.tree_ctrl_rois.DeleteChildren(self.root_rois)
         dicom_rt_struct = dicomparser.DicomParser(self.dicom_file_paths[uid]['rtstruct']['file_path'])
         structures = dicom_rt_struct.GetStructures()
-        self.roi_map = {structures[key]['name']: key for key in list(structures) if structures[key]['type'] != 'MARKER'}
+        self.roi_name_map = {structures[key]['name']: {'key': key, 'type': structures[key]['type']}
+                             for key in list(structures) if structures[key]['type'] != 'MARKER'}
         self.roi_nodes = {}
-        rois = list(self.roi_map)
+        rois = list(self.roi_name_map)
         rois.sort()
         for roi in rois:
             self.roi_nodes[roi] = self.tree_ctrl_rois.AppendItem(self.root_rois, roi, ct_type=1)
@@ -224,6 +226,16 @@ class DICOM_Importer:
             if self.tree_ctrl_files.IsItemChecked(study_node):
                 studies[uid] = {file_type: file_path for file_type, file_path in self.rt_file_nodes[uid].items()}
         return studies
+
+    def check_mapped_rois(self, physician):
+        roi_map = DatabaseROIs()
+        physician_is_valid = roi_map.is_physician(physician)
+        for roi in self.roi_name_map.keys():
+            node = self.roi_nodes[roi]
+            if physician_is_valid and roi_map.get_physician_roi(physician, roi) not in {'uncategorized'}:
+                self.tree_ctrl_rois.CheckItem(node, True)
+            else:
+                self.tree_ctrl_rois.CheckItem(node, False)
 
 
 def rank_ptvs_by_D95(dvhs):
