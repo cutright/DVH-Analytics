@@ -141,9 +141,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_birth_date = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
         sizer_birth_date_checkbox = wx.BoxSizer(wx.HORIZONTAL)
         sizer_uid = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
-        sizer_uid_checkbox = wx.BoxSizer(wx.HORIZONTAL)
         sizer_mrn = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
-        sizer_mrn_checkbox = wx.BoxSizer(wx.HORIZONTAL)
         sizer_browse_and_tree = wx.BoxSizer(wx.VERTICAL)
         sizer_studies = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Studies"), wx.VERTICAL)
         sizer_progress = wx.BoxSizer(wx.HORIZONTAL)
@@ -246,9 +244,9 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_selected_roi.Add(sizer_institutional_roi, 1, wx.ALL | wx.EXPAND, 5)
         sizer_selected_roi.Add(sizer_physician_roi, 1, wx.ALL | wx.EXPAND, 5)
         sizer_selected_roi.Add(sizer_roi_type, 1, wx.ALL | wx.EXPAND, 5)
-        sizer_selected_roi.Add(self.button_apply_roi, 0, wx.ALL | wx.EXPAND, 5)
 
         sizer_roi_map.Add(sizer_selected_roi, 0, wx.EXPAND, 0)
+        sizer_roi_map.Add(self.button_apply_roi, 0, wx.ALL | wx.EXPAND, 5)
         sizer_roi_map_wrapper.Add(sizer_roi_map, 1, wx.ALL | wx.EXPAND, 10)
 
         sizer_main.Add(sizer_roi_map_wrapper, 1, wx.EXPAND, 0)
