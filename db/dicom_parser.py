@@ -78,13 +78,14 @@ class DICOM_Parser:
         self.pinnacle_rx_data = self.get_rx_data_from_dummy_rois()
         self.pinnacle_tx_site = self.get_tx_site_from_dummy_rois()
 
-        self.over_rides = {'mrn': None,
-                           'study_instance_uid': None,
-                           'birth_date': None,
-                           'sim_study_date': None,
-                           'physician': None,
-                           'tx_site': None,
-                           'rx_dose': None}
+        self.plan_over_rides = {'mrn': None,
+                                'study_instance_uid': None,
+                                'birth_date': None,
+                                'sim_study_date': None,
+                                'physician': None,
+                                'tx_site': None,
+                                'rx_dose': None}
+        self.roi_over_rides = {}
 
     def get_rx_data_from_dummy_rois(self):
 
@@ -155,7 +156,7 @@ class DICOM_Parser:
 
     def get_required_plan_data(self):
         data = self.get_plan_row()
-        return {key: data[key] for key in list(self.over_rides)}
+        return {key: data[key] for key in list(self.plan_over_rides)}
 
     @staticmethod
     def get_referenced_beam_sequence_index(fx_grp_seq, beam_number):
@@ -271,9 +272,9 @@ class DICOM_Parser:
             for key, value in self.pinnacle_rx_data[rx.fx_grp_number].items():
                 data[key] = value
 
-        for key in self.over_rides:
+        for key in self.plan_over_rides:
             if key in data:
-                data[key] = self.over_rides[key]
+                data[key] = self.plan_over_rides[key]
 
         return data
 
@@ -313,14 +314,14 @@ class DICOM_Parser:
 
     @property
     def mrn(self):
-        if self.over_rides['mrn'] is not None:
-            return self.over_rides['mrn']
+        if self.plan_over_rides['mrn'] is not None:
+            return self.plan_over_rides['mrn']
         return self.rt_data['plan'].PatientID
 
     @property
     def study_instance_uid(self):
-        if self.over_rides['study_instance_uid']:
-            return self.over_rides['study_instance_uid']
+        if self.plan_over_rides['study_instance_uid']:
+            return self.plan_over_rides['study_instance_uid']
         return self.rt_data['plan'].StudyInstanceUID
 
     # ------------------------------------------------------------------------------
@@ -336,8 +337,8 @@ class DICOM_Parser:
 
     @property
     def rx_dose(self):
-        if self.over_rides['rx_dose'] is not None:
-            return self.over_rides['rx_dose']
+        if self.plan_over_rides['rx_dose'] is not None:
+            return self.plan_over_rides['rx_dose']
         if self.pinnacle_rx_data:
             return sum([rx['rx_dose'] for rx in self.pinnacle_rx_data.values()])
         return sum([rx.rx_dose for rx in self.rx_data if rx.rx_dose])
@@ -371,14 +372,14 @@ class DICOM_Parser:
 
     @property
     def sim_study_date(self):
-        if self.over_rides['sim_study_date'] is not None:
-            return self.over_rides['sim_study_date']
+        if self.plan_over_rides['sim_study_date'] is not None:
+            return self.plan_over_rides['sim_study_date']
         return self.get_attribute('plan', 'StudyDate')
 
     @property
     def birth_date(self):
-        if self.over_rides['birth_date'] is not None:
-            return self.over_rides['birth_date']
+        if self.plan_over_rides['birth_date'] is not None:
+            return self.plan_over_rides['birth_date']
         return self.get_attribute('plan', 'PatientBirthDate')
 
     @property
@@ -391,8 +392,8 @@ class DICOM_Parser:
 
     @property
     def physician(self):
-        if self.over_rides['physician'] is not None:
-            return self.over_rides['physician']
+        if self.plan_over_rides['physician'] is not None:
+            return self.plan_over_rides['physician']
         return str(self.get_attribute('plan', ['PhysiciansOfRecord', 'ReferringPhysicianName'])).upper()
 
     @property
@@ -444,8 +445,8 @@ class DICOM_Parser:
 
     @property
     def tx_site(self):
-        if self.over_rides['tx_site'] is not None:
-            return self.over_rides['tx_site']
+        if self.plan_over_rides['tx_site'] is not None:
+            return self.plan_over_rides['tx_site']
         if self.pinnacle_tx_site is not None:
             return self.pinnacle_tx_site
         return self.get_attribute('plan', 'RTPlanLabel')
@@ -525,6 +526,8 @@ class DICOM_Parser:
         dvhcalc.get_dvh(self.rt_data['structure'], self.rt_data['dose'], key)
 
     def get_roi_type(self, key):
+        if key in list(self.roi_over_rides):
+            return self.roi_over_rides[key]['type']
         # ITV is not currently in any TPS as an ROI type.  If the ROI begins with ITV, DVH assumes
         # a ROI type of ITV
         if self.dicompyler_rt_structures[key]['name'].lower()[0:3] == 'itv':
@@ -536,6 +539,8 @@ class DICOM_Parser:
         return clean_name(self.dicompyler_rt_structures[key]['name'])
 
     def get_physician_roi(self, key):
+        if key in list(self.roi_over_rides):
+            return self.roi_over_rides[key]['physician']
         roi_name = self.get_roi_name(key)
         if self.database_rois.is_roi(roi_name):
             if self.database_rois.is_physician(self.physician):
@@ -543,6 +548,8 @@ class DICOM_Parser:
         return 'uncategorized'
 
     def get_institutional_roi(self, key):
+        if key in list(self.roi_over_rides):
+            return self.roi_over_rides[key]['institutional']
         roi_name = self.get_roi_name(key)
         if self.database_rois.is_roi(roi_name):
             if self.database_rois.is_physician(self.physician):
@@ -580,6 +587,14 @@ class DICOM_Parser:
                 'centroid': centroid,
                 'spread': spread,
                 'cross_sections': cross_sections}
+
+    def set_roi_over_ride(self, roi_name, institutional, physician, type):
+        self.roi_over_rides[roi_name] = {'institutional': institutional,
+                                         'physician': physician,
+                                         'type': type}
+
+    def delete_roi_over_ride(self, roi_name):
+        self.roi_over_rides.pop(roi_name)
 
     # ------------------------------------------------------------------------------
     # Generic tools

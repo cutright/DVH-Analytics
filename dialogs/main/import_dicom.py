@@ -9,13 +9,15 @@ from wx.lib.agw.customtreectrl import TR_AUTO_CHECK_CHILD, TR_AUTO_CHECK_PARENT,
 from tools.utilities import datetime_to_date_string
 from db.sql_connector import DVH_SQL
 from tools.roi_name_manager import DatabaseROIs
+from dateutil.parser import parse as parse_date
+from datetime import date as datetime_obj
 
 
 class ImportDICOM_Dialog(wx.Dialog):
     def __init__(self, *args, **kwds):
-        wx.Dialog.__init__(self, None, style=wx.STAY_ON_TOP, title='Import DICOM')
+        wx.Dialog.__init__(self, None, title='Import DICOM')
 
-        self.SetSize((1300, 850))
+        self.SetSize((1350, 800))
 
         self.parsed_dicom_data = {}
         self.selected_uid = None
@@ -27,7 +29,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         start_path = parse_settings_file(abs_file_path)['inbox']
 
         self.checkbox = {}
-        for key in ['mrn', 'study_instance_uid', 'birth_date', 'sim_study_date', 'physician', 'tx_site', 'rx_dose']:
+        for key in ['birth_date', 'sim_study_date', 'physician', 'tx_site', 'rx_dose']:
             self.checkbox['%s_1' % key] = wx.CheckBox(self, wx.ID_ANY, "Apply to all studies")
             self.checkbox['%s_2' % key] = wx.CheckBox(self, wx.ID_ANY, "If missing")
 
@@ -74,6 +76,8 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.tree_ctrl_roi.SetBackgroundColour(wx.WHITE)
         self.tree_ctrl_roi_root = self.tree_ctrl_roi.AddRoot('RT Structures', ct_type=1)
 
+        self.checkbox_include_uncategorized = wx.CheckBox(self, wx.ID_ANY, "Import uncategorized ROIs")
+
         self.__do_bind()
         self.__set_properties()
         self.__do_layout()
@@ -98,10 +102,16 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.Bind(wx.EVT_COMBOBOX, self.on_physician_change, id=self.input['physician'].GetId())
         self.Bind(wx.EVT_COMBOBOX, self.on_tx_site_change, id=self.input['tx_site'].GetId())
 
+        self.Bind(wx.EVT_BUTTON, self.on_apply_plan, id=self.button_apply_plan_data.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_apply_roi, id=self.button_apply_roi.GetId())
+
     def __set_properties(self):
         self.checkbox_subfolders.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
                                                  wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         self.checkbox_subfolders.SetValue(1)
+        self.checkbox_include_uncategorized.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
+                                                 wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
+        self.checkbox_include_uncategorized.SetValue(1)
 
         for checkbox in self.checkbox.values():
             checkbox.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
@@ -167,17 +177,11 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.label['mrn'] = wx.StaticText(self, wx.ID_ANY, "MRN:")
         sizer_mrn.Add(self.label['mrn'], 0, 0, 0)
         sizer_mrn.Add(self.input['mrn'], 0, wx.EXPAND, 0)
-        sizer_mrn_checkbox.Add(self.checkbox['mrn_1'], 0, wx.RIGHT, 20)
-        sizer_mrn_checkbox.Add(self.checkbox['mrn_2'], 0, 0, 0)
-        sizer_mrn.Add(sizer_mrn_checkbox, 1, wx.EXPAND, 0)
 
         sizer_plan_data.Add(sizer_mrn, 1, wx.ALL | wx.EXPAND, 5)
         self.label['study_instance_uid'] = wx.StaticText(self, wx.ID_ANY, "Study Instance UID:")
         sizer_uid.Add(self.label['study_instance_uid'], 0, 0, 0)
         sizer_uid.Add(self.input['study_instance_uid'], 0, wx.EXPAND, 0)
-        sizer_uid_checkbox.Add(self.checkbox['study_instance_uid_1'], 0, wx.RIGHT, 20)
-        sizer_uid_checkbox.Add(self.checkbox['study_instance_uid_2'], 0, 0, 0)
-        sizer_uid.Add(sizer_uid_checkbox, 1, wx.EXPAND, 0)
 
         sizer_plan_data.Add(sizer_uid, 1, wx.ALL | wx.EXPAND, 5)
         self.label['birth_date'] = wx.StaticText(self, wx.ID_ANY, "Birthdate:")
@@ -225,6 +229,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_roi_tree.Add(self.tree_ctrl_roi, 1, wx.ALL | wx.EXPAND, 0)
         self.panel_roi_tree.SetSizer(sizer_roi_tree)
         sizer_roi_map.Add(self.panel_roi_tree, 1, wx.EXPAND, 0)
+        sizer_roi_map.Add(self.checkbox_include_uncategorized, 0, wx.EXPAND | wx.BOTTOM, 15)
 
         self.label['institutional_roi'] = wx.StaticText(self, wx.ID_ANY, "Institutional ROI:")
         sizer_institutional_roi.Add(self.label['institutional_roi'], 0, 0, 0)
@@ -323,6 +328,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         else:
             self.clear_plan_data()
             self.disable_inputs()
+            self.selected_uid = None
             self.tree_ctrl_roi.DeleteChildren(self.dicom_dir.root_rois)
 
     def on_roi_tree_select(self, evt):
@@ -439,6 +445,41 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.input_roi['physician'].Append(choices)
 
     def on_apply_plan(self, evt):
-        over_rides = self.parsed_dicom_data[self.selected_uid].over_rides
+        over_rides = self.parsed_dicom_data[self.selected_uid].plan_over_rides
         for key in list(over_rides):
-            over_rides[key] = self.input[key]
+            value = self.input[key].GetValue()
+            if 'date' in key:
+                over_rides[key] = self.validate_date(value)
+            elif key == 'rx_dose':
+                over_rides[key] = self.validate_dose(value)
+            else:
+                if not value:
+                    value = None
+                over_rides[key] = value
+
+    def on_apply_roi(self, evt):
+        over_rides = self.parsed_dicom_data[self.selected_uid].roi_over_rides
+        for key in list(self.input_roi):
+            over_rides[self.selected_roi][key] = self.input_roi[key].GetValue()
+
+    def validate_date(self, date):
+        try:
+            dt = parse_date(date)
+            truncated = datetime_obj(dt.year, dt.month, dt.day)
+            return str(truncated).replace('-', '')
+        except:
+            return None
+
+    def validate_dose(self, dose):
+        try:
+            return float(dose)
+        except:
+            return None
+
+    def is_uid_valid(self, uid):
+        cnx = DVH_SQL()
+        valid_uid = not cnx.is_study_instance_uid_in_table('Plans', uid)
+        cnx.close()
+        if valid_uid:
+            return True
+        return False
