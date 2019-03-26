@@ -60,11 +60,9 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
         self.panel_roi_tree = wx.Panel(self, wx.ID_ANY, style=wx.BORDER_SUNKEN)
-        self.input_roi = {'institutional': wx.ComboBox(self, wx.ID_ANY, choices=self.roi_map.get_institutional_rois(), style=wx.CB_DROPDOWN),
-                          'physician': wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN),
+        self.input_roi = {'physician': wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN),
                           'type': wx.ComboBox(self, wx.ID_ANY, choices=cnx.get_unique_values('DVHs', 'roi_type'), style=wx.CB_DROPDOWN)}
         self.input_roi['type'].SetValue('')
-        self.input_roi['institutional'].SetValue('')
         self.button_apply_roi = wx.Button(self, wx.ID_ANY, "Apply")
         self.disable_roi_inputs()
 
@@ -128,7 +126,6 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_selected_roi = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Map for Selected ROI"), wx.VERTICAL)
         sizer_roi_type = wx.BoxSizer(wx.VERTICAL)
         sizer_physician_roi = wx.BoxSizer(wx.VERTICAL)
-        sizer_institutional_roi = wx.BoxSizer(wx.VERTICAL)
         sizer_roi_tree = wx.BoxSizer(wx.HORIZONTAL)
         sizer_plan_data_wrapper = wx.BoxSizer(wx.HORIZONTAL)
         sizer_plan_data = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Plan Data for Selected Study"), wx.VERTICAL)
@@ -231,11 +228,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_roi_map.Add(self.panel_roi_tree, 1, wx.EXPAND, 0)
         sizer_roi_map.Add(self.checkbox_include_uncategorized, 0, wx.EXPAND | wx.BOTTOM, 15)
 
-        self.label['institutional_roi'] = wx.StaticText(self, wx.ID_ANY, "Institutional ROI:")
-        sizer_institutional_roi.Add(self.label['institutional_roi'], 0, 0, 0)
-        sizer_institutional_roi.Add(self.input_roi['institutional'], 0, wx.EXPAND, 0)
-
-        self.label['physician_roi'] = wx.StaticText(self, wx.ID_ANY, "Physician ROI:")
+        self.label['physician_roi'] = wx.StaticText(self, wx.ID_ANY, "Physician's ROI Label:")
         sizer_physician_roi.Add(self.label['physician_roi'], 0, 0, 0)
         sizer_physician_roi.Add(self.input_roi['physician'], 0, wx.EXPAND, 0)
 
@@ -243,7 +236,6 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_roi_type.Add(self.label['roi_type'], 0, 0, 0)
         sizer_roi_type.Add(self.input_roi['type'], 0, wx.EXPAND, 0)
 
-        sizer_selected_roi.Add(sizer_institutional_roi, 1, wx.ALL | wx.EXPAND, 5)
         sizer_selected_roi.Add(sizer_physician_roi, 1, wx.ALL | wx.EXPAND, 5)
         sizer_selected_roi.Add(sizer_roi_type, 1, wx.ALL | wx.EXPAND, 5)
 
@@ -347,13 +339,10 @@ class ImportDICOM_Dialog(wx.Dialog):
         physician = self.input['physician'].GetValue()
         if self.selected_roi and self.roi_map.is_physician(physician):
             physician_roi = self.roi_map.get_physician_roi(physician, self.selected_roi)
-            institutional_roi = self.roi_map.get_institutional_roi(physician, physician_roi)
             roi_type = self.dicom_dir.roi_name_map[self.selected_roi]['type']
-            self.input_roi['institutional'].SetValue(institutional_roi)
             self.input_roi['physician'].SetValue(physician_roi)
             self.input_roi['type'].SetValue(roi_type)
         else:
-            self.input_roi['institutional'].SetValue('')
             self.input_roi['physician'].SetValue('')
             self.input_roi['type'].SetValue('')
 
