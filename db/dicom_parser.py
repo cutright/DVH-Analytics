@@ -23,7 +23,7 @@ from db.sql_connector import DVH_SQL
 
 
 class DICOM_Parser:
-    def __init__(self, plan=None, structure=None, dose=None):
+    def __init__(self, plan=None, structure=None, dose=None, global_plan_over_rides=None):
 
         self.plan_file = plan
         self.structure_file = structure
@@ -85,6 +85,7 @@ class DICOM_Parser:
                                 'physician': None,
                                 'tx_site': None,
                                 'rx_dose': None}
+        self.global_plan_over_rides = global_plan_over_rides
         self.roi_over_rides = {}
 
     def get_rx_data_from_dummy_rois(self):
@@ -338,10 +339,12 @@ class DICOM_Parser:
     @property
     def rx_dose(self):
         if self.plan_over_rides['rx_dose'] is not None:
-            return self.plan_over_rides['rx_dose']
-        if self.pinnacle_rx_data:
-            return sum([rx['rx_dose'] for rx in self.pinnacle_rx_data.values()])
-        return sum([rx.rx_dose for rx in self.rx_data if rx.rx_dose])
+            ans = self.plan_over_rides['rx_dose']
+        elif self.pinnacle_rx_data:
+            ans = sum([rx['rx_dose'] for rx in self.pinnacle_rx_data.values()])
+        else:
+            ans = sum([rx.rx_dose for rx in self.rx_data if rx.rx_dose])
+        return self.process_global_over_ride('rx_dose', ans)
 
     @property
     def total_mu(self):
@@ -373,14 +376,18 @@ class DICOM_Parser:
     @property
     def sim_study_date(self):
         if self.plan_over_rides['sim_study_date'] is not None:
-            return self.plan_over_rides['sim_study_date']
-        return self.get_attribute('plan', 'StudyDate')
+            ans = self.plan_over_rides['sim_study_date']
+        else:
+            ans = self.get_attribute('plan', 'StudyDate')
+        return self.process_global_over_ride('sim_study_date', ans)
 
     @property
     def birth_date(self):
         if self.plan_over_rides['birth_date'] is not None:
-            return self.plan_over_rides['birth_date']
-        return self.get_attribute('plan', 'PatientBirthDate')
+            ans =  self.plan_over_rides['birth_date']
+        else:
+            ans = self.get_attribute('plan', 'PatientBirthDate')
+        return self.process_global_over_ride('birth_date', ans)
 
     @property
     def age(self):
@@ -393,8 +400,10 @@ class DICOM_Parser:
     @property
     def physician(self):
         if self.plan_over_rides['physician'] is not None:
-            return self.plan_over_rides['physician']
-        return str(self.get_attribute('plan', ['PhysiciansOfRecord', 'ReferringPhysicianName'])).upper()
+            ans = self.plan_over_rides['physician']
+        else:
+            ans = str(self.get_attribute('plan', ['PhysiciansOfRecord', 'ReferringPhysicianName'])).upper()
+        return self.process_global_over_ride('physician', ans)
 
     @property
     def fxs(self):
@@ -446,10 +455,12 @@ class DICOM_Parser:
     @property
     def tx_site(self):
         if self.plan_over_rides['tx_site'] is not None:
-            return self.plan_over_rides['tx_site']
-        if self.pinnacle_tx_site is not None:
-            return self.pinnacle_tx_site
-        return self.get_attribute('plan', 'RTPlanLabel')
+            ans = self.plan_over_rides['tx_site']
+        elif self.pinnacle_tx_site is not None:
+            ans = self.pinnacle_tx_site
+        else:
+            ans = self.get_attribute('plan', 'RTPlanLabel')
+        return self.process_global_over_ride('tx_site', ans)
 
     @property
     def brachy(self):
@@ -518,6 +529,14 @@ class DICOM_Parser:
             return ', '.join(dose_grid_resolution)
         except:
             return None
+
+    def process_global_over_ride(self, key, pre_over_ride_value):
+        if self.global_plan_over_rides:
+            over_ride = self.global_plan_over_rides[key]
+            if over_ride['value']:
+                if not over_ride['only_if_missing'] or (over_ride['only_if_missing'] and not pre_over_ride_value):
+                    return over_ride['value']
+        return pre_over_ride_value
 
     # ------------------------------------------------------------------------------
     # DVH table data

@@ -26,14 +26,16 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.selected_roi = None
 
         abs_file_path = get_settings('import')
-        start_path = parse_settings_file(abs_file_path)['inbox']
+        self.start_path = parse_settings_file(abs_file_path)['inbox']
 
         self.checkbox = {}
-        for key in ['birth_date', 'sim_study_date', 'physician', 'tx_site', 'rx_dose']:
+        keys = ['birth_date', 'sim_study_date', 'physician', 'tx_site', 'rx_dose']
+        for key in keys:
             self.checkbox['%s_1' % key] = wx.CheckBox(self, wx.ID_ANY, "Apply to all studies")
-            self.checkbox['%s_2' % key] = wx.CheckBox(self, wx.ID_ANY, "If missing")
+            self.checkbox['%s_2' % key] = wx.CheckBox(self, wx.ID_ANY, "Only if missing")
+        self.global_plan_over_rides = {key: {'value': None, 'only_if_missing': False} for key in keys}
 
-        self.text_ctrl_directory = wx.TextCtrl(self, wx.ID_ANY, start_path, style=wx.TE_READONLY)
+        self.text_ctrl_directory = wx.TextCtrl(self, wx.ID_ANY, '', style=wx.TE_READONLY)
 
         cnx = DVH_SQL()
         self.input = {'mrn': wx.TextCtrl(self, wx.ID_ANY, ""),
@@ -82,7 +84,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.__set_properties()
         self.__do_layout()
 
-        self.dicom_dir = DICOM_Importer(start_path, self.tree_ctrl_import, self.tree_ctrl_roi, self.tree_ctrl_roi_root)
+        self.dicom_dir = DICOM_Importer('', self.tree_ctrl_import, self.tree_ctrl_roi, self.tree_ctrl_roi_root)
         self.parse_directory()
 
     def __do_bind(self):
@@ -274,7 +276,14 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.gauge.Hide()
 
     def on_browse(self, evt):
+        self.parsed_dicom_data = {}
+        for key in list(self.global_plan_over_rides):
+            self.global_plan_over_rides[key] = {'value': None, 'only_if_missing': False}
+        self.clear_plan_data()
+        self.tree_ctrl_roi.DeleteChildren(self.dicom_dir.root_rois)
         starting_dir = self.text_ctrl_directory.GetValue()
+        if starting_dir == '':
+            starting_dir = self.start_path
         if not isdir(starting_dir):
             starting_dir = ""
         dlg = wx.DirDialog(self, "Select inbox directory", starting_dir, wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
@@ -304,7 +313,8 @@ class ImportDICOM_Dialog(wx.Dialog):
                     file_paths = self.dicom_dir.dicom_file_paths[uid]
                     self.parsed_dicom_data[uid] = DICOM_Parser(plan=file_paths['rtplan']['file_path'],
                                                                structure=file_paths['rtstruct']['file_path'],
-                                                               dose=file_paths['rtdose']['file_path'])
+                                                               dose=file_paths['rtdose']['file_path'],
+                                                               global_plan_over_rides=self.global_plan_over_rides)
                 data = self.parsed_dicom_data[uid]
 
                 self.input['mrn'].SetValue(data.mrn)
@@ -455,6 +465,14 @@ class ImportDICOM_Dialog(wx.Dialog):
                     value = None
                 over_rides[key] = value
 
+            # Apply all
+            if "%s_1" % key in list(self.checkbox):
+                if self.checkbox["%s_1" % key].IsChecked():
+                    self.global_plan_over_rides[key]['value'] = value
+                    self.global_plan_over_rides[key]['only_if_missing'] = self.checkbox["%s_2" % key].IsChecked()
+
+        self.clear_plan_check_boxes()
+
     def on_apply_roi(self, evt):
         over_rides = self.parsed_dicom_data[self.selected_uid].roi_over_rides
         for key in list(self.input_roi):
@@ -481,3 +499,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         if valid_uid:
             return True
         return False
+
+    def clear_plan_check_boxes(self):
+        for checkbox in self.checkbox.values():
+            checkbox.SetValue(False)

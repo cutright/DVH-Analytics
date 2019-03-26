@@ -1,6 +1,7 @@
 import wx
 from db.sql_connector import DVH_SQL
 from datetime import datetime
+from dateutil.parser import parse as parse_date
 import numpy as np
 from os import walk, listdir
 from os.path import join, isfile
@@ -9,15 +10,16 @@ import shutil
 
 
 def get_file_paths(start_path, search_subfolders=False):
-    if search_subfolders:
-        file_paths = []
-        for root, dirs, files in walk(start_path, topdown=False):
-            for name in files:
-                file_paths.append(join(root, name))
-        return file_paths
+    if os.path.isdir(start_path):
+        if search_subfolders:
+            file_paths = []
+            for root, dirs, files in walk(start_path, topdown=False):
+                for name in files:
+                    file_paths.append(join(root, name))
+            return file_paths
 
-    return [join(start_path, f) for f in listdir(start_path) if isfile(join(start_path, f))]
-
+        return [join(start_path, f) for f in listdir(start_path) if isfile(join(start_path, f))]
+    return []
 
 def get_study_instance_uids(**kwargs):
     cnx = DVH_SQL()
@@ -169,11 +171,9 @@ def date_str_to_obj(date_str):
 
 
 def datetime_to_date_string(datetime_obj):
-    date_str = str(datetime_obj)
-    year = int(date_str[0:4])
-    month = int(date_str[4:6])
-    day = int(date_str[6:8])
-    return "%s/%s/%s" % (month, day, year)
+    if isinstance(datetime_obj, str):
+        datetime_obj = parse_date(datetime_obj)
+    return "%s/%s/%s" % (datetime_obj.month, datetime_obj.day, datetime_obj.year)
 
 
 def change_angle_origin(angles, max_positive_angle):
