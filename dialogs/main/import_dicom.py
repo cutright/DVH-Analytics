@@ -105,20 +105,9 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self.on_apply_plan, id=self.button_apply_plan_data.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_apply_roi, id=self.button_apply_roi.GetId())
 
-        self.Bind(wx.EVT_CHECKBOX, self.on_check_apply_to_all_studies_birth_date, id=self.checkbox['birth_date_1'].GetId())
-        self.Bind(wx.EVT_CHECKBOX, self.on_check_only_if_missing_birth_date, id=self.checkbox['birth_date_2'].GetId())
-
-        self.Bind(wx.EVT_CHECKBOX, self.on_check_apply_to_all_studies_sim_study_date, id=self.checkbox['sim_study_date_1'].GetId())
-        self.Bind(wx.EVT_CHECKBOX, self.on_check_only_if_missing_sim_study_date, id=self.checkbox['sim_study_date_2'].GetId())
-
-        self.Bind(wx.EVT_CHECKBOX, self.on_check_apply_to_all_studies_physician, id=self.checkbox['physician_1'].GetId())
-        self.Bind(wx.EVT_CHECKBOX, self.on_check_only_if_missing_physician, id=self.checkbox['physician_2'].GetId())
-
-        self.Bind(wx.EVT_CHECKBOX, self.on_check_apply_to_all_studies_tx_site, id=self.checkbox['tx_site_1'].GetId())
-        self.Bind(wx.EVT_CHECKBOX, self.on_check_only_if_missing_tx_site, id=self.checkbox['tx_site_2'].GetId())
-
-        self.Bind(wx.EVT_CHECKBOX, self.on_check_apply_to_all_studies_rx_dose, id=self.checkbox['rx_dose_1'].GetId())
-        self.Bind(wx.EVT_CHECKBOX, self.on_check_only_if_missing_rx_dose, id=self.checkbox['rx_dose_2'].GetId())
+        for key in ['birth_date', 'sim_study_date', 'physician', 'tx_site', 'rx_dose']:
+            self.Bind(wx.EVT_CHECKBOX, self.on_check_apply_all, id=self.checkbox['%s_1' % key].GetId())
+            self.Bind(wx.EVT_CHECKBOX, self.on_check_apply_all, id=self.checkbox['%s_2' % key].GetId())
 
     def __set_properties(self):
         self.checkbox_subfolders.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
@@ -508,40 +497,13 @@ class ImportDICOM_Dialog(wx.Dialog):
         for checkbox in self.checkbox.values():
             checkbox.SetValue(False)
 
-    def on_apply_all_uncheck(self, key):
-        if not self.checkbox["%s_1" % key].IsChecked():
-            self.checkbox["%s_2" % key].SetValue(False)
-
-    def on_only_if_missing_check(self, key):
-        if self.checkbox["%s_2" % key].IsChecked():
-            self.checkbox["%s_1" % key].SetValue(True)
-
-    def on_check_apply_to_all_studies_birth_date(self, evt):
-        self.on_apply_all_uncheck('birth_date')
-
-    def on_check_only_if_missing_birth_date(self, evt):
-        self.on_only_if_missing_check('birth_date')
-
-    def on_check_apply_to_all_studies_sim_study_date(self, evt):
-        self.on_apply_all_uncheck('sim_study_date')
-
-    def on_check_only_if_missing_sim_study_date(self, evt):
-        self.on_only_if_missing_check('sim_study_date')
-
-    def on_check_apply_to_all_studies_physician(self, evt):
-        self.on_apply_all_uncheck('physician')
-
-    def on_check_only_if_missing_physician(self, evt):
-        self.on_only_if_missing_check('physician')
-
-    def on_check_apply_to_all_studies_tx_site(self, evt):
-        self.on_apply_all_uncheck('tx_site')
-
-    def on_check_only_if_missing_tx_site(self, evt):
-        self.on_only_if_missing_check('tx_site')
-
-    def on_check_apply_to_all_studies_rx_dose(self, evt):
-        self.on_apply_all_uncheck('rx_dose')
-
-    def on_check_only_if_missing_rx_dose(self, evt):
-        self.on_only_if_missing_check('rx_dose')
+    def on_check_apply_all(self, evt):
+        for key in ['birth_date', 'sim_study_date', 'physician', 'tx_site', 'rx_dose']:
+            if self.checkbox["%s_1" % key].GetId() == evt.GetId():
+                if not self.checkbox["%s_1" % key].IsChecked():
+                    self.checkbox["%s_2" % key].SetValue(False)
+                return
+            if self.checkbox["%s_2" % key].GetId() == evt.GetId():
+                if self.checkbox["%s_2" % key].IsChecked():
+                    self.checkbox["%s_1" % key].SetValue(True)
+                return
