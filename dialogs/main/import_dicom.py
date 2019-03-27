@@ -91,16 +91,11 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.Bind(wx.EVT_TREE_SEL_CHANGED, self.on_file_tree_select, id=self.tree_ctrl_import.GetId())
         self.Bind(wx.EVT_TREE_SEL_CHANGED, self.on_roi_tree_select, id=self.tree_ctrl_roi.GetId())
 
-        self.Bind(wx.EVT_TEXT, self.on_mrn_change, id=self.input['mrn'].GetId())
-        self.Bind(wx.EVT_TEXT, self.on_uid_change, id=self.input['study_instance_uid'].GetId())
-        self.Bind(wx.EVT_TEXT, self.on_birth_date_change, id=self.input['birth_date'].GetId())
-        self.Bind(wx.EVT_TEXT, self.on_sim_study_date_change, id=self.input['sim_study_date'].GetId())
-        self.Bind(wx.EVT_TEXT, self.on_physician_change, id=self.input['physician'].GetId())
-        self.Bind(wx.EVT_TEXT, self.on_tx_site_change, id=self.input['tx_site'].GetId())
-        self.Bind(wx.EVT_TEXT, self.on_rx_change, id=self.input['rx_dose'].GetId())
+        for input_obj in self.input.values():
+            self.Bind(wx.EVT_TEXT, self.on_text_change, id=input_obj.GetId())
 
-        self.Bind(wx.EVT_COMBOBOX, self.on_physician_change, id=self.input['physician'].GetId())
-        self.Bind(wx.EVT_COMBOBOX, self.on_tx_site_change, id=self.input['tx_site'].GetId())
+        self.Bind(wx.EVT_COMBOBOX, self.on_text_change, id=self.input['physician'].GetId())
+        self.Bind(wx.EVT_COMBOBOX, self.on_text_change, id=self.input['tx_site'].GetId())
 
         self.Bind(wx.EVT_BUTTON, self.on_apply_plan, id=self.button_apply_plan_data.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_apply_roi, id=self.button_apply_roi.GetId())
@@ -378,20 +373,15 @@ class ImportDICOM_Dialog(wx.Dialog):
                 return name
         return None
 
-    def on_mrn_change(self, evt):
-        self.update_label_text_color('mrn')
+    def on_text_change(self, evt):
+        for key, input_obj in self.input.items():
+            if input_obj.GetId() == evt.GetId():
+                self.update_label_text_color(key)
+                if key == 'physician':
+                    self.on_physician_change()
+                return
 
-    def on_uid_change(self, evt):
-        self.update_label_text_color('study_instance_uid')
-
-    def on_birth_date_change(self, evt):
-        self.update_label_text_color('birth_date')
-
-    def on_sim_study_date_change(self, evt):
-        self.update_label_text_color('sim_study_date')
-
-    def on_physician_change(self, evt):
-        self.update_label_text_color('physician')
+    def on_physician_change(self):
         self.update_physician_roi_choices()
         physician = self.input['physician'].GetValue()
         if physician:
@@ -401,12 +391,6 @@ class ImportDICOM_Dialog(wx.Dialog):
 
         self.update_roi_inputs()
         self.dicom_dir.check_mapped_rois(physician)
-
-    def on_tx_site_change(self, evt):
-        self.update_label_text_color('tx_site')
-
-    def on_rx_change(self, evt):
-        self.update_label_text_color('rx_dose')
 
     def update_label_text_color(self, key):
         red_value = [255, 0][self.input[key].GetValue() != '']
@@ -471,7 +455,8 @@ class ImportDICOM_Dialog(wx.Dialog):
         for key in list(self.input_roi):
             over_rides[self.selected_roi][key] = self.input_roi[key].GetValue()
 
-    def validate_date(self, date):
+    @staticmethod
+    def validate_date(date):
         try:
             dt = parse_date(date)
             truncated = datetime_obj(dt.year, dt.month, dt.day)
@@ -479,13 +464,15 @@ class ImportDICOM_Dialog(wx.Dialog):
         except:
             return None
 
-    def validate_dose(self, dose):
+    @staticmethod
+    def validate_dose(dose):
         try:
             return float(dose)
         except:
             return None
 
-    def is_uid_valid(self, uid):
+    @staticmethod
+    def is_uid_valid(uid):
         cnx = DVH_SQL()
         valid_uid = not cnx.is_study_instance_uid_in_table('Plans', uid)
         cnx.close()

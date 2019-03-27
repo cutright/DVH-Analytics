@@ -86,7 +86,7 @@ class DICOM_Parser:
                                 'tx_site': None,
                                 'rx_dose': None}
         self.global_plan_over_rides = global_plan_over_rides
-        self.roi_over_rides = {}
+        self.roi_type_over_ride = {}
 
     def get_rx_data_from_dummy_rois(self):
 
@@ -545,8 +545,8 @@ class DICOM_Parser:
         dvhcalc.get_dvh(self.rt_data['structure'], self.rt_data['dose'], key)
 
     def get_roi_type(self, key):
-        if key in list(self.roi_over_rides):
-            return self.roi_over_rides[key]['type']
+        if key in list(self.roi_type_over_ride):
+            return self.roi_type_over_ride[key]
         # ITV is not currently in any TPS as an ROI type.  If the ROI begins with ITV, DVH assumes
         # a ROI type of ITV
         if self.dicompyler_rt_structures[key]['name'].lower()[0:3] == 'itv':
@@ -558,8 +558,6 @@ class DICOM_Parser:
         return clean_name(self.dicompyler_rt_structures[key]['name'])
 
     def get_physician_roi(self, key):
-        if key in list(self.roi_over_rides):
-            return self.roi_over_rides[key]['physician']
         roi_name = self.get_roi_name(key)
         if self.database_rois.is_roi(roi_name):
             if self.database_rois.is_physician(self.physician):
@@ -567,8 +565,6 @@ class DICOM_Parser:
         return 'uncategorized'
 
     def get_institutional_roi(self, key):
-        if key in list(self.roi_over_rides):
-            return self.roi_over_rides[key]['institutional']
         roi_name = self.get_roi_name(key)
         if self.database_rois.is_roi(roi_name):
             if self.database_rois.is_physician(self.physician):
@@ -606,14 +602,6 @@ class DICOM_Parser:
                 'centroid': centroid,
                 'spread': spread,
                 'cross_sections': cross_sections}
-
-    def set_roi_over_ride(self, roi_name, institutional, physician, type):
-        self.roi_over_rides[roi_name] = {'institutional': institutional,
-                                         'physician': physician,
-                                         'type': type}
-
-    def delete_roi_over_ride(self, roi_name):
-        self.roi_over_rides.pop(roi_name)
 
     # ------------------------------------------------------------------------------
     # Generic tools
