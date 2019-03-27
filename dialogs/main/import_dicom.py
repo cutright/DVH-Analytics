@@ -338,7 +338,9 @@ class ImportDICOM_Dialog(wx.Dialog):
         physician = self.input['physician'].GetValue()
         if self.selected_roi and self.roi_map.is_physician(physician):
             physician_roi = self.roi_map.get_physician_roi(physician, self.selected_roi)
-            roi_type = self.dicom_dir.roi_name_map[self.selected_roi]['type']
+            roi_key = self.dicom_dir.roi_name_map[self.selected_roi]['key']
+            uid = self.selected_uid
+            roi_type = self.parsed_dicom_data[uid].get_roi_type(roi_key)
             self.input_roi['physician'].SetValue(physician_roi)
             self.input_roi['type'].SetValue(roi_type)
         else:
@@ -451,9 +453,9 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.clear_plan_check_boxes()
 
     def on_apply_roi(self, evt):
-        over_rides = self.parsed_dicom_data[self.selected_uid].roi_over_rides
-        for key in list(self.input_roi):
-            over_rides[self.selected_roi][key] = self.input_roi[key].GetValue()
+        roi_type_over_ride = self.parsed_dicom_data[self.selected_uid].roi_type_over_ride
+        key = self.dicom_dir.roi_name_map[self.selected_roi]['key']
+        roi_type_over_ride[key] = self.input_roi['type'].GetValue()
 
     @staticmethod
     def validate_date(date):
