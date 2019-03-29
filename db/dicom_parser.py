@@ -47,13 +47,13 @@ class DICOM_Parser:
 
         beam_num = 0
         self.rx_data = []
-        self.beam_data = []
+        self.beam_data = {}
         self.ref_beam_data = []
         for fx_grp_index, fx_grp_seq in enumerate(self.rt_data['plan'].FractionGroupSequence):
             self.rx_data.append(RxParser(self.rt_data['plan'],
                                          self.dicompyler_rt_plan,
                                          self.rt_data['structure'], fx_grp_index))
-
+            self.beam_data[fx_grp_index] = []
             for fx_grp_beam in range(int(fx_grp_seq.NumberOfBeams)):
 
                 beam_number = self.beam_sequence[beam_num].BeamNumber
@@ -61,7 +61,7 @@ class DICOM_Parser:
                 cp_seq = self.get_cp_sequence(self.beam_sequence[beam_num])
                 ref_beam_seq_index = self.get_referenced_beam_sequence_index(fx_grp_seq, beam_number)
                 ref_beam_seq = fx_grp_seq.ReferencedBeamSequence[ref_beam_seq_index]
-                self.beam_data.append(BeamParser(beam_seq, ref_beam_seq, cp_seq))
+                self.beam_data[fx_grp_index].append(BeamParser(beam_seq, ref_beam_seq, cp_seq))
 
                 beam_num += 1
 
@@ -137,7 +137,7 @@ class DICOM_Parser:
                 'physician': [self.physician, 'varchar(50)'],
                 'tx_site': [self.tx_site, 'varchar(50)'],
                 'rx_dose': [self.rx_dose, 'real'],
-                'fxs': [self.fxs, 'int'],
+                'fxs': [self.fxs_total, 'int'],
                 'patient_orientation': [self.patient_orientation, 'varchar(3)'],
                 'plan_time_stamp': [self.plan_time_stamp, 'timestamp'],
                 'struct_time_stamp': [self.struct_time_stamp, 'timestamp'],
@@ -180,7 +180,7 @@ class DICOM_Parser:
 
         # store these getters so code is repeated every reference
         gantry_values = beam.gantry_values
-        collimator_values = beam.collimator_value
+        collimator_values = beam.collimator_values
         couch_values = beam.couch_values
         mlc_stat_data = beam.mlc_stat_data
 
@@ -251,8 +251,7 @@ class DICOM_Parser:
     def get_rx_rows(self):
         return [self.get_rx_row(rx) for rx in self.rx_data]
 
-    def get_rx_row(self, rx_index):
-        rx = self.rx_data[rx_index]
+    def get_rx_row(self, rx):
 
         data = {'mrn': [self.mrn, 'text'],
                 'study_instance_uid': [self.study_instance_uid, 'text'],
@@ -331,9 +330,9 @@ class DICOM_Parser:
     @property
     def tx_modality(self):
         tx_modalities = []
-        for beams in self.beam_data.values():
-            for beam in beams:
-                tx_modalities.append(beam.tx_modality)
+        for fx_grp_index, beam_parser_list in self.beam_data.items():
+            for beam_parser in beam_parser_list:
+                tx_modalities.append(beam_parser.tx_modality)
         return ','.join(list(set(tx_modalities)))
 
     @property
@@ -349,12 +348,11 @@ class DICOM_Parser:
     @property
     def total_mu(self):
         mus = []
-        for i, beamset in self.beam_data.items():
-            fx = self.rx_data[i].fx_count
-            if fx:
-                for beam in beamset:
-                    if beam.meter_set:
-                        mus.append(beam.meter_set * fx)
+        for fx_grp_index, beam_parser_list in self.beam_data.items():
+            for beam_parser in beam_parser_list:
+                if self.rx_data[fx_grp_index].fx_count:
+                    if beam_parser.beam_mu:
+                        mus.append(beam_parser.beam_mu * self.rx_data[fx_grp_index].fx_count)
         return sum(mus)
 
     @property
@@ -426,7 +424,8 @@ class DICOM_Parser:
 
     @property
     def patient_orientation(self):
-        return ','.join(self.get_attribute('plan', 'PatientSetupSequence'))
+        seq = self.get_attribute('plan', 'PatientSetupSequence')
+        return ','.join([setup.PatientPosition for setup in seq])
 
     @property
     def plan_time_stamp(self):
@@ -745,6 +744,8 @@ class BeamParser:
 
     @staticmethod
     def get_rotation_direction(rotation_list):
+        if not rotation_list:
+            return None
         if len(set(rotation_list)) == 1:  # Only one direction found
             return rotation_list[0]
         return ['CC/CW', 'CW/CC'][rotation_list[0] == 'CW']
@@ -762,7 +763,7 @@ class BeamParser:
         return self.get_angle_values('couch')
 
     def get_angle_values(self, angle_type):
-        angles = getattr(self, '%s_angle' % angle_type)
+        angles = getattr(self, '%s_angles' % angle_type)
         return {'start': angles[0],
                 'end': angles[-1],
                 'rot_dir': self.get_rotation_direction(getattr(self, '%s_rot_dirs' % angle_type)),
@@ -929,3 +930,8 @@ class RxParser:
         if hasattr(self.fx_grp_data, 'NumberOfBeams'):
             return self.fx_grp_data.NumberOfBeams
         return None
+
+    @property
+    def beam_numbers(self):
+        return [ref_beam.ReferencedBeamNumber for ref_beam in self.fx_grp_data.ReferencedBeamSequence]
+

@@ -2,6 +2,7 @@ import wx
 import wx.adv
 from db.dicom_importer import DICOM_Importer
 from db.dicom_parser import DICOM_Parser
+from dicompylercore import dicomparser
 from os.path import isdir
 from options import get_settings, parse_settings_file
 from wx.lib.agw.customtreectrl import CustomTreeCtrl
@@ -103,6 +104,8 @@ class ImportDICOM_Dialog(wx.Dialog):
         for key in ['birth_date', 'sim_study_date', 'physician', 'tx_site', 'rx_dose']:
             self.Bind(wx.EVT_CHECKBOX, self.on_check_apply_all, id=self.checkbox['%s_1' % key].GetId())
             self.Bind(wx.EVT_CHECKBOX, self.on_check_apply_all, id=self.checkbox['%s_2' % key].GetId())
+
+        self.Bind(wx.EVT_BUTTON, self.on_import, id=self.button_import.GetId())
 
     def __set_properties(self):
         self.checkbox_subfolders.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
@@ -496,3 +499,83 @@ class ImportDICOM_Dialog(wx.Dialog):
                 if self.checkbox["%s_2" % key].IsChecked():
                     self.checkbox["%s_1" % key].SetValue(True)
                 return
+
+    def on_import(self, evt):
+        dlg = ImportStatusDialog(self.parsed_dicom_data)
+        res = dlg.ShowModal()
+        dlg.Destroy()
+
+
+class ImportStatusDialog(wx.Dialog):
+    def __init__(self, data):
+        """
+        :param data: parased dicom data
+        :type data: dict of DICOM_Parser
+        """
+        wx.Dialog.__init__(self, None)
+        self.SetSize((700, 200))
+        self.data = data
+        self.study_count = len(list(self.data))
+        self.gauge_study = wx.Gauge(self, wx.ID_ANY, 100)
+        self.gauge_calculation = wx.Gauge(self, wx.ID_ANY, 100)
+        self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+
+        self.__set_properties()
+        self.__do_layout()
+
+        self.import_studies()
+
+        self.Destroy()
+
+    def __set_properties(self):
+        self.SetTitle("Import Progress")
+        self.SetSize((700, 200))
+
+    def __do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_calculation = wx.BoxSizer(wx.VERTICAL)
+        sizer_study = wx.BoxSizer(wx.VERTICAL)
+        self.label_patient = wx.StaticText(self, wx.ID_ANY, "Patient:")
+        sizer_study.Add(self.label_patient, 0, 0, 0)
+        self.label_study = wx.StaticText(self, wx.ID_ANY, "Study Instance UID:")
+        sizer_study.Add(self.label_study, 0, 0, 0)
+        sizer_study.Add(self.gauge_study, 0, wx.EXPAND, 0)
+        sizer_wrapper.Add(sizer_study, 0, wx.ALL | wx.EXPAND, 10)
+        self.label_calculation = wx.StaticText(self, wx.ID_ANY, "Calculation: DVH")
+        sizer_calculation.Add(self.label_calculation, 0, 0, 0)
+        self.label_structure = wx.StaticText(self, wx.ID_ANY, "Structure: Name (1 of 50)")
+        sizer_calculation.Add(self.label_structure, 0, 0, 0)
+        sizer_calculation.Add(self.gauge_calculation, 0, wx.EXPAND, 0)
+        sizer_wrapper.Add(sizer_calculation, 0, wx.ALL | wx.EXPAND, 10)
+        sizer_wrapper.Add(self.button_cancel, 0, wx.ALIGN_RIGHT | wx.BOTTOM | wx.RIGHT, 10)
+        self.SetSizer(sizer_wrapper)
+        self.Layout()
+        self.Center()
+
+    def import_study(self, uid):
+        dicom_rt_struct = dicomparser.DicomParser(self.data[uid].structure_file)
+        structures = dicom_rt_struct.GetStructures()
+        roi_name_map = {key: structures[key]['name'] for key in list(structures) if structures[key]['type'] != 'MARKER'}
+        data_to_import = {'Plans': self.data[uid].get_plan_row(),
+                          'Rxs': self.data[uid].get_rx_rows(),
+                          'Beams': self.data[uid].get_beam_rows()}
+        cnx = DVH_SQL()
+        for key in list(data_to_import):
+            print(key)
+            cnx.insert_row(key, data_to_import[key])
+        cnx.close()
+
+        data_to_import['DVHs'] = []
+        for dicom_parser in self.data[uid]:
+            roi_counter = 1
+            roi_count = len(roi_name_map)
+            self.label_calculation.SetLabel('Calculation: DVH')
+            for roi_key, roi_name in roi_name_map.items():
+                self.label_structure.SetLabel("Structure: %s (%s of %s)" % (roi_name, roi_counter, roi_count))
+                data_to_import['DVHs'].append(dicom_parser.get_dvh_row(roi_key))
+
+    def import_studies(self):
+        for uid in list(self.data):
+            self.label_patient.SetLabel("Patient: %s" % 's')
+            self.label_study.SetLabel("Study Instance UID: %s" % uid)
+            self.import_study(uid)

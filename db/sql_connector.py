@@ -189,7 +189,7 @@ class DVH_SQL:
 
         values = []
         for column in columns:
-            if row[column][0] is None:
+            if row[column][0] is None or row[column][0] == '':
                 values.append("(NULL)")
             else:
                 if 'varchar' in row[column][1]:
@@ -199,6 +199,7 @@ class DVH_SQL:
                     values.append("'%s'" % row[column][0])
 
         cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (table, ','.join(columns), ",".join(values))
+        print(cmd)
         self.execute_str(cmd)
 
     def insert_plan(self, plan):
