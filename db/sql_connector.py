@@ -43,7 +43,8 @@ class DVH_SQL:
 
     def execute_str(self, command_str):
         for line in command_str.split('\n'):
-            self.cursor.execute(line)
+            if line:
+                self.cursor.execute(line)
         self.cnx.commit()
 
     def check_table_exists(self, table_name):
@@ -189,8 +190,10 @@ class DVH_SQL:
 
         values = []
         for column in columns:
-            if row[column][0] is None or row[column][0] == '':
-                values.append("(NULL)")
+            if row[column] is None:
+                print("column %s = None" % column)
+            if row[column] is None or row[column][0] in {None, ''}:
+                values.append("NULL")
             else:
                 if 'varchar' in row[column][1]:
                     max_length = int(row[column][1].replace('varchar(', '').replace(')', ''))
@@ -199,7 +202,6 @@ class DVH_SQL:
                     values.append("'%s'" % row[column][0])
 
         cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (table, ','.join(columns), ",".join(values))
-        print(cmd)
         self.execute_str(cmd)
 
     def insert_plan(self, plan):

@@ -46,4 +46,4 @@ ALTER TABLE Plans ADD COLUMN IF NOT EXISTS complexity real;
 -- The following columns have been added as of DVH Analytics 0.5.5
 ALTER TABLE Beams ADD COLUMN IF NOT EXISTS complexity real;
 -- The following columns have been added as of DVH Analytics 0.6
-ALTER TABLE Beams ADD COLUMN IF NOT EXISTS tx_modality real;
+ALTER TABLE Beams ADD COLUMN IF NOT EXISTS tx_modality varchar(30);

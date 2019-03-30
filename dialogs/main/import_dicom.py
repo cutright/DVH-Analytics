@@ -12,6 +12,9 @@ from db.sql_connector import DVH_SQL
 from tools.roi_name_manager import DatabaseROIs
 from dateutil.parser import parse as parse_date
 from datetime import date as datetime_obj
+import time
+from threading import Thread
+from pubsub import pub
 
 
 class ImportDICOM_Dialog(wx.Dialog):
@@ -501,21 +504,15 @@ class ImportDICOM_Dialog(wx.Dialog):
                 return
 
     def on_import(self, evt):
-        dlg = ImportStatusDialog(self.parsed_dicom_data)
-        res = dlg.ShowModal()
-        dlg.Destroy()
+        Importer(self.parsed_dicom_data)
+        dlg = ImportStatusDialog()
+        dlg.ShowModal()
 
 
 class ImportStatusDialog(wx.Dialog):
-    def __init__(self, data):
-        """
-        :param data: parased dicom data
-        :type data: dict of DICOM_Parser
-        """
+    def __init__(self):
         wx.Dialog.__init__(self, None)
         self.SetSize((700, 200))
-        self.data = data
-        self.study_count = len(list(self.data))
         self.gauge_study = wx.Gauge(self, wx.ID_ANY, 100)
         self.gauge_calculation = wx.Gauge(self, wx.ID_ANY, 100)
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
@@ -523,9 +520,10 @@ class ImportStatusDialog(wx.Dialog):
         self.__set_properties()
         self.__do_layout()
 
-        self.import_studies()
-
-        self.Destroy()
+        # create a pubsub receiver
+        pub.subscribe(self.update_patient, "update_patient")
+        pub.subscribe(self.update_calculation, "update_calculation")
+        pub.subscribe(self.close, "close")
 
     def __set_properties(self):
         self.SetTitle("Import Progress")
@@ -552,30 +550,67 @@ class ImportStatusDialog(wx.Dialog):
         self.Layout()
         self.Center()
 
+    def close(self):
+        self.Destroy()
+
+    def update_patient(self, msg):
+        self.label_patient.SetLabelText("Patient: %s" % msg['patient_name'])
+        self.label_study.SetLabelText("Study Instance UID: %s" % msg['uid'])
+        self.gauge_study.SetValue(msg['progress'])
+
+    def update_calculation(self, msg):
+        self.label_calculation.SetLabelText("Calculation: %s" % msg['calculation'])
+        self.label_structure.SetLabelText("Structure (%s of %s): %s" %
+                                          (msg['roi_num'], msg['roi_total'], msg['roi_name']))
+        self.gauge_calculation.SetValue(msg['progress'])
+
+
+class Importer(Thread):
+    def __init__(self, data):
+        """
+        :param data: parased dicom data
+        :type data: dict of DICOM_Parser
+        """
+        Thread.__init__(self)
+        self.data = data
+        self.start()  # start the thread
+
     def import_study(self, uid):
         dicom_rt_struct = dicomparser.DicomParser(self.data[uid].structure_file)
         structures = dicom_rt_struct.GetStructures()
         roi_name_map = {key: structures[key]['name'] for key in list(structures) if structures[key]['type'] != 'MARKER'}
-        data_to_import = {'Plans': self.data[uid].get_plan_row(),
+        data_to_import = {'Plans': [self.data[uid].get_plan_row()],
                           'Rxs': self.data[uid].get_rx_rows(),
-                          'Beams': self.data[uid].get_beam_rows()}
+                          'Beams': self.data[uid].get_beam_rows(),
+                          'DVHs': []}
+
+        roi_total = len(roi_name_map)
+        for roi_counter, roi_key in enumerate(list(roi_name_map)):
+            msg = {'calculation': 'DVH',
+                   'roi_num': roi_counter,
+                   'roi_total': roi_total,
+                   'roi_name': roi_name_map[roi_key],
+                   'progress': int(100 * (roi_counter+1) / roi_total)}
+            wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+            data_to_import['DVHs'].append(self.data[uid].get_dvh_row(roi_key))
+            roi_counter += 1
+
+        self.push(data_to_import)
+
+    def run(self):
+        study_total = len(self.data)
+        for study_counter, uid in enumerate(list(self.data)):
+            msg = {'patient_name': self.data[uid].patient_name,
+                   'uid': uid,
+                   'progress': int(100 * (study_counter+1) / study_total)}
+            wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
+            self.import_study(uid)
+        wx.CallAfter(pub.sendMessage, "close")
+
+    @staticmethod
+    def push(data_to_import):
         cnx = DVH_SQL()
         for key in list(data_to_import):
-            print(key)
-            cnx.insert_row(key, data_to_import[key])
+            for row in data_to_import[key]:
+                cnx.insert_row(key, row)
         cnx.close()
-
-        data_to_import['DVHs'] = []
-        for dicom_parser in self.data[uid]:
-            roi_counter = 1
-            roi_count = len(roi_name_map)
-            self.label_calculation.SetLabel('Calculation: DVH')
-            for roi_key, roi_name in roi_name_map.items():
-                self.label_structure.SetLabel("Structure: %s (%s of %s)" % (roi_name, roi_counter, roi_count))
-                data_to_import['DVHs'].append(dicom_parser.get_dvh_row(roi_key))
-
-    def import_studies(self):
-        for uid in list(self.data):
-            self.label_patient.SetLabel("Patient: %s" % 's')
-            self.label_study.SetLabel("Study Instance UID: %s" % uid)
-            self.import_study(uid)

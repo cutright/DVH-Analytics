@@ -246,7 +246,7 @@ class DICOM_Parser:
                 'cp_mu_median': [mlc_stat_data['cp_mu'][2], 'real'],
                 'cp_mu_max': [mlc_stat_data['cp_mu'][0], 'real'],
                 'complexity': [mlc_stat_data['complexity'], 'real'],
-                'tx_modality': [beam.tx_modality]}
+                'tx_modality': [beam.tx_modality, 'real']}
 
     def get_rx_rows(self):
         return [self.get_rx_row(rx) for rx in self.rx_data]
@@ -270,11 +270,11 @@ class DICOM_Parser:
         # over-ride values if dummy roi's are used to store rx data in rt_structure
         if self.pinnacle_rx_data and rx.fx_grp_number in list(self.pinnacle_rx_data):
             for key, value in self.pinnacle_rx_data[rx.fx_grp_number].items():
-                data[key] = value
+                data[key][0] = value
 
-        for key in self.plan_over_rides:
-            if key in data:
-                data[key] = self.plan_over_rides[key]
+        for key, value in self.plan_over_rides.items():
+            if key in data and value is not None:
+                data[key] = value
 
         return data
 
@@ -323,6 +323,10 @@ class DICOM_Parser:
         if self.plan_over_rides['study_instance_uid']:
             return self.plan_over_rides['study_instance_uid']
         return self.rt_data['plan'].StudyInstanceUID
+
+    @property
+    def patient_name(self):
+        return str(self.rt_data['plan'].PatientName)
 
     # ------------------------------------------------------------------------------
     # Plan table data
@@ -817,7 +821,7 @@ class BeamParser:
             mlca_stat_data = {key: calc_stats(mlc_summary_data[key]) for key in mlc_keys}
             mlca_stat_data['complexity'] = np.sum(mlc_summary_data['cmp_score'])
         except:
-            mlca_stat_data = {key: ['NULL'] * 6 for key in mlc_keys}
+            mlca_stat_data = {key: [None] * 6 for key in mlc_keys}
             mlca_stat_data['complexity'] = None
         return mlca_stat_data
 
