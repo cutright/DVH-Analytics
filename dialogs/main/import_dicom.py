@@ -5,14 +5,12 @@ from db.dicom_parser import DICOM_Parser
 from dicompylercore import dicomparser
 from os.path import isdir
 from options import get_settings, parse_settings_file
-from wx.lib.agw.customtreectrl import CustomTreeCtrl
-from wx.lib.agw.customtreectrl import TR_AUTO_CHECK_CHILD, TR_AUTO_CHECK_PARENT, TR_DEFAULT_STYLE
+from wx.lib.agw.customtreectrl import CustomTreeCtrl, TR_AUTO_CHECK_CHILD, TR_AUTO_CHECK_PARENT, TR_DEFAULT_STYLE
 from tools.utilities import datetime_to_date_string, get_elapsed_time
 from db.sql_connector import DVH_SQL
 from tools.roi_name_manager import DatabaseROIs, clean_name
 from dateutil.parser import parse as parse_date
-from datetime import date as datetime_obj
-from datetime import datetime
+from datetime import date as datetime_obj, datetime
 from threading import Thread
 from pubsub import pub
 from db import update as db_update
