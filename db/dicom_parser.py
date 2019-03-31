@@ -281,36 +281,50 @@ class DICOM_Parser:
     def get_dvh_row(self, dvh_index):
 
         dvh = dvhcalc.get_dvh(self.structure_file, self.dose_file, dvh_index)
-        geometries = self.get_dvh_geometries(dvh_index)
+        if dvh.volume > 0:
+            data = {'mrn': [self.mrn, 'text'],
+                    'study_instance_uid': [self.study_instance_uid, 'text'],
+                    'institutional_roi': [self.get_institutional_roi(dvh_index), 'varchar(50)'],
+                    'physician_roi': [self.get_physician_roi(dvh_index), 'varchar(50)'],
+                    'roi_name': [self.get_roi_name(dvh_index), 'varchar(50)'],
+                    'roi_type': [self.get_roi_type(dvh_index), 'varchar(20)'],
+                    'volume': [dvh.volume, 'real'],
+                    'min_dose': [dvh.min, 'real'],
+                    'mean_dose': [dvh.mean, 'real'],
+                    'max_dose': [dvh.max, 'real'],
+                    'dvh_string': [','.join(['%.2f' % num for num in dvh.counts]), 'text'],
+                    'roi_coord_string': [None, 'text'],
+                    'dist_to_ptv_min': [None, 'real'],
+                    'dist_to_ptv_mean': [None, 'real'],
+                    'dist_to_ptv_median': [None, 'real'],
+                    'dist_to_ptv_max': [None, 'real'],
+                    'surface_area': [None, 'real'],
+                    'ptv_overlap': [None, 'real'],
+                    'import_time_stamp': [None, 'timestamp'],
+                    'centroid': [None, 'varchar(35'],
+                    'dist_to_ptv_centroids': [None, 'real'],
+                    'dth_string': [None, 'text'],
+                    'spread_x': [None, 'real'],
+                    'spread_y': [None, 'real'],
+                    'spread_z': [None, 'real'],
+                    'cross_section_max': [None, 'real'],
+                    'cross_section_median': [None, 'real'],
+                    'toxicity_grade': [None, 'smallint']}
 
-        return {'mrn': [self.mrn, 'text'],
-                'study_instance_uid': [self.study_instance_uid, 'text'],
-                'institutional_roi': [self.get_institutional_roi(dvh_index), 'varchar(50)'],
-                'physician_roi': [self.get_physician_roi(dvh_index), 'varchar(50)'],
-                'roi_name': [self.get_roi_name(dvh_index), 'varchar(50)'],
-                'roi_type': [self.get_roi_type(dvh_index), 'varchar(20)'],
-                'volume': [dvh.volume, 'real'],
-                'min_dose': [dvh.min, 'real'],
-                'mean_dose': [dvh.mean, 'real'],
-                'max_dose': [dvh.max, 'real'],
-                'dvh_string': [','.join(['%.2f' % num for num in dvh.counts]), 'text'],
-                'roi_coord_string': [geometries['roi_coord_str'], 'text'],
-                'dist_to_ptv_min': [None, 'real'],
-                'dist_to_ptv_mean': [None, 'real'],
-                'dist_to_ptv_median': [None, 'real'],
-                'dist_to_ptv_max': [None, 'real'],
-                'surface_area': [geometries['surface_area'], 'real'],
-                'ptv_overlap': [None, 'real'],
-                'import_time_stamp': [None, 'timestamp'],
-                'centroid': [geometries['centroid'], 'varchar(35'],
-                'dist_to_ptv_centroids': [None, 'real'],
-                'dth_string': [None, 'text'],
-                'spread_x': [geometries['spread'][0], 'real'],
-                'spread_y': [geometries['spread'][1], 'real'],
-                'spread_z': [geometries['spread'][2], 'real'],
-                'cross_section_max': [geometries['cross_sections']['max'], 'real'],
-                'cross_section_median': [geometries['cross_sections']['median'], 'real'],
-                'toxicity_grade': [None, 'smallint']}
+            geometries = self.get_dvh_geometries(dvh_index)
+            if geometries:
+                data['roi_coord_string'][0] = geometries['roi_coord_str']
+                data['surface_area'][0] = geometries['surface_area']
+                data['centroid'][0] = geometries['centroid']
+                data['spread_x'][0] = geometries['spread'][0]
+                data['spread_y'][0] = geometries['spread'][1]
+                data['spread_z'][0] = geometries['spread'][2]
+                data['cross_section_max'][0] = geometries['cross_sections']['max']
+                data['cross_section_median'][0] = geometries['cross_sections']['median']
+
+            return data
+
+        return None
 
     @property
     def mrn(self):
@@ -585,20 +599,31 @@ class DICOM_Parser:
             return None
 
     def get_dvh_geometries(self, key):
-        structure_coord = self.dicompyler_data['structure'].GetStructureCoordinates(key)
-        roi_coord_str = dicompyler_roi_coord_to_db_string(structure_coord)
-        planes = get_planes_from_string(roi_coord_str)
-        coord = self.dicompyler_data['structure'].GetStructureCoordinates(key)
+        try:
+            structure_coord = self.dicompyler_data['structure'].GetStructureCoordinates(key)
+            roi_coord_str = dicompyler_roi_coord_to_db_string(structure_coord)
+        except:
+            print("ROI coordinate extraction failed for key, name: %s, %s" % (key, self.get_roi_name(key)))
+            roi_coord_str = None
 
         try:
+            planes = get_planes_from_string(roi_coord_str)
+
+            centroid = roi_calc.centroid(planes)
+            spread = roi_calc.spread(planes)
+            cross_sections = roi_calc.cross_section(planes)
+        except:
+            print("Centroid, spread, and cross-sections failed for key, name: %s, %s" % (key, self.get_roi_name(key)))
+            centroid = None
+            spread = None
+            cross_sections = None
+
+        try:
+            coord = self.dicompyler_data['structure'].GetStructureCoordinates(key)
             surface_area = roi_calc.surface_area(coord)
         except:
             print("Surface area calculation failed for key, name: %s, %s" % (key, self.get_roi_name(key)))
             surface_area = None
-
-        centroid = roi_calc.centroid(planes)
-        spread = roi_calc.spread(planes)
-        cross_sections = roi_calc.cross_section(planes)
 
         return {'roi_coord_str': roi_coord_str,
                 'surface_area': surface_area,
@@ -670,7 +695,11 @@ class BeamParser:
 
     @property
     def beam_name(self):
-        return self.beam_data.BeamDescription
+        if hasattr(self.beam_data, 'BeamDescription'):
+            return self.beam_data.BeamDescription
+        if hasattr(self.beam_data, 'BeamName'):
+            return self.beam_data.BeamName
+        return self.beam_number
 
     @property
     def treatment_machine(self):

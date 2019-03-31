@@ -274,3 +274,14 @@ def move_all_files(new_dir, old_dir):
 
     os.chdir(initial_path)
 
+
+def get_elapsed_time(start_time, end_time):
+    total_time = end_time - start_time
+    seconds = total_time.seconds
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    if h:
+        return "%d hrs %d min %d sec" % (h, m, s)
+    if m:
+        return "%d min %d sec" % (m, s)
+    return "%d sec" % s

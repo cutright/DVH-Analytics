@@ -7,12 +7,12 @@ from os.path import isdir
 from options import get_settings, parse_settings_file
 from wx.lib.agw.customtreectrl import CustomTreeCtrl
 from wx.lib.agw.customtreectrl import TR_AUTO_CHECK_CHILD, TR_AUTO_CHECK_PARENT, TR_DEFAULT_STYLE
-from tools.utilities import datetime_to_date_string
+from tools.utilities import datetime_to_date_string, get_elapsed_time
 from db.sql_connector import DVH_SQL
 from tools.roi_name_manager import DatabaseROIs
 from dateutil.parser import parse as parse_date
 from datetime import date as datetime_obj
-import time
+from datetime import datetime
 from threading import Thread
 from pubsub import pub
 
@@ -260,6 +260,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.Center()
 
     def parse_directory(self):
+        wait = wx.BusyCursor()
         self.gauge.Show()
         file_count = self.dicom_dir.file_count
         self.dicom_dir.initialize_file_tree_root()
@@ -270,7 +271,9 @@ class ImportDICOM_Dialog(wx.Dialog):
             self.update_progress_message()
             self.tree_ctrl_import.ExpandAll()
             wx.Yield()
+        self.update_progress_message(complete=True)
         self.gauge.Hide()
+        del wait
 
     def on_browse(self, evt):
         self.parsed_dicom_data = {}
@@ -292,9 +295,10 @@ class ImportDICOM_Dialog(wx.Dialog):
             self.parse_directory()
         dlg.Destroy()
 
-    def update_progress_message(self):
-        self.label_progress.SetLabelText("Progress: %s Patients - %s Studies - %s Files" %
-                                         (self.dicom_dir.count['patient'],
+    def update_progress_message(self, complete=False):
+        self.label_progress.SetLabelText("%s%s Patients - %s Studies - %s Files" %
+                                         (["Progress: ", "Found: "][complete],
+                                          self.dicom_dir.count['patient'],
                                           self.dicom_dir.count['study'],
                                           self.dicom_dir.count['file']))
 
@@ -504,25 +508,55 @@ class ImportDICOM_Dialog(wx.Dialog):
                 return
 
     def on_import(self, evt):
-        Importer(self.parsed_dicom_data)
+        self.parse_checked_dicom_data()
+        ImportWorker(self.parsed_dicom_data, list(self.dicom_dir.checked_studies))
         dlg = ImportStatusDialog()
         dlg.ShowModal()
+
+    def parse_checked_dicom_data(self):
+        wait = wx.BusyCursor()
+        parsed_uids = list(self.parsed_dicom_data)
+        checked_uids = list(self.dicom_dir.checked_studies)
+        study_total = len(checked_uids)
+        self.gauge.SetValue(0)
+        self.gauge.Show()
+        for study_counter, uid in enumerate(checked_uids):
+            self.label_progress.SetLabelText("Parsing %s of %s studies" % (study_counter+1, study_total))
+            if uid not in parsed_uids:
+                file_paths = self.dicom_dir.dicom_file_paths[uid]
+                wx.Yield()
+                self.parsed_dicom_data[uid] = DICOM_Parser(plan=file_paths['rtplan']['file_path'],
+                                                           structure=file_paths['rtstruct']['file_path'],
+                                                           dose=file_paths['rtdose']['file_path'],
+                                                           global_plan_over_rides=self.global_plan_over_rides)
+
+            self.gauge.SetValue(int(100 * (study_counter+1) / study_total))
+            wx.Yield()
+
+        self.gauge.Hide()
+        self.label_progress.SetLabelText("All %s studies parsed" % study_total)
+
+        del wait
 
 
 class ImportStatusDialog(wx.Dialog):
     def __init__(self):
         wx.Dialog.__init__(self, None)
-        self.SetSize((700, 200))
+        self.SetSize((700, 230))
         self.gauge_study = wx.Gauge(self, wx.ID_ANY, 100)
         self.gauge_calculation = wx.Gauge(self, wx.ID_ANY, 100)
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
         self.__set_properties()
         self.__do_layout()
+        self.__do_subscribe()
 
-        # create a pubsub receiver
+        self.start_time = datetime.now()
+
+    def __do_subscribe(self):
         pub.subscribe(self.update_patient, "update_patient")
         pub.subscribe(self.update_calculation, "update_calculation")
+        pub.subscribe(self.update_elapsed_time, "update_elapsed_time")
         pub.subscribe(self.close, "close")
 
     def __set_properties(self):
@@ -533,6 +567,7 @@ class ImportStatusDialog(wx.Dialog):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_calculation = wx.BoxSizer(wx.VERTICAL)
         sizer_study = wx.BoxSizer(wx.VERTICAL)
+        sizer_elapsed_time = wx.BoxSizer(wx.VERTICAL)
         self.label_patient = wx.StaticText(self, wx.ID_ANY, "Patient:")
         sizer_study.Add(self.label_patient, 0, 0, 0)
         self.label_study = wx.StaticText(self, wx.ID_ANY, "Study Instance UID:")
@@ -545,6 +580,9 @@ class ImportStatusDialog(wx.Dialog):
         sizer_calculation.Add(self.label_structure, 0, 0, 0)
         sizer_calculation.Add(self.gauge_calculation, 0, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_calculation, 0, wx.ALL | wx.EXPAND, 10)
+        self.label_elapsed_time = wx.StaticText(self, wx.ID_ANY, "Elapsed time:")
+        sizer_elapsed_time.Add(self.label_elapsed_time, 0, wx.EXPAND, 5)
+        sizer_wrapper.Add(sizer_elapsed_time, 0, wx.ALL, 5)
         sizer_wrapper.Add(self.button_cancel, 0, wx.ALIGN_RIGHT | wx.BOTTOM | wx.RIGHT, 10)
         self.SetSizer(sizer_wrapper)
         self.Layout()
@@ -564,16 +602,33 @@ class ImportStatusDialog(wx.Dialog):
                                           (msg['roi_num'], msg['roi_total'], msg['roi_name']))
         self.gauge_calculation.SetValue(msg['progress'])
 
+    def update_elapsed_time(self):
+        elapsed_time = get_elapsed_time(self.start_time, datetime.now())
+        self.label_elapsed_time.SetLabelText("Elapsed Time: %s" % elapsed_time)
 
-class Importer(Thread):
-    def __init__(self, data):
+
+class ImportWorker(Thread):
+    def __init__(self, data, checked_uids):
         """
         :param data: parased dicom data
         :type data: dict of DICOM_Parser
         """
         Thread.__init__(self)
         self.data = data
+        self.checked_uids = checked_uids
         self.start()  # start the thread
+
+    def run(self):
+
+        study_total = len(self.checked_uids)
+        for study_counter, uid in enumerate(self.checked_uids):
+            msg = {'patient_name': self.data[uid].patient_name,
+                   'uid': uid,
+                   'progress': int(100 * (study_counter+1) / study_total)}
+            wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
+            wx.CallAfter(pub.sendMessage, "update_elapsed_time")
+            self.import_study(uid)
+        wx.CallAfter(pub.sendMessage, "close")
 
     def import_study(self, uid):
         dicom_rt_struct = dicomparser.DicomParser(self.data[uid].structure_file)
@@ -592,20 +647,13 @@ class Importer(Thread):
                    'roi_name': roi_name_map[roi_key],
                    'progress': int(100 * (roi_counter+1) / roi_total)}
             wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
-            data_to_import['DVHs'].append(self.data[uid].get_dvh_row(roi_key))
+            wx.CallAfter(pub.sendMessage, "update_elapsed_time")
+            dvh_row = self.data[uid].get_dvh_row(roi_key)
+            if dvh_row:
+                data_to_import['DVHs'].append(dvh_row)
             roi_counter += 1
 
-        self.push(data_to_import)
-
-    def run(self):
-        study_total = len(self.data)
-        for study_counter, uid in enumerate(list(self.data)):
-            msg = {'patient_name': self.data[uid].patient_name,
-                   'uid': uid,
-                   'progress': int(100 * (study_counter+1) / study_total)}
-            wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
-            self.import_study(uid)
-        wx.CallAfter(pub.sendMessage, "close")
+        # self.push(data_to_import)
 
     @staticmethod
     def push(data_to_import):
