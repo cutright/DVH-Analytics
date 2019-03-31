@@ -9,12 +9,13 @@ from wx.lib.agw.customtreectrl import CustomTreeCtrl
 from wx.lib.agw.customtreectrl import TR_AUTO_CHECK_CHILD, TR_AUTO_CHECK_PARENT, TR_DEFAULT_STYLE
 from tools.utilities import datetime_to_date_string, get_elapsed_time
 from db.sql_connector import DVH_SQL
-from tools.roi_name_manager import DatabaseROIs
+from tools.roi_name_manager import DatabaseROIs, clean_name
 from dateutil.parser import parse as parse_date
 from datetime import date as datetime_obj
 from datetime import datetime
 from threading import Thread
 from pubsub import pub
+from db import update as db_update
 
 
 class ImportDICOM_Dialog(wx.Dialog):
@@ -534,7 +535,7 @@ class ImportDICOM_Dialog(wx.Dialog):
             wx.Yield()
 
         self.gauge.Hide()
-        self.label_progress.SetLabelText("All %s studies parsed" % study_total)
+        self.label_progress.SetLabelText("All %s checked studies parsed" % study_total)
 
         del wait
 
@@ -617,6 +618,14 @@ class ImportWorker(Thread):
         Thread.__init__(self)
         self.data = data
         self.checked_uids = checked_uids
+        self.calculations = {"PTV Distances",
+                             "PTV Overlap",
+                             "ROI Centroid",
+                             "ROI Spread",
+                             "ROI Cross-Section",
+                             "OAR-PTV Centroid Distance",
+                             "Beam Complexities",
+                             "Plan Complexities"}
         self.start()  # start the thread
 
     def run(self):
@@ -640,6 +649,7 @@ class ImportWorker(Thread):
                           'Beams': self.data[uid].get_beam_rows(),
                           'DVHs': []}
 
+        post_import_rois = []
         roi_total = len(roi_name_map)
         for roi_counter, roi_key in enumerate(list(roi_name_map)):
             msg = {'calculation': 'DVH',
@@ -647,13 +657,33 @@ class ImportWorker(Thread):
                    'roi_total': roi_total,
                    'roi_name': roi_name_map[roi_key],
                    'progress': int(100 * (roi_counter+1) / roi_total)}
+
             wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
             wx.CallAfter(pub.sendMessage, "update_elapsed_time")
             dvh_row = self.data[uid].get_dvh_row(roi_key)
             if dvh_row:
                 data_to_import['DVHs'].append(dvh_row)
 
+                roi_type = dvh_row['roi_type'][0]
+                roi_name = dvh_row['roi_name'][0]
+                physician_roi = dvh_row['physician_roi'][0]
+
+                if roi_type and roi_name and physician_roi:
+                    if roi_type.lower() in ['organ', 'ctv', 'gtv']:
+                        if physician_roi.lower() not in ['uncategorized', 'ignored', 'external', 'skin'] or \
+                                roi_name.lower() not in ['external', 'skin']:
+                            post_import_rois.append(clean_name(roi_name_map[roi_key]))
+
         self.push(data_to_import)
+
+        self.post_import_calc('Centroid Distance to PTV', uid, post_import_rois,
+                              db_update.dist_to_ptv_centroids, db_update.get_ptv_centroid(uid))
+
+        self.post_import_calc('PTV Overlap Volume', uid, post_import_rois,
+                              db_update.treatment_volume_overlap, db_update.get_treatment_volume(uid))
+
+        self.post_import_calc('Distances to PTV', uid, post_import_rois,
+                              db_update.min_distances, db_update.get_treatment_volume_coord(uid))
 
     @staticmethod
     def push(data_to_import):
@@ -662,3 +692,15 @@ class ImportWorker(Thread):
             for row in data_to_import[key]:
                 cnx.insert_row(key, row)
         cnx.close()
+
+    @staticmethod
+    def post_import_calc(title, uid, rois, func, pre_calc):
+        roi_total = len(rois)
+        for roi_counter, roi_name in enumerate(rois):
+            msg = {'calculation': title,
+                   'roi_num': roi_counter + 1,
+                   'roi_total': roi_total,
+                   'roi_name': roi_name,
+                   'progress': int(100 * roi_counter / roi_total)}
+            wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+            func(uid, roi_name, pre_calc=pre_calc)
