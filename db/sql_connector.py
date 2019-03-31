@@ -190,9 +190,7 @@ class DVH_SQL:
 
         values = []
         for column in columns:
-            if row[column] is None:
-                print("column %s = None" % column)
-            if row[column] is None or row[column][0] in {None, ''}:
+            if row[column] is None or row[column][0] is None or row[column][0] == '':
                 values.append("NULL")
             else:
                 if 'varchar' in row[column][1]:

@@ -542,7 +542,6 @@ class ImportDICOM_Dialog(wx.Dialog):
 class ImportStatusDialog(wx.Dialog):
     def __init__(self):
         wx.Dialog.__init__(self, None)
-        self.SetSize((700, 230))
         self.gauge_study = wx.Gauge(self, wx.ID_ANY, 100)
         self.gauge_calculation = wx.Gauge(self, wx.ID_ANY, 100)
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
@@ -561,29 +560,31 @@ class ImportStatusDialog(wx.Dialog):
 
     def __set_properties(self):
         self.SetTitle("Import Progress")
-        self.SetSize((700, 200))
+        self.SetSize((700, 230))
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_progress = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
         sizer_calculation = wx.BoxSizer(wx.VERTICAL)
         sizer_study = wx.BoxSizer(wx.VERTICAL)
-        sizer_elapsed_time = wx.BoxSizer(wx.VERTICAL)
+        sizer_time_cancel = wx.BoxSizer(wx.HORIZONTAL)
         self.label_patient = wx.StaticText(self, wx.ID_ANY, "Patient:")
         sizer_study.Add(self.label_patient, 0, 0, 0)
         self.label_study = wx.StaticText(self, wx.ID_ANY, "Study Instance UID:")
         sizer_study.Add(self.label_study, 0, 0, 0)
         sizer_study.Add(self.gauge_study, 0, wx.EXPAND, 0)
-        sizer_wrapper.Add(sizer_study, 0, wx.ALL | wx.EXPAND, 10)
+        sizer_progress.Add(sizer_study, 0, wx.ALL | wx.EXPAND, 10)
         self.label_calculation = wx.StaticText(self, wx.ID_ANY, "Calculation: DVH")
         sizer_calculation.Add(self.label_calculation, 0, 0, 0)
         self.label_structure = wx.StaticText(self, wx.ID_ANY, "Structure: Name (1 of 50)")
         sizer_calculation.Add(self.label_structure, 0, 0, 0)
         sizer_calculation.Add(self.gauge_calculation, 0, wx.EXPAND, 0)
-        sizer_wrapper.Add(sizer_calculation, 0, wx.ALL | wx.EXPAND, 10)
+        sizer_progress.Add(sizer_calculation, 0, wx.ALL | wx.EXPAND, 10)
+        sizer_wrapper.Add(sizer_progress, 0, wx.EXPAND | wx.ALL, 5)
         self.label_elapsed_time = wx.StaticText(self, wx.ID_ANY, "Elapsed time:")
-        sizer_elapsed_time.Add(self.label_elapsed_time, 0, wx.EXPAND, 5)
-        sizer_wrapper.Add(sizer_elapsed_time, 0, wx.ALL, 5)
-        sizer_wrapper.Add(self.button_cancel, 0, wx.ALIGN_RIGHT | wx.BOTTOM | wx.RIGHT, 10)
+        sizer_time_cancel.Add(self.label_elapsed_time, 1, wx.EXPAND | wx.ALL, 5)
+        sizer_time_cancel.Add(self.button_cancel, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+        sizer_wrapper.Add(sizer_time_cancel, 1, wx.EXPAND | wx.ALL, 5)
         self.SetSizer(sizer_wrapper)
         self.Layout()
         self.Center()
@@ -624,7 +625,7 @@ class ImportWorker(Thread):
         for study_counter, uid in enumerate(self.checked_uids):
             msg = {'patient_name': self.data[uid].patient_name,
                    'uid': uid,
-                   'progress': int(100 * (study_counter+1) / study_total)}
+                   'progress': int(100 * study_counter / study_total)}
             wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
             wx.CallAfter(pub.sendMessage, "update_elapsed_time")
             self.import_study(uid)
@@ -642,7 +643,7 @@ class ImportWorker(Thread):
         roi_total = len(roi_name_map)
         for roi_counter, roi_key in enumerate(list(roi_name_map)):
             msg = {'calculation': 'DVH',
-                   'roi_num': roi_counter,
+                   'roi_num': roi_counter+1,
                    'roi_total': roi_total,
                    'roi_name': roi_name_map[roi_key],
                    'progress': int(100 * (roi_counter+1) / roi_total)}
@@ -651,9 +652,8 @@ class ImportWorker(Thread):
             dvh_row = self.data[uid].get_dvh_row(roi_key)
             if dvh_row:
                 data_to_import['DVHs'].append(dvh_row)
-            roi_counter += 1
 
-        # self.push(data_to_import)
+        self.push(data_to_import)
 
     @staticmethod
     def push(data_to_import):

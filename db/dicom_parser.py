@@ -246,7 +246,7 @@ class DICOM_Parser:
                 'cp_mu_median': [mlc_stat_data['cp_mu'][2], 'real'],
                 'cp_mu_max': [mlc_stat_data['cp_mu'][0], 'real'],
                 'complexity': [mlc_stat_data['complexity'], 'real'],
-                'tx_modality': [beam.tx_modality, 'real']}
+                'tx_modality': [beam.tx_modality, 'varchar(35)']}
 
     def get_rx_rows(self):
         return [self.get_rx_row(rx) for rx in self.rx_data]
@@ -282,7 +282,9 @@ class DICOM_Parser:
 
         dvh = dvhcalc.get_dvh(self.structure_file, self.dose_file, dvh_index)
         if dvh.volume > 0:
-            data = {'mrn': [self.mrn, 'text'],
+            geometries = self.get_dvh_geometries(dvh_index)
+
+            return {'mrn': [self.mrn, 'text'],
                     'study_instance_uid': [self.study_instance_uid, 'text'],
                     'institutional_roi': [self.get_institutional_roi(dvh_index), 'varchar(50)'],
                     'physician_roi': [self.get_physician_roi(dvh_index), 'varchar(50)'],
@@ -293,37 +295,23 @@ class DICOM_Parser:
                     'mean_dose': [dvh.mean, 'real'],
                     'max_dose': [dvh.max, 'real'],
                     'dvh_string': [','.join(['%.2f' % num for num in dvh.counts]), 'text'],
-                    'roi_coord_string': [None, 'text'],
+                    'roi_coord_string': [geometries['roi_coord_str'], 'text'],
                     'dist_to_ptv_min': [None, 'real'],
                     'dist_to_ptv_mean': [None, 'real'],
                     'dist_to_ptv_median': [None, 'real'],
                     'dist_to_ptv_max': [None, 'real'],
-                    'surface_area': [None, 'real'],
+                    'surface_area': [geometries['surface_area'], 'real'],
                     'ptv_overlap': [None, 'real'],
                     'import_time_stamp': [None, 'timestamp'],
-                    'centroid': [None, 'varchar(35'],
+                    'centroid': [geometries['centroid'], 'varchar(35'],
                     'dist_to_ptv_centroids': [None, 'real'],
                     'dth_string': [None, 'text'],
-                    'spread_x': [None, 'real'],
-                    'spread_y': [None, 'real'],
-                    'spread_z': [None, 'real'],
-                    'cross_section_max': [None, 'real'],
-                    'cross_section_median': [None, 'real'],
+                    'spread_x': [geometries['spread'][0], 'real'],
+                    'spread_y': [geometries['spread'][1], 'real'],
+                    'spread_z': [geometries['spread'][2], 'real'],
+                    'cross_section_max': [geometries['cross_sections']['max'], 'real'],
+                    'cross_section_median': [geometries['cross_sections']['median'], 'real'],
                     'toxicity_grade': [None, 'smallint']}
-
-            geometries = self.get_dvh_geometries(dvh_index)
-            if geometries:
-                data['roi_coord_string'][0] = geometries['roi_coord_str']
-                data['surface_area'][0] = geometries['surface_area']
-                data['centroid'][0] = geometries['centroid']
-                data['spread_x'][0] = geometries['spread'][0]
-                data['spread_y'][0] = geometries['spread'][1]
-                data['spread_z'][0] = geometries['spread'][2]
-                data['cross_section_max'][0] = geometries['cross_sections']['max']
-                data['cross_section_median'][0] = geometries['cross_sections']['median']
-
-            return data
-
         return None
 
     @property
@@ -599,35 +587,25 @@ class DICOM_Parser:
             return None
 
     def get_dvh_geometries(self, key):
-        try:
-            structure_coord = self.dicompyler_data['structure'].GetStructureCoordinates(key)
-            roi_coord_str = dicompyler_roi_coord_to_db_string(structure_coord)
-        except:
-            print("ROI coordinate extraction failed for key, name: %s, %s" % (key, self.get_roi_name(key)))
-            roi_coord_str = None
+
+        structure_coord = self.dicompyler_data['structure'].GetStructureCoordinates(key)
+        roi_coord_str = dicompyler_roi_coord_to_db_string(structure_coord)
+        planes = get_planes_from_string(roi_coord_str)
+        coord = self.dicompyler_data['structure'].GetStructureCoordinates(key)
 
         try:
-            planes = get_planes_from_string(roi_coord_str)
-
-            centroid = roi_calc.centroid(planes)
-            spread = roi_calc.spread(planes)
-            cross_sections = roi_calc.cross_section(planes)
-        except:
-            print("Centroid, spread, and cross-sections failed for key, name: %s, %s" % (key, self.get_roi_name(key)))
-            centroid = None
-            spread = None
-            cross_sections = None
-
-        try:
-            coord = self.dicompyler_data['structure'].GetStructureCoordinates(key)
             surface_area = roi_calc.surface_area(coord)
         except:
             print("Surface area calculation failed for key, name: %s, %s" % (key, self.get_roi_name(key)))
             surface_area = None
 
+        centroid = roi_calc.centroid(planes)
+        spread = roi_calc.spread(planes)
+        cross_sections = roi_calc.cross_section(planes)
+
         return {'roi_coord_str': roi_coord_str,
                 'surface_area': surface_area,
-                'centroid': centroid,
+                'centroid': [round(x, 3) for x in centroid],
                 'spread': spread,
                 'cross_sections': cross_sections}
 
@@ -868,7 +846,7 @@ class BeamParser:
     def get_point_attribute(self, data_obj, pydicom_attr):
         point = self.get_data_attribute(data_obj, pydicom_attr)
         if point:
-            return ','.join([str(round(dim_value, 2)) for dim_value in point])
+            return ','.join([str(round(dim_value, 3)) for dim_value in point])
         return None
 
     def get_cp_attributes(self, pydicom_attr):
