@@ -21,6 +21,7 @@ def get_file_paths(start_path, search_subfolders=False):
         return [join(start_path, f) for f in listdir(start_path) if isfile(join(start_path, f))]
     return []
 
+
 def get_study_instance_uids(**kwargs):
     cnx = DVH_SQL()
     uids = {table: cnx.get_unique_values(table, 'study_instance_uid', condition) for table, condition in kwargs.items()}
@@ -285,3 +286,17 @@ def get_elapsed_time(start_time, end_time):
     if m:
         return "%d min %d sec" % (m, s)
     return "%d sec" % s
+
+
+def is_date(date):
+    if isinstance(date, datetime):
+        return True
+
+    if isinstance(date, str):
+        try:
+            parse_date(date)
+            return True
+        except:
+            return False
+
+    return False
