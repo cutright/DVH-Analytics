@@ -605,7 +605,7 @@ class DICOM_Parser:
 
         return {'roi_coord_str': roi_coord_str,
                 'surface_area': surface_area,
-                'centroid': [round(x, 3) for x in centroid],
+                'centroid': ','.join([str(round(x, 3)) for x in centroid]),
                 'spread': spread,
                 'cross_sections': cross_sections}
 
