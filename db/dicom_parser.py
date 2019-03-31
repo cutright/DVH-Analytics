@@ -274,7 +274,7 @@ class DICOM_Parser:
 
         for key, value in self.plan_over_rides.items():
             if key in data and value is not None:
-                data[key] = value
+                data[key][0] = value
 
         return data
 
