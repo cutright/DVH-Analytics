@@ -65,6 +65,10 @@ REGRESSION_LINE_DASH = 'dashed'
 # This is the number of bins up do 100% used when resampling a DVH to fractional dose
 RESAMPLED_DVH_BIN_COUNT = 5000
 
+COMPLEXITY_SCORE_X_WEIGHT = 1.
+COMPLEXITY_SCORE_Y_WEIGHT = 1.
+COMPLEXITY_SCORE_GLOBAL_SCALING_FACTOR = 1000.
+
 # Note that docker paths are absolute, default will be treated as relative to script directory
 SETTINGS_PATHS = {'import': os.path.join(paths.PREF_DIR, 'import_settings.txt'),
                   'sql': os.path.join(paths.PREF_DIR, 'sql_connection.cnf')}
