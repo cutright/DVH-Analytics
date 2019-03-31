@@ -42,7 +42,7 @@ def get_planes_from_string(roi_coord_string):
 def points_to_shapely_polygon(sets_of_points):
     """
     :param sets_of_points: sets of points is a dictionary of lists using str(z) as keys
-    :return: a composite polygon as a shapely object (eith polygon or multipolygon)
+    :return: a composite polygon as a shapely object (either polygon or multipolygon)
     """
     # sets of points are lists using str(z) as keys
     # each item is an ordered list of points representing a polygon, each point is a 3-item list [x, y, z]
