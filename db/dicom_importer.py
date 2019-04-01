@@ -123,12 +123,6 @@ class DICOM_Importer:
                         title = "Date Unknown - %s" % uid
                     self.tree_ctrl_files.SetItemText(self.rt_file_nodes[uid][file_type], title)
 
-                # if study contains rtplan, rtstruct, and rtdose, remove yellow highlight
-                if self.is_study_file_set_complete(mrn, uid):
-                    self.tree_ctrl_files.SetItemBackgroundColour(self.study_nodes[uid], None)
-                    if self.is_patient_file_set_complete(mrn, list(self.file_tree[mrn])):
-                        self.tree_ctrl_files.SetItemBackgroundColour(self.patient_nodes[mrn], None)
-
             self.current_index += 1
 
     def append_file(self, mrn, uid, file_type, file_path, timestamp):
@@ -167,8 +161,6 @@ class DICOM_Importer:
         self.tree_ctrl_files.SetPyData(self.study_nodes[uid], None)
         self.tree_ctrl_files.SetItemImage(self.study_nodes[uid], self.images['study'],
                                           wx.TreeItemIcon_Normal)
-        self.tree_ctrl_files.SetItemBackgroundColour(self.study_nodes[uid], wx.Colour(255, 255, 0))
-        self.tree_ctrl_files.SetItemBackgroundColour(self.patient_nodes[mrn], wx.Colour(255, 255, 0))
         self.tree_ctrl_files.SortChildren(self.patient_nodes[mrn])
 
     # def update_latest_index(self):
@@ -181,8 +173,14 @@ class DICOM_Importer:
     #                     file_type['latest_file'] = file_type['file_path'][i]
 
     @property
-    def incomplete_patients(self):
-        return [uid for uid, study in self.file_tree.items() if not self.is_study_file_set_complete(study)]
+    def incomplete_studies(self):
+        uids = []
+        for patient in self.file_tree.values():
+            for uid in list(patient):
+                files = [patient[uid][file_type]['file_path'] for file_type in self.file_types]
+                if not all(files):
+                    uids.append(uid)
+        return uids
 
     def is_study_file_set_complete(self, mrn, uid):
         for file_type in self.file_types:

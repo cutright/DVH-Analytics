@@ -191,7 +191,10 @@ class DVH_SQL:
         values = []
         for column in columns:
             if row[column] is None or row[column][0] is None or row[column][0] == '':
-                values.append("NULL")
+                if 'date' in column:
+                    values.append(str(datetime.now()))
+                else:
+                    values.append("NULL")
             else:
                 if 'varchar' in row[column][1]:
                     max_length = int(row[column][1].replace('varchar(', '').replace(')', ''))

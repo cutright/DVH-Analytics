@@ -69,6 +69,9 @@ COMPLEXITY_SCORE_X_WEIGHT = 1.
 COMPLEXITY_SCORE_Y_WEIGHT = 1.
 COMPLEXITY_SCORE_GLOBAL_SCALING_FACTOR = 1000.
 
+ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV', 'EXTERNAL',
+             'FIDUCIAL', 'IMPLANT', 'OPTIMIZATION', 'PRV', 'SUPPORT', 'NONE']
+
 # Note that docker paths are absolute, default will be treated as relative to script directory
 SETTINGS_PATHS = {'import': os.path.join(paths.PREF_DIR, 'import_settings.txt'),
                   'sql': os.path.join(paths.PREF_DIR, 'sql_connection.cnf')}

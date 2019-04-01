@@ -667,13 +667,25 @@ class DICOM_Parser:
         return False
 
     @property
-    def validate(self):
-        return {'physician': {'status': DatabaseROIs().is_physician(self.physician), 'value': self.physician},
-                'mrn': {'status': self.mrn is not None, 'value': self.mrn},
-                'uid': {'status': self.is_study_instance_uid_valid, 'value': self.study_instance_uid},
-                'ptv': {'status': self.ptv_exists, 'value': self.get_ptv_names()},
-                'sim_study_date': {'status': is_date(self.sim_study_date), 'value': self.sim_study_date},
-                'rx_dose': {'status': self.rx_dose is not None, 'value': self.rx_dose}}
+    def validation(self):
+        return {'physician': {'status': DatabaseROIs().is_physician(self.physician),
+                              'value': self.physician,
+                              'message': "No physician assigned or physician is not in ROI Map."},
+                'mrn': {'status': self.mrn is not None,
+                        'value': self.mrn,
+                        'message': "MRN is empty."},
+                'study_instance_uid': {'status': self.is_study_instance_uid_valid,
+                                       'value': self.study_instance_uid,
+                                       'message': "Study Instance UID already exists in the database."},
+                'ptv': {'status': self.ptv_exists,
+                        'value': self.get_ptv_names(),
+                        'message': "No PTV found."},
+                'sim_study_date': {'status': is_date(self.sim_study_date),
+                                   'value': self.sim_study_date,
+                                   'message': "Simulation date is empty or invalid."},
+                'rx_dose': {'status': self.rx_dose is not None,
+                            'value': self.rx_dose,
+                            'message': "Prescription dose is not defined."}}
 
 
 class BeamParser:

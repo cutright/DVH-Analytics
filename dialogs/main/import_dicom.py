@@ -14,6 +14,7 @@ from datetime import date as datetime_obj, datetime
 from threading import Thread
 from pubsub import pub
 from db import update as db_update
+from default_options import ROI_TYPES
 
 
 class ImportDICOM_Dialog(wx.Dialog):
@@ -53,6 +54,8 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.input['physician'].SetValue('')
         self.input['tx_site'].SetValue('')
         self.button_apply_plan_data = wx.Button(self, wx.ID_ANY, "Apply")
+        self.button_delete_study = wx.Button(self, wx.ID_ANY, "Delete Study in Database with this UID")
+        self.button_delete_study.Disable()
         self.disable_inputs()
 
         self.button_browse = wx.Button(self, wx.ID_ANY, u"Browse…")
@@ -64,9 +67,8 @@ class ImportDICOM_Dialog(wx.Dialog):
 
         self.panel_roi_tree = wx.Panel(self, wx.ID_ANY, style=wx.BORDER_SUNKEN)
         self.input_roi = {'physician': wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN),
-                          'type': wx.ComboBox(self, wx.ID_ANY, choices=cnx.get_unique_values('DVHs', 'roi_type'), style=wx.CB_DROPDOWN)}
+                          'type': wx.ComboBox(self, wx.ID_ANY, choices=ROI_TYPES, style=wx.CB_DROPDOWN)}
         self.input_roi['type'].SetValue('')
-        self.button_apply_roi = wx.Button(self, wx.ID_ANY, "Apply")
         self.disable_roi_inputs()
 
         cnx.close()
@@ -81,10 +83,13 @@ class ImportDICOM_Dialog(wx.Dialog):
 
         self.checkbox_include_uncategorized = wx.CheckBox(self, wx.ID_ANY, "Import uncategorized ROIs")
 
+        self.allow_input_roi_apply = False
+
         self.__do_bind()
         self.__set_properties()
         self.__do_layout()
 
+        self.is_all_data_parsed = False
         self.dicom_dir = DICOM_Importer('', self.tree_ctrl_import, self.tree_ctrl_roi, self.tree_ctrl_roi_root)
         self.parse_directory()
 
@@ -97,11 +102,17 @@ class ImportDICOM_Dialog(wx.Dialog):
         for input_obj in self.input.values():
             self.Bind(wx.EVT_TEXT, self.on_text_change, id=input_obj.GetId())
 
+        self.Bind(wx.EVT_BUTTON, self.on_delete_study, id=self.button_delete_study.GetId())
+
         self.Bind(wx.EVT_COMBOBOX, self.on_text_change, id=self.input['physician'].GetId())
         self.Bind(wx.EVT_COMBOBOX, self.on_text_change, id=self.input['tx_site'].GetId())
 
         self.Bind(wx.EVT_BUTTON, self.on_apply_plan, id=self.button_apply_plan_data.GetId())
-        self.Bind(wx.EVT_BUTTON, self.on_apply_roi, id=self.button_apply_roi.GetId())
+
+        self.Bind(wx.EVT_COMBOBOX, self.on_apply_roi, id=self.input_roi['type'].GetId())
+        self.Bind(wx.EVT_COMBOBOX, self.on_apply_roi, id=self.input_roi['physician'].GetId())
+        self.Bind(wx.EVT_TEXT, self.on_apply_roi, id=self.input_roi['type'].GetId())
+        self.Bind(wx.EVT_TEXT, self.on_apply_roi, id=self.input_roi['physician'].GetId())
 
         for key in ['birth_date', 'sim_study_date', 'physician', 'tx_site', 'rx_dose']:
             self.Bind(wx.EVT_CHECKBOX, self.on_check_apply_all, id=self.checkbox['%s_1' % key].GetId())
@@ -124,6 +135,8 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.label = {}
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_warning = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_warning_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_main = wx.BoxSizer(wx.HORIZONTAL)
         sizer_roi_map_wrapper = wx.BoxSizer(wx.HORIZONTAL)
         sizer_roi_map = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "ROI Mapping for Selected Study"), wx.VERTICAL)
@@ -183,6 +196,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.label['study_instance_uid'] = wx.StaticText(self, wx.ID_ANY, "Study Instance UID:")
         sizer_uid.Add(self.label['study_instance_uid'], 0, 0, 0)
         sizer_uid.Add(self.input['study_instance_uid'], 0, wx.EXPAND, 0)
+        sizer_uid.Add(self.button_delete_study, 0, wx.ALL | wx.ALIGN_CENTER, 5)
 
         sizer_plan_data.Add(sizer_uid, 1, wx.ALL | wx.EXPAND, 5)
         self.label['birth_date'] = wx.StaticText(self, wx.ID_ANY, "Birthdate:")
@@ -244,15 +258,19 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_selected_roi.Add(sizer_roi_type, 1, wx.ALL | wx.EXPAND, 5)
 
         sizer_roi_map.Add(sizer_selected_roi, 0, wx.EXPAND, 0)
-        sizer_roi_map.Add(self.button_apply_roi, 0, wx.ALL | wx.EXPAND, 5)
         sizer_roi_map_wrapper.Add(sizer_roi_map, 1, wx.ALL | wx.EXPAND, 10)
 
         sizer_main.Add(sizer_roi_map_wrapper, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_main, 1, wx.EXPAND, 0)
 
+        self.label_warning = wx.StaticText(self, wx.ID_ANY, '')
+        sizer_warning.Add(self.label_warning, 1, wx.EXPAND, 0)
+
+        sizer_warning_buttons.Add(sizer_warning, 1, wx.ALL | wx.EXPAND, 5)
         sizer_buttons.Add(self.button_import, 0, wx.ALL, 5)
         sizer_buttons.Add(self.button_cancel, 0, wx.ALL, 5)
-        sizer_wrapper.Add(sizer_buttons, 0, wx.ALIGN_RIGHT | wx.BOTTOM | wx.LEFT | wx.RIGHT, 10)
+        sizer_warning_buttons.Add(sizer_buttons, 0, wx.ALIGN_RIGHT | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
+        sizer_wrapper.Add(sizer_warning_buttons, 0, wx.ALL | wx.EXPAND, 5)
 
         self.SetSizer(sizer_wrapper)
         self.Layout()
@@ -273,6 +291,9 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.update_progress_message(complete=True)
         self.gauge.Hide()
         del wait
+
+        self.parse_dicom_data()
+        self.validate()
 
     def on_browse(self, evt):
         self.parsed_dicom_data = {}
@@ -333,6 +354,7 @@ class ImportDICOM_Dialog(wx.Dialog):
                 self.dicom_dir.check_mapped_rois(data.physician)
                 del wait
                 self.enable_inputs()
+            self.update_warning_label()
         else:
             self.clear_plan_data()
             self.disable_inputs()
@@ -340,10 +362,13 @@ class ImportDICOM_Dialog(wx.Dialog):
             self.tree_ctrl_roi.DeleteChildren(self.dicom_dir.root_rois)
 
     def on_roi_tree_select(self, evt):
+        self.allow_input_roi_apply = False
         self.selected_roi = self.get_roi_tree_item_name(evt.GetItem())
         self.update_roi_inputs()
+        self.allow_input_roi_apply = True
 
     def update_roi_inputs(self):
+        self.allow_input_roi_apply = False
         physician = self.input['physician'].GetValue()
         if self.selected_roi and self.roi_map.is_physician(physician):
             physician_roi = self.roi_map.get_physician_roi(physician, self.selected_roi)
@@ -355,6 +380,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         else:
             self.input_roi['physician'].SetValue('')
             self.input_roi['type'].SetValue('')
+        self.allow_input_roi_apply = True
 
     def clear_plan_data(self):
         for input_obj in self.input.values():
@@ -415,21 +441,21 @@ class ImportDICOM_Dialog(wx.Dialog):
         for input_obj in self.input.values():
             input_obj.Disable()
         self.button_apply_plan_data.Disable()
+        self.button_delete_study.Disable()
 
     def enable_inputs(self):
         for input_obj in self.input.values():
             input_obj.Enable()
         self.button_apply_plan_data.Enable()
+        self.button_delete_study.Enable()
 
     def disable_roi_inputs(self):
         for input_obj in self.input_roi.values():
             input_obj.Disable()
-        self.button_apply_roi.Disable()
 
     def enable_roi_inputs(self):
         for input_obj in self.input_roi.values():
             input_obj.Enable()
-        self.button_apply_roi.Enable()
 
     def update_physician_roi_choices(self):
         physician = self.input['physician'].GetValue()
@@ -442,6 +468,7 @@ class ImportDICOM_Dialog(wx.Dialog):
 
     def on_apply_plan(self, evt):
         over_rides = self.parsed_dicom_data[self.selected_uid].plan_over_rides
+        apply_all_selected = False
         for key in list(over_rides):
             value = self.input[key].GetValue()
             if 'date' in key:
@@ -455,16 +482,25 @@ class ImportDICOM_Dialog(wx.Dialog):
 
             # Apply all
             if "%s_1" % key in list(self.checkbox):
+                apply_all_selected = True
                 if self.checkbox["%s_1" % key].IsChecked():
                     self.global_plan_over_rides[key]['value'] = value
                     self.global_plan_over_rides[key]['only_if_missing'] = self.checkbox["%s_2" % key].IsChecked()
 
         self.clear_plan_check_boxes()
+        if apply_all_selected:
+            self.validate()
+        else:
+            self.validate(uid=self.selected_uid)
+        self.update_warning_label()
 
     def on_apply_roi(self, evt):
-        roi_type_over_ride = self.parsed_dicom_data[self.selected_uid].roi_type_over_ride
-        key = self.dicom_dir.roi_name_map[self.selected_roi]['key']
-        roi_type_over_ride[key] = self.input_roi['type'].GetValue()
+        if self.allow_input_roi_apply:
+            roi_type_over_ride = self.parsed_dicom_data[self.selected_uid].roi_type_over_ride
+            key = self.dicom_dir.roi_name_map[self.selected_roi]['key']
+            roi_type_over_ride[key] = self.input_roi['type'].GetValue()
+            self.validate(uid=self.selected_uid)
+            self.update_warning_label()
 
     @staticmethod
     def validate_date(date):
@@ -507,19 +543,18 @@ class ImportDICOM_Dialog(wx.Dialog):
                 return
 
     def on_import(self, evt):
-        self.parse_checked_dicom_data()
+        self.parse_dicom_data()
         ImportWorker(self.parsed_dicom_data, list(self.dicom_dir.checked_studies))
         dlg = ImportStatusDialog()
         dlg.ShowModal()
 
-    def parse_checked_dicom_data(self):
+    def parse_dicom_data(self):
         wait = wx.BusyCursor()
         parsed_uids = list(self.parsed_dicom_data)
-        checked_uids = list(self.dicom_dir.checked_studies)
-        study_total = len(checked_uids)
+        study_total = len(list(self.dicom_dir.study_nodes))
         self.gauge.SetValue(0)
         self.gauge.Show()
-        for study_counter, uid in enumerate(checked_uids):
+        for study_counter, uid in enumerate(list(self.dicom_dir.study_nodes)):
             self.label_progress.SetLabelText("Parsing %s of %s studies" % (study_counter+1, study_total))
             if uid not in parsed_uids:
                 file_paths = self.dicom_dir.dicom_file_paths[uid]
@@ -533,9 +568,65 @@ class ImportDICOM_Dialog(wx.Dialog):
             wx.Yield()
 
         self.gauge.Hide()
-        self.label_progress.SetLabelText("All %s checked studies parsed" % study_total)
+        self.label_progress.SetLabelText("All %s studies parsed" % study_total)
 
         del wait
+
+        self.is_all_data_parsed = True
+
+    def validate(self, uid=None):
+        if self.is_all_data_parsed:
+            if not uid:
+                nodes = self.dicom_dir.study_nodes
+            else:
+                nodes = {uid: self.dicom_dir.study_nodes[uid]}
+            for uid, node in nodes.items():
+                validation = self.parsed_dicom_data[uid].validation
+                failed_keys = {key for key, value in validation.items() if not value['status']}
+                if failed_keys:
+                    if 'study_instance_uid' in failed_keys:
+                        color = wx.Colour(255, 0, 0)  # red
+                    elif {'physician', 'ptv'}.intersection(failed_keys):
+                        color = wx.Colour(255, 165, 0)  # orange
+                    else:
+                        color = wx.Colour(255, 255, 0)  # yellow
+                elif uid in self.dicom_dir.incomplete_studies:
+                    color = wx.Colour(255, 0, 0)  # red
+                else:
+                    color = None
+                self.tree_ctrl_import.SetItemBackgroundColour(node, color)
+
+    def update_warning_label(self):
+        if self.selected_uid:
+            validation = self.parsed_dicom_data[self.selected_uid].validation
+            failed_keys = {key for key, value in validation.items() if not value['status']}
+            if failed_keys:
+                msg = ' '.join([validation[key]['message'] for key in failed_keys])
+                self.label_warning.SetLabelText("WARNING: %s" % msg)
+            else:
+                self.label_warning.SetLabelText('')
+        else:
+            self.label_warning.SetLabelText('')
+
+    def on_delete_study(self, evt):
+        uid = self.input['study_instance_uid'].GetValue()
+        cnx = DVH_SQL()
+        if cnx.is_uid_imported(uid):
+            dlg = wx.MessageDialog(self, "Delete all data in database with this UID?", caption='Delete Study',
+                                   style=wx.YES | wx.NO | wx.NO_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
+        else:
+            dlg = wx.MessageDialog(self, "Study Instance UID not found in Database", caption='Delete Study',
+                                   style=wx.OK | wx.CENTER | wx.ICON_EXCLAMATION)
+
+        res = dlg.ShowModal()
+        dlg.Center()
+        if res == wx.ID_YES:
+            cnx.delete_rows("study_instance_uid = '%s'" % uid)
+        cnx.close()
+        dlg.Destroy()
+
+        self.validate(uid)
+        self.update_warning_label()
 
 
 class ImportStatusDialog(wx.Dialog):
@@ -559,7 +650,7 @@ class ImportStatusDialog(wx.Dialog):
 
     def __set_properties(self):
         self.SetTitle("Import Progress")
-        self.SetSize((700, 230))
+        self.SetSize((700, 260))
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -567,12 +658,14 @@ class ImportStatusDialog(wx.Dialog):
         sizer_calculation = wx.BoxSizer(wx.VERTICAL)
         sizer_study = wx.BoxSizer(wx.VERTICAL)
         sizer_time_cancel = wx.BoxSizer(wx.HORIZONTAL)
+        self.label_study_counter = wx.StaticText(self, wx.ID_ANY, "Study 1 of 1")
+        sizer_study.Add(self.label_study_counter, 0, wx.ALIGN_CENTER, 0)
         self.label_patient = wx.StaticText(self, wx.ID_ANY, "Patient:")
         sizer_study.Add(self.label_patient, 0, 0, 0)
         self.label_study = wx.StaticText(self, wx.ID_ANY, "Study Instance UID:")
         sizer_study.Add(self.label_study, 0, 0, 0)
         sizer_study.Add(self.gauge_study, 0, wx.EXPAND, 0)
-        sizer_progress.Add(sizer_study, 0, wx.ALL | wx.EXPAND, 10)
+        sizer_progress.Add(sizer_study, 0, wx.ALL | wx.EXPAND, 5)
         self.label_calculation = wx.StaticText(self, wx.ID_ANY, "Calculation: DVH")
         sizer_calculation.Add(self.label_calculation, 0, 0, 0)
         self.label_structure = wx.StaticText(self, wx.ID_ANY, "Structure: Name (1 of 50)")
@@ -592,6 +685,7 @@ class ImportStatusDialog(wx.Dialog):
         self.Destroy()
 
     def update_patient(self, msg):
+        self.label_study_counter.SetLabelText("Study %s of %s" % (msg['study_number'], msg['study_total']))
         self.label_patient.SetLabelText("Patient: %s" % msg['patient_name'])
         self.label_study.SetLabelText("Study Instance UID: %s" % msg['uid'])
         self.gauge_study.SetValue(msg['progress'])
@@ -632,7 +726,9 @@ class ImportWorker(Thread):
         for study_counter, uid in enumerate(self.checked_uids):
             msg = {'patient_name': self.data[uid].patient_name,
                    'uid': uid,
-                   'progress': int(100 * study_counter / study_total)}
+                   'progress': int(100 * study_counter / study_total),
+                   'study_number': study_counter+1,
+                   'study_total': study_total}
             wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
             wx.CallAfter(pub.sendMessage, "update_elapsed_time")
             self.import_study(uid)
@@ -668,8 +764,8 @@ class ImportWorker(Thread):
 
                 if roi_type and roi_name and physician_roi:
                     if roi_type.lower() in ['organ', 'ctv', 'gtv']:
-                        if physician_roi.lower() not in ['uncategorized', 'ignored', 'external', 'skin'] or \
-                                roi_name.lower() not in ['external', 'skin']:
+                        if not (physician_roi.lower() in ['uncategorized', 'ignored', 'external', 'skin'] or
+                                roi_name.lower() in ['external', 'skin']):
                             post_import_rois.append(clean_name(roi_name_map[roi_key]))
 
         self.push(data_to_import)
