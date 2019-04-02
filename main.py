@@ -5,7 +5,7 @@
 import wx
 from dialogs.main.query import query_dlg
 from dialogs.main.settings import UserSettings
-from dialogs.main.import_dicom import ImportDICOM_Dialog
+from models.import_dicom import ImportDICOM_Dialog
 from models.database_editor import DatabaseEditorDialog
 from db import sql_columns
 from models.datatable import DataTable

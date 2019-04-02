@@ -15,6 +15,7 @@ from threading import Thread
 from pubsub import pub
 from db import update as db_update
 from default_options import ROI_TYPES
+from dialogs.main.date_picker import DatePicker
 
 
 class ImportDICOM_Dialog(wx.Dialog):
@@ -44,13 +45,15 @@ class ImportDICOM_Dialog(wx.Dialog):
         cnx = DVH_SQL()
         self.input = {'mrn': wx.TextCtrl(self, wx.ID_ANY, ""),
                       'study_instance_uid': wx.TextCtrl(self, wx.ID_ANY, ""),
-                      'birth_date': wx.TextCtrl(self, wx.ID_ANY, ""),
-                      'sim_study_date': wx.TextCtrl(self, wx.ID_ANY, ""),
+                      'birth_date': wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_READONLY),
+                      'sim_study_date': wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_READONLY),
                       'physician': wx.ComboBox(self, wx.ID_ANY, choices=cnx.get_unique_values('Plans', 'physician'),
                                                style=wx.CB_DROPDOWN),
                       'tx_site': wx.ComboBox(self, wx.ID_ANY, choices=cnx.get_unique_values('Plans', 'tx_site'),
                                              style=wx.CB_DROPDOWN),
                       'rx_dose': wx.TextCtrl(self, wx.ID_ANY, "")}
+        self.button_edit_sim_study_date = wx.Button(self, wx.ID_ANY, "Edit")
+        self.button_edit_birth_date = wx.Button(self, wx.ID_ANY, "Edit")
         self.input['physician'].SetValue('')
         self.input['tx_site'].SetValue('')
         self.button_apply_plan_data = wx.Button(self, wx.ID_ANY, "Apply")
@@ -118,6 +121,9 @@ class ImportDICOM_Dialog(wx.Dialog):
             self.Bind(wx.EVT_CHECKBOX, self.on_check_apply_all, id=self.checkbox['%s_1' % key].GetId())
             self.Bind(wx.EVT_CHECKBOX, self.on_check_apply_all, id=self.checkbox['%s_2' % key].GetId())
 
+        self.Bind(wx.EVT_BUTTON, self.on_edit_birth_date, id=self.button_edit_birth_date.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_edit_sim_study_date, id=self.button_edit_sim_study_date.GetId())
+
         self.Bind(wx.EVT_BUTTON, self.on_import, id=self.button_import.GetId())
 
     def __set_properties(self):
@@ -153,8 +159,10 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_physician = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
         sizer_physician_checkbox = wx.BoxSizer(wx.HORIZONTAL)
         sizer_sim_study_date = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
+        sizer_sim_study_date_text_button = wx.BoxSizer(wx.HORIZONTAL)
         sizer_sim_study_date_checkbox = wx.BoxSizer(wx.HORIZONTAL)
         sizer_birth_date = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
+        sizer_birth_date_text_button = wx.BoxSizer(wx.HORIZONTAL)
         sizer_birth_date_checkbox = wx.BoxSizer(wx.HORIZONTAL)
         sizer_uid = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
         sizer_mrn = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
@@ -201,17 +209,21 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_plan_data.Add(sizer_uid, 1, wx.ALL | wx.EXPAND, 5)
         self.label['birth_date'] = wx.StaticText(self, wx.ID_ANY, "Birthdate:")
         sizer_birth_date.Add(self.label['birth_date'], 0, 0, 0)
-        sizer_birth_date.Add(self.input['birth_date'], 0, 0, 0)
+        sizer_birth_date_text_button.Add(self.input['birth_date'], 0, 0, 0)
+        sizer_birth_date_text_button.Add(self.button_edit_birth_date, 0, wx.LEFT, 10)
         sizer_birth_date_checkbox.Add(self.checkbox['birth_date_1'], 0, wx.RIGHT, 20)
         sizer_birth_date_checkbox.Add(self.checkbox['birth_date_2'], 0, 0, 0)
+        sizer_birth_date.Add(sizer_birth_date_text_button, 0, 0, 0)
         sizer_birth_date.Add(sizer_birth_date_checkbox, 1, wx.EXPAND, 0)
         sizer_plan_data.Add(sizer_birth_date, 1, wx.ALL | wx.EXPAND, 5)
 
         self.label['sim_study_date'] = wx.StaticText(self, wx.ID_ANY, "Sim Study Date:")
         sizer_sim_study_date.Add(self.label['sim_study_date'], 0, 0, 0)
-        sizer_sim_study_date.Add(self.input['sim_study_date'], 0, 0, 0)
+        sizer_sim_study_date_text_button.Add(self.input['sim_study_date'], 0, 0, 0)
+        sizer_sim_study_date_text_button.Add(self.button_edit_sim_study_date, 0, wx.LEFT, 10)
         sizer_sim_study_date_checkbox.Add(self.checkbox['sim_study_date_1'], 0, wx.RIGHT, 20)
         sizer_sim_study_date_checkbox.Add(self.checkbox['sim_study_date_2'], 0, 0, 0)
+        sizer_sim_study_date.Add(sizer_sim_study_date_text_button, 0, 0, 0)
         sizer_sim_study_date.Add(sizer_sim_study_date_checkbox, 1, wx.EXPAND, 0)
         sizer_plan_data.Add(sizer_sim_study_date, 1, wx.ALL | wx.EXPAND, 5)
 
@@ -440,14 +452,22 @@ class ImportDICOM_Dialog(wx.Dialog):
     def disable_inputs(self):
         for input_obj in self.input.values():
             input_obj.Disable()
+        self.button_edit_sim_study_date.Disable()
+        self.button_edit_birth_date.Disable()
         self.button_apply_plan_data.Disable()
         self.button_delete_study.Disable()
+        for check_box in self.checkbox.values():
+            check_box.Disable()
 
     def enable_inputs(self):
         for input_obj in self.input.values():
             input_obj.Enable()
+        self.button_edit_sim_study_date.Enable()
+        self.button_edit_birth_date.Enable()
         self.button_apply_plan_data.Enable()
         self.button_delete_study.Enable()
+        for check_box in self.checkbox.values():
+            check_box.Enable()
 
     def disable_roi_inputs(self):
         for input_obj in self.input_roi.values():
@@ -625,7 +645,24 @@ class ImportDICOM_Dialog(wx.Dialog):
         cnx.close()
         dlg.Destroy()
 
-        self.validate(uid)
+        self.validate(uid=self.selected_uid)
+        self.update_warning_label()
+
+    def on_edit_birth_date(self, evt):
+        self.on_edit_date('birth_date')
+
+    def on_edit_sim_study_date(self, evt):
+        self.on_edit_date('sim_study_date')
+
+    def on_edit_date(self, key):
+        dlg = DatePicker(initial_date=self.input[key].GetValue(),
+                         title=key.replace('_', ' ').title())
+        res = dlg.ShowModal()
+        if res == wx.ID_OK or (res == wx.ID_CANCEL and dlg.none):
+            self.input[key].SetValue(dlg.date)
+        dlg.Destroy()
+
+        self.validate(self.selected_uid)
         self.update_warning_label()
 
 
