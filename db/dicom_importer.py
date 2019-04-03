@@ -133,7 +133,7 @@ class DICOM_Importer:
         self.count['file'] += 1
 
         self.rt_file_nodes[uid][file_type] = self.tree_ctrl_files.AppendItem(self.study_nodes[uid],
-                                                                          "%s - %s" % (file_type, file_name))
+                                                                             "%s - %s" % (file_type, file_name))
 
         self.tree_ctrl_files.SetPyData(self.rt_file_nodes[uid][file_type], None)
         self.tree_ctrl_files.SetItemImage(self.rt_file_nodes[uid][file_type], self.images[file_type],
@@ -207,15 +207,19 @@ class DICOM_Importer:
 
     def rebuild_tree_ctrl_rois(self, uid):
         self.tree_ctrl_rois.DeleteChildren(self.root_rois)
-        dicom_rt_struct = dicomparser.DicomParser(self.dicom_file_paths[uid]['rtstruct']['file_path'])
-        structures = dicom_rt_struct.GetStructures()
-        self.roi_name_map = {structures[key]['name']: {'key': key, 'type': structures[key]['type']}
-                             for key in list(structures) if structures[key]['type'] != 'MARKER'}
-        self.roi_nodes = {}
-        rois = list(self.roi_name_map)
-        rois.sort()
-        for roi in rois:
-            self.roi_nodes[roi] = self.tree_ctrl_rois.AppendItem(self.root_rois, roi, ct_type=1)
+        if self.dicom_file_paths[uid]['rtstruct']['file_path']:
+            self.tree_ctrl_rois.SetItemBackgroundColour(self.root_rois, None)
+            dicom_rt_struct = dicomparser.DicomParser(self.dicom_file_paths[uid]['rtstruct']['file_path'])
+            structures = dicom_rt_struct.GetStructures()
+            self.roi_name_map = {structures[key]['name']: {'key': key, 'type': structures[key]['type']}
+                                 for key in list(structures) if structures[key]['type'] != 'MARKER'}
+            self.roi_nodes = {}
+            rois = list(self.roi_name_map)
+            rois.sort()
+            for roi in rois:
+                self.roi_nodes[roi] = self.tree_ctrl_rois.AppendItem(self.root_rois, roi, ct_type=1)
+        else:
+            self.tree_ctrl_rois.SetItemBackgroundColour(self.root_rois, wx.Colour(255, 0, 0))
 
     @property
     def checked_studies(self):

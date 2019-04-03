@@ -96,6 +96,8 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.dicom_dir = DICOM_Importer('', self.tree_ctrl_import, self.tree_ctrl_roi, self.tree_ctrl_roi_root)
         self.parse_directory()
 
+        self.incomplete_studies = []
+
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_browse, id=self.button_browse.GetId())
 
@@ -351,7 +353,7 @@ class ImportDICOM_Dialog(wx.Dialog):
                 data = self.parsed_dicom_data[uid]
 
                 self.input['mrn'].SetValue(data.mrn)
-                self.input['study_instance_uid'].SetValue(data.study_instance_uid)
+                self.input['study_instance_uid'].SetValue(data.study_instance_uid_to_be_imported)
                 if data.birth_date is None or data.birth_date == '':
                     self.input['birth_date'].SetValue('')
                 else:
@@ -604,7 +606,7 @@ class ImportDICOM_Dialog(wx.Dialog):
                 validation = self.parsed_dicom_data[uid].validation
                 failed_keys = {key for key, value in validation.items() if not value['status']}
                 if failed_keys:
-                    if 'study_instance_uid' in failed_keys:
+                    if {'study_instance_uid', 'complete_file_set'}.intersection(failed_keys):
                         color = wx.Colour(255, 0, 0)  # red
                     elif {'physician', 'ptv'}.intersection(failed_keys):
                         color = wx.Colour(255, 165, 0)  # orange
@@ -617,16 +619,19 @@ class ImportDICOM_Dialog(wx.Dialog):
                 self.tree_ctrl_import.SetItemBackgroundColour(node, color)
 
     def update_warning_label(self):
+        msg = ''
         if self.selected_uid:
             validation = self.parsed_dicom_data[self.selected_uid].validation
             failed_keys = {key for key, value in validation.items() if not value['status']}
             if failed_keys:
-                msg = ' '.join([validation[key]['message'] for key in failed_keys])
-                self.label_warning.SetLabelText("WARNING: %s" % msg)
-            else:
-                self.label_warning.SetLabelText('')
-        else:
-            self.label_warning.SetLabelText('')
+                if 'complete_file_set' in failed_keys:
+                    msg = "CRITICAL: %s" % validation['complete_file_set']['message']
+                    if self.selected_uid not in self.incomplete_studies:
+                        self.incomplete_studies.append(self.selected_uid)
+                else:
+                    msg = "WARNING: %s" % ' '.join([validation[key]['message'] for key in failed_keys])
+
+        self.label_warning.SetLabelText(msg)
 
     def on_delete_study(self, evt):
         uid = self.input['study_instance_uid'].GetValue()
