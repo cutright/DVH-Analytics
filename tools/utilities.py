@@ -300,3 +300,21 @@ def is_date(date):
             return False
 
     return False
+
+
+def rank_ptvs_by_D95(ptvs):
+
+    doses_to_rank = get_dose_to_volume(ptvs['dvh'], ptvs['volume'], 0.95)
+    return sorted(range(len(ptvs['dvh'])), key=lambda k: doses_to_rank[k])
+
+
+def get_dose_to_volume(dvhs, volumes, roi_fraction):
+    # Not precise (i.e., no interpolation) but good enough for sorting PTVs
+    doses = []
+    for i, dvh in enumerate(dvhs):
+        abs_volume = volumes[i] * roi_fraction
+        dvh_np = np.array(dvh.split(','), dtype=np.float)
+        dose = next(x[0] for x in enumerate(dvh_np) if x[1] < abs_volume)
+        doses.append(dose)
+
+    return doses

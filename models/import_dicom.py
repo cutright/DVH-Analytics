@@ -7,7 +7,7 @@ from os.path import isdir, join, basename
 from os import listdir, rmdir
 from options import get_settings, parse_settings_file
 from wx.lib.agw.customtreectrl import CustomTreeCtrl, TR_AUTO_CHECK_CHILD, TR_AUTO_CHECK_PARENT, TR_DEFAULT_STYLE
-from tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path
+from tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95
 from db.sql_connector import DVH_SQL
 from tools.roi_name_manager import DatabaseROIs, clean_name
 from dateutil.parser import parse as parse_date
@@ -566,10 +566,10 @@ class ImportDICOM_Dialog(wx.Dialog):
                 return
 
     def on_import(self, evt):
-        self.parse_dicom_data()
         ImportWorker(self.parsed_dicom_data, list(self.dicom_dir.checked_studies))
         dlg = ImportStatusDialog()
-        dlg.ShowModal()
+        dlg.Show()
+        self.Close()
 
     def parse_dicom_data(self):
         wait = wx.BusyCursor()
@@ -767,14 +767,18 @@ class ImportWorker(Thread):
 
         study_total = len(self.checked_uids)
         for study_counter, uid in enumerate(self.checked_uids):
-            msg = {'patient_name': self.data[uid].patient_name,
-                   'uid': uid,
-                   'progress': int(100 * study_counter / study_total),
-                   'study_number': study_counter+1,
-                   'study_total': study_total}
-            wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
-            wx.CallAfter(pub.sendMessage, "update_elapsed_time")
-            self.import_study(uid)
+            if DVH_SQL().is_uid_imported(uid):
+                print("WARNING: This Study Instance UID is already imported in Database. Skipping Import.")
+                print("\t%s" % uid)
+            else:
+                msg = {'patient_name': self.data[uid].patient_name,
+                       'uid': uid,
+                       'progress': int(100 * study_counter / study_total),
+                       'study_number': study_counter+1,
+                       'study_total': study_total}
+                wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
+                wx.CallAfter(pub.sendMessage, "update_elapsed_time")
+                self.import_study(uid)
         wx.CallAfter(pub.sendMessage, "close")
 
     def import_study(self, uid):
@@ -789,6 +793,7 @@ class ImportWorker(Thread):
 
         post_import_rois = []
         roi_total = len(roi_name_map)
+        ptvs = {key: [] for key in ['dvh', 'volume', 'index']}
         for roi_counter, roi_key in enumerate(list(roi_name_map)):
             msg = {'calculation': 'DVH',
                    'roi_num': roi_counter+1,
@@ -800,11 +805,16 @@ class ImportWorker(Thread):
             wx.CallAfter(pub.sendMessage, "update_elapsed_time")
             dvh_row = self.data[uid].get_dvh_row(roi_key)
             if dvh_row:
-                data_to_import['DVHs'].append(dvh_row)
-
                 roi_type = dvh_row['roi_type'][0]
                 roi_name = dvh_row['roi_name'][0]
                 physician_roi = dvh_row['physician_roi'][0]
+
+                if roi_type.startswith('PTV'):
+                    ptvs['dvh'].append(dvh_row['dvh_string'][0])
+                    ptvs['volume'].append(dvh_row['volume'][0])
+                    ptvs['index'].append(len(data_to_import['DVHs']))
+
+                data_to_import['DVHs'].append(dvh_row)
 
                 if roi_type and roi_name and physician_roi:
                     if roi_type.lower() in ['organ', 'ctv', 'gtv']:
@@ -812,18 +822,27 @@ class ImportWorker(Thread):
                                 roi_name.lower() in ['external', 'skin']):
                             post_import_rois.append(clean_name(roi_name_map[roi_key]))
 
+        if ptvs['dvh']:
+            ptv_order = rank_ptvs_by_D95(ptvs)
+            for ptv_row, dvh_row_index in enumerate(ptvs['index']):
+                data_to_import['DVHs'][dvh_row_index]['roi_type'][0] = "PTV%s" % (ptv_order[ptv_row]+1)
+
         self.push(data_to_import)
 
         self.move_files(uid)
 
-        self.post_import_calc('Centroid Distance to PTV', uid, post_import_rois,
-                              db_update.dist_to_ptv_centroids, db_update.get_ptv_centroid(uid))
+        if ptvs['dvh']:
+            self.post_import_calc('Centroid Distance to PTV', uid, post_import_rois,
+                                  db_update.dist_to_ptv_centroids, db_update.get_treatment_volume_centroid(uid))
 
-        self.post_import_calc('PTV Overlap Volume', uid, post_import_rois,
-                              db_update.treatment_volume_overlap, db_update.get_treatment_volume(uid))
+            self.post_import_calc('PTV Overlap Volume', uid, post_import_rois,
+                                  db_update.treatment_volume_overlap, db_update.get_treatment_volume(uid))
 
-        self.post_import_calc('Distances to PTV', uid, post_import_rois,
-                              db_update.min_distances, db_update.get_treatment_volume_coord(uid))
+            self.post_import_calc('Distances to PTV', uid, post_import_rois,
+                                  db_update.min_distances, db_update.get_treatment_volume_coord(uid))
+        else:
+            print("WARNING: No PTV found for %s" % uid)
+            print("\tSkipping PTV related calculations.")
 
     @staticmethod
     def push(data_to_import):

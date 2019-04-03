@@ -93,14 +93,14 @@ def dist_to_ptv_centroids(study_instance_uid, roi_name, pre_calc=None):
 
     ptv_centroid = pre_calc
     if ptv_centroid is None:
-        ptv_centroid = get_ptv_centroid(study_instance_uid)
+        ptv_centroid = get_treatment_volume_centroid(study_instance_uid)
 
     data = float(np.linalg.norm(ptv_centroid - oar_centroid)) / 10.
 
     update_dvhs_table(study_instance_uid, roi_name, 'dist_to_ptv_centroids', round(float(data), 3))
 
 
-def get_ptv_centroid(study_instance_uid):
+def get_treatment_volume_centroid(study_instance_uid):
     ptv_coordinates_strings = DVH_SQL().query('dvhs',
                                               'roi_coord_string',
                                               "study_instance_uid = '%s' and roi_type like 'PTV%%'"
