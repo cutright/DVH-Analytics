@@ -626,7 +626,7 @@ class ImportDICOM_Dialog(wx.Dialog):
             failed_keys = {key for key, value in validation.items() if not value['status']}
             if failed_keys:
                 if 'complete_file_set' in failed_keys:
-                    msg = "CRITICAL: %s" % validation['complete_file_set']['message']
+                    msg = "WARNING: %s" % validation['complete_file_set']['message']
                     if self.selected_uid not in self.incomplete_studies:
                         self.incomplete_studies.append(self.selected_uid)
                 else:
@@ -767,12 +767,12 @@ class ImportWorker(Thread):
 
         study_total = len(self.checked_uids)
         for study_counter, uid in enumerate(self.checked_uids):
-            if DVH_SQL().is_uid_imported(uid):
+            if DVH_SQL().is_uid_imported(self.data[uid].study_instance_uid_to_be_imported):
                 print("WARNING: This Study Instance UID is already imported in Database. Skipping Import.")
-                print("\t%s" % uid)
+                print("\t%s" % self.data[uid].study_instance_uid_to_be_imported)
             else:
                 msg = {'patient_name': self.data[uid].patient_name,
-                       'uid': uid,
+                       'uid': self.data[uid].study_instance_uid_to_be_imported,
                        'progress': int(100 * study_counter / study_total),
                        'study_number': study_counter+1,
                        'study_total': study_total}

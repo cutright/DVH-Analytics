@@ -367,11 +367,18 @@ class DICOM_Parser:
 
     @property
     def is_study_instance_uid_valid(self):
+        return self.is_uid_valid(self.study_instance_uid)
+
+    @property
+    def is_study_instance_uid_to_be_imported_valid(self):
+        return self.is_uid_valid(self.study_instance_uid_to_be_imported)
+
+    @staticmethod
+    def is_uid_valid(uid):
         valid = False
-        uid = self.study_instance_uid
         if uid:
             cnx = DVH_SQL()
-            valid = not cnx.is_study_instance_uid_in_table('Plans', self.study_instance_uid)
+            valid = not cnx.is_study_instance_uid_in_table('Plans', uid)
             cnx.close()
         return valid
 
@@ -725,8 +732,8 @@ class DICOM_Parser:
                 'mrn': {'status': self.mrn is not None,
                         'value': self.mrn,
                         'message': "MRN is empty."},
-                'study_instance_uid': {'status': self.is_study_instance_uid_valid,
-                                       'value': self.study_instance_uid,
+                'study_instance_uid': {'status': self.is_study_instance_uid_to_be_imported_valid,
+                                       'value': self.study_instance_uid_to_be_imported,
                                        'message': "Study Instance UID already exists in the database."},
                 'ptv': {'status': self.ptv_exists,
                         'value': self.get_ptv_names(),
