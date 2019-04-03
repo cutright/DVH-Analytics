@@ -191,8 +191,8 @@ class DVH_SQL:
         values = []
         for column in columns:
             if row[column] is None or row[column][0] is None or row[column][0] == '':
-                if 'date' in column:
-                    values.append(str(datetime.now()))
+                if 'date' in column or column == 'timestamp':
+                    values.append("'%s'" % str(datetime.now()))
                 else:
                     values.append("NULL")
             else:

@@ -3,10 +3,11 @@ import wx.adv
 from db.dicom_importer import DICOM_Importer
 from db.dicom_parser import DICOM_Parser
 from dicompylercore import dicomparser
-from os.path import isdir
+from os.path import isdir, join, basename
+from os import listdir, rmdir
 from options import get_settings, parse_settings_file
 from wx.lib.agw.customtreectrl import CustomTreeCtrl, TR_AUTO_CHECK_CHILD, TR_AUTO_CHECK_PARENT, TR_DEFAULT_STYLE
-from tools.utilities import datetime_to_date_string, get_elapsed_time
+from tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path
 from db.sql_connector import DVH_SQL
 from tools.roi_name_manager import DatabaseROIs, clean_name
 from dateutil.parser import parse as parse_date
@@ -783,6 +784,7 @@ class ImportWorker(Thread):
         data_to_import = {'Plans': [self.data[uid].get_plan_row()],
                           'Rxs': self.data[uid].get_rx_rows(),
                           'Beams': self.data[uid].get_beam_rows(),
+                          'DICOM_Files': [self.data[uid].get_dicom_file_row()],
                           'DVHs': []}
 
         post_import_rois = []
@@ -812,6 +814,8 @@ class ImportWorker(Thread):
 
         self.push(data_to_import)
 
+        self.move_files(uid)
+
         self.post_import_calc('Centroid Distance to PTV', uid, post_import_rois,
                               db_update.dist_to_ptv_centroids, db_update.get_ptv_centroid(uid))
 
@@ -840,3 +844,17 @@ class ImportWorker(Thread):
                    'progress': int(100 * roi_counter / roi_total)}
             wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
             func(uid, roi_name, pre_calc=pre_calc)
+
+    def move_files(self, uid):
+        files = [self.data[uid].plan_file,
+                 self.data[uid].structure_file,
+                 self.data[uid].dose_file]
+
+        new_dir = join(self.data[uid].import_path, self.data[uid].mrn)
+        move_files_to_new_path(files, new_dir)
+
+        # remove old directory if empty
+        for file in files:
+            old_dir = basename(file)
+            if isdir(old_dir) and not listdir(old_dir):
+                rmdir(old_dir)
