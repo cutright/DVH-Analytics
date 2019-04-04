@@ -116,7 +116,10 @@ class DICOM_Parser:
                 rx_dose = fx_dose * float(fxs)
                 rx_percent = float(name_split[2].strip().split(' ')[5].strip('%'))
                 normalization_method = name_split[3].strip()
-                normalization_object = ['plan_max', name_split[4].strip()][normalization_method != 'plan_max']
+                try:
+                    normalization_object = ['plan_max', name_split[4].strip()][normalization_method != 'plan_max']
+                except IndexError:
+                    normalization_object = None
 
                 rx_data[fx_grp_number] = {'fx_grp_number': fx_grp_number,
                                           'fx_grp_name': fx_grp_name,

@@ -92,7 +92,7 @@ class DICOM_Importer:
                 timestamp = os.path.getmtime(file_path)
 
                 if uid not in self.dicom_file_paths:
-                    self.dicom_file_paths[uid] = {ft: {'file_path': None, 'timestamp': None} for ft in self.file_types}
+                    self.dicom_file_paths[uid] = {ft: {'file_path': None, 'timestamp': None} for ft in self.file_types + ['other']}
 
                 # patient level
                 if mrn not in list(self.file_tree):
@@ -111,11 +111,13 @@ class DICOM_Importer:
                 # file level
                 if self.dicom_file_paths[uid][file_type]['file_path'] is None:
                     self.dicom_file_paths[uid][file_type]['file_path'] = file_path
+                    self.dicom_file_paths[uid][file_type]['timestamp'] = timestamp
                     self.add_rt_file_node(uid, file_type, file_name)
                     self.append_file(mrn, uid, file_type, file_path, timestamp)
 
                 elif self.dicom_file_paths[uid][file_type]['timestamp'] < timestamp:
                     self.dicom_file_paths[uid][file_type]['file_path'] = file_path
+                    self.dicom_file_paths[uid][file_type]['timestamp'] = timestamp
                     study_date = dicom_file.StudyDate
                     if study_date and len(study_date) == 8:
                         title = "%s.%s.%s - %s" % (study_date[0:4], study_date[4:6], study_date[6:], uid)
