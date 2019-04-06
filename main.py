@@ -16,7 +16,7 @@ from models.rad_bio import RadBioFrame
 from models.time_series import TimeSeriesFrame
 from db.sql_to_python import QuerySQL
 from paths import LOGO_PATH
-from tools.utilities import get_study_instance_uids
+from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows
 
 
 class MainFrame(wx.Frame):
@@ -84,7 +84,10 @@ class MainFrame(wx.Frame):
                        'ROI Map': "Define ROI name aliases"}
 
         for key in self.toolbar_keys:
-            self.frame_toolbar.AddTool(self.toolbar_ids[key], key, wx.Bitmap(files[key], wx.BITMAP_TYPE_ANY),
+            bitmap = wx.Bitmap(files[key], wx.BITMAP_TYPE_ANY)
+            if is_windows():
+                bitmap = scale_bitmap(bitmap, 16, 16)
+            self.frame_toolbar.AddTool(self.toolbar_ids[key], key, bitmap,
                                        wx.NullBitmap, wx.ITEM_NORMAL, description[key], "")
 
             if key in {'Close', 'Export', 'ROI Map'}:
@@ -100,25 +103,25 @@ class MainFrame(wx.Frame):
         self.frame_menubar = wx.MenuBar()
 
         file_menu = wx.Menu()
-        file_menu.Append(wx.ID_NEW, '&New')
-        menu_open = file_menu.Append(wx.ID_OPEN, '&Open\tCtrl+O')
+        # file_menu.Append(wx.ID_NEW, '&New')
+        # menu_open = file_menu.Append(wx.ID_OPEN, '&Open\tCtrl+O')
         menu_close = file_menu.Append(wx.ID_ANY, '&Close\tCtrl+W')
         file_menu.Append(wx.ID_SAVE, '&Save')
         menu_pref = file_menu.Append(wx.ID_PREFERENCES)
         menu_about = file_menu.Append(wx.ID_ANY, '&About\tCtrl+A')
         file_menu.AppendSeparator()
 
-        imp = wx.Menu()
-        imp.Append(wx.ID_ANY, 'Import newsfeed list...')
-        imp.Append(wx.ID_ANY, 'Import bookmarks...')
-        imp.Append(wx.ID_ANY, 'Import mail...')
-
-        file_menu.AppendSubMenu(imp, 'I&mport')
+        # imp = wx.Menu()
+        # imp.Append(wx.ID_ANY, 'Import newsfeed list...')
+        # imp.Append(wx.ID_ANY, 'Import bookmarks...')
+        # imp.Append(wx.ID_ANY, 'Import mail...')
+        #
+        # file_menu.AppendSubMenu(imp, 'I&mport')
 
         qmi = file_menu.Append(wx.ID_ANY, '&Quit\tCtrl+Q')
 
         self.Bind(wx.EVT_MENU, self.OnQuit, qmi)
-        self.Bind(wx.EVT_MENU, self.OnOpen, menu_open)
+        # self.Bind(wx.EVT_MENU, self.OnOpen, menu_open)
         self.Bind(wx.EVT_MENU, self.OnClose, menu_close)
         self.Bind(wx.EVT_MENU, self.OnPref, menu_pref)
         self.Bind(wx.EVT_MENU, self.OnAbout, menu_about)

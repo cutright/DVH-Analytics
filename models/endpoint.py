@@ -18,10 +18,12 @@ class EndpointFrame:
         self.time_series = times_series
 
         self.button = {'add': wx.Button(self.parent, wx.ID_ANY, "Add Endpoint"),
-                       'del': wx.Button(self.parent, wx.ID_ANY, "Delete Endpoint")}
+                       'del': wx.Button(self.parent, wx.ID_ANY, "Delete Endpoint"),
+                       'exp': wx.Button(self.parent, wx.ID_ANY, 'Export')}
 
         self.parent.Bind(wx.EVT_BUTTON, self.add_ep_button_click, id=self.button['add'].GetId())
         self.parent.Bind(wx.EVT_BUTTON, self.del_ep_button_click, id=self.button['del'].GetId())
+        self.parent.Bind(wx.EVT_BUTTON, self.on_export_csv, id=self.button['exp'].GetId())
 
         self.table = wx.ListCtrl(self.parent, wx.ID_ANY,
                                  style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
@@ -48,7 +50,7 @@ class EndpointFrame:
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         vbox = wx.BoxSizer(wx.VERTICAL)
         hbox = wx.BoxSizer(wx.HORIZONTAL)
-        for key in ['add', 'del']:
+        for key in list(self.button):
             hbox.Add(self.button[key], 0, wx.ALL, 5)
         vbox.Add(hbox, 0, wx.ALL | wx.EXPAND, 5)
         vbox.Add(self.table, 1, wx.EXPAND, 0)
@@ -140,12 +142,28 @@ class EndpointFrame:
         # self.dvh = None
 
     def enable_buttons(self):
-        for key in ['add', 'del']:
+        for key in list(self.button):
             self.button[key].Enable()
 
     def disable_buttons(self):
-        for key in ['add', 'del']:
+        for key in list(self.button):
             self.button[key].Disable()
 
     def enable_initial_buttons(self):
         self.button['add'].Enable()
+
+    def on_export_csv(self, evt):
+        # from https://wxpython.org/Phoenix/docs/html/wx.FileDialog.html
+
+        with wx.FileDialog(self.parent, "Export to Endpoints to CSV", wildcard="CSV files (*.csv)|*.csv",
+                           style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
+
+            if fileDialog.ShowModal() == wx.ID_CANCEL:
+                return
+
+            pathname = fileDialog.GetPath()
+            try:
+                with open(pathname, 'w') as file:
+                    file.write(self.data_table.csv)
+            except IOError:
+                wx.LogError("Cannot save current data in file '%s'." % pathname)

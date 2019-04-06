@@ -9,6 +9,24 @@ import os
 import shutil
 
 
+def is_windows():
+    return wx.Platform == '__WXMSW__'
+
+
+def is_linux():
+    return wx.Platform == '__WXGTK__'
+
+
+def is_mac():
+    return wx.Platform == '__WXMAC__'
+
+
+def scale_bitmap(bitmap, width, height):
+    image = wx.Bitmap.ConvertToImage(bitmap)
+    image = image.Scale(width, height, wx.IMAGE_QUALITY_HIGH)
+    return wx.Bitmap(image)
+
+
 def get_file_paths(start_path, search_subfolders=False):
     if os.path.isdir(start_path):
         if search_subfolders:

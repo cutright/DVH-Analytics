@@ -143,3 +143,20 @@ class DataTable:
     def clear(self):
         self.delete_all_rows()
         self.layout.DeleteAllColumns()
+
+    @property
+    def csv(self):
+
+        data = [','.join([col for col in self.columns])]
+        for row_index in range(self.row_count):
+            row = []
+            for key in self.keys:
+                raw_value = self.data[key][row_index]
+                if isinstance(raw_value, float):
+                    value = "%0.2f" % raw_value
+                else:
+                    value = str(raw_value).replace(',', ';')
+                row.append(value)
+            data.append(','.join(row))
+
+        return '\n'.join(data)
