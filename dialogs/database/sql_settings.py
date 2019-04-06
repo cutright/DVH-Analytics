@@ -1,5 +1,5 @@
 import wx
-from options import get_settings, parse_settings_file
+from paths import SQL_CNF_PATH, parse_settings_file
 from db.sql_connector import DVH_SQL
 
 
@@ -51,8 +51,7 @@ class SQLSettingsDialog(wx.Dialog):
         self.Layout()
 
     def load_sql_settings(self):
-        abs_file_path = get_settings('sql')
-        config = parse_settings_file(abs_file_path)
+        config = parse_settings_file(SQL_CNF_PATH)
 
         for input_type in self.keys:
             if input_type in config:

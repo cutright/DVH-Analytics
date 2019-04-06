@@ -1,6 +1,6 @@
 from bokeh.plotting import figure
 from bokeh.io.export import get_layout_html
-from options import load_options
+from options import Options
 from bokeh.models import Legend, HoverTool, ColumnDataSource, DataTable, TableColumn, NumberFormatter, Div
 from bokeh.layouts import column
 from bokeh.palettes import Colorblind8 as palette
@@ -12,7 +12,7 @@ import numpy as np
 from tools.utilities import collapse_into_single_dates, moving_avg
 
 
-options = load_options()
+options = Options()
 
 
 def get_base_plot(parent, x_axis_label='X Axis', y_axis_label='Y Axis', plot_width=800, plot_height=500,

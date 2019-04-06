@@ -20,14 +20,13 @@ from tools import roi_geometry as roi_calc
 from tools.mlc_analyzer import Beam as mlca
 from db.sql_connector import DVH_SQL
 from os.path import basename
-from options import get_settings, parse_settings_file
+from paths import IMPORT_SETTINGS_PATH, parse_settings_file
 
 
 class DICOM_Parser:
     def __init__(self, plan=None, structure=None, dose=None, global_plan_over_rides=None):
 
-        abs_file_path = get_settings('import')
-        self.import_path = parse_settings_file(abs_file_path)['imported']
+        self.import_path = parse_settings_file(IMPORT_SETTINGS_PATH)['imported']
 
         self.plan_file = plan
         self.structure_file = structure

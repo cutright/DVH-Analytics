@@ -11,10 +11,10 @@ import numpy as np
 from shapely.geometry import Polygon
 from tools.utilities import flatten_list_of_lists as flatten
 from shapely import speedups
-from options import load_options
+from options import Options
 
 
-options = load_options()
+options = Options()
 
 # Enable shapely calculations using C, as opposed to the C++ default
 if speedups.available:

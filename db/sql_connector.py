@@ -9,8 +9,7 @@ Created on Sat Mar  4 11:33:10 2017
 import os
 import psycopg2
 from datetime import datetime
-from options import get_settings, parse_settings_file
-from paths import SCRIPT_DIR, DATA_DIR
+from paths import SCRIPT_DIR, DATA_DIR, SQL_CNF_PATH, parse_settings_file
 
 
 class DVH_SQL:
@@ -19,8 +18,7 @@ class DVH_SQL:
             config = config[0]
         else:
             # Read SQL configuration file
-            abs_file_path = get_settings('sql')
-            config = parse_settings_file(abs_file_path)
+            config = parse_settings_file(SQL_CNF_PATH)
 
         self.dbname = config['dbname']
 

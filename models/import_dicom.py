@@ -5,7 +5,6 @@ from db.dicom_parser import DICOM_Parser
 from dicompylercore import dicomparser
 from os.path import isdir, join, basename
 from os import listdir, rmdir
-from options import get_settings, parse_settings_file
 from wx.lib.agw.customtreectrl import CustomTreeCtrl, TR_AUTO_CHECK_CHILD, TR_AUTO_CHECK_PARENT, TR_DEFAULT_STYLE
 from tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95
 from db.sql_connector import DVH_SQL
@@ -17,6 +16,7 @@ from pubsub import pub
 from db import update as db_update
 from default_options import ROI_TYPES
 from dialogs.main.date_picker import DatePicker
+from paths import IMPORT_SETTINGS_PATH, parse_settings_file
 
 
 class ImportDICOM_Dialog(wx.Dialog):
@@ -31,8 +31,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.roi_map = DatabaseROIs()
         self.selected_roi = None
 
-        abs_file_path = get_settings('import')
-        self.start_path = parse_settings_file(abs_file_path)['inbox']
+        self.start_path = parse_settings_file(IMPORT_SETTINGS_PATH)['inbox']
 
         self.checkbox = {}
         keys = ['birth_date', 'sim_study_date', 'physician', 'tx_site', 'rx_dose']

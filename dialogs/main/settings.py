@@ -4,17 +4,16 @@
 
 import wx
 import matplotlib.colors as plot_colors
-from options import load_options, save_options, get_settings, parse_settings_file
+from options import Options
 from os.path import isdir
-from copy import deepcopy
+from paths import IMPORT_SETTINGS_PATH, parse_settings_file
 
 
 class UserSettings(wx.Dialog):
     def __init__(self, *args, **kw):
         wx.Dialog.__init__(self, None, title="User Settings")
 
-        self.options = load_options()
-        self.initial_options = deepcopy(self.options)
+        self.options = Options()
 
         colors = list(plot_colors.cnames)
         colors.sort()
@@ -38,31 +37,23 @@ class UserSettings(wx.Dialog):
                                                       style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_sizes_category = wx.ComboBox(self, wx.ID_ANY, choices=size_variables,
                                                     style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.text_ctrl_sizes_input = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_DONTWRAP | wx.TE_PROCESS_ENTER)
+        self.spin_ctrl_sizes_input = wx.SpinCtrl(self, wx.ID_ANY, "0", min=6, max=20, style=wx.SP_ARROW_KEYS)
         self.combo_box_line_widths_category = wx.ComboBox(self, wx.ID_ANY, choices=width_variables,
                                                           style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.text_ctrl_line_widths_input = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_PROCESS_ENTER)
+        self.spin_ctrl_line_widths_input = wx.SpinCtrl(self, wx.ID_ANY, "0", min=1, max=5, style=wx.SP_ARROW_KEYS)
         self.combo_box_line_styles_category = wx.ComboBox(self, wx.ID_ANY, choices=line_dash_variables,
                                                           style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_line_styles_selection = wx.ComboBox(self, wx.ID_ANY, choices=line_style_options,
                                                            style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_alpha_category = wx.ComboBox(self, wx.ID_ANY, choices=alpha_variables,
                                                     style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.text_ctrl_alpha_input = wx.TextCtrl(self, wx.ID_ANY, "")
+        self.spin_ctrl_alpha_input = wx.SpinCtrlDouble(self, wx.ID_ANY, "0", min=0.1, max=1.0, style=wx.SP_ARROW_KEYS)
         self.button_ok = wx.Button(self, wx.ID_OK, "OK")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
         self.__set_properties()
         self.__do_layout()
-
-        self.Bind(wx.EVT_BUTTON, self.inbox_dir_dlg, id=self.button_inbox.GetId())
-        self.Bind(wx.EVT_BUTTON, self.imported_dir_dlg, id=self.button_imported.GetId())
-
-        self.Bind(wx.EVT_COMBOBOX, self.update_input_colors_var, id=self.combo_box_colors_category.GetId())
-        self.Bind(wx.EVT_COMBOBOX, self.update_size_var, id=self.combo_box_sizes_category.GetId())
-        self.Bind(wx.EVT_COMBOBOX, self.update_line_width_var, id=self.combo_box_line_widths_category.GetId())
-        self.Bind(wx.EVT_COMBOBOX, self.update_line_style_var, id=self.combo_box_line_styles_category.GetId())
-        self.Bind(wx.EVT_COMBOBOX, self.update_alpha_var, id=self.combo_box_alpha_category.GetId())
+        self.__do_bind()
 
         self.load_options()
         self.load_paths()
@@ -70,8 +61,6 @@ class UserSettings(wx.Dialog):
         self.Center()
 
     def __set_properties(self):
-        # begin wxGlade: MyFrame.__set_properties
-        self.SetTitle("User Settings")
         self.text_ctrl_inbox.SetToolTip("Default directory for batch processing of incoming DICOM files")
         self.button_inbox.SetMinSize((40, 21))
         self.text_ctrl_imported.SetToolTip("Directory for post-processed DICOM files")
@@ -79,14 +68,15 @@ class UserSettings(wx.Dialog):
         self.combo_box_colors_category.SetMinSize((250, 25))
         self.combo_box_colors_selection.SetMinSize((145, 25))
         self.combo_box_sizes_category.SetMinSize((250, 25))
-        self.text_ctrl_sizes_input.SetMinSize((50, 22))
+        self.spin_ctrl_sizes_input.SetMinSize((50, 22))
         self.combo_box_line_widths_category.SetMinSize((250, 25))
-        self.text_ctrl_line_widths_input.SetMinSize((50, 22))
+        self.spin_ctrl_line_widths_input.SetMinSize((50, 22))
         self.combo_box_line_styles_category.SetMinSize((250, 25))
         self.combo_box_line_styles_selection.SetMinSize((145, 25))
         self.combo_box_alpha_category.SetMinSize((250, 25))
-        self.text_ctrl_alpha_input.SetMinSize((50, 22))
-        # end wxGlade
+        self.spin_ctrl_alpha_input.SetMinSize((50, 22))
+
+        self.spin_ctrl_alpha_input.SetIncrement(0.1)
 
     def __do_layout(self):
         # begin wxGlade: MyFrame.__do_layout
@@ -138,14 +128,14 @@ class UserSettings(wx.Dialog):
         sizer_sizes.Add(label_sizes, 0, 0, 0)
         sizer_sizes_input.Add(self.combo_box_sizes_category, 0, 0, 0)
         sizer_sizes_input.Add((20, 20), 0, 0, 0)
-        sizer_sizes_input.Add(self.text_ctrl_sizes_input, 0, 0, 0)
+        sizer_sizes_input.Add(self.spin_ctrl_sizes_input, 0, 0, 0)
         sizer_sizes.Add(sizer_sizes_input, 1, wx.EXPAND, 0)
         sizer_plot_options.Add(sizer_sizes, 1, wx.EXPAND, 0)
         label_line_widths = wx.StaticText(self, wx.ID_ANY, "Line Widths:")
         sizer_line_widths.Add(label_line_widths, 0, 0, 0)
         sizer_line_widths_input.Add(self.combo_box_line_widths_category, 0, 0, 0)
         sizer_line_widths_input.Add((20, 20), 0, 0, 0)
-        sizer_line_widths_input.Add(self.text_ctrl_line_widths_input, 0, 0, 0)
+        sizer_line_widths_input.Add(self.spin_ctrl_line_widths_input, 0, 0, 0)
         sizer_line_widths.Add(sizer_line_widths_input, 1, wx.EXPAND, 0)
         sizer_plot_options.Add(sizer_line_widths, 1, wx.EXPAND, 0)
         label_line_styles = wx.StaticText(self, wx.ID_ANY, "Line Styles:")
@@ -159,7 +149,7 @@ class UserSettings(wx.Dialog):
         sizer_alpha.Add(label_alpha, 0, 0, 0)
         sizer_alpha_input.Add(self.combo_box_alpha_category, 0, 0, 0)
         sizer_alpha_input.Add((20, 20), 0, 0, 0)
-        sizer_alpha_input.Add(self.text_ctrl_alpha_input, 0, 0, 0)
+        sizer_alpha_input.Add(self.spin_ctrl_alpha_input, 0, 0, 0)
         sizer_alpha.Add(sizer_alpha_input, 1, wx.EXPAND, 0)
         sizer_plot_options.Add(sizer_alpha, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_plot_options, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10)
@@ -168,6 +158,22 @@ class UserSettings(wx.Dialog):
         sizer_wrapper.Add(sizer_ok_cancel, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
         self.SetSizer(sizer_wrapper)
         self.Layout()
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_BUTTON, self.inbox_dir_dlg, id=self.button_inbox.GetId())
+        self.Bind(wx.EVT_BUTTON, self.imported_dir_dlg, id=self.button_imported.GetId())
+
+        self.Bind(wx.EVT_COMBOBOX, self.update_input_colors_var, id=self.combo_box_colors_category.GetId())
+        self.Bind(wx.EVT_COMBOBOX, self.update_size_var, id=self.combo_box_sizes_category.GetId())
+        self.Bind(wx.EVT_COMBOBOX, self.update_line_width_var, id=self.combo_box_line_widths_category.GetId())
+        self.Bind(wx.EVT_COMBOBOX, self.update_line_style_var, id=self.combo_box_line_styles_category.GetId())
+        self.Bind(wx.EVT_COMBOBOX, self.update_alpha_var, id=self.combo_box_alpha_category.GetId())
+
+        self.Bind(wx.EVT_COMBOBOX, self.update_input_colors_val, id=self.combo_box_colors_selection.GetId())
+        self.Bind(wx.EVT_TEXT, self.update_size_val, id=self.spin_ctrl_sizes_input.GetId())
+        self.Bind(wx.EVT_TEXT, self.update_line_width_val, id=self.spin_ctrl_line_widths_input.GetId())
+        self.Bind(wx.EVT_COMBOBOX, self.update_line_style_val, id=self.combo_box_line_styles_selection.GetId())
+        self.Bind(wx.EVT_TEXT, self.update_alpha_val, id=self.spin_ctrl_alpha_input.GetId())
 
     def inbox_dir_dlg(self, evt):
         starting_dir = self.text_ctrl_inbox.GetValue()
@@ -188,7 +194,7 @@ class UserSettings(wx.Dialog):
         dlg.Destroy()
 
     def get_option_choices(self, category):
-        choices = [self.clean_option_variable(c) for c in self.options.__dict__ if c.find(category) > -1]
+        choices = [self.clean_option_variable(c) for c in self.options.option_attr if c.find(category) > -1]
         choices.sort()
         return choices
 
@@ -200,55 +206,63 @@ class UserSettings(wx.Dialog):
             return option_variable.replace('_', ' ').title().replace('Dvh', 'DVH').replace('Iqr', 'IQR')
 
     def save_options(self):
-        save_options(self.options)
-
-    def revert_options(self):
-        save_options(self.initial_options)
+        self.options.save()
 
     def update_input_colors_var(self, evt):
         var = self.clean_option_variable(self.combo_box_colors_category.GetValue(), inverse=True)
-        self.combo_box_colors_selection.SetValue(getattr(self.options, var))
+        val = getattr(self.options, var)
+        self.combo_box_colors_selection.SetValue(val)
 
     def update_input_colors_val(self, evt):
         var = self.clean_option_variable(self.combo_box_colors_category.GetValue(), inverse=True)
-        new = self.combo_box_colors_selection.GetValue()
-        setattr(self.options, var, new)
+        val = self.combo_box_colors_selection.GetValue()
+        self.options.set_option(var, val)
 
     def update_size_var(self, evt):
         var = self.clean_option_variable(self.combo_box_sizes_category.GetValue(), inverse=True)
         try:
-            self.text_ctrl_sizes_input.SetValue(getattr(self.options, var).replace('pt', ''))
+            val = getattr(self.options, var).replace('pt', '')
         except AttributeError:
-            self.text_ctrl_sizes_input.SetValue(str(getattr(self.options, var)))
+            val = str(getattr(self.options, var))
+        try:
+            val = int(float(val))
+        except ValueError:
+            pass
+        self.spin_ctrl_sizes_input.SetValue(val)
 
     def update_size_val(self, evt):
-        new = self.text_ctrl_sizes_input.GetValue()
-        if 'FONT' in self.combo_box_sizes_category.GetValue():
+        new = self.spin_ctrl_sizes_input.GetValue()
+        if 'Font' in self.combo_box_sizes_category.GetValue():
             try:
-                size = str(int(new)) + 'pt'
+                val = str(int(new)) + 'pt'
             except ValueError:
-                size = '10pt'
+                val = '10pt'
         else:
             try:
-                size = float(new)
+                val = float(new)
             except ValueError:
-                size = 1.
+                val = 1.
 
         var = self.clean_option_variable(self.combo_box_sizes_category.GetValue(), inverse=True)
-        setattr(self.options, var, size)
+        self.options.set_option(var, val)
 
     def update_line_width_var(self, evt):
         var = self.clean_option_variable(self.combo_box_line_widths_category.GetValue(), inverse=True)
-        self.text_ctrl_line_widths_input.SetValue(str(getattr(self.options, var)))
+        val = str(getattr(self.options, var))
+        try:
+            val = int(val)
+        except ValueError:
+            pass
+        self.spin_ctrl_line_widths_input.SetValue(val)
 
     def update_line_width_val(self, evt):
-        new = self.text_ctrl_line_widths_input.GetValue()
+        new = self.spin_ctrl_line_widths_input.GetValue()
         try:
-            line_width = float(new)
+            val = float(new)
         except ValueError:
-            line_width = 1.
+            val = 1.
         var = self.clean_option_variable(self.combo_box_line_widths_category.GetValue(), inverse=True)
-        setattr(self.options, var, line_width)
+        self.options.set_option(var, val)
 
     def update_line_style_var(self, evt):
         var = self.clean_option_variable(self.combo_box_line_styles_category.GetValue(), inverse=True)
@@ -256,21 +270,21 @@ class UserSettings(wx.Dialog):
 
     def update_line_style_val(self, evt):
         var = self.clean_option_variable(self.combo_box_line_styles_category.GetValue(), inverse=True)
-        new = self.combo_box_line_styles_selection.GetValue()
-        setattr(self.options, var, new)
+        val = self.combo_box_line_styles_selection.GetValue()
+        self.options.set_option(var, val)
 
     def update_alpha_var(self, evt):
         var = self.clean_option_variable(self.combo_box_alpha_category.GetValue(), inverse=True)
-        self.text_ctrl_alpha_input.SetValue(str(getattr(self.options, var)))
+        self.spin_ctrl_alpha_input.SetValue(str(getattr(self.options, var)))
 
     def update_alpha_val(self, evt):
-        new = self.text_ctrl_line_widths_input.GetValue()
+        new = self.spin_ctrl_line_widths_input.GetValue()
         try:
-            alpha = float(new)
+            val = float(new)
         except ValueError:
-            alpha = 1.
+            val = 1.
         var = self.clean_option_variable(self.combo_box_alpha_category.GetValue(), inverse=True)
-        setattr(self.options, var, alpha)
+        self.options.set_option(var, val)
 
     def load_options(self):
         self.update_alpha_var(None)
@@ -280,7 +294,6 @@ class UserSettings(wx.Dialog):
         self.update_size_var(None)
 
     def load_paths(self):
-        abs_file_path = get_settings('import')
-        paths = parse_settings_file(abs_file_path)
+        paths = parse_settings_file(IMPORT_SETTINGS_PATH)
         self.text_ctrl_inbox.SetValue(paths['inbox'])
         self.text_ctrl_imported.SetValue(paths['imported'])

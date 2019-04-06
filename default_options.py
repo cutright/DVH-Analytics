@@ -4,9 +4,6 @@ Created on Sat Oct 28 2017
 @author: Dan Cutright, PhD
 """
 
-import os
-import paths
-
 VERSION = '0.6'
 
 MIN_BORDER = 5
@@ -71,7 +68,3 @@ COMPLEXITY_SCORE_GLOBAL_SCALING_FACTOR = 1000.
 
 ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV', 'EXTERNAL',
              'FIDUCIAL', 'IMPLANT', 'OPTIMIZATION', 'PRV', 'SUPPORT', 'NONE']
-
-# Note that docker paths are absolute, default will be treated as relative to script directory
-SETTINGS_PATHS = {'import': os.path.join(paths.PREF_DIR, 'import_settings.txt'),
-                  'sql': os.path.join(paths.PREF_DIR, 'sql_connection.cnf')}

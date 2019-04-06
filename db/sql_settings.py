@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-from options import get_settings, parse_settings_file
+from paths import SQL_CNF_PATH, parse_settings_file
 from db.sql_connector import DVH_SQL
 
 
@@ -11,8 +11,8 @@ def is_sql_connection_defined():
     Checks if sql_connection.cnf exists
     :rtype: bool
     """
-    abs_file_path = get_settings('sql')
-    if os.path.isfile(abs_file_path):
+
+    if os.path.isfile(SQL_CNF_PATH):
         return True
     else:
         return False
@@ -26,15 +26,13 @@ def write_sql_connection_settings(config):
     text = ["%s %s" % (key, value) for key, value in config.items() if value]
     text = '\n'.join(text)
 
-    abs_file_path = get_settings('sql')
-
-    with open(abs_file_path, "w") as text_file:
+    with open(SQL_CNF_PATH, "w") as text_file:
         text_file.write(text)
 
 
 def load_sql_settings():
     if is_sql_connection_defined():
-        config = parse_settings_file(get_settings('sql'))
+        config = parse_settings_file(SQL_CNF_PATH)
         config = validate_config(config)
 
     else:
