@@ -14,6 +14,7 @@ from models.dvh import DVH
 from models.endpoint import EndpointFrame
 from models.rad_bio import RadBioFrame
 from models.time_series import TimeSeriesFrame
+from models.roi_map import ROIMapDialog
 from db.sql_to_python import QuerySQL
 from paths import LOGO_PATH
 from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows
@@ -95,6 +96,7 @@ class MainFrame(wx.Frame):
 
         self.Bind(wx.EVT_TOOL, self.on_toolbar_database, id=self.toolbar_ids['Database'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_settings, id=self.toolbar_ids['Settings'])
+        self.Bind(wx.EVT_TOOL, self.on_toolbar_roi_map, id=self.toolbar_ids['ROI Map'])
         self.Bind(wx.EVT_TOOL, self.OnClose, id=self.toolbar_ids['Close'])
         self.Bind(wx.EVT_TOOL, self.OnImport, id=self.toolbar_ids['Import'])
 
@@ -495,6 +497,11 @@ class MainFrame(wx.Frame):
         #     dlg.save_options()
         # else:
         #     dlg.revert_options()
+        dlg.Destroy()
+
+    def on_toolbar_roi_map(self, evt):
+        dlg = ROIMapDialog()
+        res = dlg.ShowModal()
         dlg.Destroy()
 
 
