@@ -106,7 +106,7 @@ class MainFrame(wx.Frame):
         # file_menu.Append(wx.ID_NEW, '&New')
         # menu_open = file_menu.Append(wx.ID_OPEN, '&Open\tCtrl+O')
         menu_close = file_menu.Append(wx.ID_ANY, '&Close\tCtrl+W')
-        file_menu.Append(wx.ID_SAVE, '&Save')
+        # file_menu.Append(wx.ID_SAVE, '&Save')
         menu_pref = file_menu.Append(wx.ID_PREFERENCES)
         menu_about = file_menu.Append(wx.ID_ANY, '&About\tCtrl+A')
         file_menu.AppendSeparator()

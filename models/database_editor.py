@@ -12,6 +12,7 @@ from db.sql_settings import write_sql_connection_settings, validate_sql_connecti
 from db.sql_to_python import get_database_tree
 from db.sql_connector import DVH_SQL
 from models.datatable import DataTable
+from dialogs.export import data_table_to_csv as export_dlg
 
 
 class DatabaseEditorDialog(wx.Frame):
@@ -36,26 +37,16 @@ class DatabaseEditorDialog(wx.Frame):
         self.text_ctrl_condition = wx.TextCtrl(self.window_pane_query, wx.ID_ANY, "")
         self.button_query = wx.Button(self.window_pane_query, wx.ID_ANY, "Query")
         self.button_clear = wx.Button(self.window_pane_query, wx.ID_ANY, "Clear")
-        self.button_download = wx.Button(self.window_pane_query, wx.ID_ANY, "Download")
+        self.button_export = wx.Button(self.window_pane_query, wx.ID_ANY, "Export")
         self.list_ctrl_query_results = wx.ListCtrl(self.window_pane_query, wx.ID_ANY,
                                                    style=wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
         self.data_query_results = DataTable(self.list_ctrl_query_results, columns=['mrn', 'study_instance_uid'])
         self.combo_box_query_table = wx.ComboBox(self.window_pane_query, wx.ID_ANY, choices=list(self.db_tree),
                                                  style=wx.CB_DROPDOWN | wx.CB_READONLY)
 
-        self.Bind(wx.EVT_BUTTON, self.OnSQLSettings, id=self.button_sql_connection.GetId())
-        # self.Bind(wx.EVT_TREE_SEL_CHANGED, self.OnTreeAdd, self.tree_ctrl_db, id=self.tree_ctrl_db.GetId())
-        self.Bind(wx.EVT_BUTTON, self.OnQuery, id=self.button_query.GetId())
-        self.Bind(wx.EVT_BUTTON, self.OnClear, id=self.button_clear.GetId())
-        self.Bind(wx.EVT_BUTTON, self.OnRebuildDB, id=self.button_rebuild_db.GetId())
-        self.Bind(wx.EVT_BUTTON, self.OnPostImportCalc, id=self.button_post_import_calc.GetId())
-        self.Bind(wx.EVT_BUTTON, self.OnEditDB, id=self.button_edit_db.GetId())
-        self.Bind(wx.EVT_BUTTON, self.OnReimport, id=self.button_reimport.GetId())
-        self.Bind(wx.EVT_BUTTON, self.OnDeletePatient, id=self.button_delete_study.GetId())
-        self.Bind(wx.EVT_BUTTON, self.OnChangePatientIdentifier, id=self.button_change_mrn_uid.GetId())
-
         self.__set_properties()
         self.__do_layout()
+        self.__do_bind()
 
         self.selected_columns = {table: {c: False for c in list(self.db_tree[table])} for table in list(self.db_tree)}
         self.selected_tables = {table: False for table in list(self.db_tree)}
@@ -121,7 +112,7 @@ class DatabaseEditorDialog(wx.Frame):
         sizer_condition_buttons.Add(sizer_query_button, 0, wx.ALL, 5)
         label_spacer_2 = wx.StaticText(self.window_pane_query, wx.ID_ANY, "")
         sizer_download_button.Add(label_spacer_2, 0, wx.BOTTOM, 5)
-        sizer_download_button.Add(self.button_download, 0, wx.TOP | wx.BOTTOM, 5)
+        sizer_download_button.Add(self.button_export, 0, wx.TOP | wx.BOTTOM, 5)
         sizer_condition_buttons.Add(sizer_download_button, 0, wx.ALL, 5)
         label_spacer_3 = wx.StaticText(self.window_pane_query, wx.ID_ANY, "")
         sizer_clear_button.Add(label_spacer_3, 0, wx.BOTTOM, 5)
@@ -136,6 +127,19 @@ class DatabaseEditorDialog(wx.Frame):
         self.SetSizer(sizer_wrapper)
         self.Layout()
         self.Center()
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_BUTTON, self.OnSQLSettings, id=self.button_sql_connection.GetId())
+        # self.Bind(wx.EVT_TREE_SEL_CHANGED, self.OnTreeAdd, self.tree_ctrl_db, id=self.tree_ctrl_db.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnQuery, id=self.button_query.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnClear, id=self.button_clear.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnRebuildDB, id=self.button_rebuild_db.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnPostImportCalc, id=self.button_post_import_calc.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnEditDB, id=self.button_edit_db.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnReimport, id=self.button_reimport.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnDeletePatient, id=self.button_delete_study.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnChangePatientIdentifier, id=self.button_change_mrn_uid.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_export_csv, id=self.button_export.GetId())
 
     @staticmethod
     def OnSQLSettings(evt):
@@ -239,3 +243,6 @@ class DatabaseEditorDialog(wx.Frame):
             cnx.reinitialize_database()
             cnx.close()
         dlg.Destroy()
+
+    def on_export_csv(self, evt):
+        export_dlg(self, "Export Data Table to CSV", self.data_query_results)

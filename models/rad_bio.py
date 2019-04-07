@@ -7,6 +7,7 @@ from models.dvh import calc_eud, calc_tcp
 # import wx.lib.mixins.listctrl as listmix
 from copy import deepcopy
 from tools.utilities import convert_value_to_str, get_selected_listctrl_items
+from dialogs.export import data_table_to_csv as export_dlg
 
 
 # class EditableListCtrl(wx.ListCtrl, listmix.TextEditMixin):
@@ -33,6 +34,7 @@ class RadBioFrame:
         self.text_input_gamma_50 = wx.TextCtrl(self.parent, wx.ID_ANY, "")
         self.text_input_td_50 = wx.TextCtrl(self.parent, wx.ID_ANY, "")
         self.button_apply_parameters = wx.Button(self.parent, wx.ID_ANY, "Apply Parameters")
+        self.button_export = wx.Button(self.parent, wx.ID_ANY, "Export")
         self.table_rad_bio = wx.ListCtrl(self.parent, wx.ID_ANY, style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
         self.columns = ['MRN', 'ROI Name', 'a', u'\u03b3_50', 'TD or TCD', 'EUD', 'NTCP or TCP', 'PTV Overlap',
                         'ROI Type', 'Rx Dose', 'Total Fxs', 'Fx Dose']
@@ -52,6 +54,7 @@ class RadBioFrame:
 
         parent.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_parameter_select, self.table_published_values)
         parent.Bind(wx.EVT_BUTTON, self.apply_parameters, id=self.button_apply_parameters.GetId())
+        parent.Bind(wx.EVT_BUTTON, self.on_export_csv, id=self.button_export.GetId())
 
         self.disable_buttons()
 
@@ -91,6 +94,7 @@ class RadBioFrame:
         sizer_parameters = wx.BoxSizer(wx.VERTICAL)
         sizer_parameters_input = wx.StaticBoxSizer(wx.StaticBox(self.parent, wx.ID_ANY, ""), wx.HORIZONTAL)
         sizer_button = wx.BoxSizer(wx.VERTICAL)
+        sizer_button_2 = wx.BoxSizer(wx.VERTICAL)
         sizer_td_50 = wx.BoxSizer(wx.VERTICAL)
         sizer_gamma_50 = wx.BoxSizer(wx.VERTICAL)
         sizer_eud = wx.BoxSizer(wx.VERTICAL)
@@ -120,7 +124,9 @@ class RadBioFrame:
         sizer_td_50.Add(self.text_input_td_50, 0, wx.ALL | wx.EXPAND, 5)
         sizer_parameters_input.Add(sizer_td_50, 1, wx.EXPAND, 0)
         sizer_button.Add(self.button_apply_parameters, 1, wx.ALL | wx.EXPAND, 15)
+        sizer_button_2.Add(self.button_export, 1, wx.ALL | wx.EXPAND, 15)
         sizer_parameters_input.Add(sizer_button, 1, wx.EXPAND, 0)
+        sizer_parameters_input.Add(sizer_button_2, 1, wx.EXPAND, 0)
         # sizer_parameters_input.Add(self.radio_box_apply, 0, wx.EXPAND, 0)
         sizer_parameters.Add(sizer_parameters_input, 1, wx.ALL | wx.EXPAND, 5)
         sizer_main.Add(sizer_parameters, 0, wx.ALL | wx.EXPAND, 10)
@@ -190,3 +196,6 @@ class RadBioFrame:
 
     def clear_data(self):
         self.data_table_rad_bio.delete_all_rows()
+
+    def on_export_csv(self, evt):
+        export_dlg(self.parent, "Export RadBio table to CSV", self.data_table_rad_bio)

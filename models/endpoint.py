@@ -4,6 +4,7 @@
 import wx
 from models.datatable import DataTable
 from dialogs.main.endpoint import AddEndpointDialog, DelEndpointDialog
+from dialogs.export import data_table_to_csv as export_dlg
 from copy import deepcopy
 
 
@@ -63,13 +64,14 @@ class EndpointFrame:
 
     def calculate_endpoints(self):
 
-        columns = ['MRN', 'ROI Name']
+        columns = ['MRN', 'Tx Site', 'ROI Name']
         if self.data_table.data:
             current_labels = [key for key in list(self.data_table.data) if key not in columns]
         else:
             current_labels = []
 
         ep = {'MRN': self.dvh.mrn,
+              'Tx Site': self.dvh.get_plan_values('tx_site'),
               'ROI Name': self.dvh.roi_name}
 
         ep_defs = self.endpoint_defs.data
@@ -99,7 +101,8 @@ class EndpointFrame:
 
         self.data_table.set_data(ep, columns)
         self.data_table.set_column_width(0, 150)
-        self.data_table.set_column_width(1, 250)
+        self.data_table.set_column_width(1, 150)
+        self.data_table.set_column_width(2, 200)
 
     def add_ep_button_click(self, evt):
         dlg = AddEndpointDialog(title='Add Endpoint')
@@ -153,17 +156,4 @@ class EndpointFrame:
         self.button['add'].Enable()
 
     def on_export_csv(self, evt):
-        # from https://wxpython.org/Phoenix/docs/html/wx.FileDialog.html
-
-        with wx.FileDialog(self.parent, "Export to Endpoints to CSV", wildcard="CSV files (*.csv)|*.csv",
-                           style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
-
-            if fileDialog.ShowModal() == wx.ID_CANCEL:
-                return
-
-            pathname = fileDialog.GetPath()
-            try:
-                with open(pathname, 'w') as file:
-                    file.write(self.data_table.csv)
-            except IOError:
-                wx.LogError("Cannot save current data in file '%s'." % pathname)
+        export_dlg(self.parent, "Export Endpoints to CSV", self.data_table)
