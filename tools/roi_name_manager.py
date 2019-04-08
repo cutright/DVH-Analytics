@@ -546,6 +546,13 @@ class DatabaseROIs:
 
         return table
 
+    @property
+    def tree(self):
+        return {physician: self.get_physician_tree(physician) for physician in self.get_physicians()}
+
+    def get_physician_tree(self, physician):
+        return {phys_roi: self.get_variations(physician, phys_roi) for phys_roi in self.get_physician_rois(physician)}
+
 
 def clean_name(name):
     return str(name).lower().strip().replace('\'', '`').replace('_', ' ')
