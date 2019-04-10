@@ -3,7 +3,6 @@
 
 
 import wx
-from dialogs.database.sql_settings import run_sql_settings_dlg
 from dialogs.database.change_or_delete_patient import ChangePatientIdentifierDialog, DeletePatientDialog
 from dialogs.database.reimport import ReimportDialog
 from dialogs.database.edit_db import EditDatabaseDialog
@@ -128,7 +127,6 @@ class DatabaseEditorDialog(wx.Frame):
         self.Center()
 
     def __do_bind(self):
-        self.Bind(wx.EVT_BUTTON, self.OnSQLSettings, id=self.button_sql_connection.GetId())
         # self.Bind(wx.EVT_TREE_SEL_CHANGED, self.OnTreeAdd, self.tree_ctrl_db, id=self.tree_ctrl_db.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnQuery, id=self.button_query.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnClear, id=self.button_clear.GetId())
@@ -139,10 +137,6 @@ class DatabaseEditorDialog(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnDeletePatient, id=self.button_delete_study.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnChangePatientIdentifier, id=self.button_change_mrn_uid.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export_csv, id=self.button_export.GetId())
-
-    @staticmethod
-    def OnSQLSettings(evt):
-        run_sql_settings_dlg()
 
     def OnTreeAdd(self, evt):
         self.update_selected_tree_items()

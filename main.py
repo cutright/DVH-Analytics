@@ -114,7 +114,6 @@ class MainFrame(wx.Frame):
         # menu_open = file_menu.Append(wx.ID_OPEN, '&Open\tCtrl+O')
         menu_close = file_menu.Append(wx.ID_ANY, '&Close\tCtrl+W')
         # file_menu.Append(wx.ID_SAVE, '&Save')
-        menu_pref = file_menu.Append(wx.ID_PREFERENCES)
         menu_about = file_menu.Append(wx.ID_ANY, '&About\tCtrl+A')
         file_menu.AppendSeparator()
 
@@ -128,6 +127,7 @@ class MainFrame(wx.Frame):
         qmi = file_menu.Append(wx.ID_ANY, '&Quit\tCtrl+Q')
 
         settings_menu = wx.Menu()
+        menu_pref = settings_menu.Append(wx.ID_PREFERENCES)
         menu_sql = settings_menu.Append(wx.ID_ANY, '&Database Connection\tCtrl+D')
 
         self.Bind(wx.EVT_MENU, self.OnQuit, qmi)
@@ -305,7 +305,6 @@ class MainFrame(wx.Frame):
     def __disable_add_filter_buttons(self):
         self.button_categorical['add'].Disable()
         self.button_numerical['add'].Disable()
-
 
     def __enable_add_filter_buttons(self):
         self.button_categorical['add'].Enable()
