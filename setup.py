@@ -2,6 +2,8 @@ from setuptools import setup, find_packages
 from default_options import VERSION
 
 requires = [
+    'wxpython',
+    'pypubsub',
     'numpy',
     'scipy',
     'pydicom >= 0.9.9',
