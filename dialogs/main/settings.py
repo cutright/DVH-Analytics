@@ -65,7 +65,7 @@ class UserSettings(wx.Dialog):
         self.text_ctrl_inbox.SetMinSize((100, 21))
         self.button_inbox.SetMinSize((40, 21))
         self.text_ctrl_imported.SetToolTip("Directory for post-processed DICOM files")
-        self.text_ctrl_imported.MinSize((100, 21))
+        self.text_ctrl_imported.SetMinSize((100, 21))
         self.button_imported.SetMinSize((40, 21))
         self.combo_box_colors_category.SetMinSize((250, 25))
         self.combo_box_colors_selection.SetMinSize((145, 25))
