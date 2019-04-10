@@ -203,7 +203,7 @@ class DatabaseROIs:
                 physician_rois.sort()
                 return physician_rois
 
-        return ['']
+        return []
 
     def get_physician_roi(self, physician, roi):
         physician = clean_name(physician).upper()
@@ -218,12 +218,11 @@ class DatabaseROIs:
         physician = clean_name(physician).upper()
         institutional_roi = clean_name(institutional_roi)
         if institutional_roi == 'uncategorized':
-            return ['uncategorized']
+            return institutional_roi
         for physician_roi in self.get_physician_rois(physician):
             if institutional_roi == self.get_institutional_roi(physician, physician_roi):
                 return physician_roi
-        else:
-            return ['uncategorized']
+        return institutional_roi
 
     def add_physician_roi(self, physician, institutional_roi, physician_roi):
         physician = clean_name(physician).upper()
@@ -264,7 +263,7 @@ class DatabaseROIs:
             if self.get_institutional_roi(physician, physician_roi) == 'uncategorized':
                 unused_rois.append(physician_roi)
         if not unused_rois:
-            unused_rois = ['']
+            unused_rois = []
 
         return unused_rois
 
@@ -292,7 +291,7 @@ class DatabaseROIs:
             variations = self.physicians[physician].physician_rois[physician_roi]['variations']
             if variations:
                 return variations
-        return ['']
+        return []
 
     def get_all_variations_of_physician(self, physician):
         physician = clean_name(physician).upper()
@@ -303,7 +302,7 @@ class DatabaseROIs:
         if variations:
             variations.sort()
         else:
-            variations = ['']
+            variations = []
         return variations
 
     def add_variation(self, physician, physician_roi, variation):
@@ -551,7 +550,16 @@ class DatabaseROIs:
         return {physician: self.get_physician_tree(physician) for physician in self.get_physicians()}
 
     def get_physician_tree(self, physician):
-        return {phys_roi: self.get_variations(physician, phys_roi) for phys_roi in self.get_physician_rois(physician)}
+        phys_rois = self.get_physician_rois(physician)
+        unused_inst_rois = self.get_unused_institutional_rois(physician)
+        all_inst_rois = self.get_institutional_rois()
+        inst_rois = [roi for roi in all_inst_rois if roi not in unused_inst_rois]
+        linked_phys_rois = [self.get_physician_roi_from_institutional_roi(physician, roi) for roi in inst_rois]
+        unlinked_phys_rois = [roi for roi in phys_rois if roi not in linked_phys_rois]
+        linked_phys_roi_tree = {roi: self.get_variations(physician, roi) for roi in linked_phys_rois if roi != 'uncategorized'}
+        unlinked_phys_roi_tree = {roi: self.get_variations(physician, roi) for roi in unlinked_phys_rois if roi != 'uncategorized'}
+        return {'Linked to Institutional ROI': linked_phys_roi_tree,
+                'Unlinked to Institutional ROI': unlinked_phys_roi_tree}
 
 
 def clean_name(name):

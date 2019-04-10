@@ -10,11 +10,13 @@ class ROIMapDialog(wx.Dialog):
         self.SetSize((1000, 600))
         self.window = wx.SplitterWindow(self, wx.ID_ANY)
         self.window_tree = wx.Panel(self.window, wx.ID_ANY, style=wx.BORDER_SUNKEN)
-        self.roi_tree = RoiTree(self.window_tree)
+        self.db_roi_trees = DatabaseROIs()
+        self.roi_tree = RoiTree(self.window_tree, self.db_roi_trees)
         self.roi_tree.rebuild_tree()
         self.tree_ctrl = self.roi_tree.tree_ctrl
         self.window_editor = wx.Panel(self.window, wx.ID_ANY, style=wx.BORDER_SUNKEN)
-        self.combo_box_physician = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
+        self.combo_box_physician = wx.ComboBox(self.window_editor, wx.ID_ANY,
+                                               choices=self.db_roi_trees.get_physicians(), style=wx.CB_DROPDOWN)
         self.button_add_physician = wx.Button(self.window_editor, wx.ID_ANY, "Add")
         self.button_rename_physician = wx.Button(self.window_editor, wx.ID_ANY, "Rename")
         self.button_delete_physician = wx.Button(self.window_editor, wx.ID_ANY, "Delete")
@@ -41,9 +43,13 @@ class ROIMapDialog(wx.Dialog):
     def __set_properties(self):
         self.combo_box_roi_type.SetSelection(0)
         self.combo_box_uncategorized_ignored.SetSelection(0)
-        self.combo_box_physician_roi_a.SetMinSize((200, 25))
-        self.combo_box_physician_roi_b.SetMinSize((200, 25))
-        self.window.SetMinimumPaneSize(20)
+        self.combo_box_physician.SetMinSize((150, 25))
+        self.combo_box_roi_type.SetMinSize((150, 25))
+        self.combo_box_uncategorized_ignored_roi.SetMinSize((240, 25))
+        self.combo_box_uncategorized_ignored.SetMinSize((150, 25))
+        self.combo_box_physician_roi_a.SetMinSize((250, 25))
+        self.combo_box_physician_roi_b.SetMinSize((250, 25))
+        # self.window.SetMinimumPaneSize(20)
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.HORIZONTAL)
@@ -144,12 +150,13 @@ class ROIMapDialog(wx.Dialog):
 
 
 class RoiTree:
-    def __init__(self, parent):
+    def __init__(self, parent, db_rois):
 
         self.tree_ctrl = wx.TreeCtrl(parent, wx.ID_ANY)
-        self.db = DatabaseROIs()
-        self.root = self.tree_ctrl.AddRoot('ROI Map')
+        self.db = db_rois
+        self.root = self.tree_ctrl.AddRoot('Physicians')
         self.physician_nodes = {}
+        self.institutional_status_nodes = {}
         self.physician_roi_nodes = {}
         self.roi_variation_nodes = {}
 
@@ -158,15 +165,17 @@ class RoiTree:
         tree = self.db.tree
 
         self.physician_nodes = {}
+        self.institutional_status_nodes = {}
         self.physician_roi_nodes = {}
         self.roi_variation_nodes = {}
 
-        for physician, physician_rois in tree.items():
+        for physician, linked_statuses in tree.items():
             self.append_physician(physician)
-            for physician_roi, variations in physician_rois.items():
-                self.append_physician_roi(physician, physician_roi)
-                for variation in variations:
-                    self.append_variation(physician, physician_roi, variation)
+            for linked_status, physician_rois in linked_statuses.items():
+                for physician_roi, variations in physician_rois.items():
+                    self.append_physician_roi(physician, physician_roi, linked_status)
+                    for variation in variations:
+                        self.append_variation(physician, physician_roi, variation)
 
         self.tree_ctrl.Expand(self.root)
 
@@ -175,8 +184,8 @@ class RoiTree:
         nodes = self.roi_variation_nodes[physician][physician_roi]
         self.append_tree_item(parent_node, nodes, variation)
 
-    def append_physician_roi(self, physician, physician_roi):
-        parent_node = self.physician_nodes[physician]
+    def append_physician_roi(self, physician, physician_roi, linked_status):
+        parent_node = self.institutional_status_nodes[physician][linked_status]
         nodes = self.physician_roi_nodes[physician]
         self.append_tree_item(parent_node, nodes, physician_roi)
         if physician_roi not in list(self.roi_variation_nodes[physician]):
@@ -186,6 +195,14 @@ class RoiTree:
 
     def append_physician(self, physician):
         self.append_tree_item(self.root, self.physician_nodes, physician)
+        if physician not in list(self.institutional_status_nodes):
+            self.institutional_status_nodes[physician] = {'Linked to Institutional ROI': [],
+                                                          'Unlinked to Institutional ROI': []}
+        self.append_tree_item(self.physician_nodes[physician],
+                              self.institutional_status_nodes[physician], 'Linked to Institutional ROI')
+        self.append_tree_item(self.physician_nodes[physician],
+                              self.institutional_status_nodes[physician], 'Unlinked to Institutional ROI')
+
         if physician not in list(self.physician_roi_nodes):
             self.physician_roi_nodes[physician] = {}
         if physician not in list(self.roi_variation_nodes):
@@ -196,7 +213,3 @@ class RoiTree:
 
     def sort_tree(self):
         self.tree_ctrl.SortChildren(self.root)
-        # for physician, physician_node in self.physician_nodes.items():
-        #     self.tree_ctrl.SortChildren(physician_node)
-        #     for physician_roi_node in self.physician_roi_nodes[physician].values():
-        #         self.tree_ctrl.SortChildren(physician_roi_node)
