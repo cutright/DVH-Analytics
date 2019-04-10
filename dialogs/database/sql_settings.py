@@ -1,11 +1,11 @@
 import wx
 from paths import SQL_CNF_PATH, parse_settings_file
-from db.sql_connector import DVH_SQL
+from db.sql_connector import DVH_SQL, echo_sql_db
 
 
 class SQLSettingsDialog(wx.Dialog):
     def __init__(self, *args, **kw):
-        wx.Dialog.__init__(self, None, title="SQL Connection Settings")
+        wx.Dialog.__init__(self, None, title="Database Connection Settings")
 
         self.keys = ['host', 'port', 'dbname', 'user', 'password']
 
@@ -65,10 +65,5 @@ class SQLSettingsDialog(wx.Dialog):
 
     @property
     def valid_sql_settings(self):
-        try:
-            config = {key: self.input[key].GetValue() for key in self.keys if self.input[key].GetValue()}
-            cnx = DVH_SQL(config)
-            cnx.close()
-            return True
-        except:
-            return False
+        config = {key: self.input[key].GetValue() for key in self.keys if self.input[key].GetValue()}
+        return echo_sql_db(config)

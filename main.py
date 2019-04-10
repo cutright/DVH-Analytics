@@ -5,6 +5,7 @@
 import wx
 from dialogs.main.query import query_dlg
 from dialogs.main.settings import UserSettings
+from dialogs.database.sql_settings import SQLSettingsDialog
 from models.import_dicom import ImportDICOM_Dialog
 from models.database_editor import DatabaseEditorDialog
 from db import sql_columns
@@ -16,6 +17,7 @@ from models.rad_bio import RadBioFrame
 from models.time_series import TimeSeriesFrame
 from models.roi_map import ROIMapDialog
 from db.sql_to_python import QuerySQL
+from db.sql_connector import echo_sql_db
 from paths import LOGO_PATH
 from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, initialize_directories_and_settings
 
@@ -105,6 +107,7 @@ class MainFrame(wx.Frame):
         self.frame_menubar = wx.MenuBar()
 
         file_menu = wx.Menu()
+        menu_sql = file_menu.Append(wx.ID_ANY, '&SQL Connection')
         # file_menu.Append(wx.ID_NEW, '&New')
         # menu_open = file_menu.Append(wx.ID_OPEN, '&Open\tCtrl+O')
         menu_close = file_menu.Append(wx.ID_ANY, '&Close\tCtrl+W')
@@ -122,13 +125,18 @@ class MainFrame(wx.Frame):
 
         qmi = file_menu.Append(wx.ID_ANY, '&Quit\tCtrl+Q')
 
+        settings_menu = wx.Menu()
+        menu_sql = settings_menu.Append(wx.ID_ANY, '&Database Connection\tCtrl+D')
+
         self.Bind(wx.EVT_MENU, self.OnQuit, qmi)
         # self.Bind(wx.EVT_MENU, self.OnOpen, menu_open)
         self.Bind(wx.EVT_MENU, self.OnClose, menu_close)
         self.Bind(wx.EVT_MENU, self.OnPref, menu_pref)
         self.Bind(wx.EVT_MENU, self.OnAbout, menu_about)
+        self.Bind(wx.EVT_MENU, self.OnSQL, menu_sql)
 
         self.frame_menubar.Append(file_menu, '&File')
+        self.frame_menubar.Append(settings_menu, '&Settings')
         self.SetMenuBar(self.frame_menubar)
 
     def __add_layout_objects(self):
@@ -498,6 +506,10 @@ class MainFrame(wx.Frame):
         # else:
         #     dlg.revert_options()
         dlg.Destroy()
+
+    def OnSQL(self, evt):
+        dlg = SQLSettingsDialog()
+        dlg.ShowModal()
 
     def on_toolbar_roi_map(self, evt):
         dlg = ROIMapDialog()
