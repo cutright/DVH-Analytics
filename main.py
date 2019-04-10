@@ -107,7 +107,6 @@ class MainFrame(wx.Frame):
         self.frame_menubar = wx.MenuBar()
 
         file_menu = wx.Menu()
-        menu_sql = file_menu.Append(wx.ID_ANY, '&SQL Connection')
         # file_menu.Append(wx.ID_NEW, '&New')
         # menu_open = file_menu.Append(wx.ID_OPEN, '&Open\tCtrl+O')
         menu_close = file_menu.Append(wx.ID_ANY, '&Close\tCtrl+W')
