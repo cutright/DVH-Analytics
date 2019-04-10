@@ -7,6 +7,8 @@ from os import walk, listdir
 from os.path import join, isfile
 import os
 import shutil
+from paths import IMPORT_SETTINGS_PATH, SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
+    APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR
 
 
 def is_windows():
@@ -19,6 +21,58 @@ def is_linux():
 
 def is_mac():
     return wx.Platform == '__WXMAC__'
+
+
+def initialize_directories_and_settings():
+    initialize_directories()
+    initialize_default_sql_connection_config_file()
+    initialize_default_import_settings_file()
+
+
+def initialize_directories():
+    directories = [APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR, BACKUP_DIR]
+    for directory in directories:
+        if not os.path.isdir(directory):
+            os.mkdir(directory)
+
+
+def write_import_settings(directories):
+
+    import_text = ['inbox ' + directories['inbox'],
+                   'imported ' + directories['imported'],
+                   'review ' + directories['review']]
+    import_text = '\n'.join(import_text)
+
+    with open(IMPORT_SETTINGS_PATH, "w") as text_file:
+        text_file.write(import_text)
+
+
+def write_sql_connection_settings(config):
+    """
+    :param config: a dict with keys 'host', 'dbname', 'port' and optionally 'user' and 'password'
+    """
+
+    text = ["%s %s" % (key, value) for key, value in config.items() if value]
+    text = '\n'.join(text)
+
+    with open(SQL_CNF_PATH, "w") as text_file:
+        text_file.write(text)
+
+
+def initialize_default_import_settings_file():
+    # Create default import settings file
+    if not isfile(IMPORT_SETTINGS_PATH):
+        write_import_settings({'inbox': INBOX_DIR,
+                               'imported': IMPORTED_DIR,
+                               'review': REVIEW_DIR})
+
+
+def initialize_default_sql_connection_config_file():
+    # Create default sql connection config file
+    if not isfile(SQL_CNF_PATH):
+        write_sql_connection_settings({'host': 'localhost',
+                                       'dbname': 'dvh',
+                                       'port': '5432'})
 
 
 def scale_bitmap(bitmap, width, height):
@@ -248,11 +302,9 @@ def move_files_to_new_path(files, new_dir):
     for file_path in files:
         file_name = os.path.basename(file_path)
         new = os.path.join(new_dir, file_name)
-        try:
-            shutil.move(file_path, new)
-        except:
+        if not os.path.isdir(new_dir):
             os.mkdir(new_dir)
-            shutil.move(file_path, new)
+        shutil.move(file_path, new)
 
 
 # def remove_empty_folders(start_path):

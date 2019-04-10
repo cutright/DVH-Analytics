@@ -17,7 +17,7 @@ from models.time_series import TimeSeriesFrame
 from models.roi_map import ROIMapDialog
 from db.sql_to_python import QuerySQL
 from paths import LOGO_PATH
-from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows
+from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, initialize_directories_and_settings
 
 
 class MainFrame(wx.Frame):
@@ -507,6 +507,7 @@ class MainFrame(wx.Frame):
 
 class DVHApp(wx.App):
     def OnInit(self):
+        initialize_directories_and_settings()
         self.SetAppName('DVH Analytics')
         self.frame = MainFrame(None, wx.ID_ANY, "")
         self.SetTopWindow(self.frame)
