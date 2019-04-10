@@ -3,12 +3,11 @@
 
 
 import wx
-from dialogs.database.sql_settings import SQLSettingsDialog
+from dialogs.database.sql_settings import run_sql_settings_dlg
 from dialogs.database.change_or_delete_patient import ChangePatientIdentifierDialog, DeletePatientDialog
 from dialogs.database.reimport import ReimportDialog
 from dialogs.database.edit_db import EditDatabaseDialog
 from dialogs.database.post_import_calculations import PostImportCalculationsDialog
-from db.sql_settings import write_sql_connection_settings, validate_sql_connection
 from db.sql_to_python import get_database_tree
 from db.sql_connector import DVH_SQL
 from models.datatable import DataTable
@@ -143,16 +142,7 @@ class DatabaseEditorDialog(wx.Frame):
 
     @staticmethod
     def OnSQLSettings(evt):
-        dlg = SQLSettingsDialog()
-        res = dlg.ShowModal()
-        if res == wx.ID_OK:
-            new_config = {key: dlg.input[key].GetValue() for key in dlg.keys if dlg.input[key].GetValue()}
-            if validate_sql_connection(new_config):
-                write_sql_connection_settings(new_config)
-            else:
-                print("Invalid SQL config")
-                print(new_config)
-        dlg.Destroy()
+        run_sql_settings_dlg()
 
     def OnTreeAdd(self, evt):
         self.update_selected_tree_items()

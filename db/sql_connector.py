@@ -280,9 +280,12 @@ def truncate_string(input_string, character_limit):
     return input_string
 
 
-def echo_sql_db(config):
+def echo_sql_db(config=None):
     try:
-        cnx = DVH_SQL(config)
+        if config:
+            cnx = DVH_SQL(config)
+        else:
+            cnx = DVH_SQL()
         cnx.close()
         return True
     except OperationalError:

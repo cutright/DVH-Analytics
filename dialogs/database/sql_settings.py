@@ -1,6 +1,7 @@
 import wx
 from paths import SQL_CNF_PATH, parse_settings_file
-from db.sql_connector import DVH_SQL, echo_sql_db
+from db.sql_connector import echo_sql_db
+from db.sql_settings import write_sql_connection_settings, validate_sql_connection
 
 
 class SQLSettingsDialog(wx.Dialog):
@@ -67,3 +68,17 @@ class SQLSettingsDialog(wx.Dialog):
     def valid_sql_settings(self):
         config = {key: self.input[key].GetValue() for key in self.keys if self.input[key].GetValue()}
         return echo_sql_db(config)
+
+
+def run_sql_settings_dlg():
+    dlg = SQLSettingsDialog()
+    res = dlg.ShowModal()
+    if res == wx.ID_OK:
+        new_config = {key: dlg.input[key].GetValue() for key in dlg.keys if dlg.input[key].GetValue()}
+        write_sql_connection_settings(new_config)
+        if not validate_sql_connection(new_config):
+            dlg = wx.MessageDialog(dlg, 'Connection to database could not be established.', 'ERROR!', wx.OK | wx.ICON_ERROR)
+            dlg.ShowModal()
+    dlg.Destroy()
+
+    return res

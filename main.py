@@ -5,7 +5,7 @@
 import wx
 from dialogs.main.query import query_dlg
 from dialogs.main.settings import UserSettings
-from dialogs.database.sql_settings import SQLSettingsDialog
+from dialogs.database.sql_settings import run_sql_settings_dlg
 from models.import_dicom import ImportDICOM_Dialog
 from models.database_editor import DatabaseEditorDialog
 from db import sql_columns
@@ -61,6 +61,9 @@ class MainFrame(wx.Frame):
                    'numerical': ['category', 'min', 'max', 'Filter Type']}
         self.data_table_categorical = DataTable(self.table_categorical, columns=columns['categorical'])
         self.data_table_numerical = DataTable(self.table_numerical, columns=columns['numerical'])
+
+        if not echo_sql_db():
+            self.__disable_add_filter_buttons()
 
     def __add_tool_bar(self):
         self.frame_toolbar = wx.ToolBar(self, -1, style=wx.TB_HORIZONTAL | wx.TB_TEXT)
@@ -299,6 +302,15 @@ class MainFrame(wx.Frame):
         self.radbio.enable_initial_buttons()
         self.time_series.enable_initial_buttons()
 
+    def __disable_add_filter_buttons(self):
+        self.button_categorical['add'].Disable()
+        self.button_numerical['add'].Disable()
+
+
+    def __enable_add_filter_buttons(self):
+        self.button_categorical['add'].Enable()
+        self.button_numerical['add'].Enable()
+
     def enable_query_buttons(self, query_type):
         for key in ['del', 'edit']:
             {'categorical':  self.button_categorical[key],
@@ -507,8 +519,9 @@ class MainFrame(wx.Frame):
         dlg.Destroy()
 
     def OnSQL(self, evt):
-        dlg = SQLSettingsDialog()
-        dlg.ShowModal()
+        res = run_sql_settings_dlg()
+        if res == wx.ID_OK:
+            [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db()]()
 
     def on_toolbar_roi_map(self, evt):
         dlg = ROIMapDialog()
