@@ -668,6 +668,6 @@ def print_uncategorized_rois():
 def initialize_roi_preference_file(rel_file_name):
     roi_files_user = [f for f in os.listdir(PREF_DIR) if '.roi' in f]
     if rel_file_name not in roi_files_user:
-        src = os.path.join(SCRIPT_DIR, 'preferences', rel_file_name)
+        src = os.path.join(SCRIPT_DIR, 'db', rel_file_name)
         dest = os.path.join(PREF_DIR, rel_file_name)
         copyfile(src, dest)
