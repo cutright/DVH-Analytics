@@ -78,6 +78,13 @@ class UserSettings(wx.Dialog):
 
         self.spin_ctrl_alpha_input.SetIncrement(0.1)
 
+        # Windows needs this done explicitly or the value will be an empty string
+        self.combo_box_alpha_category.SetSelection(0)
+        self.combo_box_colors_category.SetSelection(0)
+        self.combo_box_line_styles_category.SetSelection(0)
+        self.combo_box_line_widths_category.SetSelection(0)
+        self.combo_box_sizes_category.SetSelection(0)
+
     def __do_layout(self):
         # begin wxGlade: MyFrame.__do_layout
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
