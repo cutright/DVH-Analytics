@@ -142,6 +142,16 @@ class DVH_SQL:
         cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (table, ','.join(columns), ",".join(values))
         self.execute_str(cmd)
 
+    def insert_dicom_file_row(self, mrn, uid, dir_name, plan_file, struct_file, dose_file):
+
+        col_names = ['mrn', 'study_instance_uid', 'folder_path', 'plan_file', 'structure_file', 'dose_file',
+                     'import_time_stamp']
+        values = [mrn, uid, dir_name, plan_file, struct_file, dose_file]
+        sql_cmd = "INSERT INTO DICOM_Files (%s) VALUES ('%s', NOW());\n" % \
+                  (','.join(col_names), "','".join(values).replace("'(NULL)'", "(NULL)"))
+        self.cursor.execute(sql_cmd)
+        self.cnx.commit()
+
     def delete_rows(self, condition_str, ignore_table=[]):
         tables = [t for t in self.tables if t not in ignore_table]
         for table in tables:

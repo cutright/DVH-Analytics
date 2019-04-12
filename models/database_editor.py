@@ -11,6 +11,8 @@ from db.sql_to_python import get_database_tree
 from db.sql_connector import DVH_SQL
 from models.datatable import DataTable
 from dialogs.export import data_table_to_csv as export_dlg
+from models.import_dicom import ImportDICOM_Dialog
+from paths import IMPORTED_DIR
 
 
 class DatabaseEditorDialog(wx.Frame):
@@ -20,7 +22,7 @@ class DatabaseEditorDialog(wx.Frame):
         self.db_tree = self.get_db_tree()
 
         self.SetSize((1330, 820))
-        self.button_sql_connection = wx.Button(self, wx.ID_ANY, "SQL Connection")
+        self.button_delete_all_data = wx.Button(self, wx.ID_ANY, "Delete All Data")
         self.button_rebuild_db = wx.Button(self, wx.ID_ANY, "Rebuild Database")
         self.button_post_import_calc = wx.Button(self, wx.ID_ANY, "Post-Import Calculations")
         self.button_edit_db = wx.Button(self, wx.ID_ANY, "Edit Database")
@@ -86,13 +88,13 @@ class DatabaseEditorDialog(wx.Frame):
         sizer_combo_box = wx.BoxSizer(wx.VERTICAL)
         sizer_db_tree = wx.BoxSizer(wx.HORIZONTAL)
         sizer_dialog_buttons = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_dialog_buttons.Add(self.button_sql_connection, 0, wx.ALL, 5)
-        sizer_dialog_buttons.Add(self.button_rebuild_db, 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button_post_import_calc, 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button_edit_db, 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button_reimport, 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button_delete_study, 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button_change_mrn_uid, 0, wx.ALL, 5)
+        sizer_dialog_buttons.Add(self.button_rebuild_db, 0, wx.ALL, 5)
+        sizer_dialog_buttons.Add(self.button_delete_all_data, 0, wx.ALL, 5)
         sizer_wrapper.Add(sizer_dialog_buttons, 0, wx.ALL, 5)
         sizer_db_tree.Add(self.tree_ctrl_db, 1, wx.EXPAND, 0)
         self.window_pane_db_tree.SetSizer(sizer_db_tree)
@@ -136,6 +138,7 @@ class DatabaseEditorDialog(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnReimport, id=self.button_reimport.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnDeletePatient, id=self.button_delete_study.GetId())
         self.Bind(wx.EVT_BUTTON, self.OnChangePatientIdentifier, id=self.button_change_mrn_uid.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnDeleteAllData, id=self.button_delete_all_data.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export_csv, id=self.button_export.GetId())
 
     def OnTreeAdd(self, evt):
@@ -220,6 +223,20 @@ class DatabaseEditorDialog(wx.Frame):
 
     def OnRebuildDB(self, evt):
         dlg = wx.MessageDialog(self, "Are you sure?", "Rebuild Database from DICOM",
+                               wx.ICON_WARNING | wx.OK | wx.CANCEL | wx.CANCEL_DEFAULT)
+        res = dlg.ShowModal()
+        if res == wx.ID_OK:
+            cnx = DVH_SQL()
+            cnx.reinitialize_database()
+            cnx.close()
+        dlg.Destroy()
+
+        dlg = ImportDICOM_Dialog(inbox=IMPORTED_DIR)
+        dlg.ShowModal()
+        dlg.Destroy()
+
+    def OnDeleteAllData(self, evt):
+        dlg = wx.MessageDialog(self, "Are you sure?", "Delete All Data in Database",
                                wx.ICON_WARNING | wx.OK | wx.CANCEL | wx.CANCEL_DEFAULT)
         res = dlg.ShowModal()
         if res == wx.ID_OK:
