@@ -504,18 +504,19 @@ class MainFrame(wx.Frame):
         res = dlg.ShowModal()
         if res == wx.ID_OK:
             dlg.save_options()
-        # else:
-        #     dlg.revert_options()
         dlg.Destroy()
 
     def OnImport(self, evt):
-        dlg = ImportDICOM_Dialog()
-        res = dlg.ShowModal()
-        # if res == wx.ID_OK:
-        #     dlg.save_options()
-        # else:
-        #     dlg.revert_options()
-        dlg.Destroy()
+        if not echo_sql_db():
+            self.OnSQL(None)
+
+        if echo_sql_db():
+            dlg = ImportDICOM_Dialog()
+            dlg.ShowModal()
+            dlg.Destroy()
+        else:
+            wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
+                          wx.OK | wx.ICON_WARNING)
 
     def OnSQL(self, evt):
         res = run_sql_settings_dlg()
@@ -524,7 +525,7 @@ class MainFrame(wx.Frame):
 
     def on_toolbar_roi_map(self, evt):
         dlg = ROIMapDialog()
-        res = dlg.ShowModal()
+        dlg.ShowModal()
         dlg.Destroy()
 
 
