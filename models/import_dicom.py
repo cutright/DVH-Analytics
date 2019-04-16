@@ -3,7 +3,7 @@ import wx.adv
 from db.dicom_importer import DICOM_Importer
 from db.dicom_parser import DICOM_Parser
 from dicompylercore import dicomparser
-from os.path import isdir, join, basename
+from os.path import isdir, join, dirname
 from os import listdir, rmdir
 from wx.lib.agw.customtreectrl import CustomTreeCtrl, TR_AUTO_CHECK_CHILD, TR_AUTO_CHECK_PARENT, TR_DEFAULT_STYLE
 from tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95
@@ -20,7 +20,7 @@ from paths import IMPORT_SETTINGS_PATH, parse_settings_file
 
 
 class ImportDICOM_Dialog(wx.Dialog):
-    def __init__(self, *args, **kwds):
+    def __init__(self, inbox=None, *args, **kwds):
         wx.Dialog.__init__(self, None, title='Import DICOM')
 
         self.SetSize((1350, 800))
@@ -93,7 +93,9 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.__do_layout()
 
         self.is_all_data_parsed = False
-        self.dicom_dir = DICOM_Importer('', self.tree_ctrl_import, self.tree_ctrl_roi, self.tree_ctrl_roi_root)
+        if inbox is None or not isdir(inbox):
+            inbox = ''
+        self.dicom_dir = DICOM_Importer(inbox, self.tree_ctrl_import, self.tree_ctrl_roi, self.tree_ctrl_roi_root)
         self.parse_directory()
 
         self.incomplete_studies = []
@@ -752,14 +754,14 @@ class ImportWorker(Thread):
         Thread.__init__(self)
         self.data = data
         self.checked_uids = checked_uids
-        self.calculations = {"PTV Distances",
-                             "PTV Overlap",
-                             "ROI Centroid",
-                             "ROI Spread",
-                             "ROI Cross-Section",
-                             "OAR-PTV Centroid Distance",
-                             "Beam Complexities",
-                             "Plan Complexities"}
+        # self.calculations = {"PTV Distances",
+        #                      "PTV Overlap",
+        #                      "ROI Centroid",
+        #                      "ROI Spread",
+        #                      "ROI Cross-Section",
+        #                      "OAR-PTV Centroid Distance",
+        #                      "Beam Complexities",
+        #                      "Plan Complexities"}
         self.start()  # start the thread
 
     def run(self):
@@ -873,6 +875,6 @@ class ImportWorker(Thread):
 
         # remove old directory if empty
         for file in files:
-            old_dir = basename(file)
+            old_dir = dirname(file)
             if isdir(old_dir) and not listdir(old_dir):
                 rmdir(old_dir)
