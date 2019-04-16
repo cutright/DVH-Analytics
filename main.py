@@ -323,14 +323,17 @@ class MainFrame(wx.Frame):
     # --------------------------------------------------------------------------------------------------------------
     # Menu bar event functions
     # --------------------------------------------------------------------------------------------------------------
-    @staticmethod
-    def on_toolbar_database(evt):
-        frame = DatabaseEditorDialog()
-        frame.Show()
-        # res = dlg.ShowModal()
-        # if res == wx.ID_OK:
-        #     pass
-        # dlg.Destroy()
+    def on_toolbar_database(self, evt):
+
+        if not echo_sql_db():
+            self.OnSQL(None)
+
+        if echo_sql_db():
+            frame = DatabaseEditorDialog()
+            frame.Show()
+        else:
+            wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
+                          wx.OK | wx.ICON_WARNING)
 
     def on_toolbar_settings(self, evt):
         self.OnPref(None)
