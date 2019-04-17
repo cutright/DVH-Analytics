@@ -1,5 +1,6 @@
 from copy import deepcopy
 import wx
+from tools.utilities import get_selected_listctrl_items
 
 
 class DataTable:
@@ -160,3 +161,7 @@ class DataTable:
             data.append(','.join(row))
 
         return '\n'.join(data)
+
+    @property
+    def selected_row_data(self):
+        return [self.get_row(index) for index in get_selected_listctrl_items(self.layout)]

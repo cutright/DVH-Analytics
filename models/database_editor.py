@@ -187,14 +187,24 @@ class DatabaseEditorDialog(wx.Frame):
                 self.selected_columns[table][column] = self.tree_ctrl_db.IsSelected(column_item)
 
     def OnChangePatientIdentifier(self, evt):
-        dlg = ChangePatientIdentifierDialog()
+        selected_data = self.data_query_results.selected_row_data
+        if selected_data:
+            dlg = ChangePatientIdentifierDialog(mrn=selected_data[0][0],
+                                                study_instance_uid=selected_data[0][1])
+        else:
+            dlg = ChangePatientIdentifierDialog()
         res = dlg.ShowModal()
         if res == wx.ID_OK:
             pass
         dlg.Destroy()
 
     def OnDeletePatient(self, evt):
-        dlg = DeletePatientDialog()
+        selected_data = self.data_query_results.selected_row_data
+        if selected_data:
+            dlg = DeletePatientDialog(mrn=selected_data[0][0],
+                                      study_instance_uid=selected_data[0][1])
+        else:
+            dlg = DeletePatientDialog()
         res = dlg.ShowModal()
         if res == wx.ID_OK:
             pass

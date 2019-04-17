@@ -588,7 +588,7 @@ class DICOM_Parser:
             m, s = divmod(seconds, 60)
             h, m = divmod(m, 60)
             return "%02d:%02d:%02d" % (h, m, s)
-        return '00:00:00'
+        return None
 
     @property
     def dose_grid_res(self):

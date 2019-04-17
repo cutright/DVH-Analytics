@@ -112,7 +112,13 @@ class DVH_SQL:
         self.cnx.commit()
 
     def is_study_instance_uid_in_table(self, table_name, study_instance_uid):
-        query = "Select study_instance_uid from %s where study_instance_uid = '%s';" % (table_name, study_instance_uid)
+        return self.is_value_in_table(table_name, study_instance_uid, 'study_instance_uid')
+
+    def is_mrn_in_table(self, table_name, mrn):
+        return self.is_value_in_table(table_name, mrn, 'mrn')
+
+    def is_value_in_table(self, table_name, value, column):
+        query = "Select %s from %s where %s = '%s';" % (column, table_name, column, value)
         self.cursor.execute(query)
         results = self.cursor.fetchall()
         return bool(results)
@@ -259,6 +265,12 @@ class DVH_SQL:
     def is_uid_imported(self, uid):
         for table in self.tables:
             if self.is_study_instance_uid_in_table(table, uid):
+                return True
+        return False
+
+    def is_mrn_imported(self, mrn):
+        for table in self.tables:
+            if self.is_mrn_in_table(table, mrn):
                 return True
         return False
 

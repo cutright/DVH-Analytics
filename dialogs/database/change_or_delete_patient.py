@@ -1,9 +1,14 @@
 import wx
+from db.sql_connector import DVH_SQL
 
 
 class BaseClass(wx.Dialog):
-    def __init__(self, text_input_1_label, text_input_2_label, ok_button_label, title, *args, **kw):
+    def __init__(self, text_input_1_label, text_input_2_label, ok_button_label, title,
+                 mrn=None, study_instance_uid=None, *args, **kw):
         wx.Dialog.__init__(self, None, title=title)
+
+        self.mrn = mrn
+        self.study_instance_uid = study_instance_uid
 
         self.text_input_1_label = text_input_1_label
         self.text_input_2_label = text_input_2_label
@@ -15,6 +20,7 @@ class BaseClass(wx.Dialog):
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
         self.__set_properties()
+        self.__do_bind()
         self.__do_layout()
         # end wxGlade
 
@@ -22,6 +28,7 @@ class BaseClass(wx.Dialog):
         # begin wxGlade: MyFrame.__set_properties
         # self.SetTitle("Title")
         self.text_ctrl_1.SetMinSize((365, 22))
+        self.on_identifier_change(None)
 
     def __do_layout(self):
         # begin wxGlade: MyFrame.__do_layout
@@ -52,12 +59,44 @@ class BaseClass(wx.Dialog):
         self.Layout()
         self.Center()
 
+    def __do_bind(self):
+        self.Bind(wx.EVT_COMBOBOX, self.on_identifier_change, id=self.combo_box_patient_identifier.GetId())
+
+    def on_identifier_change(self, evt):
+        value = {'Study Instance UID': self.study_instance_uid,
+                 'MRN': self.mrn}[self.combo_box_patient_identifier.GetValue()]
+        if value is not None:
+            self.text_ctrl_1.SetValue(value)
+
 
 class ChangePatientIdentifierDialog(BaseClass):
-    def __init__(self, *args, **kw):
-        BaseClass.__init__(self, 'Value:', 'New Value:', 'Change', "Change Patient Identifier")
+    def __init__(self, mrn=None, study_instance_uid=None, *args, **kw):
+        BaseClass.__init__(self, 'Value:', 'New Value:', 'Change', "Change Patient Identifier",
+                           mrn=mrn, study_instance_uid=study_instance_uid)
+
+    def change_identifier(self, evt):
+        id_type = self.combo_box_patient_identifier.GetValue().lower().replace(' ', '_')
+        old_id = self.text_ctrl_1.GetValue()
+        new_id = self.text_ctrl_2.GetValue()
+
+        cnx = DVH_SQL()
+        validation_func = [cnx.is_uid_imported, cnx.is_mrn_imported][id_type == 'mrn']
+        change_func = [cnx.change_uid, cnx.change_mrn][id_type == 'mrn']
+
+        if validation_func(old_id):
+            if id_type == 'study_instance_uid' and validation_func(new_id):
+                wx.MessageBox('This Study Instance UID is already in use.',
+                              '%s Error' % self.combo_box_patient_identifier.GetValue(),
+                              wx.OK | wx.ICON_WARNING)
+            else:
+                change_func(old_id, new_id)
+        else:
+            wx.MessageBox('No studies found with this %s.' % self.combo_box_patient_identifier.GetValue(),
+                          '%s Error' % self.combo_box_patient_identifier.GetValue(),
+                          wx.OK | wx.ICON_WARNING)
 
 
 class DeletePatientDialog(BaseClass):
-    def __init__(self, *args, **kw):
-        BaseClass.__init__(self, 'Delete:', 'Type "delete" to authorize:', 'Delete', "Delete Patient")
+    def __init__(self, mrn=None, study_instance_uid=None, *args, **kw):
+        BaseClass.__init__(self, 'Delete:', 'Type "delete" to authorize:', 'Delete', "Delete Patient",
+                           mrn=mrn, study_instance_uid=study_instance_uid)
