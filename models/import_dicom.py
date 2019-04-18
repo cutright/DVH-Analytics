@@ -683,6 +683,8 @@ class ImportDICOM_Dialog(wx.Dialog):
         for roi in self.dicom_dir.roi_name_map.values():
             self.parsed_dicom_data[self.selected_uid].autodetect_target_roi_type(roi['key'])
         self.update_roi_inputs()
+        self.validate(self.selected_uid)
+        self.update_warning_label()
 
 
 class ImportStatusDialog(wx.Dialog):
