@@ -314,6 +314,8 @@ class ImportDICOM_Dialog(wx.Dialog):
 
         self.parse_dicom_data()
         self.validate()
+        self.tree_ctrl_import.CheckItem(self.dicom_dir.root_files, True)
+        self.text_ctrl_directory
 
     def on_browse(self, evt):
         self.parsed_dicom_data = {}
