@@ -167,11 +167,10 @@ class ControlPoint:
                 cp['leaf_type'] = leaf_jaw_type
                 leaf_jaw_type = 'mlc'
 
-            positions = np.array(map(float, device_position_seq.LeafJawPositions))
-
-            pos_count = len(positions)
-            cp[leaf_jaw_type] = [positions[0:pos_count / 2],
-                                 positions[pos_count / 2:pos_count]]
+            positions = np.array(list(map(float, device_position_seq.LeafJawPositions)))
+            mid_index = int(len(positions) / 2)
+            cp[leaf_jaw_type] = [positions[:mid_index],
+                                 positions[mid_index:]]
 
         if 'leaf_type' not in list(cp):
             cp['leaf_type'] = False
