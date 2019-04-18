@@ -22,7 +22,6 @@ class BaseClass(wx.Dialog):
         self.__set_properties()
         self.__do_bind()
         self.__do_layout()
-        # end wxGlade
 
     def __set_properties(self):
         # begin wxGlade: MyFrame.__set_properties
@@ -67,6 +66,7 @@ class BaseClass(wx.Dialog):
                  'MRN': self.mrn}[self.combo_box_patient_identifier.GetValue()]
         if value is not None:
             self.text_ctrl_1.SetValue(value)
+            wx.CallAfter(self.text_ctrl_2.SetFocus)
 
 
 class ChangePatientIdentifierDialog(BaseClass):
