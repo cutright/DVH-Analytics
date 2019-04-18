@@ -618,12 +618,22 @@ class DICOM_Parser:
     def get_roi_type(self, key):
         if key in list(self.roi_type_over_ride):
             return self.roi_type_over_ride[key]
-        # ITV is not currently in any TPS as an ROI type.  If the ROI begins with ITV, DVH assumes
-        # a ROI type of ITV
-        if self.dicompyler_rt_structures[key]['name'].lower()[0:3] == 'itv':
-            return 'ITV'
-        else:
-            return self.dicompyler_rt_structures[key]['type'].upper()
+        return self.dicompyler_rt_structures[key]['type'].upper()
+
+    def autodetect_target_roi_type(self, key):
+        # target/tumor ROIs are often not labeled properly in ROI Type, but often start with correct acronym
+        # any ROI that starts with GTV, CTV, ITV, or PTV and is followed by nothing, a single number, or a character
+        # then a single number will be flagged.
+        roi_name = self.dicompyler_rt_structures[key]['name'].lower()
+        roi_name_len = len(roi_name)
+        if (roi_name_len > 2 and roi_name[0:3] in {'gtv', 'ctv', 'itv', 'ptv'}) and \
+                ((roi_name_len == 3) or
+                 (roi_name_len == 4 and roi_name[3].isdigit()) or
+                 (roi_name_len == 5 and not roi_name[3].isdigit() and roi_name[4].isdigit())):
+            self.roi_type_over_ride[key] = roi_name[0:3].upper()
+
+    def reset_roi_type_over_ride(self, key):
+        self.roi_type_over_ride[key] = None
 
     def get_roi_name(self, key):
         return clean_name(self.dicompyler_rt_structures[key]['name'])

@@ -47,7 +47,7 @@ class ImportDICOM_Dialog(wx.Dialog):
                       'study_instance_uid': wx.TextCtrl(self, wx.ID_ANY, ""),
                       'birth_date': wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_READONLY),
                       'sim_study_date': wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_READONLY),
-                      'physician': wx.ComboBox(self, wx.ID_ANY, choices=cnx.get_unique_values('Plans', 'physician'),
+                      'physician': wx.ComboBox(self, wx.ID_ANY, choices=self.roi_map.get_physicians(),
                                                style=wx.CB_DROPDOWN),
                       'tx_site': wx.ComboBox(self, wx.ID_ANY, choices=cnx.get_unique_values('Plans', 'tx_site'),
                                              style=wx.CB_DROPDOWN),
@@ -72,6 +72,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.input_roi = {'physician': wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN),
                           'type': wx.ComboBox(self, wx.ID_ANY, choices=ROI_TYPES, style=wx.CB_DROPDOWN)}
         self.input_roi['type'].SetValue('')
+        self.button_auto_detect_targets = wx.Button(self, wx.ID_ANY, "Autodetect Targets")
         self.disable_roi_inputs()
 
         cnx.close()
@@ -135,8 +136,8 @@ class ImportDICOM_Dialog(wx.Dialog):
                                                  wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         self.checkbox_subfolders.SetValue(1)
         self.checkbox_include_uncategorized.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
-                                                 wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
-        self.checkbox_include_uncategorized.SetValue(1)
+                                                            wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
+        self.checkbox_include_uncategorized.SetValue(0)
 
         for checkbox in self.checkbox.values():
             checkbox.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
@@ -192,6 +193,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_tree.Add(self.tree_ctrl_import, 1, wx.EXPAND, 0)
         self.panel_study_tree.SetSizer(sizer_tree)
         sizer_studies.Add(self.panel_study_tree, 1, wx.ALL | wx.EXPAND, 5)
+        sizer_studies.Add(self.checkbox_include_uncategorized, 0, wx.LEFT | wx.BOTTOM | wx.EXPAND, 10)
         self.label_progress = wx.StaticText(self, wx.ID_ANY, "Progress: Status message")
         self.label_progress.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         sizer_progress.Add(self.label_progress, 1, 0, 0)
@@ -260,7 +262,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_roi_tree.Add(self.tree_ctrl_roi, 1, wx.ALL | wx.EXPAND, 0)
         self.panel_roi_tree.SetSizer(sizer_roi_tree)
         sizer_roi_map.Add(self.panel_roi_tree, 1, wx.EXPAND, 0)
-        sizer_roi_map.Add(self.checkbox_include_uncategorized, 0, wx.EXPAND | wx.BOTTOM, 15)
+        sizer_roi_map.Add(self.button_auto_detect_targets, 0, wx.EXPAND | wx.ALL, 15)
 
         self.label['physician_roi'] = wx.StaticText(self, wx.ID_ANY, "Physician's ROI Label:")
         sizer_physician_roi.Add(self.label['physician_roi'], 0, 0, 0)
@@ -474,10 +476,12 @@ class ImportDICOM_Dialog(wx.Dialog):
             check_box.Enable()
 
     def disable_roi_inputs(self):
+        self.button_auto_detect_targets.Disable()
         for input_obj in self.input_roi.values():
             input_obj.Disable()
 
     def enable_roi_inputs(self):
+        self.button_auto_detect_targets.Enable()
         for input_obj in self.input_roi.values():
             input_obj.Enable()
 
