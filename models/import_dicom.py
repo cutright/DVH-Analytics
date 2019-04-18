@@ -72,7 +72,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.input_roi = {'physician': wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN),
                           'type': wx.ComboBox(self, wx.ID_ANY, choices=ROI_TYPES, style=wx.CB_DROPDOWN)}
         self.input_roi['type'].SetValue('')
-        self.button_auto_detect_targets = wx.Button(self, wx.ID_ANY, "Autodetect Targets")
+        self.button_autodetect_targets = wx.Button(self, wx.ID_ANY, "Autodetect Targets")
         self.disable_roi_inputs()
 
         cnx.close()
@@ -130,6 +130,8 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self.on_edit_sim_study_date, id=self.button_edit_sim_study_date.GetId())
 
         self.Bind(wx.EVT_BUTTON, self.on_import, id=self.button_import.GetId())
+
+        self.Bind(wx.EVT_BUTTON, self.on_autodetect_target, id=self.button_autodetect_targets.GetId())
 
     def __set_properties(self):
         self.checkbox_subfolders.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
@@ -262,7 +264,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_roi_tree.Add(self.tree_ctrl_roi, 1, wx.ALL | wx.EXPAND, 0)
         self.panel_roi_tree.SetSizer(sizer_roi_tree)
         sizer_roi_map.Add(self.panel_roi_tree, 1, wx.EXPAND, 0)
-        sizer_roi_map.Add(self.button_auto_detect_targets, 0, wx.EXPAND | wx.ALL, 15)
+        sizer_roi_map.Add(self.button_autodetect_targets, 0, wx.EXPAND | wx.ALL, 15)
 
         self.label['physician_roi'] = wx.StaticText(self, wx.ID_ANY, "Physician's ROI Label:")
         sizer_physician_roi.Add(self.label['physician_roi'], 0, 0, 0)
@@ -342,6 +344,7 @@ class ImportDICOM_Dialog(wx.Dialog):
 
     def on_file_tree_select(self, evt):
         uid = self.get_file_tree_item_uid(evt.GetItem())
+        self.tree_ctrl_roi.SelectItem(self.tree_ctrl_roi_root, True)
         if uid is not None:
             if uid != self.selected_uid:
                 self.selected_uid = uid
@@ -476,12 +479,12 @@ class ImportDICOM_Dialog(wx.Dialog):
             check_box.Enable()
 
     def disable_roi_inputs(self):
-        self.button_auto_detect_targets.Disable()
+        self.button_autodetect_targets.Disable()
         for input_obj in self.input_roi.values():
             input_obj.Disable()
 
     def enable_roi_inputs(self):
-        self.button_auto_detect_targets.Enable()
+        self.button_autodetect_targets.Enable()
         for input_obj in self.input_roi.values():
             input_obj.Enable()
 
@@ -675,6 +678,11 @@ class ImportDICOM_Dialog(wx.Dialog):
 
         self.validate(self.selected_uid)
         self.update_warning_label()
+
+    def on_autodetect_target(self, evt):
+        for roi in self.dicom_dir.roi_name_map.values():
+            self.parsed_dicom_data[self.selected_uid].autodetect_target_roi_type(roi['key'])
+        self.update_roi_inputs()
 
 
 class ImportStatusDialog(wx.Dialog):
