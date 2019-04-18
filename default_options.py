@@ -8,6 +8,9 @@ VERSION = '0.6'
 
 MIN_BORDER = 5
 
+MAX_FIELD_SIZE_X = 400  # in mm
+MAX_FIELD_SIZE_Y = 400  # in mm
+
 # These colors propagate to all tabs that visualize your two groups
 PLOT_COLOR = 'blue'
 
