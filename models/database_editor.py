@@ -187,28 +187,23 @@ class DatabaseEditorDialog(wx.Frame):
                 self.selected_columns[table][column] = self.tree_ctrl_db.IsSelected(column_item)
 
     def OnChangePatientIdentifier(self, evt):
-        selected_data = self.data_query_results.selected_row_data
-        if selected_data:
-            dlg = ChangePatientIdentifierDialog(mrn=selected_data[0][0],
-                                                study_instance_uid=selected_data[0][1])
-        else:
-            dlg = ChangePatientIdentifierDialog()
-        res = dlg.ShowModal()
-        if res == wx.ID_OK:
-            pass
-        dlg.Destroy()
+        self.ChangeOrDeleteDlg(ChangePatientIdentifierDialog)
 
     def OnDeletePatient(self, evt):
+        self.ChangeOrDeleteDlg(DeletePatientDialog)
+
+    def ChangeOrDeleteDlg(self, class_type):
         selected_data = self.data_query_results.selected_row_data
         if selected_data:
-            dlg = DeletePatientDialog(mrn=selected_data[0][0],
-                                      study_instance_uid=selected_data[0][1])
+            dlg = class_type(mrn=selected_data[0][0],
+                             study_instance_uid=selected_data[0][1])
         else:
-            dlg = DeletePatientDialog()
+            dlg = class_type()
         res = dlg.ShowModal()
         if res == wx.ID_OK:
-            pass
+            dlg.action()
         dlg.Destroy()
+        self.OnQuery(None)
 
     def OnReimport(self, evt):
         dlg = ReimportDialog()
@@ -239,10 +234,11 @@ class DatabaseEditorDialog(wx.Frame):
             cnx = DVH_SQL()
             cnx.reinitialize_database()
             cnx.close()
-        dlg.Destroy()
 
-        dlg = ImportDICOM_Dialog(inbox=IMPORTED_DIR)
-        dlg.ShowModal()
+            dlg2 = ImportDICOM_Dialog(inbox=IMPORTED_DIR)
+            dlg2.ShowModal()
+            dlg2.Destroy()
+
         dlg.Destroy()
 
     def OnDeleteAllData(self, evt):
