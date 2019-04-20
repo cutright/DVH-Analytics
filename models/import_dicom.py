@@ -72,7 +72,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.input_roi = {'physician': wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN),
                           'type': wx.ComboBox(self, wx.ID_ANY, choices=ROI_TYPES, style=wx.CB_DROPDOWN)}
         self.input_roi['type'].SetValue('')
-        self.button_autodetect_targets = wx.Button(self, wx.ID_ANY, "Autodetect Targets")
+        self.button_autodetect_targets = wx.Button(self, wx.ID_ANY, "Autodetect Target/Tumor ROIs")
         self.disable_roi_inputs()
 
         cnx.close()
