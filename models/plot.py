@@ -260,3 +260,23 @@ class PlotTimeSeries:
         self.source['trend'].data = {'x': [], 'y': [], 'mrn': []}
         self.source['bound'].data = {'x': [], 'mrn': [], 'upper': [], 'avg': [], 'lower': []}
         self.source['patch'].data = {'x': [], 'y': []}
+
+
+class PlotRegression:
+    def __init__(self, parent):
+
+        self.figure, self.layout = get_base_plot(parent, plot_width=650, plot_height=600)
+
+        self.source = ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[]))
+
+        self.plot_data = self.figure.circle('x', 'y', source=self.source, size=options.TIME_SERIES_CIRCLE_SIZE,
+                                            alpha=options.TIME_SERIES_CIRCLE_ALPHA, color=options.PLOT_COLOR)
+
+        self.bokeh_layout = column(self.figure)
+
+    def update_plot(self, data, x_axis_title, y_axis_title):
+        self.source.data = data
+        self.figure.xaxis.axis_label = x_axis_title
+        self.figure.yaxis.axis_label = y_axis_title
+        html_str = get_layout_html(self.bokeh_layout)
+        self.layout.SetPage(html_str, "")

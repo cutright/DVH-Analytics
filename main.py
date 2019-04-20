@@ -15,11 +15,13 @@ from models.dvh import DVH
 from models.endpoint import EndpointFrame
 from models.rad_bio import RadBioFrame
 from models.time_series import TimeSeriesFrame
+from models.regression import RegressionFrame
 from models.roi_map import ROIMapDialog
 from db.sql_to_python import QuerySQL
 from db.sql_connector import echo_sql_db
 from paths import LOGO_PATH
 from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, initialize_directories_and_settings
+from tools.stats import StatsData
 
 
 class MainFrame(wx.Frame):
@@ -30,6 +32,7 @@ class MainFrame(wx.Frame):
         # Initial DVH object and data
         self.dvh = None
         self.data = {key: None for key in ['Plans', 'Beams', 'Rxs']}
+        self.stats_data = None
 
         self.toolbar_keys = ['Open', 'Close', 'Save', 'Print', 'Export', 'Import', 'Database', 'ROI Map', 'Settings']
         self.toolbar_ids = {key: i+1000 for i, key in enumerate(self.toolbar_keys)}
@@ -202,6 +205,7 @@ class MainFrame(wx.Frame):
     def __add_notebook_frames(self):
         self.plot = PlotStatDVH(self.notebook_tab['DVHs'], self.dvh)
         self.time_series = TimeSeriesFrame(self.notebook_tab['Time Series'], self.dvh, self.data)
+        self.regression = RegressionFrame(self.notebook_tab['Regression'], self.stats_data)
         self.endpoint = EndpointFrame(self.notebook_tab['Endpoints'], self.dvh, self.time_series)
         self.radbio = RadBioFrame(self.notebook_tab['Rad Bio'], self.dvh, self.time_series)
 
@@ -270,6 +274,10 @@ class MainFrame(wx.Frame):
         sizer_time_series = wx.BoxSizer(wx.VERTICAL)
         sizer_time_series.Add(self.time_series.layout, 0, wx.ALIGN_CENTER | wx.ALL, 25)
         self.notebook_tab['Time Series'].SetSizer(sizer_time_series)
+
+        sizer_regression = wx.BoxSizer(wx.VERTICAL)
+        sizer_regression.Add(self.regression.layout, 0, wx.ALIGN_CENTER | wx.ALL, 25)
+        self.notebook_tab['Regression'].SetSizer(sizer_regression)
 
         for key in self.tab_keys:
             self.notebook_main_view.AddPage(self.notebook_tab[key], key)
@@ -460,6 +468,13 @@ class MainFrame(wx.Frame):
         else:
             self.data = {key: None for key in tables}
         del wait
+
+        if hasattr(self.dvh, 'study_instance_uid'):
+            wait = wx.BusyCursor()
+            self.stats_data = StatsData(self.dvh, self.data)
+            self.regression.data = self.stats_data
+            self.regression.update_combo_box_choices()
+            del wait
 
     # --------------------------------------------------------------------------------------------------------------
     # Menu bar event functions
