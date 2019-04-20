@@ -500,6 +500,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.input_roi['physician'].Append(choices)
 
     def on_apply_plan(self, evt):
+        wait = wx.BusyCursor()
         over_rides = self.parsed_dicom_data[self.selected_uid].plan_over_rides
         apply_all_selected = False
         for key in list(over_rides):
@@ -526,6 +527,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         else:
             self.validate(uid=self.selected_uid)
         self.update_warning_label()
+        del wait
 
     def on_apply_roi(self, evt):
         if self.allow_input_roi_apply:
@@ -609,6 +611,7 @@ class ImportDICOM_Dialog(wx.Dialog):
 
     def validate(self, uid=None):
         if self.is_all_data_parsed:
+            wait = wx.BusyCursor()
             if not uid:
                 nodes = self.dicom_dir.study_nodes
             else:
@@ -628,6 +631,7 @@ class ImportDICOM_Dialog(wx.Dialog):
                 else:
                     color = None
                 self.tree_ctrl_import.SetItemBackgroundColour(node, color)
+            del wait
 
     def update_warning_label(self):
         msg = ''
