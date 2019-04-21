@@ -513,7 +513,7 @@ class DICOM_Parser:
 
     @property
     def dose_time_stamp(self):
-        return self.get_time_stamp('dose', 'InstanceCreationDate', 'InstanceCreationTime', round_seconds=True)
+        return self.get_time_stamp('dose', 'InstanceCreationDate', 'InstanceCreationTime')
 
     @property
     def tps_manufacturer(self):
@@ -721,16 +721,14 @@ class DICOM_Parser:
                 return getattr(self.rt_data[rt_type], attribute)
         return None
 
-    def get_time_stamp(self, rt_type, date_attribute, time_attribute, round_seconds=False):
+    def get_time_stamp(self, rt_type, date_attribute, time_attribute):
         date = self.get_attribute(rt_type, date_attribute)
         time = self.get_attribute(rt_type, time_attribute)
+        if time:
+            date = date + time
         try:
-            if round_seconds:
-                date = date.split('.')[0]
-            return datetime_str_to_obj(date + time)
-        except ValueError:
-            return date_str_to_obj(date)
-        finally:
+            return datetime_str_to_obj(date)
+        except:
             return None
 
     def is_photon_or_electron(self, rad_type):

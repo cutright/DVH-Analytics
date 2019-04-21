@@ -134,14 +134,16 @@ class DVH_SQL:
         values = []
         for column in columns:
             if row[column] is None or row[column][0] is None or row[column][0] == '':
-                if 'date' in column or column == 'timestamp':
-                    values.append("'%s'" % str(datetime.now()))
+                if column == 'import_time_stamp':
+                    values.append("NOW()")
                 else:
                     values.append("NULL")
             else:
                 if 'varchar' in row[column][1]:
                     max_length = int(row[column][1].replace('varchar(', '').replace(')', ''))
                     values.append("'%s'" % truncate_string(row[column][0], max_length))
+                elif 'time_stamp' in row[column][1]:
+                    values.append("'%s'::date" % row[column][0])
                 else:
                     values.append("'%s'" % row[column][0])
 

@@ -578,7 +578,8 @@ class ImportDICOM_Dialog(wx.Dialog):
                 return
 
     def on_import(self, evt):
-        ImportWorker(self.parsed_dicom_data, list(self.dicom_dir.checked_studies))
+        ImportWorker(self.parsed_dicom_data, list(self.dicom_dir.checked_studies),
+                     self.checkbox_include_uncategorized.GetValue())
         dlg = ImportStatusDialog()
         dlg.Show()
         self.Close()
@@ -766,7 +767,7 @@ class ImportStatusDialog(wx.Dialog):
 
 
 class ImportWorker(Thread):
-    def __init__(self, data, checked_uids):
+    def __init__(self, data, checked_uids, import_uncategorized):
         """
         :param data: parased dicom data
         :type data: dict of DICOM_Parser
@@ -774,6 +775,7 @@ class ImportWorker(Thread):
         Thread.__init__(self)
         self.data = data
         self.checked_uids = checked_uids
+        self.import_uncategorized = import_uncategorized
         # self.calculations = {"PTV Distances",
         #                      "PTV Overlap",
         #                      "ROI Centroid",
@@ -811,6 +813,14 @@ class ImportWorker(Thread):
                           'Beams': self.data[uid].get_beam_rows(),
                           'DICOM_Files': [self.data[uid].get_dicom_file_row()],
                           'DVHs': []}
+
+        if not self.import_uncategorized:
+            ignore_me = []
+            for roi_key in list(roi_name_map):
+                if self.data[uid].get_physician_roi(roi_key) == 'uncategorized':
+                    ignore_me.append(roi_key)
+            for roi_key in ignore_me:
+                roi_name_map.pop(roi_key)
 
         post_import_rois = []
         roi_total = len(roi_name_map)
