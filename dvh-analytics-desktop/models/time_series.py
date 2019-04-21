@@ -101,9 +101,13 @@ class TimeSeriesFrame:
         for uid in uids:
             if uid in self.data['Plans'].study_instance_uid:
                 index = self.data['Plans'].study_instance_uid.index(uid)
-                x_data.append(self.data['Plans'].sim_study_date[index])
+                x = self.data['Plans'].sim_study_date[index]
+                if x and x != 'None':
+                    x_data.append(x)
+                else:
+                    x_data.append(str(datetime.now()))
             else:
-                x_data.append(datetime.now())
+                x_data.append(str(datetime.now()))
 
         sort_index = sorted(range(len(x_data)), key=lambda k: x_data[k])
         x_values_sorted, y_values_sorted, mrn_sorted = [], [], []
