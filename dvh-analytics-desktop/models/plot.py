@@ -10,6 +10,7 @@ import wx
 import wx.html2
 import numpy as np
 from tools.utilities import collapse_into_single_dates, moving_avg
+from scipy.stats import linregress
 
 
 options = Options()
@@ -265,18 +266,59 @@ class PlotTimeSeries:
 class PlotRegression:
     def __init__(self, parent):
 
-        self.figure, self.layout = get_base_plot(parent, plot_width=650, plot_height=600)
+        self.figure, self.layout = get_base_plot(parent, plot_width=550, plot_height=500)
 
-        self.source = ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[]))
+        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[])),
+                       'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[]))}
 
-        self.plot_data = self.figure.circle('x', 'y', source=self.source, size=options.TIME_SERIES_CIRCLE_SIZE,
-                                            alpha=options.TIME_SERIES_CIRCLE_ALPHA, color=options.PLOT_COLOR)
+        self.plot_data = self.figure.circle('x', 'y', source=self.source['plot'], size=options.REGRESSION_CIRCLE_SIZE,
+                                            alpha=options.REGRESSION_ALPHA, color=options.PLOT_COLOR)
+        self.plot_trend = self.figure.line('x', 'y', color=options.PLOT_COLOR, source=self.source['trend'],
+                                           line_width=options.REGRESSION_LINE_WIDTH,
+                                           line_dash=options.REGRESSION_LINE_DASH)
+
+        self.figure.add_tools(HoverTool(show_arrow=True,
+                                        tooltips=[('ID', '@mrn'),
+                                                  ('x', '@x{0.2f}'),
+                                                  ('y', '@y{0.2f}')]))
 
         self.bokeh_layout = column(self.figure)
 
-    def update_plot(self, data, x_axis_title, y_axis_title):
-        self.source.data = data
+    def update_plot(self, plot_data, x_axis_title, y_axis_title):
+        self.source['plot'].data = plot_data
+        self.update_trend()
         self.figure.xaxis.axis_label = x_axis_title
         self.figure.yaxis.axis_label = y_axis_title
         html_str = get_layout_html(self.bokeh_layout)
         self.layout.SetPage(html_str, "")
+
+    def update_trend(self):
+        x, y = self.clean_data(self.source['plot'].data['x'],
+                               self.source['plot'].data['y'])
+
+        try:
+            slope, intercept, r_value, p_value, std_err = linregress(x, y)
+            stats = [round(slope, 3),
+                     round(intercept, 3),
+                     round(r_value ** 2, 3),
+                     round(p_value, 3),
+                     round(std_err, 3),
+                     len(x)]
+            x_trend = [min(x), max(x)]
+            y_trend = np.add(np.multiply(x_trend, slope), intercept)
+
+            self.source['trend'].data = {'x': x_trend,
+                                         'y': y_trend,
+                                         'mrn': ['Trend'] * 2}
+        except:
+            self.source['trend'].data = {'x': [], 'y': [], 'mrn': []}
+
+    @staticmethod
+    def clean_data(x, y):
+        bad_indices = [i for i, value in enumerate(x) if value == 'None']
+        bad_indices.extend([i for i, value in enumerate(y) if value == 'None'])
+        bad_indices = list(set(bad_indices))
+
+        return [value for i, value in enumerate(x) if i not in bad_indices],\
+               [value for i, value in enumerate(y) if i not in bad_indices]
+

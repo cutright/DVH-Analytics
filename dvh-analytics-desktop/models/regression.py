@@ -79,9 +79,17 @@ class RegressionFrame:
         self.pane_plot.SetSizer(sizer_plot_pane)
         self.window.SplitVertically(self.pane_tree, self.pane_plot)
         sizer_wrapper.Add(self.window, 1, wx.EXPAND, 0)
-        self.window.SetSashPosition(150)
+        self.window.SetSashPosition(250)
 
         self.layout = sizer_wrapper
+
+    @property
+    def x_axis(self):
+        return self.combo_box_x_axis.GetValue()
+
+    @property
+    def y_axis(self):
+        return self.combo_box_y_axis.GetValue()
 
     def update_combo_box_choices(self):
         if self.data:
@@ -102,8 +110,7 @@ class RegressionFrame:
         self.update_plot()
 
     def update_plot(self):
-        x_axis, y_axis = self.combo_box_x_axis.GetValue(), self.combo_box_y_axis.GetValue()
-        self.plot.update_plot(self.data.get_bokeh_data(x_axis, y_axis), x_axis, y_axis)
+        self.plot.update_plot(self.data.get_bokeh_data(self.x_axis, self.y_axis), self.x_axis, self.y_axis)
 
     def spin_x(self, evt):
         new_index = len(self.choices)-1 - int(self.spin_button_x_axis.GetValue())
@@ -116,8 +123,8 @@ class RegressionFrame:
         self.update_plot()
 
     def sync_spin_buttons(self):
-        index = self.choices.index(self.combo_box_x_axis.GetValue())
+        index = self.choices.index(self.x_axis)
         self.spin_button_x_axis.SetValue(len(self.choices)-1 - index)
 
-        index = self.choices.index(self.combo_box_y_axis.GetValue())
+        index = self.choices.index(self.y_axis)
         self.spin_button_y_axis.SetValue(len(self.choices)-1 - index)
