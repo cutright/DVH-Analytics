@@ -139,6 +139,7 @@ class Beam:
                         'area': np.divide(area, 100.).tolist(),
                         'x_perim': np.divide(x_paths, 10.).tolist(),
                         'y_perim': np.divide(y_paths, 10.).tolist(),
+                        'perim': np.divide(np.add(x_paths, y_paths), 10.).tolist(),
                         'cmp_score': complexity_scores.tolist()}
 
         for key in self.summary:

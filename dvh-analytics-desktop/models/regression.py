@@ -110,7 +110,9 @@ class RegressionFrame:
         self.update_plot()
 
     def update_plot(self):
-        self.plot.update_plot(self.data.get_bokeh_data(self.x_axis, self.y_axis), self.x_axis, self.y_axis)
+        self.plot.update_plot(self.data.get_bokeh_data(self.x_axis, self.y_axis),
+                              self.data.get_axis_title(self.x_axis),
+                              self.data.get_axis_title(self.y_axis))
 
     def spin_x(self, evt):
         new_index = len(self.choices)-1 - int(self.spin_button_x_axis.GetValue())

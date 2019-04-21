@@ -255,6 +255,10 @@ class DICOM_Parser:
                 'area_mean': [mlc_stat_data['area'][3], 'real'],
                 'area_median': [mlc_stat_data['area'][2], 'real'],
                 'area_max': [mlc_stat_data['area'][0], 'real'],
+                'perim_min': [mlc_stat_data['area'][5], 'real'],
+                'perim_mean': [mlc_stat_data['area'][3], 'real'],
+                'perim_median': [mlc_stat_data['area'][2], 'real'],
+                'perim_max': [mlc_stat_data['area'][0], 'real'],
                 'x_perim_min': [mlc_stat_data['x_perim'][5], 'real'],
                 'x_perim_mean': [mlc_stat_data['x_perim'][3], 'real'],
                 'x_perim_median': [mlc_stat_data['x_perim'][2], 'real'],
@@ -922,7 +926,7 @@ class BeamParser:
 
     @property
     def mlc_stat_data(self):
-        mlc_keys = ['area', 'x_perim', 'y_perim', 'cmp_score', 'cp_mu']
+        mlc_keys = ['area', 'x_perim', 'y_perim', 'perim', 'cmp_score', 'cp_mu']
         try:
             mlc_summary_data = mlca(self.beam_data, self.beam_mu, ignore_zero_mu_cp=True).summary
             mlca_stat_data = {key: calc_stats(mlc_summary_data[key]) for key in mlc_keys}

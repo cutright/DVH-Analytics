@@ -44,7 +44,8 @@ class StatsData:
                 elif table == 'Beams':
                     src = self.table_data[table]
 
-                    if str_starts_with_any_in_list(var, ['Beam Complexity', 'Beam Area', 'CP MU', 'Beam Perimeter']):
+                    if str_starts_with_any_in_list(var, ['Beam Complexity', 'Beam Area', 'CP MU',
+                                                         'Beam Perimeter', 'Beam Energy']):
                         # stats of these four variable types have min, mean, median, and max types in DB
                         # The following will take min, mean, median, or max of all values for a UID based on var type
                         # Example, if var_name == Beam Complexity (Max), the following will return the Max of these
@@ -97,6 +98,11 @@ class StatsData:
                 'mrn': self.mrns,
                 'x': self.data[x]['values'],
                 'y': self.data[y]['values']}
+
+    def get_axis_title(self, variable):
+        if self.data[variable]['units']:
+            return "%s (%s)" % (variable, self.data[variable]['units'])
+        return variable
 
 
 def str_starts_with_any_in_list(string_a, string_list):

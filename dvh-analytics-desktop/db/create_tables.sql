@@ -47,3 +47,7 @@ ALTER TABLE Plans ADD COLUMN IF NOT EXISTS complexity real;
 ALTER TABLE Beams ADD COLUMN IF NOT EXISTS complexity real;
 -- The following columns have been added as of DVH Analytics 0.6
 ALTER TABLE Beams ADD COLUMN IF NOT EXISTS tx_modality varchar(30);
+ALTER TABLE Beams ADD COLUMN IF NOT EXISTS perim_min real;
+ALTER TABLE Beams ADD COLUMN IF NOT EXISTS perim_mean real;
+ALTER TABLE Beams ADD COLUMN IF NOT EXISTS perim_median real;
+ALTER TABLE Beams ADD COLUMN IF NOT EXISTS perim_max real;;
