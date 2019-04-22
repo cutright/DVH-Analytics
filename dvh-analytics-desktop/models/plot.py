@@ -237,25 +237,31 @@ class PlotTimeSeries:
 
         x = self.source['plot'].data['x']
         y = self.source['plot'].data['y']
-        x_len = len(x)
+        if x and y:
+            x_len = len(x)
 
-        data_collapsed = collapse_into_single_dates(x, y)
-        x_trend, y_trend = moving_avg(data_collapsed, avg_len)
+            data_collapsed = collapse_into_single_dates(x, y)
+            x_trend, y_trend = moving_avg(data_collapsed, avg_len)
 
-        y_np = np.array(self.source['plot'].data['y'])
-        upper_bound = float(np.percentile(y_np, 50. + percentile / 2.))
-        average = float(np.percentile(y_np, 50))
-        lower_bound = float(np.percentile(y_np, 50. - percentile / 2.))
-        self.source['trend'].data = {'x': x_trend,
-                                     'y': y_trend,
-                                     'mrn': ['Avg'] * len(x_trend)}
-        self.source['bound'].data = {'x': x,
-                                     'mrn': ['Bound'] * x_len,
-                                     'upper': [upper_bound] * x_len,
-                                     'avg': [average] * x_len,
-                                     'lower': [lower_bound] * x_len}
-        self.source['patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
-                                     'y': [upper_bound, upper_bound, lower_bound, lower_bound]}
+            y_np = np.array(self.source['plot'].data['y'])
+            upper_bound = float(np.percentile(y_np, 50. + percentile / 2.))
+            average = float(np.percentile(y_np, 50))
+            lower_bound = float(np.percentile(y_np, 50. - percentile / 2.))
+
+            self.source['trend'].data = {'x': x_trend,
+                                         'y': y_trend,
+                                         'mrn': ['Avg'] * len(x_trend)}
+            self.source['bound'].data = {'x': x,
+                                         'mrn': ['Bound'] * x_len,
+                                         'upper': [upper_bound] * x_len,
+                                         'avg': [average] * x_len,
+                                         'lower': [lower_bound] * x_len}
+            self.source['patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
+                                         'y': [upper_bound, upper_bound, lower_bound, lower_bound]}
+        else:
+            self.source['trend'].data = {'x': [], 'y': [], 'mrn': []}
+            self.source['bound'].data = {'x': [], 'mrn': [], 'upper': [], 'avg': [], 'lower': []}
+            self.source['patch'].data = {'x': [], 'y': []}
 
     def clear_additional_plot_sources(self):
         self.source['trend'].data = {'x': [], 'y': [], 'mrn': []}

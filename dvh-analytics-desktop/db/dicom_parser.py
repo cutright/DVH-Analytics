@@ -178,7 +178,8 @@ class DICOM_Parser:
                 'baseline': [None, 'boolean'],
                 'import_time_stamp': [None, 'timestamp'],
                 'protocol': [None, 'text'],
-                'toxicity_grades': [None, 'text']}
+                'toxicity_grades': [None, 'text'],
+                'complexity': [self.plan_complexity, 'real']}
 
     def get_required_plan_data(self):
         data = self.get_plan_row()
@@ -612,6 +613,21 @@ class DICOM_Parser:
                 if not over_ride['only_if_missing'] or (over_ride['only_if_missing'] and not pre_over_ride_value):
                     return over_ride['value']
         return pre_over_ride_value
+
+    @property
+    def plan_complexity(self):
+        plan_complexity = 0
+        mu = 0
+        for fx in self.beam_data.values():
+            for beam in fx:
+                complexity = beam.mlc_stat_data['complexity']
+                beam_mu = beam.beam_mu
+                if beam_mu and complexity:
+                    mu += beam_mu
+                    plan_complexity += complexity * beam_mu
+        if mu:
+            return plan_complexity / mu
+        return None
 
     # ------------------------------------------------------------------------------
     # DVH table data

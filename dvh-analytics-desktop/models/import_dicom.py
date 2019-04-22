@@ -814,7 +814,7 @@ class ImportWorker(Thread):
                           'DICOM_Files': [self.data[uid].get_dicom_file_row()],
                           'DVHs': []}
 
-        if not self.import_uncategorized:
+        if not self.import_uncategorized:  # remove uncategorized ROIs unless this is checked
             ignore_me = []
             for roi_key in list(roi_name_map):
                 if self.data[uid].get_physician_roi(roi_key) == 'uncategorized':
@@ -849,8 +849,8 @@ class ImportWorker(Thread):
 
                 if roi_type and roi_name and physician_roi:
                     if roi_type.lower() in ['organ', 'ctv', 'gtv']:
-                        if not (physician_roi.lower() in ['uncategorized', 'ignored', 'external', 'skin'] or
-                                roi_name.lower() in ['external', 'skin']):
+                        if not (physician_roi.lower() in ['uncategorized', 'ignored', 'external', 'skin', 'body'] or
+                                roi_name.lower() in ['external', 'skin', 'body']):
                             post_import_rois.append(clean_name(roi_name_map[roi_key]))
 
         if ptvs['dvh']:

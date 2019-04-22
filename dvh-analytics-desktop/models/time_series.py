@@ -135,8 +135,12 @@ class TimeSeriesFrame:
             self.text_inputs_percentile.SetValue('90')
             percentile = 90.
 
+        y_axis = self.combo_box_y_axis.GetValue()
+        units = self.y_axis_options[y_axis]['units']
+        if units:
+            y_axis = "%s (%s)" % (y_axis, units)
         self.plot.update_plot(x_values_sorted, y_values_sorted, mrn_sorted,
-                              y_axis_label=self.combo_box_y_axis.GetValue(), avg_len=avg_len,
+                              y_axis_label=y_axis, avg_len=avg_len,
                               percentile=percentile, bin_size=hist_bins)
 
     def update_data(self, dvh, data):
