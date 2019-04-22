@@ -158,7 +158,7 @@ class MainFrame(wx.Frame):
         self.button_query_execute = wx.Button(self, wx.ID_ANY, "Query and Retrieve")
 
         self.notebook_main_view = wx.Notebook(self, wx.ID_ANY)
-        self.tab_keys = ['Welcome', 'DVHs', 'Endpoints', 'Rad Bio', 'Time Series', 'Correlation', 'Regression']
+        self.tab_keys = ['Welcome', 'DVHs', 'Endpoints', 'Rad Bio', 'Time Series', 'Regression']
         self.notebook_tab = {key: wx.Panel(self.notebook_main_view, wx.ID_ANY) for key in self.tab_keys}
 
         self.text_summary = wx.StaticText(self, wx.ID_ANY, "", style=wx.ALIGN_LEFT)

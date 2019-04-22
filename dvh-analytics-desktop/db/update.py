@@ -13,7 +13,6 @@ from tools import roi_formatter as roi_form
 from os.path import join as join_path
 from tools.mlc_analyzer import Beam as mlca
 from tools.utilities import calc_stats
-from default_options import COMPLEXITY_SCORE_GLOBAL_SCALING_FACTOR
 import pydicom as dicom
 
 
@@ -259,7 +258,7 @@ def plan_complexity(cnx, study_instance_uid):
     beam_mu = [row[1] for i, row in enumerate(beam_data) if i in include]
     plan_mu = np.sum(beam_mu)
     if plan_mu:
-        complexity = COMPLEXITY_SCORE_GLOBAL_SCALING_FACTOR * np.sum(np.multiply(scores, beam_mu)) / plan_mu
+        complexity = np.sum(np.multiply(scores, beam_mu)) / plan_mu
         cnx.update('Plans', 'complexity', complexity, "study_instance_uid = '%s'" % study_instance_uid)
     else:
         print('Zero plan MU detected for uid %s' % study_instance_uid)
