@@ -3,8 +3,8 @@ from db.sql_connector import DVH_SQL
 from datetime import datetime
 from dateutil.parser import parse as parse_date
 import numpy as np
-from os import walk, listdir
-from os.path import join, isfile
+from os import walk, listdir, unlink
+from os.path import join, isfile, isdir
 import os
 import shutil
 from paths import IMPORT_SETTINGS_PATH, SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
@@ -307,6 +307,19 @@ def move_files_to_new_path(files, new_dir):
             os.mkdir(new_dir)
         if old_dir != new_dir:
             shutil.move(file_path, new)
+
+
+def delete_directory_contents(dir_to_delete):
+    # https://stackoverflow.com/questions/185936/how-to-delete-the-contents-of-a-folder-in-python
+    for the_file in listdir(dir_to_delete):
+        file_path = join(dir_to_delete, the_file)
+        try:
+            if isfile(file_path):
+                unlink(file_path)
+            elif isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print(e)
 
 
 # def remove_empty_folders(start_path):

@@ -12,7 +12,11 @@ from db.sql_connector import DVH_SQL
 from models.datatable import DataTable
 from dialogs.export import data_table_to_csv as export_dlg
 from models.import_dicom import ImportDICOM_Dialog
-from paths import IMPORTED_DIR
+from paths import IMPORTED_DIR, INBOX_DIR
+from os.path import join
+from os import mkdir, rename
+from datetime import datetime
+from tools.utilities import delete_directory_contents
 
 
 class DatabaseEditorDialog(wx.Frame):
@@ -243,13 +247,35 @@ class DatabaseEditorDialog(wx.Frame):
 
     def OnDeleteAllData(self, evt):
         dlg = wx.MessageDialog(self, "Are you sure?", "Delete All Data in Database",
-                               wx.ICON_WARNING | wx.OK | wx.CANCEL | wx.CANCEL_DEFAULT)
+                               wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT)
         res = dlg.ShowModal()
-        if res == wx.ID_OK:
+        if res == wx.ID_YES:
+            # delete data from database
             cnx = DVH_SQL()
             cnx.reinitialize_database()
             cnx.close()
-        dlg.Destroy()
+            dlg.Destroy()
+
+            # Move files to inbox?
+            dlg = wx.MessageDialog(self, "Are you sure?", "Move files to inbox?",
+                                   wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT)
+            res = dlg.ShowModal()
+            if res == wx.ID_YES:
+                new_dir = join(INBOX_DIR, "previously_imported %s" %
+                               str(datetime.now()).split('.')[0].replace(':', '-').replace(' ', '_'))
+                rename(IMPORTED_DIR, new_dir)
+                mkdir(IMPORTED_DIR)
+
+                dlg.Destroy()
+            else:
+                dlg.Destroy()
+                # Delete Imported Directory?
+                dlg = wx.MessageDialog(self, "Are you sure?", "Delete Imported Directory?",
+                                       wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT)
+                res = dlg.ShowModal()
+                if res == wx.ID_YES:
+                    delete_directory_contents(IMPORTED_DIR)
+                dlg.Destroy()
 
     def on_export_csv(self, evt):
         export_dlg(self, "Export Data Table to CSV", self.data_query_results)

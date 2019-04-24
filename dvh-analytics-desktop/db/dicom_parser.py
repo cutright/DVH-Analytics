@@ -467,9 +467,12 @@ class DICOM_Parser:
     @property
     def age(self):
         if self.sim_study_date and self.birth_date:
-            age = relativedelta(self.sim_study_date, self.birth_date).years
-            if age >= 0:
-                return age
+            try:
+                age = relativedelta(self.sim_study_date, self.birth_date).years
+                if age >= 0:
+                    return age
+            except:
+                pass
         return None
 
     @property

@@ -817,7 +817,8 @@ class ImportWorker(Thread):
         if not self.import_uncategorized:  # remove uncategorized ROIs unless this is checked
             ignore_me = []
             for roi_key in list(roi_name_map):
-                if self.data[uid].get_physician_roi(roi_key) == 'uncategorized':
+                if self.data[uid].get_physician_roi(roi_key) == 'uncategorized' and \
+                        self.data[uid].get_roi_type(roi_key) not in {'GTV', 'CTV', 'ITV', 'PTV'}:
                     ignore_me.append(roi_key)
             for roi_key in ignore_me:
                 roi_name_map.pop(roi_key)
