@@ -14,9 +14,12 @@ from datetime import date as datetime_obj, datetime
 from threading import Thread
 from pubsub import pub
 from db import update as db_update
-from default_options import ROI_TYPES
 from dialogs.main.date_picker import DatePicker
 from paths import IMPORT_SETTINGS_PATH, parse_settings_file
+
+
+ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV', 'EXTERNAL',
+             'FIDUCIAL', 'IMPLANT', 'OPTIMIZATION', 'PRV', 'SUPPORT', 'NONE']
 
 
 class ImportDICOM_Dialog(wx.Dialog):

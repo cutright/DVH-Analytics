@@ -5,7 +5,6 @@ from bokeh.models import Legend, HoverTool, ColumnDataSource, DataTable, TableCo
 from bokeh.layouts import column
 from bokeh.palettes import Colorblind8 as palette
 import itertools
-import default_options as options
 import wx
 import wx.html2
 import numpy as np
@@ -219,7 +218,6 @@ class PlotTimeSeries:
 
         # histograms
         width_fraction = 0.9
-
         hist, bins = np.histogram(self.source['plot'].data['y'], bins=bin_size)
         width = [width_fraction * (bins[1] - bins[0])] * bin_size
         center = (bins[:-1] + bins[1:]) / 2.

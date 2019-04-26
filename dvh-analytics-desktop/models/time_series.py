@@ -136,7 +136,10 @@ class TimeSeriesFrame:
             percentile = 90.
 
         y_axis = self.combo_box_y_axis.GetValue()
-        units = self.y_axis_options[y_axis]['units']
+        try:
+            units = self.y_axis_options[y_axis]['units']
+        except:
+            units = ''
         if units:
             y_axis = "%s (%s)" % (y_axis, units)
         self.plot.update_plot(x_values_sorted, y_values_sorted, mrn_sorted,

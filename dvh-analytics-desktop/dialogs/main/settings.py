@@ -287,7 +287,7 @@ class UserSettings(wx.Dialog):
         self.spin_ctrl_alpha_input.SetValue(str(getattr(self.options, var)))
 
     def update_alpha_val(self, evt):
-        new = self.spin_ctrl_line_widths_input.GetValue()
+        new = self.spin_ctrl_alpha_input.GetValue()
         try:
             val = float(new)
         except ValueError:
