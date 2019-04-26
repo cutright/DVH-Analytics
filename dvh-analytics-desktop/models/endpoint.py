@@ -12,11 +12,12 @@ ENDPOINT_DEF_COLUMNS = ['label', 'output_type', 'input_type', 'input_value', 'un
 
 
 class EndpointFrame:
-    def __init__(self, parent, dvh, times_series, *args, **kwds):
+    def __init__(self, parent, dvh, times_series, regression, *args, **kwds):
 
         self.parent = parent
         self.dvh = dvh
         self.time_series = times_series
+        self.regression = regression
 
         self.button = {'add': wx.Button(self.parent, wx.ID_ANY, "Add Endpoint"),
                        'del': wx.Button(self.parent, wx.ID_ANY, "Delete Endpoint"),
@@ -114,6 +115,8 @@ class EndpointFrame:
             self.update_endpoints_in_dvh()
             self.time_series.update_y_axis_options()
         dlg.Destroy()
+        self.regression.data.update_endpoints_and_radbio()
+        self.regression.update_combo_box_choices()
 
     def del_ep_button_click(self, evt):
         dlg = DelEndpointDialog(self.data_table.columns, title='Delete Endpoint')
@@ -126,6 +129,9 @@ class EndpointFrame:
                 self.endpoint_defs.delete_row(endpoint_def_row)
             self.time_series.update_y_axis_options()
         dlg.Destroy()
+
+        self.regression.data.update_endpoints_and_radbio()
+        self.regression.update_combo_box_choices()
 
         if self.data_table.column_count == 2:
             self.button['del'].Disable()

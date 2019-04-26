@@ -148,7 +148,3 @@ class Options(DefaultOptions):
             pass
         print('Corrupted options file detected. Loading default options.')
         return False
-
-
-class Obj:
-    pass

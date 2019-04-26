@@ -206,8 +206,8 @@ class MainFrame(wx.Frame):
         self.plot = PlotStatDVH(self.notebook_tab['DVHs'], self.dvh)
         self.time_series = TimeSeriesFrame(self.notebook_tab['Time Series'], self.dvh, self.data)
         self.regression = RegressionFrame(self.notebook_tab['Regression'], self.stats_data)
-        self.endpoint = EndpointFrame(self.notebook_tab['Endpoints'], self.dvh, self.time_series)
-        self.radbio = RadBioFrame(self.notebook_tab['Rad Bio'], self.dvh, self.time_series)
+        self.endpoint = EndpointFrame(self.notebook_tab['Endpoints'], self.dvh, self.time_series, self.regression)
+        self.radbio = RadBioFrame(self.notebook_tab['Rad Bio'], self.dvh, self.time_series, self.regression)
 
     def __do_layout(self):
         sizer_summary = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Summary"), wx.HORIZONTAL)

@@ -104,6 +104,26 @@ class StatsData:
             return "%s (%s)" % (variable, self.data[variable]['units'])
         return variable
 
+    def update_endpoints_and_radbio(self):
+        if self.dvhs:
+            if self.dvhs.endpoints['defs']:
+                for var in self.dvhs.endpoints['defs']['label']:
+                    if var not in self.variables:
+                        self.data[var] = {'units': '',
+                                          'values': self.dvhs.endpoints['data'][var]}
+
+                for var in self.variables:
+                    if var[0:2] in {'D_', 'V_'}:
+                        if var not in self.dvhs.endpoints['defs']['label']:
+                            self.data.pop(var)
+
+            if self.dvhs.eud:
+                self.data['EUD'] = {'units': 'Gy',
+                                    'values': self.dvhs.eud}
+            if self.dvhs.ntcp_or_tcp:
+                self.data['NTCP or TCP'] = {'units': '',
+                                            'values': self.dvhs.ntcp_or_tcp}
+
 
 def str_starts_with_any_in_list(string_a, string_list):
     for string_b in string_list:

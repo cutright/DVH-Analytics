@@ -22,11 +22,12 @@ from dialogs.export import data_table_to_csv as export_dlg
 
 
 class RadBioFrame:
-    def __init__(self, parent, dvh, time_series, *args, **kwds):
+    def __init__(self, parent, dvh, time_series, regression, *args, **kwds):
 
         self.parent = parent
         self.dvh = dvh
         self.time_series = time_series
+        self.regression = regression
 
         self.table_published_values = wx.ListCtrl(self.parent, wx.ID_ANY,
                                                   style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
@@ -193,6 +194,9 @@ class RadBioFrame:
         self.time_series.update_y_axis_options()
         if self.time_series.combo_box_y_axis.GetValue() in ['EUD', 'NTCP or TCP']:
             self.time_series.update_plot()
+
+        self.regression.data.update_endpoints_and_radbio()
+        self.regression.update_combo_box_choices()
 
     def clear_data(self):
         self.data_table_rad_bio.delete_all_rows()
