@@ -26,6 +26,8 @@ class ImportDICOM_Dialog(wx.Dialog):
     def __init__(self, inbox=None, *args, **kwds):
         wx.Dialog.__init__(self, None, title='Import DICOM')
 
+        DVH_SQL().initialize_database()
+
         self.SetSize((1350, 800))
 
         self.parsed_dicom_data = {}
