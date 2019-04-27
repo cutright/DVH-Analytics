@@ -312,3 +312,37 @@ def beam_complexities(*condition):
     for uid in uids:
         beam_complexity(cnx, uid)
     cnx.close()
+
+
+def update_ptv_data(study_instance_uid):
+    ptv_coordinates_strings = DVH_SQL().query('dvhs',
+                                              'roi_coord_string',
+                                              "study_instance_uid = '%s' and roi_type like 'PTV%%'"
+                                              % study_instance_uid)
+
+    if ptv_coordinates_strings:
+        ptvs = [roi_form.get_planes_from_string(ptv[0]) for ptv in ptv_coordinates_strings]
+        tv = roi_geom.union(ptvs)
+
+        ptv_cross_section = roi_geom.cross_section(tv)
+        ptv_spread = roi_geom.spread(tv)
+
+        condition = "study_instance_uid = '%s' and roi_type like 'PTV%%'" % study_instance_uid
+        max_dose = DVH_SQL().get_max_value('dvhs', 'max_dose', condition=condition)
+        min_dose = DVH_SQL().get_min_value('dvhs', 'min_dose', condition=condition)
+
+        ptv_data = {'ptv_coord_string': tv,
+                    'ptv_cross_section_max': ptv_cross_section['max'],
+                    'ptv_cross_section_median': ptv_cross_section['median'],
+                    'ptv_max_dose': max_dose,
+                    'ptv_min_dose': min_dose,
+                    'ptv_spread_x': ptv_spread[0],
+                    'ptv_spread_y': ptv_spread[1],
+                    'ptv_spread_z': ptv_spread[2],
+                    'ptv_surface_area': roi_geom.surface_area(tv, coord_type='sets_of_points'),
+                    'ptv_volume': roi_geom.volume(tv)}
+
+        cnx = DVH_SQL()
+        for key, value in ptv_data.items():
+            cnx.update('Plans', key, value, "study_instance_uid = '%s'" % study_instance_uid)
+        cnx.close()

@@ -8,6 +8,8 @@ Created on Thu Mar  9 18:48:19 2017
 import numpy as np
 from db.sql_connector import DVH_SQL
 from db.sql_to_python import QuerySQL
+from tools import roi_geometry as roi_geom
+from tools import roi_formatter as roi_form
 
 
 # This class retrieves DVH data from the SQL database and calculates statistical DVHs (min, max, quartiles)
@@ -59,6 +61,8 @@ class DVH:
                           'defs': None}
         self.eud = None
         self.ntcp_or_tcp = None
+
+        # self.__set_ptv_data()
 
         self.bin_count = max([value.count(',') + 1 for value in self.dvh_string])
 
@@ -309,6 +313,57 @@ class DVH:
                                                            sum(self.max_dose) / self.count,
                                                            max(self.max_dose))]
         return '\n'.join(summary)
+
+    def __set_ptv_data(self):
+        self.ptv_cross_section_max = []
+        self.ptv_cross_section_median = []
+        self.ptv_max_dose = []
+        self.ptv_min_dose = []
+        self.ptv_spread_x = []
+        self.ptv_spread_y = []
+        self.ptv_spread_z = []
+        self.ptv_surface_area = []
+        self.ptv_volume = []
+
+        for uid in self.uid:
+            ptv_coordinates_strings = DVH_SQL().query('dvhs',
+                                                      'roi_coord_string',
+                                                      "study_instance_uid = '%s' and roi_type like 'PTV%%'"
+                                                      % uid)
+
+            if ptv_coordinates_strings:
+                ptvs = [roi_form.get_planes_from_string(ptv[0]) for ptv in ptv_coordinates_strings]
+                tv = roi_geom.union(ptvs)
+
+                cross_section = roi_geom.cross_section(tv)
+                spread = roi_geom.spread(tv)
+                surface_area = roi_geom.surface_area(tv, coord_type='sets_of_points')
+                volume = roi_geom.volume(tv)
+
+                max_dose = DVH_SQL().get_max_value('dvhs', 'max_dose',
+                                                   condition="study_instance_uid = '%s' and roi_type like 'PTV%%'" % uid)
+                min_dose = DVH_SQL().get_min_value('dvhs', 'min_dose',
+                                                   condition="study_instance_uid = '%s' and roi_type like 'PTV%%'" % uid)
+
+                self.ptv_cross_section_max.append(cross_section['max'])
+                self.ptv_cross_section_median.append(cross_section['median'])
+                self.ptv_max_dose.append(max_dose)
+                self.ptv_min_dose.append(min_dose)
+                self.ptv_spread_x.append(spread[0])
+                self.ptv_spread_y.append(spread[1])
+                self.ptv_spread_z.append(spread[2])
+                self.ptv_surface_area.append(surface_area)
+                self.ptv_volume.append(volume)
+            else:
+                self.ptv_cross_section_max.append(None)
+                self.ptv_cross_section_median.append(None)
+                self.ptv_max_dose.append(None)
+                self.ptv_min_dose.append(None)
+                self.ptv_spread_x.append(None)
+                self.ptv_spread_y.append(None)
+                self.ptv_spread_z.append(None)
+                self.ptv_surface_area.append(None)
+                self.ptv_volume.append(None)
 
 
 # Returns the isodose level outlining the given volume

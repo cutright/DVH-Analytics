@@ -13,6 +13,7 @@ class StatsData:
         self.correlation_variables.sort()
 
         self.map_data()
+        # self.add_ptv_data()
 
     @property
     def uids(self):
@@ -123,6 +124,16 @@ class StatsData:
             if self.dvhs.ntcp_or_tcp:
                 self.data['NTCP or TCP'] = {'units': '',
                                             'values': self.dvhs.ntcp_or_tcp}
+
+    def add_ptv_data(self):
+        if self.dvhs:
+            attr = ['cross_section_max', 'cross_section_median', 'max_dose', 'min_dose', 'spread_x', 'spread_y',
+                    'spread_z', 'surface_area', 'volume']
+            units = ['cm²', 'cm²', 'Gy', 'Gy', 'cm', 'cm', 'cm', 'cm²', 'cm³']
+
+            for i, key in enumerate(attr):
+                clean_key = ('PTV %s' % key.replace('_', ' ').title())
+                self.data[clean_key] = {'values': getattr(self.dvhs, 'ptv_%s' % key), 'units': units[i]}
 
 
 def str_starts_with_any_in_list(string_a, string_list):

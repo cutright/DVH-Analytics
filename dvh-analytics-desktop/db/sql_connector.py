@@ -236,14 +236,17 @@ class DVH_SQL:
         columns.sort()
         return columns
 
-    def get_min_value(self, table, column):
-        query = "SELECT MIN(%s) FROM %s;" % (column, table)
-        self.cursor.execute(query)
-        cursor_return = self.cursor.fetchone()
-        return cursor_return[0]
+    def get_min_value(self, table, column, condition=None):
+        return self.get_sql_function_value('MIN', table, column, condition=condition)
 
-    def get_max_value(self, table, column):
-        query = "SELECT MAX(%s) FROM %s;" % (column, table)
+    def get_max_value(self, table, column, condition=None):
+        return self.get_sql_function_value('MAX', table, column, condition=condition)
+
+    def get_sql_function_value(self, func, table, column, condition=None):
+        if condition:
+            query = "SELECT %s(%s) FROM %s WHERE %s;" % (func, column, table, condition)
+        else:
+            query = "SELECT %s(%s) FROM %s;" % (func, column, table)
         self.cursor.execute(query)
         cursor_return = self.cursor.fetchone()
         return cursor_return[0]
