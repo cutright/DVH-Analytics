@@ -600,10 +600,12 @@ class ImportDICOM_Dialog(wx.Dialog):
             if uid not in parsed_uids:
                 file_paths = self.dicom_dir.dicom_file_paths[uid]
                 wx.Yield()
-                self.parsed_dicom_data[uid] = DICOM_Parser(plan=file_paths['rtplan']['file_path'],
-                                                           structure=file_paths['rtstruct']['file_path'],
-                                                           dose=file_paths['rtdose']['file_path'],
-                                                           global_plan_over_rides=self.global_plan_over_rides)
+                if file_paths['rtplan']['file_path'] and file_paths['rtstruct']['file_path'] and \
+                        file_paths['rtdose']['file_path']:
+                    self.parsed_dicom_data[uid] = DICOM_Parser(plan=file_paths['rtplan']['file_path'],
+                                                               structure=file_paths['rtstruct']['file_path'],
+                                                               dose=file_paths['rtdose']['file_path'],
+                                                               global_plan_over_rides=self.global_plan_over_rides)
 
             self.gauge.SetValue(int(100 * (study_counter+1) / study_total))
             wx.Yield()

@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-from default_options import VERSION
+from options import DefaultOptions
 
 requires = [
     'wxpython',
