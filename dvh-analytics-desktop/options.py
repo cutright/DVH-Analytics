@@ -66,6 +66,12 @@ class DefaultOptions:
         self.REGRESSION_LINE_WIDTH = 2
         self.REGRESSION_LINE_DASH = 'dashed'
 
+        self.REGRESSION_RESIDUAL_CIRCLE_SIZE = 3
+        self.REGRESSION_RESIDUAL_ALPHA = 0.5
+        self.REGRESSION_RESIDUAL_LINE_WIDTH = 2
+        self.REGRESSION_RESIDUAL_LINE_DASH = 'solid'
+        self.REGRESSION_RESIDUAL_LINE_COLOR = 'red'
+
         # This is the number of bins up do 100% used when resampling a DVH to fractional dose
         self.RESAMPLED_DVH_BIN_COUNT = 5000
 

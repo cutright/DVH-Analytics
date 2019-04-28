@@ -17,6 +17,7 @@ requires = [
     'psycopg2-binary',
     'shapely[vectorized]',
     'statsmodels',
+    'scikit-learn'
 ]
 
 setup(

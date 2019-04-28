@@ -2,14 +2,16 @@
 # -*- coding: UTF-8 -*-
 
 import wx
-from models.plot import PlotRegression
+from models.plot import PlotRegression, PlotMultiVarRegression
+from scipy import stats
+import numpy as np
 
 
 class RegressionFrame:
     def __init__(self, parent, data, *args, **kwds):
         self.parent = parent
         # self.dvh = dvh
-        self.data = data
+        self.stats_data = data
         self.choices = []
 
         self.__define_gui_objects()
@@ -26,8 +28,9 @@ class RegressionFrame:
         self.spin_button_x_axis = wx.SpinButton(self.pane_plot, wx.ID_ANY, style=wx.SP_WRAP)
         self.combo_box_y_axis = wx.ComboBox(self.pane_plot, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.TE_READONLY)
         self.spin_button_y_axis = wx.SpinButton(self.pane_plot, wx.ID_ANY, style=wx.SP_WRAP)
-        self.checkbox = wx.CheckBox(self.pane_plot, wx.ID_ANY, "Include in Regression")
+        self.checkbox = wx.CheckBox(self.pane_plot, wx.ID_ANY, "Include in Multi-Var\nRegression")
         self.plot = PlotRegression(self.pane_plot)
+        self.button_multi_var_reg_model = wx.Button(self.pane_tree, wx.ID_ANY, 'Run Model')
 
     def __set_properties(self):
         self.pane_tree.SetScrollRate(10, 10)
@@ -35,11 +38,22 @@ class RegressionFrame:
         self.combo_box_x_axis.SetValue('ROI Max Dose')
         self.combo_box_y_axis.SetValue('ROI Volume')
 
+        self.tree_ctrl_root = self.tree_ctrl.AddRoot('Regressions')
+        self.y_variable_nodes = {}
+        self.x_variable_nodes = {}
+
+        self.image_list = wx.ImageList(16, 16)
+        self.images = {'y': self.image_list.Add(wx.Image("icons/iconfinder_r2d2_216973.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
+                       'x': self.image_list.Add( wx.Image("icons/iconfinder_x-wing_298963.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())}
+        self.tree_ctrl.AssignImageList(self.image_list)
+
     def __do_bind(self):
         self.parent.Bind(wx.EVT_COMBOBOX, self.on_combo_box, id=self.combo_box_x_axis.GetId())
         self.parent.Bind(wx.EVT_COMBOBOX, self.on_combo_box, id=self.combo_box_y_axis.GetId())
         self.parent.Bind(wx.EVT_SPIN, self.spin_x, id=self.spin_button_x_axis.GetId())
         self.parent.Bind(wx.EVT_SPIN, self.spin_y, id=self.spin_button_y_axis.GetId())
+        self.parent.Bind(wx.EVT_CHECKBOX, self.on_checkbox, id=self.checkbox.GetId())
+        self.pane_tree.Bind(wx.EVT_BUTTON, self.on_regression, id=self.button_multi_var_reg_model.GetId())
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -53,7 +67,8 @@ class RegressionFrame:
         sizer_x_axis = wx.BoxSizer(wx.VERTICAL)
         sizer_x_axis_select = wx.BoxSizer(wx.HORIZONTAL)
 
-        sizer_tree = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_tree = wx.BoxSizer(wx.VERTICAL)
+        sizer_tree.Add(self.button_multi_var_reg_model, 0, wx.EXPAND, 5)
         sizer_tree.Add(self.tree_ctrl, 1, wx.EXPAND, 0)
         self.pane_tree.SetSizer(sizer_tree)
 
@@ -92,8 +107,8 @@ class RegressionFrame:
         return self.combo_box_y_axis.GetValue()
 
     def update_combo_box_choices(self):
-        if self.data:
-            self.choices = self.data.variables
+        if self.stats_data:
+            self.choices = self.stats_data.variables
             self.choices.sort()
             self.combo_box_x_axis.SetItems(self.choices)
             self.combo_box_y_axis.SetItems(self.choices)
@@ -112,9 +127,15 @@ class RegressionFrame:
         self.update_plot()
 
     def update_plot(self):
-        self.plot.update_plot(self.data.get_bokeh_data(self.x_axis, self.y_axis),
-                              self.data.get_axis_title(self.x_axis),
-                              self.data.get_axis_title(self.y_axis))
+        self.plot.update_plot(self.stats_data.get_bokeh_data(self.x_axis, self.y_axis),
+                              self.combo_box_x_axis.GetValue(),
+                              self.stats_data.get_axis_title(self.x_axis),
+                              self.stats_data.get_axis_title(self.y_axis))
+
+        if self.y_axis in list(self.y_variable_nodes) and self.x_axis in list(self.x_variable_nodes[self.y_axis]):
+                self.checkbox.SetValue(True)
+        else:
+            self.checkbox.SetValue(False)
 
     def spin_x(self, evt):
         new_index = len(self.choices)-1 - int(self.spin_button_x_axis.GetValue())
@@ -132,3 +153,57 @@ class RegressionFrame:
 
         index = self.choices.index(self.y_axis)
         self.spin_button_y_axis.SetValue(len(self.choices)-1 - index)
+
+    def on_checkbox(self, evt):
+        y_value = self.combo_box_y_axis.GetValue()
+        x_value = self.combo_box_x_axis.GetValue()
+        if y_value not in list(self.y_variable_nodes):
+            self.y_variable_nodes[y_value] = self.tree_ctrl.AppendItem(self.tree_ctrl_root, "y_var: %s" % y_value)
+            self.tree_ctrl.SetItemData(self.y_variable_nodes[y_value], None)
+            self.tree_ctrl.SetItemImage(self.y_variable_nodes[y_value], self.images['y'], wx.TreeItemIcon_Normal)
+        if y_value not in list(self.x_variable_nodes):
+            self.x_variable_nodes[y_value] = {}
+        if x_value not in self.x_variable_nodes[y_value]:
+            self.x_variable_nodes[y_value][x_value] = self.tree_ctrl.AppendItem(self.y_variable_nodes[y_value], "x_var: %s" % x_value)
+            self.tree_ctrl.SetItemData(self.x_variable_nodes[y_value][x_value], None)
+            self.tree_ctrl.SetItemImage(self.x_variable_nodes[y_value][x_value], self.images['x'], wx.TreeItemIcon_Normal)
+        self.tree_ctrl.ExpandAll()
+
+    def on_regression(self, evt):
+        self.multi_variable_regression(self.combo_box_y_axis.GetValue())
+
+    def multi_variable_regression(self, y_variable):
+
+        x_variables = list(self.x_variable_nodes[y_variable])
+
+        dlg = MultiVarResults(y_variable, x_variables, self.stats_data)
+        dlg.ShowModal()
+        dlg.Destroy()
+
+
+    @staticmethod
+    def get_p_values(X, y, predictions, params):
+        # https://stackoverflow.com/questions/27928275/find-p-value-significance-in-scikit-learn-linearregression
+        newX = np.append(np.ones((len(X),1)), X, axis=1)
+        MSE = (sum((y-predictions)**2))/(len(newX)-len(newX[0]))
+
+        var_b = MSE * (np.linalg.inv(np.dot(newX.T, newX)).diagonal())
+        sd_b = np.sqrt(var_b)
+        ts_b = params / sd_b
+
+        return [2 * (1 - stats.t.cdf(np.abs(i), (len(newX) - 1))) for i in ts_b], sd_b, ts_b
+
+
+class MultiVarResults(wx.Dialog):
+    def __init__(self, y_variable, x_variables, stats_data, *args, **kw):
+        wx.Dialog.__init__(self, None, title="Multi-Variable Model for %s" % y_variable)
+
+        plot_layout = PlotMultiVarRegression(self)
+        plot_layout.update_plot(y_variable, x_variables, stats_data)
+
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_wrapper.Add(plot_layout.layout, 0, wx.EXPAND, 5)
+        self.SetSizer(sizer_wrapper)
+        sizer_wrapper.Fit(self)
+        self.Layout()
+        self.Center()

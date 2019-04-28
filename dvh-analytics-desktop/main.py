@@ -472,7 +472,7 @@ class MainFrame(wx.Frame):
         if hasattr(self.dvh, 'study_instance_uid'):
             wait = wx.BusyCursor()
             self.stats_data = StatsData(self.dvh, self.data)
-            self.regression.data = self.stats_data
+            self.regression.stats_data = self.stats_data
             self.regression.update_combo_box_choices()
             del wait
 

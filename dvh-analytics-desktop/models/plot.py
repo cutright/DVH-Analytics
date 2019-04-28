@@ -2,14 +2,16 @@ from bokeh.plotting import figure
 from bokeh.io.export import get_layout_html
 from options import Options
 from bokeh.models import Legend, HoverTool, ColumnDataSource, DataTable, TableColumn, NumberFormatter, Div
-from bokeh.layouts import column
+from bokeh.layouts import column, row
 from bokeh.palettes import Colorblind8 as palette
 import itertools
 import wx
 import wx.html2
 import numpy as np
 from tools.utilities import collapse_into_single_dates, moving_avg
-from scipy.stats import linregress
+from scipy import stats
+from sklearn import linear_model
+from sklearn.metrics import mean_squared_error, r2_score
 
 
 options = Options()
@@ -270,59 +272,266 @@ class PlotTimeSeries:
 class PlotRegression:
     def __init__(self, parent):
 
-        self.figure, self.layout = get_base_plot(parent, plot_width=550, plot_height=500)
+        self.figure, self.layout = get_base_plot(parent, plot_width=550, plot_height=400)
+
+        self.figure_residual_fits = figure(plot_width=275, plot_height=200)
+        self.figure_residual_fits.xaxis.axis_label = 'Fitted Values'
+        self.figure_residual_fits.yaxis.axis_label = 'Residuals'
+        self.figure_prob_plot = figure(plot_width=275, plot_height=200)
+        self.figure_prob_plot.xaxis.axis_label = 'Quantiles'
+        self.figure_prob_plot.yaxis.axis_label = 'Ordered Values'
 
         self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[])),
-                       'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[]))}
+                       'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'residuals': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'prob': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'prob_45': ColumnDataSource(data=dict(x=[], y=[])),
+                       'table': ColumnDataSource(data=dict(var=[], coef=[], std_err=[], t_value=[], p_value=[],
+                                                           spacer=[], fit_param=[]))}
 
         self.plot_data = self.figure.circle('x', 'y', source=self.source['plot'], size=options.REGRESSION_CIRCLE_SIZE,
                                             alpha=options.REGRESSION_ALPHA, color=options.PLOT_COLOR)
         self.plot_trend = self.figure.line('x', 'y', color=options.PLOT_COLOR, source=self.source['trend'],
                                            line_width=options.REGRESSION_LINE_WIDTH,
                                            line_dash=options.REGRESSION_LINE_DASH)
+        self.plot_residuals = self.figure_residual_fits.circle('x', 'y', source=self.source['residuals'],
+                                                               size=options.REGRESSION_RESIDUAL_CIRCLE_SIZE,
+                                                               alpha=options.REGRESSION_RESIDUAL_ALPHA,
+                                                               color=options.PLOT_COLOR)
+        self.plot_prob = self.figure_prob_plot.circle('x', 'y', source=self.source['prob'],
+                                                      size=options.REGRESSION_RESIDUAL_CIRCLE_SIZE,
+                                                      alpha=options.REGRESSION_RESIDUAL_ALPHA,
+                                                      color=options.PLOT_COLOR)
+        self.plot_prob_45 = self.figure_prob_plot.line('x', 'y', source=self.source['prob_45'],
+                                                       line_width=options.REGRESSION_RESIDUAL_LINE_WIDTH,
+                                                       line_dash=options.REGRESSION_RESIDUAL_LINE_DASH,
+                                                       alpha=options.REGRESSION_RESIDUAL_ALPHA,
+                                                       color=options.REGRESSION_RESIDUAL_LINE_COLOR)
+
+        columns = [TableColumn(field="var", title="", width=100),
+                   TableColumn(field="coef", title="Coef", formatter=NumberFormatter(format="0.000"), width=50),
+                   TableColumn(field="std_err", title="Std. Err.", formatter=NumberFormatter(format="0.000"), width=50),
+                   TableColumn(field="t_value", title="t-value", formatter=NumberFormatter(format="0.000"), width=50),
+                   TableColumn(field="p_value", title="p-value", formatter=NumberFormatter(format="0.000"), width=50),
+                   TableColumn(field="spacer", title="", width=2),
+                   TableColumn(field="fit_param", title="", width=75)]
+        self.regression_table = DataTable(source=self.source['table'], columns=columns, width=500, height=100,
+                                          index_position=None)
 
         self.figure.add_tools(HoverTool(show_arrow=True,
                                         tooltips=[('ID', '@mrn'),
                                                   ('x', '@x{0.2f}'),
                                                   ('y', '@y{0.2f}')]))
 
-        self.bokeh_layout = column(self.figure)
+        self.bokeh_layout = column(self.figure,
+                                   self.regression_table,
+                                   row(self.figure_residual_fits, self.figure_prob_plot))
 
-    def update_plot(self, plot_data, x_axis_title, y_axis_title):
+    def update_plot(self, plot_data, x_var, x_axis_title, y_axis_title):
         self.source['plot'].data = plot_data
-        self.update_trend()
+        self.update_trend(x_var)
         self.figure.xaxis.axis_label = x_axis_title
         self.figure.yaxis.axis_label = y_axis_title
         html_str = get_layout_html(self.bokeh_layout)
         self.layout.SetPage(html_str, "")
 
-    def update_trend(self):
-        x, y = self.clean_data(self.source['plot'].data['x'],
-                               self.source['plot'].data['y'])
+    def update_trend(self, x_var):
+        x, y, mrn = self.clean_data(self.source['plot'].data['x'],
+                                    self.source['plot'].data['y'],
+                                    self.source['plot'].data['mrn'])
+        reg = linear_model.LinearRegression()
+        X = [[val] for val in x]
 
-        try:
-            slope, intercept, r_value, p_value, std_err = linregress(x, y)
-            stats = [round(slope, 3),
-                     round(intercept, 3),
-                     round(r_value ** 2, 3),
-                     round(p_value, 3),
-                     round(std_err, 3),
-                     len(x)]
-            x_trend = [min(x), max(x)]
-            y_trend = np.add(np.multiply(x_trend, slope), intercept)
+        reg.fit(X, y)
 
-            self.source['trend'].data = {'x': x_trend,
-                                         'y': y_trend,
-                                         'mrn': ['Trend'] * 2}
-        except:
-            self.source['trend'].data = {'x': [], 'y': [], 'mrn': []}
+        y_intercept = reg.intercept_
+        slope = reg.coef_
+        params = np.append(y_intercept, slope)
+        predictions = reg.predict(X)
+
+        r_sq = r2_score(y, predictions)
+        mse = mean_squared_error(y, predictions)
+
+        p_values, sd_b, ts_b = self.get_p_values(X, y, predictions, params)
+
+        residuals = np.subtract(y, predictions)
+
+        x_trend = [min(x), max(x)]
+        y_trend = np.add(np.multiply(x_trend, slope), y_intercept)
+
+        norm_prob_plot = stats.probplot(residuals, dist='norm', fit=False, plot=None, rvalue=False)
+
+        reg_prob = linear_model.LinearRegression()
+        reg_prob.fit([[val] for val in norm_prob_plot[0]], norm_prob_plot[1])
+        y_intercept_prob = reg_prob.intercept_
+        slope_prob = reg_prob.coef_
+        x_trend_prob = [min(norm_prob_plot[0]), max(norm_prob_plot[0])]
+        y_trend_prob = np.add(np.multiply(x_trend_prob, slope_prob), y_intercept_prob)
+
+        self.source['residuals'].data = {'x': predictions,
+                                         'y': residuals,
+                                         'mrn': mrn}
+
+        self.source['prob'].data = {'x': norm_prob_plot[0],
+                                    'y': norm_prob_plot[1]}
+
+        self.source['prob_45'].data = {'x': x_trend_prob,
+                                       'y': y_trend_prob}
+
+        self.source['table'].data = {'var': ['y-int', x_var],
+                                     'coef': [y_intercept, slope],
+                                     'std_err': sd_b,
+                                     't_value': ts_b,
+                                     'p_value': p_values,
+                                     'spacer': ['', ''],
+                                     'fit_param': ["R²: %0.3f" % r_sq, "MSE: %0.3f" % mse]}
+
+        self.source['trend'].data = {'x': x_trend,
+                                     'y': y_trend,
+                                     'mrn': ['Trend'] * 2}
 
     @staticmethod
-    def clean_data(x, y):
+    def get_p_values(X, y, predictions, params):
+        # https://stackoverflow.com/questions/27928275/find-p-value-significance-in-scikit-learn-linearregression
+        newX = np.append(np.ones((len(X),1)), X, axis=1)
+        MSE = (sum((y-predictions)**2))/(len(newX)-len(newX[0]))
+
+        var_b = MSE * (np.linalg.inv(np.dot(newX.T, newX)).diagonal())
+        sd_b = np.sqrt(var_b)
+        ts_b = params / sd_b
+
+        return [2 * (1 - stats.t.cdf(np.abs(i), (len(newX) - 1))) for i in ts_b], sd_b, ts_b
+
+    @staticmethod
+    def clean_data(x, y, mrn):
         bad_indices = [i for i, value in enumerate(x) if value == 'None']
         bad_indices.extend([i for i, value in enumerate(y) if value == 'None'])
         bad_indices = list(set(bad_indices))
 
         return [value for i, value in enumerate(x) if i not in bad_indices],\
-               [value for i, value in enumerate(y) if i not in bad_indices]
+               [value for i, value in enumerate(y) if i not in bad_indices], \
+               [value for i, value in enumerate(mrn) if i not in bad_indices]
 
+
+class PlotMultiVarRegression:
+    def __init__(self, parent):
+
+        self.figure_residual_fits, self.layout = get_base_plot(parent, plot_width=400, plot_height=400)
+
+        self.figure_residual_fits.xaxis.axis_label = 'Fitted Values'
+        self.figure_residual_fits.yaxis.axis_label = 'Residuals'
+        self.figure_prob_plot = figure(plot_width=400, plot_height=400)
+        self.figure_prob_plot.xaxis.axis_label = 'Quantiles'
+        self.figure_prob_plot.yaxis.axis_label = 'Ordered Values'
+
+        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[])),
+                       'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'residuals': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'prob': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'prob_45': ColumnDataSource(data=dict(x=[], y=[])),
+                       'table': ColumnDataSource(data=dict(var=[], coef=[], std_err=[], t_value=[], p_value=[],
+                                                           spacer=[], fit_param=[]))}
+
+        self.plot_residuals = self.figure_residual_fits.circle('x', 'y', source=self.source['residuals'],
+                                                               size=options.REGRESSION_RESIDUAL_CIRCLE_SIZE,
+                                                               alpha=options.REGRESSION_RESIDUAL_ALPHA,
+                                                               color=options.PLOT_COLOR)
+        self.plot_prob = self.figure_prob_plot.circle('x', 'y', source=self.source['prob'],
+                                                      size=options.REGRESSION_RESIDUAL_CIRCLE_SIZE,
+                                                      alpha=options.REGRESSION_RESIDUAL_ALPHA,
+                                                      color=options.PLOT_COLOR)
+        self.plot_prob_45 = self.figure_prob_plot.line('x', 'y', source=self.source['prob_45'],
+                                                       line_width=options.REGRESSION_RESIDUAL_LINE_WIDTH,
+                                                       line_dash=options.REGRESSION_RESIDUAL_LINE_DASH,
+                                                       alpha=options.REGRESSION_RESIDUAL_ALPHA,
+                                                       color=options.REGRESSION_RESIDUAL_LINE_COLOR)
+
+        columns = [TableColumn(field="var", title="", width=100),
+                   TableColumn(field="coef", title="Coef", formatter=NumberFormatter(format="0.000"), width=50),
+                   TableColumn(field="std_err", title="Std. Err.", formatter=NumberFormatter(format="0.000"), width=50),
+                   TableColumn(field="t_value", title="t-value", formatter=NumberFormatter(format="0.000"), width=50),
+                   TableColumn(field="p_value", title="p-value", formatter=NumberFormatter(format="0.000"), width=50),
+                   TableColumn(field="spacer", title="", width=2),
+                   TableColumn(field="fit_param", title="", width=75)]
+        self.regression_table = DataTable(source=self.source['table'], columns=columns, width=500,
+                                          index_position=None)
+
+        self.bokeh_layout = column(row(self.figure_prob_plot, self.figure_residual_fits),
+                                   self.regression_table)
+
+    def update_plot(self, y_variable, x_variables, stats_data):
+
+        data = []
+        y_var_data = []
+        for value in stats_data.data[y_variable]['values']:
+            y_var_data.append([value, np.nan][value == 'None'])
+        data.append(y_var_data)
+        for var in x_variables:
+            x_var_data = []
+            for value in stats_data.data[var]['values']:
+                x_var_data.append([value, np.nan][value == 'None'])
+            data.append(x_var_data)
+
+        data = np.array(data)
+        clean_data = data[:, ~np.any(np.isnan(data), axis=0)]
+        X = np.transpose(clean_data[1:])
+        y = clean_data[0]
+
+        reg = linear_model.LinearRegression()
+        reg.fit(X, y)
+
+        y_intercept = reg.intercept_
+        slope = reg.coef_
+        params = np.append(y_intercept, slope)
+        predictions = reg.predict(X)
+
+        r_sq = r2_score(y, predictions)
+        mse = mean_squared_error(y, predictions)
+
+        p_values, sd_b, ts_b = self.get_p_values(X, y, predictions, params)
+
+        residuals = np.subtract(y, predictions)
+
+        norm_prob_plot = stats.probplot(residuals, dist='norm', fit=False, plot=None, rvalue=False)
+
+        reg_prob = linear_model.LinearRegression()
+        reg_prob.fit([[val] for val in norm_prob_plot[0]], norm_prob_plot[1])
+        y_intercept_prob = reg_prob.intercept_
+        slope_prob = reg_prob.coef_
+        x_trend_prob = [min(norm_prob_plot[0]), max(norm_prob_plot[0])]
+        y_trend_prob = np.add(np.multiply(x_trend_prob, slope_prob), y_intercept_prob)
+
+        self.source['residuals'].data = {'x': predictions,
+                                         'y': residuals}
+
+        self.source['prob'].data = {'x': norm_prob_plot[0],
+                                    'y': norm_prob_plot[1]}
+
+        self.source['prob_45'].data = {'x': x_trend_prob,
+                                       'y': y_trend_prob}
+
+        fit_param = [''] * (len(x_variables) + 1)
+        fit_param[0] = "R²: %0.3f" % r_sq
+        fit_param[1] = "MSE: %0.3f" % mse
+        self.source['table'].data = {'var': ['y-int'] + x_variables,
+                                     'coef': [y_intercept] + slope.tolist(),
+                                     'std_err': sd_b,
+                                     't_value': ts_b,
+                                     'p_value': p_values,
+                                     'spacer': [''] * (len(x_variables) + 1),
+                                     'fit_param': fit_param}
+
+        html_str = get_layout_html(self.bokeh_layout)
+        self.layout.SetPage(html_str, "")
+
+    @staticmethod
+    def get_p_values(X, y, predictions, params):
+        # https://stackoverflow.com/questions/27928275/find-p-value-significance-in-scikit-learn-linearregression
+        newX = np.append(np.ones((len(X), 1)), X, axis=1)
+        MSE = (sum((y - predictions) ** 2)) / (len(newX) - len(newX[0]))
+
+        var_b = MSE * (np.linalg.inv(np.dot(newX.T, newX)).diagonal())
+        sd_b = np.sqrt(var_b)
+        ts_b = params / sd_b
+
+        return [2 * (1 - stats.t.cdf(np.abs(i), (len(newX) - 1))) for i in ts_b], sd_b, ts_b
