@@ -93,6 +93,7 @@ class StatsData:
                             corr_key = "%s (%s)" % (var, stat.capitalize())
                             self.data[corr_key] = {'units': self.column_info[var]['units'],
                                                    'values': temp[stat]}
+        self.validate_data()
 
     def get_plan_index(self, uid):
         return self.table_data['Plans'].study_instance_uid.index(uid)
@@ -107,7 +108,7 @@ class StatsData:
 
     @property
     def variables(self):
-        return list(self.data)
+        return [var for var in list(self.data) if var != 'Simulation Date']
 
     @property
     def control_chart_variables(self):
@@ -143,6 +144,7 @@ class StatsData:
             if self.dvhs.ntcp_or_tcp:
                 self.data['NTCP or TCP'] = {'units': '',
                                             'values': self.dvhs.ntcp_or_tcp}
+            self.validate_data()
 
     def add_ptv_data(self):
         if self.dvhs:
@@ -153,6 +155,16 @@ class StatsData:
             for i, key in enumerate(attr):
                 clean_key = ('PTV %s' % key.replace('_', ' ').title())
                 self.data[clean_key] = {'values': getattr(self.dvhs, 'ptv_%s' % key), 'units': units[i]}
+
+    def validate_data(self):
+        bad_vars = []
+        for var_name, var_obj in self.data.items():
+            if var_name != 'Simulation Date':
+                values = [float(val) for val in var_obj['values'] if val != 'None' and val is not None]
+                if not any(np.diff(values).tolist()):
+                    bad_vars.append(var_name)
+        for var in bad_vars:
+            self.data.pop(var)
 
 
 def str_starts_with_any_in_list(string_a, string_list):
