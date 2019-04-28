@@ -6,10 +6,9 @@ from dateutil import parser
 
 
 class ControlChartFrame:
-    def __init__(self, parent, dvh, data, stats_data, *args, **kwds):
+    def __init__(self, parent, dvh, stats_data, *args, **kwds):
         self.parent = parent
-        self.dvh = dvh
-        self.data = data
+        self.dvhs = dvh
         self.stats_data = stats_data
         self.choices = []
 
@@ -63,8 +62,7 @@ class ControlChartFrame:
             self.combo_box_y_axis.SetValue('ROI Volume')
 
     def on_combo_box_y(self, evt):
-        if self.dvh and self.data['Plans']:
-            self.update_plot()
+        self.update_plot()
 
     def update_plot_ticker(self, evt):
         self.update_plot()
@@ -72,42 +70,16 @@ class ControlChartFrame:
     def update_plot(self):
 
         y_axis_selection = self.combo_box_y_axis.GetValue()
-        uids = getattr(self.dvh, 'study_instance_uid')
-        mrn_data = self.dvh.mrn
 
-        if y_axis_selection.split('_')[0] in {'D', 'V'}:
-            y_data = self.dvh.endpoints['data'][y_axis_selection]
-        elif y_axis_selection in ['EUD', 'NTCP or TCP']:
-            y_data = getattr(self.dvh, y_axis_selection.lower().replace(' ', '_'))
-        else:
-            data_info = self.y_axis_options[self.combo_box_y_axis.GetValue()]
-            table = data_info['table']
-            var_name = data_info['var_name']
-
-            if table == 'DVHs':
-                y_data = getattr(self.dvh, var_name)
-            else:
-                y_data = getattr(self.data[table], var_name)
-                uids = getattr(self.data[table], 'study_instance_uid')
-                mrn_data = getattr(self.data[table], 'mrn')
-
-        x_data = []
-        for uid in uids:
-            if uid in self.data['Plans'].study_instance_uid:
-                index = self.data['Plans'].study_instance_uid.index(uid)
-                x = self.data['Plans'].sim_study_date[index]
-                if x and x != 'None':
-                    x_data.append(x)
-                else:
-                    x_data.append(str(datetime.now()))
-            else:
-                x_data.append(str(datetime.now()))
+        x_data = self.stats_data.sim_study_dates
+        y_data = self.stats_data.data[y_axis_selection]['values']
+        mrn_data = self.stats_data.mrns
 
         sort_index = sorted(range(len(x_data)), key=lambda k: x_data[k])
         x_values_sorted, y_values_sorted, mrn_sorted = [], [], []
 
         for s in range(len(x_data)):
-            x_values_sorted.append(parser.parse(x_data[sort_index[s]]))
+            x_values_sorted.append(x_data[sort_index[s]])
             y_values_sorted.append(y_data[sort_index[s]])
             mrn_sorted.append(mrn_data[sort_index[s]])
 
@@ -115,36 +87,34 @@ class ControlChartFrame:
 
         self.plot.update_plot(x_final, y_values_sorted, mrn_sorted, y_axis_label=y_axis_selection)
 
-    def update_data(self, dvh, data, stats_data):
-        self.dvh = dvh
-        self.data = data
+    def update_data(self, dvh, stats_data):
+        self.dvhs = dvh
         self.stats_data = stats_data
         self.update_plot()
 
-    def update_y_axis_options(self):
-        current_choice = self.combo_box_y_axis.GetValue()
-        if self.dvh:
-            if self.dvh.endpoints['defs']:
-                for choice in self.dvh.endpoints['defs']['label']:
-                    if choice not in self.choices:
-                        self.choices.append(choice)
+    @property
+    def variables(self):
+        return list(self.stats_data)
 
-                for i in range(len(self.choices))[::-1]:
-                    if self.choices[i][0:2] in {'D_', 'V_'}:
-                        if self.choices[i] not in self.dvh.endpoints['defs']['label']:
-                            self.choices.pop(i)
+    def update_endpoints_and_radbio(self):
+        if self.dvhs:
+            if self.dvhs.endpoints['defs']:
+                for var in self.dvhs.endpoints['defs']['label']:
+                    if var not in self.variables:
+                        self.stats_data[var] = {'units': '',
+                                          'values': self.dvhs.endpoints['data'][var]}
 
-            if self.dvh.eud and 'EUD' not in self.choices:
-                self.choices.append('EUD')
-            if self.dvh.ntcp_or_tcp and 'NTCP or TCP' not in self.choices:
-                self.choices.append('NTCP or TCP')
+                for var in self.variables:
+                    if var[0:2] in {'D_', 'V_'}:
+                        if var not in self.dvhs.endpoints['defs']['label']:
+                            self.stats_data.pop(var)
 
-            self.choices.sort()
-
-            self.combo_box_y_axis.SetItems(self.choices)
-            if current_choice not in self.choices:
-                current_choice = 'ROI Max Dose'
-            self.combo_box_y_axis.SetValue(current_choice)
+            if self.dvhs.eud:
+                self.stats_data['EUD'] = {'units': 'Gy',
+                                    'values': self.dvhs.eud}
+            if self.dvhs.ntcp_or_tcp:
+                self.stats_data['NTCP or TCP'] = {'units': '',
+                                            'values': self.dvhs.ntcp_or_tcp}
 
     def initialize_y_axis_options(self):
         for i in range(len(self.choices))[::-1]:

@@ -22,7 +22,7 @@ from dialogs.export import data_table_to_csv as export_dlg
 
 
 class RadBioFrame:
-    def __init__(self, parent, dvh, time_series, regression, *args, **kwds):
+    def __init__(self, parent, dvh, time_series, regression, control_chart, *args, **kwds):
 
         self.parent = parent
         self.dvh = dvh
@@ -194,6 +194,10 @@ class RadBioFrame:
         self.time_series.update_y_axis_options()
         if self.time_series.combo_box_y_axis.GetValue() in ['EUD', 'NTCP or TCP']:
             self.time_series.update_plot()
+
+        self.control_chart.update_y_axis_options()
+        if self.control_chart.combo_box_y_axis.GetValue() in ['EUD', 'NTCP or TCP']:
+            self.control_chart.update_plot()
 
         self.regression.data.update_endpoints_and_radbio()
         self.regression.update_combo_box_choices()

@@ -1,4 +1,5 @@
 from db import sql_columns
+from db.sql_connector import DVH_SQL
 import numpy as np
 from scipy import stats
 from sklearn import linear_model
@@ -26,6 +27,16 @@ class StatsData:
     @property
     def mrns(self):
         return self.dvhs.mrn
+
+    @property
+    def sim_study_dates(self):
+        uids = self.dvhs.study_instance_uid
+        sim_study_dates = []
+        cnx = DVH_SQL()
+        for uid in uids:
+            sim_study_dates.append(cnx.query('Plans', 'sim_study_date', "study_instance_uid = '%s'" % uid)[0])
+        cnx.close()
+        return sim_study_dates
 
     def map_data(self):
         self.data = {}

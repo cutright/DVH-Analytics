@@ -24,14 +24,18 @@ def get_base_plot(parent, x_axis_label='X Axis', y_axis_label='Y Axis', plot_wid
     fig.xaxis.axis_label = x_axis_label
     fig.yaxis.axis_label = y_axis_label
 
+    apply_default_options(fig)
+
+    return fig, wxlayout
+
+
+def apply_default_options(fig):
     fig.xaxis.axis_label_text_font_size = options.PLOT_AXIS_LABEL_FONT_SIZE
     fig.yaxis.axis_label_text_font_size = options.PLOT_AXIS_LABEL_FONT_SIZE
     fig.xaxis.major_label_text_font_size = options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
     fig.yaxis.major_label_text_font_size = options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
     fig.min_border_bottom = options.MIN_BORDER
     fig.yaxis.axis_label_text_baseline = "bottom"
-
-    return fig, wxlayout
 
 
 class PlotStatDVH:
@@ -344,7 +348,7 @@ class PlotRegression:
                                     self.source['plot'].data['y'],
                                     self.source['plot'].data['mrn'])
 
-        data = np.array([self.source['plot'].data['y'], self.source['plot'].data['x']])
+        data = np.array([y, x])
         clean_data = data[:, ~np.any(np.isnan(data), axis=0)]
         X = np.transpose(clean_data[1:])
         y = clean_data[0]
@@ -399,6 +403,7 @@ class PlotMultiVarRegression:
         self.figure_residual_fits.xaxis.axis_label = 'Fitted Values'
         self.figure_residual_fits.yaxis.axis_label = 'Residuals'
         self.figure_prob_plot = figure(plot_width=400, plot_height=400)
+        apply_default_options(self.figure_prob_plot)
         self.figure_prob_plot.xaxis.axis_label = 'Quantiles'
         self.figure_prob_plot.yaxis.axis_label = 'Ordered Values'
 

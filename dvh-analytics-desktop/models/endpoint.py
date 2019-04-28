@@ -12,12 +12,13 @@ ENDPOINT_DEF_COLUMNS = ['label', 'output_type', 'input_type', 'input_value', 'un
 
 
 class EndpointFrame:
-    def __init__(self, parent, dvh, times_series, regression, *args, **kwds):
+    def __init__(self, parent, dvh, times_series, regression, control_chart, *args, **kwds):
 
         self.parent = parent
         self.dvh = dvh
         self.time_series = times_series
         self.regression = regression
+        self.control_chart = control_chart
 
         self.button = {'add': wx.Button(self.parent, wx.ID_ANY, "Add Endpoint"),
                        'del': wx.Button(self.parent, wx.ID_ANY, "Delete Endpoint"),
@@ -114,6 +115,7 @@ class EndpointFrame:
             self.enable_buttons()
             self.update_endpoints_in_dvh()
             self.time_series.update_y_axis_options()
+            self.control_chart.update_y_axis_options()
         dlg.Destroy()
         self.regression.data.update_endpoints_and_radbio()
         self.regression.update_combo_box_choices()
@@ -128,6 +130,7 @@ class EndpointFrame:
                 self.update_endpoints_in_dvh()
                 self.endpoint_defs.delete_row(endpoint_def_row)
             self.time_series.update_y_axis_options()
+            self.control_chart.update_y_axis_options()
         dlg.Destroy()
 
         self.regression.data.update_endpoints_and_radbio()

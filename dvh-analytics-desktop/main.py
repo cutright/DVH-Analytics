@@ -207,9 +207,11 @@ class MainFrame(wx.Frame):
         self.plot = PlotStatDVH(self.notebook_tab['DVHs'], self.dvh)
         self.time_series = TimeSeriesFrame(self.notebook_tab['Time Series'], self.dvh, self.data)
         self.regression = RegressionFrame(self.notebook_tab['Regression'], self.stats_data)
-        self.endpoint = EndpointFrame(self.notebook_tab['Endpoints'], self.dvh, self.time_series, self.regression)
-        self.radbio = RadBioFrame(self.notebook_tab['Rad Bio'], self.dvh, self.time_series, self.regression)
         self.control_chart = ControlChartFrame(self.notebook_tab['Control Chart'], self.dvh, self.data, self.stats_data)
+        self.radbio = RadBioFrame(self.notebook_tab['Rad Bio'], self.dvh, self.time_series, self.regression,
+                                  self.control_chart)
+        self.endpoint = EndpointFrame(self.notebook_tab['Endpoints'], self.dvh, self.time_series, self.regression,
+                                      self.control_chart)
 
     def __do_layout(self):
         sizer_summary = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Summary"), wx.HORIZONTAL)
@@ -421,7 +423,7 @@ class MainFrame(wx.Frame):
         self.notebook_main_view.SetSelection(1)
         self.update_data()
         self.time_series.update_data(self.dvh, self.data)
-        self.control_chart.update_data(self.dvh, self.data, self.stats_data)
+        self.control_chart.update_data(self.dvh, self.stats_data)
         self.radbio.update_dvh_data(self.dvh)
 
         self.__enable_notebook_tabs()
