@@ -157,17 +157,28 @@ class RegressionFrame:
     def on_checkbox(self, evt):
         y_value = self.combo_box_y_axis.GetValue()
         x_value = self.combo_box_x_axis.GetValue()
-        if y_value not in list(self.y_variable_nodes):
-            self.y_variable_nodes[y_value] = self.tree_ctrl.AppendItem(self.tree_ctrl_root, "y_var: %s" % y_value)
-            self.tree_ctrl.SetItemData(self.y_variable_nodes[y_value], None)
-            self.tree_ctrl.SetItemImage(self.y_variable_nodes[y_value], self.images['y'], wx.TreeItemIcon_Normal)
-        if y_value not in list(self.x_variable_nodes):
-            self.x_variable_nodes[y_value] = {}
-        if x_value not in self.x_variable_nodes[y_value]:
-            self.x_variable_nodes[y_value][x_value] = self.tree_ctrl.AppendItem(self.y_variable_nodes[y_value], "x_var: %s" % x_value)
-            self.tree_ctrl.SetItemData(self.x_variable_nodes[y_value][x_value], None)
-            self.tree_ctrl.SetItemImage(self.x_variable_nodes[y_value][x_value], self.images['x'], wx.TreeItemIcon_Normal)
-        self.tree_ctrl.ExpandAll()
+
+        if self.checkbox.GetValue():
+            if y_value not in list(self.y_variable_nodes):
+                self.y_variable_nodes[y_value] = self.tree_ctrl.AppendItem(self.tree_ctrl_root, "y_var: %s" % y_value)
+                self.tree_ctrl.SetItemData(self.y_variable_nodes[y_value], None)
+                self.tree_ctrl.SetItemImage(self.y_variable_nodes[y_value], self.images['y'], wx.TreeItemIcon_Normal)
+            if y_value not in list(self.x_variable_nodes):
+                self.x_variable_nodes[y_value] = {}
+            if x_value not in self.x_variable_nodes[y_value]:
+                self.x_variable_nodes[y_value][x_value] = self.tree_ctrl.AppendItem(self.y_variable_nodes[y_value], "x_var: %s" % x_value)
+                self.tree_ctrl.SetItemData(self.x_variable_nodes[y_value][x_value], None)
+                self.tree_ctrl.SetItemImage(self.x_variable_nodes[y_value][x_value], self.images['x'], wx.TreeItemIcon_Normal)
+            self.tree_ctrl.ExpandAll()
+        else:
+            if y_value in list(self.y_variable_nodes):
+                if x_value in list(self.x_variable_nodes[y_value]):
+                    self.tree_ctrl.Delete(self.x_variable_nodes[y_value][x_value])
+                    self.x_variable_nodes[y_value].pop(x_value)
+                    if not list(self.x_variable_nodes[y_value]):
+                        self.x_variable_nodes.pop(y_value)
+                        self.tree_ctrl.Delete(self.y_variable_nodes[y_value])
+                        self.y_variable_nodes.pop(y_value)
 
     def on_regression(self, evt):
         self.multi_variable_regression(self.combo_box_y_axis.GetValue())
@@ -177,8 +188,7 @@ class RegressionFrame:
         x_variables = list(self.x_variable_nodes[y_variable])
 
         dlg = MultiVarResults(y_variable, x_variables, self.stats_data)
-        dlg.ShowModal()
-        dlg.Destroy()
+        dlg.Show()
 
 
     @staticmethod

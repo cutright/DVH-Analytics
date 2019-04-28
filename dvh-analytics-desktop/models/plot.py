@@ -12,6 +12,7 @@ from tools.utilities import collapse_into_single_dates, moving_avg
 from scipy import stats
 from sklearn import linear_model
 from sklearn.metrics import mean_squared_error, r2_score
+from regressors import stats as regressors_stats
 
 
 options = Options()
@@ -284,6 +285,7 @@ class PlotRegression:
         self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[])),
                        'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'residuals': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'residuals_zero': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'prob': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'prob_45': ColumnDataSource(data=dict(x=[], y=[])),
                        'table': ColumnDataSource(data=dict(var=[], coef=[], std_err=[], t_value=[], p_value=[],
@@ -298,6 +300,11 @@ class PlotRegression:
                                                                size=options.REGRESSION_RESIDUAL_CIRCLE_SIZE,
                                                                alpha=options.REGRESSION_RESIDUAL_ALPHA,
                                                                color=options.PLOT_COLOR)
+        self.plot_residuals_zero = self.figure_residual_fits.line('x', 'y', source=self.source['residuals_zero'],
+                                                                  line_width=options.REGRESSION_RESIDUAL_LINE_WIDTH,
+                                                                  line_dash=options.REGRESSION_RESIDUAL_LINE_DASH,
+                                                                  alpha=options.REGRESSION_RESIDUAL_ALPHA,
+                                                                  color=options.REGRESSION_RESIDUAL_LINE_COLOR)
         self.plot_prob = self.figure_prob_plot.circle('x', 'y', source=self.source['prob'],
                                                       size=options.REGRESSION_RESIDUAL_CIRCLE_SIZE,
                                                       alpha=options.REGRESSION_RESIDUAL_ALPHA,
@@ -372,6 +379,10 @@ class PlotRegression:
                                          'y': residuals,
                                          'mrn': mrn}
 
+        self.source['residuals_zero'].data = {'x': [min(predictions), max(predictions)],
+                                              'y': [0, 0],
+                                              'mrn': [None, None]}
+
         self.source['prob'].data = {'x': norm_prob_plot[0],
                                     'y': norm_prob_plot[1]}
 
@@ -427,6 +438,7 @@ class PlotMultiVarRegression:
         self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[])),
                        'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'residuals': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'residuals_zero': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'prob': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'prob_45': ColumnDataSource(data=dict(x=[], y=[])),
                        'table': ColumnDataSource(data=dict(var=[], coef=[], std_err=[], t_value=[], p_value=[],
@@ -436,6 +448,11 @@ class PlotMultiVarRegression:
                                                                size=options.REGRESSION_RESIDUAL_CIRCLE_SIZE,
                                                                alpha=options.REGRESSION_RESIDUAL_ALPHA,
                                                                color=options.PLOT_COLOR)
+        self.plot_residuals_zero = self.figure_residual_fits.line('x', 'y', source=self.source['residuals_zero'],
+                                                                  line_width=options.REGRESSION_RESIDUAL_LINE_WIDTH,
+                                                                  line_dash=options.REGRESSION_RESIDUAL_LINE_DASH,
+                                                                  alpha=options.REGRESSION_RESIDUAL_ALPHA,
+                                                                  color=options.REGRESSION_RESIDUAL_LINE_COLOR)
         self.plot_prob = self.figure_prob_plot.circle('x', 'y', source=self.source['prob'],
                                                       size=options.REGRESSION_RESIDUAL_CIRCLE_SIZE,
                                                       alpha=options.REGRESSION_RESIDUAL_ALPHA,
@@ -447,14 +464,13 @@ class PlotMultiVarRegression:
                                                        color=options.REGRESSION_RESIDUAL_LINE_COLOR)
 
         columns = [TableColumn(field="var", title="", width=100),
-                   TableColumn(field="coef", title="Coef", formatter=NumberFormatter(format="0.000"), width=50),
-                   TableColumn(field="std_err", title="Std. Err.", formatter=NumberFormatter(format="0.000"), width=50),
-                   TableColumn(field="t_value", title="t-value", formatter=NumberFormatter(format="0.000"), width=50),
-                   TableColumn(field="p_value", title="p-value", formatter=NumberFormatter(format="0.000"), width=50),
-                   TableColumn(field="spacer", title="", width=2),
+                   TableColumn(field="coef", title="Coef", formatter=NumberFormatter(format="0.000"), width=40),
+                   TableColumn(field="std_err", title="Std. Err.", formatter=NumberFormatter(format="0.000"), width=40),
+                   TableColumn(field="t_value", title="t-value", formatter=NumberFormatter(format="0.000"), width=40),
+                   TableColumn(field="p_value", title="p-value", formatter=NumberFormatter(format="0.000"), width=40),
+                   TableColumn(field="spacer", title="", width=5),
                    TableColumn(field="fit_param", title="", width=75)]
-        self.regression_table = DataTable(source=self.source['table'], columns=columns, width=500,
-                                          index_position=None)
+        self.regression_table = DataTable(source=self.source['table'], columns=columns, width=800, index_position=None)
 
         self.bokeh_layout = column(row(self.figure_prob_plot, self.figure_residual_fits),
                                    self.regression_table)
@@ -478,7 +494,7 @@ class PlotMultiVarRegression:
         y = clean_data[0]
 
         reg = linear_model.LinearRegression()
-        reg.fit(X, y)
+        ols = reg.fit(X, y)
 
         y_intercept = reg.intercept_
         slope = reg.coef_
@@ -501,8 +517,18 @@ class PlotMultiVarRegression:
         x_trend_prob = [min(norm_prob_plot[0]), max(norm_prob_plot[0])]
         y_trend_prob = np.add(np.multiply(x_trend_prob, slope_prob), y_intercept_prob)
 
+        f_stat = regressors_stats.f_stat(ols, X, y)
+        df_error = len(clean_data[0]) - len(x_variables) - 1
+        df_model = len(x_variables)
+
+        f_p_value = stats.f.cdf(f_stat, df_model, df_error)
+
         self.source['residuals'].data = {'x': predictions,
                                          'y': residuals}
+
+        self.source['residuals_zero'].data = {'x': [min(predictions), max(predictions)],
+                                              'y': [0, 0],
+                                              'mrn': [None, None]}
 
         self.source['prob'].data = {'x': norm_prob_plot[0],
                                     'y': norm_prob_plot[1]}
@@ -511,8 +537,8 @@ class PlotMultiVarRegression:
                                        'y': y_trend_prob}
 
         fit_param = [''] * (len(x_variables) + 1)
-        fit_param[0] = "R²: %0.3f" % r_sq
-        fit_param[1] = "MSE: %0.3f" % mse
+        fit_param[0] = "R²: %0.3f ----- MSE: %0.3f" % (r_sq, mse)
+        fit_param[1] = "f stat: %0.3f ---- p value: %0.3f" % (f_stat, f_p_value)
         self.source['table'].data = {'var': ['y-int'] + x_variables,
                                      'coef': [y_intercept] + slope.tolist(),
                                      'std_err': sd_b,
