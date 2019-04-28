@@ -9,10 +9,7 @@ import wx
 import wx.html2
 import numpy as np
 from tools.utilities import collapse_into_single_dates, moving_avg
-from scipy import stats
-from sklearn import linear_model
-from sklearn.metrics import mean_squared_error, r2_score
-from regressors import stats as regressors_stats
+from tools.stats import multi_variable_regression, get_control_limits
 
 
 options = Options()
@@ -346,72 +343,42 @@ class PlotRegression:
         x, y, mrn = self.clean_data(self.source['plot'].data['x'],
                                     self.source['plot'].data['y'],
                                     self.source['plot'].data['mrn'])
-        reg = linear_model.LinearRegression()
-        X = [[val] for val in x]
 
-        reg.fit(X, y)
+        data = np.array([self.source['plot'].data['y'], self.source['plot'].data['x']])
+        clean_data = data[:, ~np.any(np.isnan(data), axis=0)]
+        X = np.transpose(clean_data[1:])
+        y = clean_data[0]
 
-        y_intercept = reg.intercept_
-        slope = reg.coef_
-        params = np.append(y_intercept, slope)
-        predictions = reg.predict(X)
-
-        r_sq = r2_score(y, predictions)
-        mse = mean_squared_error(y, predictions)
-
-        p_values, sd_b, ts_b = self.get_p_values(X, y, predictions, params)
-
-        residuals = np.subtract(y, predictions)
+        reg = multi_variable_regression(X, y)
 
         x_trend = [min(x), max(x)]
-        y_trend = np.add(np.multiply(x_trend, slope), y_intercept)
+        y_trend = np.add(np.multiply(x_trend, reg.slope), reg.y_intercept)
 
-        norm_prob_plot = stats.probplot(residuals, dist='norm', fit=False, plot=None, rvalue=False)
-
-        reg_prob = linear_model.LinearRegression()
-        reg_prob.fit([[val] for val in norm_prob_plot[0]], norm_prob_plot[1])
-        y_intercept_prob = reg_prob.intercept_
-        slope_prob = reg_prob.coef_
-        x_trend_prob = [min(norm_prob_plot[0]), max(norm_prob_plot[0])]
-        y_trend_prob = np.add(np.multiply(x_trend_prob, slope_prob), y_intercept_prob)
-
-        self.source['residuals'].data = {'x': predictions,
-                                         'y': residuals,
+        self.source['residuals'].data = {'x': reg.predictions,
+                                         'y': reg.residuals,
                                          'mrn': mrn}
 
-        self.source['residuals_zero'].data = {'x': [min(predictions), max(predictions)],
+        self.source['residuals_zero'].data = {'x': [min(reg.predictions), max(reg.predictions)],
                                               'y': [0, 0],
                                               'mrn': [None, None]}
 
-        self.source['prob'].data = {'x': norm_prob_plot[0],
-                                    'y': norm_prob_plot[1]}
+        self.source['prob'].data = {'x': reg.norm_prob_plot[0],
+                                    'y': reg.norm_prob_plot[1]}
 
-        self.source['prob_45'].data = {'x': x_trend_prob,
-                                       'y': y_trend_prob}
+        self.source['prob_45'].data = {'x': reg.x_trend_prob,
+                                       'y': reg.y_trend_prob}
 
         self.source['table'].data = {'var': ['y-int', x_var],
-                                     'coef': [y_intercept, slope],
-                                     'std_err': sd_b,
-                                     't_value': ts_b,
-                                     'p_value': p_values,
+                                     'coef': [reg.y_intercept, reg.slope],
+                                     'std_err': reg.sd_b,
+                                     't_value': reg.ts_b,
+                                     'p_value': reg.p_values,
                                      'spacer': ['', ''],
-                                     'fit_param': ["R²: %0.3f" % r_sq, "MSE: %0.3f" % mse]}
+                                     'fit_param': ["R²: %0.3f" % reg.r_sq, "MSE: %0.3f" % reg.mse]}
 
         self.source['trend'].data = {'x': x_trend,
                                      'y': y_trend,
                                      'mrn': ['Trend'] * 2}
-
-    @staticmethod
-    def get_p_values(X, y, predictions, params):
-        # https://stackoverflow.com/questions/27928275/find-p-value-significance-in-scikit-learn-linearregression
-        newX = np.append(np.ones((len(X),1)), X, axis=1)
-        MSE = (sum((y-predictions)**2))/(len(newX)-len(newX[0]))
-
-        var_b = MSE * (np.linalg.inv(np.dot(newX.T, newX)).diagonal())
-        sd_b = np.sqrt(var_b)
-        ts_b = params / sd_b
-
-        return [2 * (1 - stats.t.cdf(np.abs(i), (len(newX) - 1))) for i in ts_b], sd_b, ts_b
 
     @staticmethod
     def clean_data(x, y, mrn):
@@ -477,6 +444,37 @@ class PlotMultiVarRegression:
 
     def update_plot(self, y_variable, x_variables, stats_data):
 
+        X, y = self.get_X_and_y(y_variable, x_variables, stats_data)
+        reg = multi_variable_regression(X, y)
+
+        self.source['residuals'].data = {'x': reg.predictions,
+                                         'y': reg.residuals}
+
+        self.source['residuals_zero'].data = {'x': [min(reg.predictions), max(reg.predictions)],
+                                              'y': [0, 0],
+                                              'mrn': [None, None]}
+
+        self.source['prob'].data = {'x': reg.norm_prob_plot[0],
+                                    'y': reg.norm_prob_plot[1]}
+
+        self.source['prob_45'].data = {'x': reg.x_trend_prob,
+                                       'y': reg.y_trend_prob}
+
+        fit_param = [''] * (len(x_variables) + 1)
+        fit_param[0] = "R²: %0.3f ----- MSE: %0.3f" % (reg.r_sq, reg.mse)
+        fit_param[1] = "f stat: %0.3f ---- p value: %0.3f" % (reg.f_stat, reg.f_p_value)
+        self.source['table'].data = {'var': ['y-int'] + x_variables,
+                                     'coef': [reg.y_intercept] + reg.slope.tolist(),
+                                     'std_err': reg.sd_b,
+                                     't_value': reg.ts_b,
+                                     'p_value': reg.p_values,
+                                     'spacer': [''] * (len(x_variables) + 1),
+                                     'fit_param': fit_param}
+
+        html_str = get_layout_html(self.bokeh_layout)
+        self.layout.SetPage(html_str, "")
+
+    def get_X_and_y(self, y_variable, x_variables, stats_data):
         data = []
         y_var_data = []
         for value in stats_data.data[y_variable]['values']:
@@ -493,71 +491,115 @@ class PlotMultiVarRegression:
         X = np.transpose(clean_data[1:])
         y = clean_data[0]
 
-        reg = linear_model.LinearRegression()
-        ols = reg.fit(X, y)
+        return X, y
 
-        y_intercept = reg.intercept_
-        slope = reg.coef_
-        params = np.append(y_intercept, slope)
-        predictions = reg.predict(X)
 
-        r_sq = r2_score(y, predictions)
-        mse = mean_squared_error(y, predictions)
+class PlotControlChart:
+    def __init__(self, parent, x=[], y=[], mrn=[]):
 
-        p_values, sd_b, ts_b = self.get_p_values(X, y, predictions, params)
+        plot_width = 800  # store of histograms and divider bar
 
-        residuals = np.subtract(y, predictions)
+        self.figure, self.layout = get_base_plot(parent, x_axis_label='Study',
+                                                 plot_width=plot_width, plot_height=325)
+        color = [options.PLOT_COLOR] * len(x)
+        alpha = [options.CONTROL_CHART_CIRCLE_ALPHA] * len(x)
+        self.source = {'plot': ColumnDataSource(data=dict(x=x, y=y, mrn=mrn, color=color, alpha=alpha)),
+                       'center_line': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'ucl_line': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'lcl_line': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'bound': ColumnDataSource(data=dict(x=[], mrn=[], upper=[], avg=[], lower=[])),
+                       'patch': ColumnDataSource(data=dict(x=[], y=[]))}
 
-        norm_prob_plot = stats.probplot(residuals, dist='norm', fit=False, plot=None, rvalue=False)
+        self.figure.add_tools(HoverTool(show_arrow=True,
+                                        tooltips=[('ID', '@mrn'),
+                                                  ('Date', '@x{%F}'),
+                                                  ('Value', '@y{0.2f}')],
+                                        formatters={'x': 'datetime'}))
 
-        reg_prob = linear_model.LinearRegression()
-        reg_prob.fit([[val] for val in norm_prob_plot[0]], norm_prob_plot[1])
-        y_intercept_prob = reg_prob.intercept_
-        slope_prob = reg_prob.coef_
-        x_trend_prob = [min(norm_prob_plot[0]), max(norm_prob_plot[0])]
-        y_trend_prob = np.add(np.multiply(x_trend_prob, slope_prob), y_intercept_prob)
+        self.plot_data = self.figure.circle('x', 'y', source=self.source['plot'],
+                                            size=options.CONTROL_CHART_CIRCLE_SIZE,
+                                            alpha='alpha',
+                                            color='color')
+        self.plot_data_line = self.figure.line('x', 'y', source=self.source['plot'],
+                                               line_width=options.CONTROL_CHART_LINE_WIDTH,
+                                               color=options.CONTROL_CHART_LINE_COLOR,
+                                               line_dash=options.CONTROL_CHART_LINE_DASH)
+        self.plot_patch = self.figure.patch('x', 'y', color=options.PLOT_COLOR, source=self.source['patch'],
+                                            alpha=options.CONTROL_CHART_PATCH_ALPHA)
+        self.plot_center_line = self.figure.line('x', 'y', source=self.source['center_line'],
+                                                 line_width=options.CONTROL_CHART_CENTER_LINE_WIDTH,
+                                                 alpha=options.CONTROL_CHART_CENTER_LINE_ALPHA,
+                                                 color=options.CONTROL_CHART_CENTER_LINE_COLOR,
+                                                 line_dash=options.CONTROL_CHART_CENTER_LINE_DASH)
+        self.plot_lcl_line = self.figure.line('x', 'y', source=self.source['lcl_line'],
+                                              line_width=options.CONTROL_CHART_LCL_LINE_WIDTH,
+                                              alpha=options.CONTROL_CHART_LCL_LINE_ALPHA,
+                                              color=options.CONTROL_CHART_LCL_LINE_COLOR,
+                                              line_dash=options.CONTROL_CHART_LCL_LINE_DASH)
+        self.plot_ucl_line = self.figure.line('x', 'y', source=self.source['ucl_line'],
+                                              line_width=options.CONTROL_CHART_UCL_LINE_WIDTH,
+                                              alpha=options.CONTROL_CHART_UCL_LINE_ALPHA,
+                                              color=options.CONTROL_CHART_UCL_LINE_COLOR,
+                                              line_dash=options.CONTROL_CHART_UCL_LINE_DASH)
 
-        f_stat = regressors_stats.f_stat(ols, X, y)
-        df_error = len(clean_data[0]) - len(x_variables) - 1
-        df_model = len(x_variables)
+        self.figure.add_tools(HoverTool(show_arrow=True,
+                                        tooltips=[('ID', '@mrn'),
+                                                  ('Date', '@x{%F}'),
+                                                  ('Value', '@y{0.2f}')],
+                                        formatters={'x': 'datetime'}))
 
-        f_p_value = stats.f.cdf(f_stat, df_model, df_error)
+        self.div_center_line = Div(text='', width=175)
+        self.div_ucl = Div(text='', width=175)
+        self.div_lcl = Div(text='', width=175)
 
-        self.source['residuals'].data = {'x': predictions,
-                                         'y': residuals}
+        # Set the legend
+        legend_plot = Legend(items=[("Charting Variable   ", [self.plot_data]),
+                                    ("Charting Variable Line  ", [self.plot_data_line]),
+                                    ('Center Line   ', [self.plot_center_line]),
+                                    ('UCL  ', [self.plot_ucl_line]),
+                                    ('LCL  ', [self.plot_lcl_line])],
+                             orientation='horizontal')
 
-        self.source['residuals_zero'].data = {'x': [min(predictions), max(predictions)],
-                                              'y': [0, 0],
-                                              'mrn': [None, None]}
+        # Add the layout outside the plot, clicking legend item hides the line
+        self.figure.add_layout(legend_plot, 'above')
+        self.figure.legend.click_policy = "hide"
 
-        self.source['prob'].data = {'x': norm_prob_plot[0],
-                                    'y': norm_prob_plot[1]}
+        self.bokeh_layout = column(self.figure,
+                                   row(self.div_center_line, self.div_ucl, self.div_lcl))
 
-        self.source['prob_45'].data = {'x': x_trend_prob,
-                                       'y': y_trend_prob}
+    def update_plot(self, x, y, mrn, y_axis_label='Y Axis'):
+        self.figure.yaxis.axis_label = y_axis_label
+        valid_indices = [i for i, value in enumerate(y) if value != 'None']
 
-        fit_param = [''] * (len(x_variables) + 1)
-        fit_param[0] = "R²: %0.3f ----- MSE: %0.3f" % (r_sq, mse)
-        fit_param[1] = "f stat: %0.3f ---- p value: %0.3f" % (f_stat, f_p_value)
-        self.source['table'].data = {'var': ['y-int'] + x_variables,
-                                     'coef': [y_intercept] + slope.tolist(),
-                                     'std_err': sd_b,
-                                     't_value': ts_b,
-                                     'p_value': p_values,
-                                     'spacer': [''] * (len(x_variables) + 1),
-                                     'fit_param': fit_param}
+        x = [value for i, value in enumerate(x) if i in valid_indices]
+        y = [value for i, value in enumerate(y) if i in valid_indices]
+        mrn = [value for i, value in enumerate(mrn) if i in valid_indices]
+
+        center_line, ucl, lcl = get_control_limits(y)
+
+        colors = [options.CONTROL_CHART_OUT_OF_CONTROL_COLOR, options.PLOT_COLOR]
+        alphas = [options.CONTROL_CHART_OUT_OF_CONTROL_ALPHA, options.CONTROL_CHART_CIRCLE_ALPHA]
+        color = [colors[ucl > value > lcl] for value in y]
+        alpha = [alphas[ucl > value > lcl] for value in y]
+
+        self.source['plot'].data = {'x': x, 'y': y, 'mrn': mrn, 'color': color, 'alpha': alpha}
+
+        self.source['patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
+                                     'y': [ucl, ucl, lcl, lcl]}
+        self.source['center_line'].data = {'x': [min(x), max(x)],
+                                           'y': [center_line] * 2,
+                                           'mrn': ['center line'] * 2}
+
+        self.source['lcl_line'].data = {'x': [min(x), max(x)],
+                                        'y': [lcl] * 2,
+                                        'mrn': ['center line'] * 2}
+        self.source['ucl_line'].data = {'x': [min(x), max(x)],
+                                        'y': [ucl] * 2,
+                                        'mrn': ['center line'] * 2}
+
+        self.div_center_line.text = "<b>Center line</b>: %0.3f" % center_line
+        self.div_ucl.text = "<b>UCL</b>: %0.3f" % ucl
+        self.div_lcl.text = "<b>LCL</b>: %0.3f" % lcl
 
         html_str = get_layout_html(self.bokeh_layout)
         self.layout.SetPage(html_str, "")
-
-    @staticmethod
-    def get_p_values(X, y, predictions, params):
-        # https://stackoverflow.com/questions/27928275/find-p-value-significance-in-scikit-learn-linearregression
-        newX = np.append(np.ones((len(X), 1)), X, axis=1)
-        MSE = (sum((y - predictions) ** 2)) / (len(newX) - len(newX[0]))
-
-        var_b = MSE * (np.linalg.inv(np.dot(newX.T, newX)).diagonal())
-        sd_b = np.sqrt(var_b)
-        ts_b = params / sd_b
-
-        return [2 * (1 - stats.t.cdf(np.abs(i), (len(newX) - 1))) for i in ts_b], sd_b, ts_b

@@ -57,6 +57,28 @@ class DefaultOptions:
         self.TIME_SERIES_AVG_LINE_DASH = 'dotted'
         self.TIME_SERIES_PATCH_ALPHA = 0.1
 
+        # Options for the time-series plot
+        self.CONTROL_CHART_CIRCLE_SIZE = 10
+        self.CONTROL_CHART_CIRCLE_ALPHA = 0.3
+        self.CONTROL_CHART_LINE_WIDTH = 1
+        self.CONTROL_CHART_LINE_DASH = 'solid'
+        self.CONTROL_CHART_LINE_COLOR = 'blue'
+        self.CONTROL_CHART_CENTER_LINE_WIDTH = 2
+        self.CONTROL_CHART_CENTER_LINE_DASH = 'solid'
+        self.CONTROL_CHART_CENTER_LINE_COLOR = 'black'
+        self.CONTROL_CHART_CENTER_LINE_ALPHA = 1
+        self.CONTROL_CHART_UCL_LINE_WIDTH = 2
+        self.CONTROL_CHART_UCL_LINE_DASH = 'dashed'
+        self.CONTROL_CHART_UCL_LINE_COLOR = 'red'
+        self.CONTROL_CHART_UCL_LINE_ALPHA = 1
+        self.CONTROL_CHART_LCL_LINE_WIDTH = 2
+        self.CONTROL_CHART_LCL_LINE_DASH = 'dashed'
+        self.CONTROL_CHART_LCL_LINE_COLOR = 'red'
+        self.CONTROL_CHART_LCL_LINE_ALPHA = 1
+        self.CONTROL_CHART_PATCH_ALPHA = 0.1
+        self.CONTROL_CHART_OUT_OF_CONTROL_COLOR = 'red'
+        self.CONTROL_CHART_OUT_OF_CONTROL_ALPHA = 1
+
         # Adjust the opacity of the histograms
         self.HISTOGRAM_ALPHA = 0.3
 
@@ -77,6 +99,8 @@ class DefaultOptions:
 
         self.COMPLEXITY_SCORE_X_WEIGHT = 1.
         self.COMPLEXITY_SCORE_Y_WEIGHT = 1.
+
+        self.SCALAR_D = 1.128
 
         self.ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV', 'EXTERNAL',
                           'FIDUCIAL', 'IMPLANT', 'OPTIMIZATION', 'PRV', 'SUPPORT', 'NONE']

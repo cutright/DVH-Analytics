@@ -1,5 +1,9 @@
 from db import sql_columns
-import numpy
+import numpy as np
+from scipy import stats
+from sklearn import linear_model
+from sklearn.metrics import mean_squared_error, r2_score
+from regressors import stats as regressors_stats
 
 
 class StatsData:
@@ -58,7 +62,7 @@ class StatsData:
                             for stat in stats:
                                 if stat in var.lower():
                                     if values:
-                                        temp.append(getattr(numpy, stat)(values))
+                                        temp.append(getattr(np, stat)(values))
                                     else:
                                         temp.append(None)
                         self.data[var] = {'units': self.column_info[var]['units'],
@@ -70,7 +74,7 @@ class StatsData:
                                 values = self.get_src_values(src, var_name, uid)
                                 values = [v for v in values if v != 'None']
                                 if values:
-                                    temp[stat].append(getattr(numpy, stat)(values))
+                                    temp[stat].append(getattr(np, stat)(values))
                                 else:
                                     temp[stat].append(None)
 
@@ -92,6 +96,10 @@ class StatsData:
 
     @property
     def variables(self):
+        return list(self.data)
+
+    @property
+    def control_chart_variables(self):
         return list(self.data)
 
     def get_bokeh_data(self, x, y):
@@ -141,3 +149,75 @@ def str_starts_with_any_in_list(string_a, string_list):
         if string_a.startswith(string_b):
             return True
     return False
+
+
+def get_p_values(X, y, predictions, params):
+    # https://stackoverflow.com/questions/27928275/find-p-value-significance-in-scikit-learn-linearregression
+    newX = np.append(np.ones((len(X), 1)), X, axis=1)
+    MSE = (sum((y - predictions) ** 2)) / (len(newX) - len(newX[0]))
+
+    var_b = MSE * (np.linalg.inv(np.dot(newX.T, newX)).diagonal())
+    sd_b = np.sqrt(var_b)
+    ts_b = params / sd_b
+
+    return [2 * (1 - stats.t.cdf(np.abs(i), (len(newX) - 1))) for i in ts_b], sd_b, ts_b
+
+
+def multi_variable_regression(X, y):
+    output = {}
+
+    reg = linear_model.LinearRegression()
+    ols = reg.fit(X, y)
+
+    output['y_intercept'] = reg.intercept_
+    output['slope'] = reg.coef_
+    params = np.append(output['y_intercept'],
+                       output['slope'])
+    output['predictions'] = reg.predict(X)
+
+    output['r_sq'] = r2_score(y,  output['predictions'])
+    output['mse'] = mean_squared_error(y,  output['predictions'])
+
+    output['p_values'], output['sd_b'], output['ts_b'] = get_p_values(X, y,  output['predictions'], params)
+
+    output['residuals'] = np.subtract(y, output['predictions'])
+
+    output['norm_prob_plot'] = stats.probplot(output['residuals'], dist='norm', fit=False, plot=None, rvalue=False)
+
+    reg_prob = linear_model.LinearRegression()
+    reg_prob.fit([[val] for val in output['norm_prob_plot'][0]], output['norm_prob_plot'][1])
+    output['y_intercept_prob'] = reg_prob.intercept_
+    output['slope_prob'] = reg_prob.coef_
+    output['x_trend_prob'] = [min(output['norm_prob_plot'][0]), max(output['norm_prob_plot'][0])]
+    output['y_trend_prob'] = np.add(np.multiply(output['x_trend_prob'],  output['slope_prob']),
+                                    output['y_intercept_prob'])
+
+    output['f_stat'] = regressors_stats.f_stat(ols, X, y)
+    output['df_error'] = len(X[:, 0]) - len(X[0, :]) - 1
+    output['df_model'] = len(X[0, :])
+
+    output['f_p_value'] = stats.f.cdf(output['f_stat'], output['df_model'], output['df_error'])
+
+    answer = Obj()
+    for key in list(output):
+        setattr(answer, key, output[key])
+
+    return answer
+
+
+class Obj:
+    pass
+
+
+def get_control_limits(y):
+    y = np.array(y)
+
+    center_line = np.mean(y)
+    avg_moving_range = np.mean(np.absolute(np.diff(y)))
+
+    scalar_d = 1.128
+
+    ucl = center_line + 3 * avg_moving_range / scalar_d
+    lcl = center_line - 3 * avg_moving_range / scalar_d
+
+    return center_line, ucl, lcl

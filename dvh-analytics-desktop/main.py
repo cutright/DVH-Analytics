@@ -16,6 +16,7 @@ from models.endpoint import EndpointFrame
 from models.rad_bio import RadBioFrame
 from models.time_series import TimeSeriesFrame
 from models.regression import RegressionFrame
+from models.control_chart import ControlChartFrame
 from models.roi_map import ROIMapDialog
 from db.sql_to_python import QuerySQL
 from db.sql_connector import echo_sql_db
@@ -158,7 +159,7 @@ class MainFrame(wx.Frame):
         self.button_query_execute = wx.Button(self, wx.ID_ANY, "Query and Retrieve")
 
         self.notebook_main_view = wx.Notebook(self, wx.ID_ANY)
-        self.tab_keys = ['Welcome', 'DVHs', 'Endpoints', 'Rad Bio', 'Time Series', 'Regression']
+        self.tab_keys = ['Welcome', 'DVHs', 'Endpoints', 'Rad Bio', 'Time Series', 'Regression', 'Control Chart']
         self.notebook_tab = {key: wx.Panel(self.notebook_main_view, wx.ID_ANY) for key in self.tab_keys}
 
         self.text_summary = wx.StaticText(self, wx.ID_ANY, "", style=wx.ALIGN_LEFT)
@@ -208,6 +209,7 @@ class MainFrame(wx.Frame):
         self.regression = RegressionFrame(self.notebook_tab['Regression'], self.stats_data)
         self.endpoint = EndpointFrame(self.notebook_tab['Endpoints'], self.dvh, self.time_series, self.regression)
         self.radbio = RadBioFrame(self.notebook_tab['Rad Bio'], self.dvh, self.time_series, self.regression)
+        self.control_chart = ControlChartFrame(self.notebook_tab['Control Chart'], self.dvh, self.data, self.stats_data)
 
     def __do_layout(self):
         sizer_summary = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Summary"), wx.HORIZONTAL)
@@ -278,6 +280,10 @@ class MainFrame(wx.Frame):
         sizer_regression = wx.BoxSizer(wx.VERTICAL)
         sizer_regression.Add(self.regression.layout, 0, wx.ALIGN_CENTER | wx.ALL, 25)
         self.notebook_tab['Regression'].SetSizer(sizer_regression)
+
+        sizer_control_chart = wx.BoxSizer(wx.VERTICAL)
+        sizer_control_chart.Add(self.control_chart.layout, 0, wx.ALIGN_CENTER | wx.ALL, 25)
+        self.notebook_tab['Control Chart'].SetSizer(sizer_control_chart)
 
         for key in self.tab_keys:
             self.notebook_main_view.AddPage(self.notebook_tab[key], key)
@@ -402,6 +408,8 @@ class MainFrame(wx.Frame):
         self.endpoint.clear_data()
         self.time_series.clear_data()
         self.time_series.initialize_y_axis_options()
+        self.control_chart.clear_data()
+        self.control_chart.initialize_y_axis_options()
         self.radbio.clear_data()
 
         uids, dvh_str = self.get_query()
@@ -413,6 +421,7 @@ class MainFrame(wx.Frame):
         self.notebook_main_view.SetSelection(1)
         self.update_data()
         self.time_series.update_data(self.dvh, self.data)
+        self.control_chart.update_data(self.dvh, self.data, self.stats_data)
         self.radbio.update_dvh_data(self.dvh)
 
         self.__enable_notebook_tabs()
@@ -473,7 +482,9 @@ class MainFrame(wx.Frame):
             wait = wx.BusyCursor()
             self.stats_data = StatsData(self.dvh, self.data)
             self.regression.stats_data = self.stats_data
+            self.control_chart.stats_data = self.stats_data
             self.regression.update_combo_box_choices()
+            self.control_chart.update_combo_box_choices()
             del wait
 
     # --------------------------------------------------------------------------------------------------------------
@@ -510,6 +521,7 @@ class MainFrame(wx.Frame):
                     self.disable_query_buttons(key)
                 self.button_query_execute.Disable()
                 self.time_series.initialize_y_axis_options()
+                self.control_chart.initialize_y_axis_options()
             dlg.Destroy()
 
     def OnAbout(self, evt):
