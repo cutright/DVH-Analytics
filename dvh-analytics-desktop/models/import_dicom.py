@@ -320,7 +320,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.parse_dicom_data()
         self.validate()
         self.tree_ctrl_import.CheckItem(self.dicom_dir.root_files, True)
-        self.text_ctrl_directory
+        # self.text_ctrl_directory
 
     def on_browse(self, evt):
         self.parsed_dicom_data = {}
@@ -352,7 +352,7 @@ class ImportDICOM_Dialog(wx.Dialog):
     def on_file_tree_select(self, evt):
         uid = self.get_file_tree_item_uid(evt.GetItem())
         self.tree_ctrl_roi.SelectItem(self.tree_ctrl_roi_root, True)
-        if uid is not None:
+        if uid in list(self.parsed_dicom_data) and self.parsed_dicom_data[uid].validation['complete_file_set']:
             if uid != self.selected_uid:
                 self.selected_uid = uid
                 wait = wx.BusyCursor()
@@ -382,12 +382,13 @@ class ImportDICOM_Dialog(wx.Dialog):
                 self.dicom_dir.check_mapped_rois(data.physician)
                 del wait
                 self.enable_inputs()
-            self.update_warning_label()
         else:
             self.clear_plan_data()
             self.disable_inputs()
             self.selected_uid = None
             self.tree_ctrl_roi.DeleteChildren(self.dicom_dir.root_rois)
+        self.selected_uid = uid
+        self.update_warning_label()
 
     def on_roi_tree_select(self, evt):
         self.allow_input_roi_apply = False
@@ -625,8 +626,11 @@ class ImportDICOM_Dialog(wx.Dialog):
             else:
                 nodes = {uid: self.dicom_dir.study_nodes[uid]}
             for uid, node in nodes.items():
-                validation = self.parsed_dicom_data[uid].validation
-                failed_keys = {key for key, value in validation.items() if not value['status']}
+                if uid in list(self.parsed_dicom_data):
+                    validation = self.parsed_dicom_data[uid].validation
+                    failed_keys = {key for key, value in validation.items() if not value['status']}
+                else:
+                    failed_keys = {'complete_file_set'}
                 if failed_keys:
                     if {'study_instance_uid', 'complete_file_set'}.intersection(failed_keys):
                         color = wx.Colour(255, 0, 0)  # red
@@ -644,16 +648,18 @@ class ImportDICOM_Dialog(wx.Dialog):
     def update_warning_label(self):
         msg = ''
         if self.selected_uid:
-            validation = self.parsed_dicom_data[self.selected_uid].validation
-            failed_keys = {key for key, value in validation.items() if not value['status']}
-            if failed_keys:
-                if 'complete_file_set' in failed_keys:
-                    msg = "WARNING: %s" % validation['complete_file_set']['message']
-                    if self.selected_uid not in self.incomplete_studies:
-                        self.incomplete_studies.append(self.selected_uid)
-                else:
-                    msg = "WARNING: %s" % ' '.join([validation[key]['message'] for key in failed_keys])
-
+            if self.selected_uid in list(self.parsed_dicom_data):
+                validation = self.parsed_dicom_data[self.selected_uid].validation
+                failed_keys = {key for key, value in validation.items() if not value['status']}
+                if failed_keys:
+                    if 'complete_file_set' in failed_keys:
+                        msg = "WARNING: %s" % validation['complete_file_set']['message']
+                        if self.selected_uid not in self.incomplete_studies:
+                            self.incomplete_studies.append(self.selected_uid)
+                    else:
+                        msg = "WARNING: %s" % ' '.join([validation[key]['message'] for key in failed_keys])
+            else:
+                msg = "WARNING: Incomplete Fileset. RT Plan, Dose, and Structure required."
         self.label_warning.SetLabelText(msg)
 
     def on_delete_study(self, evt):
@@ -783,32 +789,29 @@ class ImportWorker(Thread):
         self.data = data
         self.checked_uids = checked_uids
         self.import_uncategorized = import_uncategorized
-        # self.calculations = {"PTV Distances",
-        #                      "PTV Overlap",
-        #                      "ROI Centroid",
-        #                      "ROI Spread",
-        #                      "ROI Cross-Section",
-        #                      "OAR-PTV Centroid Distance",
-        #                      "Beam Complexities",
-        #                      "Plan Complexities"}
         self.start()  # start the thread
 
     def run(self):
 
         study_total = len(self.checked_uids)
         for study_counter, uid in enumerate(self.checked_uids):
-            if DVH_SQL().is_uid_imported(self.data[uid].study_instance_uid_to_be_imported):
-                print("WARNING: This Study Instance UID is already imported in Database. Skipping Import.")
-                print("\t%s" % self.data[uid].study_instance_uid_to_be_imported)
+            if uid in list(self.data):
+                if DVH_SQL().is_uid_imported(self.data[uid].study_instance_uid_to_be_imported):
+                    print("WARNING: This Study Instance UID is already imported in Database. Skipping Import.")
+                    print("\t%s" % self.data[uid].study_instance_uid_to_be_imported)
+                else:
+                    msg = {'patient_name': self.data[uid].patient_name,
+                           'uid': self.data[uid].study_instance_uid_to_be_imported,
+                           'progress': int(100 * study_counter / study_total),
+                           'study_number': study_counter+1,
+                           'study_total': study_total}
+                    wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
+                    wx.CallAfter(pub.sendMessage, "update_elapsed_time")
+                    self.import_study(uid)
             else:
-                msg = {'patient_name': self.data[uid].patient_name,
-                       'uid': self.data[uid].study_instance_uid_to_be_imported,
-                       'progress': int(100 * study_counter / study_total),
-                       'study_number': study_counter+1,
-                       'study_total': study_total}
-                wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
-                wx.CallAfter(pub.sendMessage, "update_elapsed_time")
-                self.import_study(uid)
+                print('WARNING: This study could not be parsed. Skipping import. '
+                      'Did you supply RT Structure, Dose, and Plan?')
+                print('\tStudy Instance UID: %s' % uid)
         wx.CallAfter(pub.sendMessage, "close")
 
     def import_study(self, uid):
