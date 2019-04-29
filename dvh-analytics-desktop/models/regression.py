@@ -250,8 +250,5 @@ class MultiVarResultsFrame(wx.Frame):
         RandomForestWorker(self.plot.X, self.plot.y)
 
     def show_plot(self, msg):
-        print('showing plot')
-        print(msg)
-
         frame = RandomForestFrame(self.plot.y, msg['y_predict'], msg['mse'])
         frame.Show()

@@ -31,13 +31,15 @@ class StatsData:
 
     @property
     def sim_study_dates(self):
-        uids = self.dvhs.study_instance_uid
-        sim_study_dates = []
-        cnx = DVH_SQL()
-        for uid in uids:
-            sim_study_dates.append(cnx.query('Plans', 'sim_study_date', "study_instance_uid = '%s'" % uid)[0])
-        cnx.close()
-        return sim_study_dates
+        # print(self.data['Simulation Date'])
+        # uids = self.dvhs.study_instance_uid
+        # sim_study_dates = []
+        # cnx = DVH_SQL()
+        # for uid in uids:
+        #     sim_study_dates.append(cnx.query('Plans', 'sim_study_date', "study_instance_uid = '%s'" % uid)[0])
+        # cnx.close()
+        # return sim_study_dates
+        return self.data['Simulation Date']['values']
 
     def map_data(self):
         self.data = {}

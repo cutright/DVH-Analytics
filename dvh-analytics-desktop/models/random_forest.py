@@ -62,9 +62,6 @@ class RandomForestWorker(Thread):
         self.start()  # start the thread
 
     def run(self):
-        print('begin random forest')
         y_predict, mse = get_random_forest(self.X, self.y, **self.kwargs)
-        print('finished random forest')
         msg = {'y_predict': y_predict, 'mse': mse}
-        print(msg)
         wx.CallAfter(pub.sendMessage, "random_forest_complete", msg=msg)
