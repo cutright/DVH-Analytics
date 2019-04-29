@@ -92,21 +92,15 @@ def dist_to_ptv_centroids(study_instance_uid, roi_name, pre_calc=None):
 
     ptv_centroid = pre_calc
     if ptv_centroid is None:
-        ptv_centroid = get_treatment_volume_centroid(study_instance_uid)
+        tv = get_treatment_volume(study_instance_uid)
+        ptv_centroid = get_treatment_volume_centroid(tv)
 
     data = float(np.linalg.norm(ptv_centroid - oar_centroid)) / 10.
 
     update_dvhs_table(study_instance_uid, roi_name, 'dist_to_ptv_centroids', round(float(data), 3))
 
 
-def get_treatment_volume_centroid(study_instance_uid):
-    ptv_coordinates_strings = DVH_SQL().query('dvhs',
-                                              'roi_coord_string',
-                                              "study_instance_uid = '%s' and roi_type like 'PTV%%'"
-                                              % study_instance_uid)
-
-    ptvs = [roi_form.get_planes_from_string(ptv[0]) for ptv in ptv_coordinates_strings]
-    tv = roi_geom.union(ptvs)
+def get_treatment_volume_centroid(tv):
     return np.array(roi_geom.centroid(tv))
 
 
@@ -147,13 +141,8 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
         print('dist_to_ptv calculation failure, skipping')
 
 
-def get_treatment_volume_coord(study_instance_uid):
-    ptv_coordinates_strings = DVH_SQL().query('dvhs',
-                                              'roi_coord_string',
-                                              "study_instance_uid = '%s' and roi_type like 'PTV%%'"
-                                              % study_instance_uid)
-    ptvs = [roi_form.get_planes_from_string(ptv[0]) for ptv in ptv_coordinates_strings]
-    return roi_form.get_roi_coordinates_from_planes(roi_geom.union(ptvs))
+def get_treatment_volume_coord(tv):
+    return roi_form.get_roi_coordinates_from_planes(tv)
 
 
 def treatment_volume_overlap(study_instance_uid, roi_name, pre_calc=None):
@@ -314,16 +303,7 @@ def beam_complexities(*condition):
     cnx.close()
 
 
-def update_ptv_data(study_instance_uid):
-    ptv_coordinates_strings = DVH_SQL().query('dvhs',
-                                              'roi_coord_string',
-                                              "study_instance_uid = '%s' and roi_type like 'PTV%%'"
-                                              % study_instance_uid)
-
-    if ptv_coordinates_strings:
-        ptvs = [roi_form.get_planes_from_string(ptv[0]) for ptv in ptv_coordinates_strings]
-        tv = roi_geom.union(ptvs)
-
+def update_ptv_data(tv, study_instance_uid):
         ptv_cross_section = roi_geom.cross_section(tv)
         ptv_spread = roi_geom.spread(tv)
 
@@ -331,8 +311,7 @@ def update_ptv_data(study_instance_uid):
         max_dose = DVH_SQL().get_max_value('dvhs', 'max_dose', condition=condition)
         min_dose = DVH_SQL().get_min_value('dvhs', 'min_dose', condition=condition)
 
-        ptv_data = {'ptv_coord_string': tv,
-                    'ptv_cross_section_max': ptv_cross_section['max'],
+        ptv_data = {'ptv_cross_section_max': ptv_cross_section['max'],
                     'ptv_cross_section_median': ptv_cross_section['median'],
                     'ptv_max_dose': max_dose,
                     'ptv_min_dose': min_dose,

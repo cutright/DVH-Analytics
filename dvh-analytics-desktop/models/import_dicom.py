@@ -874,14 +874,27 @@ class ImportWorker(Thread):
         self.move_files(uid)
 
         if ptvs['dvh']:
-            self.post_import_calc('Centroid Distance to PTV', uid, post_import_rois,
-                                  db_update.dist_to_ptv_centroids, db_update.get_treatment_volume_centroid(uid))
-
+            tv = db_update.get_treatment_volume(uid)
             self.post_import_calc('PTV Overlap Volume', uid, post_import_rois,
-                                  db_update.treatment_volume_overlap, db_update.get_treatment_volume(uid))
+                                  db_update.treatment_volume_overlap, tv)
 
+            tv_centroid = db_update.get_treatment_volume_centroid(tv)
+            self.post_import_calc('Centroid Distance to PTV', uid, post_import_rois,
+                                  db_update.dist_to_ptv_centroids, tv_centroid)
+
+            tv_coord = db_update.get_treatment_volume_coord(tv)
             self.post_import_calc('Distances to PTV', uid, post_import_rois,
-                                  db_update.min_distances, db_update.get_treatment_volume_coord(uid))
+                                  db_update.min_distances, tv_coord)
+
+            msg = {'calculation': 'Total Treatment Volume Statistics',
+                   'roi_num': 0,
+                   'roi_total': 1,
+                   'roi_name': 'PTV',
+                   'progress': 0}
+            wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+            db_update.update_ptv_data(tv, uid)
+            msg['roi_num'], msg['progress'] = 1, 100
+            wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
         else:
             print("WARNING: No PTV found for %s" % uid)
             print("\tSkipping PTV related calculations.")
