@@ -5,6 +5,8 @@ import wx
 from models.plot import PlotRegression, PlotMultiVarRegression
 from scipy import stats
 import numpy as np
+from models.random_forest import RandomForestFrame, RandomForestWorker
+from pubsub import pub
 
 
 class RegressionFrame:
@@ -187,7 +189,7 @@ class RegressionFrame:
 
         x_variables = list(self.x_variable_nodes[y_variable])
 
-        dlg = MultiVarResults(y_variable, x_variables, self.stats_data)
+        dlg = MultiVarResultsFrame(y_variable, x_variables, self.stats_data)
         dlg.Show()
 
 
@@ -204,16 +206,52 @@ class RegressionFrame:
         return [2 * (1 - stats.t.cdf(np.abs(i), (len(newX) - 1))) for i in ts_b], sd_b, ts_b
 
 
-class MultiVarResults(wx.Dialog):
+class MultiVarResultsFrame(wx.Frame):
     def __init__(self, y_variable, x_variables, stats_data, *args, **kw):
-        wx.Dialog.__init__(self, None, title="Multi-Variable Model for %s" % y_variable)
+        wx.Frame.__init__(self, None, title="Multi-Variable Model for %s" % y_variable)
 
-        plot_layout = PlotMultiVarRegression(self)
-        plot_layout.update_plot(y_variable, x_variables, stats_data)
+        self.plot = PlotMultiVarRegression(self)
+        self.plot.update_plot(y_variable, x_variables, stats_data)
+
+        algorithms = ['Random Forest', 'Support Vector Machines', 'Decision Trees', 'Gradient Boosted']
+        self.button = {key: wx.Button(self, wx.ID_ANY, key) for key in algorithms}
+
+        self.__do_bind()
+        self.__do_subscribe()
+        self.__do_layout()
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_BUTTON, self.on_random_forest, id=self.button['Random Forest'].GetId())
+
+    def __do_subscribe(self):
+        pub.subscribe(self.show_plot, "random_forest_complete")
+
+    def __do_layout(self):
 
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
-        sizer_wrapper.Add(plot_layout.layout, 0, wx.EXPAND, 5)
+        sizer_wrapper.Add(self.plot.layout, 0, wx.EXPAND | wx.ALL, 5)
+
+        sizer_algo_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_algo_select = wx.BoxSizer(wx.HORIZONTAL)
+        text = wx.StaticText(self, wx.ID_ANY, "Compare with Machine Learning Module")
+        sizer_algo_wrapper.Add(text, 0, wx.EXPAND | wx.ALL | wx.ALIGN_CENTER, 5)
+        for key, button in self.button.items():
+            sizer_algo_select.Add(button, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_algo_wrapper.Add(sizer_algo_select, 0, wx.ALL, 5)
+
+        sizer_wrapper.Add(sizer_algo_wrapper, 0, wx.EXPAND | wx.ALL | wx.ALIGN_CENTER, 10)
+
         self.SetSizer(sizer_wrapper)
         sizer_wrapper.Fit(self)
         self.Layout()
         self.Center()
+
+    def on_random_forest(self, evt):
+        RandomForestWorker(self.plot.X, self.plot.y)
+
+    def show_plot(self, msg):
+        print('showing plot')
+        print(msg)
+
+        frame = RandomForestFrame(self.plot.y, msg['y_predict'], msg['mse'])
+        frame.Show()

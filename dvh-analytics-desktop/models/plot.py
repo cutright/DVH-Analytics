@@ -398,7 +398,10 @@ class PlotRegression:
 class PlotMultiVarRegression:
     def __init__(self, parent):
 
-        self.figure_residual_fits, self.layout = get_base_plot(parent, plot_width=400, plot_height=400)
+        self.X, self.y = None, None
+
+        self.figure_residual_fits, self.layout = get_base_plot(parent, plot_width=400, plot_height=400,
+                                                               frame_size=(900, 600))
 
         self.figure_residual_fits.xaxis.axis_label = 'Fitted Values'
         self.figure_residual_fits.yaxis.axis_label = 'Residuals'
@@ -449,8 +452,8 @@ class PlotMultiVarRegression:
 
     def update_plot(self, y_variable, x_variables, stats_data):
 
-        X, y = self.get_X_and_y(y_variable, x_variables, stats_data)
-        reg = multi_variable_regression(X, y)
+        self.X, self.y = self.get_X_and_y(y_variable, x_variables, stats_data)
+        reg = multi_variable_regression(self.X, self.y)
 
         self.source['residuals'].data = {'x': reg.predictions,
                                          'y': reg.residuals}
@@ -606,5 +609,25 @@ class PlotControlChart:
         self.div_ucl.text = "<b>UCL</b>: %0.3f" % ucl
         self.div_lcl.text = "<b>LCL</b>: %0.3f" % lcl
 
+        html_str = get_layout_html(self.bokeh_layout)
+        self.layout.SetPage(html_str, "")
+
+
+class PlotRandomForest:
+    def __init__(self, parent, y, y_predict, mse):
+        self.y, self.y_predict = y, y_predict
+        self.mse = mse
+
+        self.x = list(range(1, len(self.y)+1))
+
+        self.figure_predictions, self.layout = get_base_plot(parent, plot_width=400, plot_height=400,
+                                                             frame_size=(900, 600))
+
+        self.source = ColumnDataSource(data=dict(x=self.x, y=self.y, y_predict=self.y_predict))
+
+        self.figure_predictions.circle('x', 'y', source=self.source, color='blue')
+        self.figure_predictions.circle('x', 'y_predict', source=self.source, color='red')
+
+        self.bokeh_layout = column(self.figure_predictions)
         html_str = get_layout_html(self.bokeh_layout)
         self.layout.SetPage(html_str, "")

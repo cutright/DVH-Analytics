@@ -5,6 +5,7 @@ from scipy import stats
 from sklearn import linear_model
 from sklearn.metrics import mean_squared_error, r2_score
 from regressors import stats as regressors_stats
+from sklearn.ensemble import RandomForestRegressor
 
 
 class StatsData:
@@ -244,3 +245,15 @@ def get_control_limits(y):
     lcl = center_line - 3 * avg_moving_range / scalar_d
 
     return center_line, ucl, lcl
+
+
+def get_random_forest(X, y, n_estimators=100, max_features=None):
+    if max_features is None:
+        max_features = len(X[0, :])
+    regressor = RandomForestRegressor(n_estimators=n_estimators, max_features=max_features)
+    regressor.fit(X, y)
+    y_pred = regressor.predict(X)
+
+    mse = np.mean(np.square(np.subtract(y_pred, y)))
+
+    return y_pred, mse
