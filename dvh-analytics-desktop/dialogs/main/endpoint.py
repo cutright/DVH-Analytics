@@ -157,7 +157,7 @@ class DelEndpointDialog(wx.Dialog):
         self.list_ctrl_endpoints.AppendColumn("Endpoint", format=wx.LIST_FORMAT_LEFT, width=200)
 
         for ep in self.endpoints:
-            if ep not in {'MRN', 'ROI Name'}:
+            if ep not in {'MRN', 'Tx Site', 'ROI Name'}:
                 self.list_ctrl_endpoints.InsertItem(50000, ep)
 
     def __do_layout(self):

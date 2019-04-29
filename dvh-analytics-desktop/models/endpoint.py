@@ -86,20 +86,20 @@ class EndpointFrame:
                     ep[ep_name] = deepcopy(self.data_table.data[ep_name])
 
                 else:
-                    endpoint_input = ['absolute', 'relative']['%' in ep_defs['units_in'][i]]
-                    endpoint_output = ['absolute', 'relative']['%' in ep_defs['units_out'][i]]
+                    endpoint_input = ep_defs['input_type'][i]
+                    endpoint_output = ep_defs['output_type'][i]
 
                     x = float(ep_defs['input_value'][i])
                     if endpoint_input == 'relative':
                         x /= 100.
 
                     if 'V' in ep_name:
-                        ep[ep_name] = self.dvh.get_volume_of_dose(x, volume_scale=endpoint_input,
-                                                                  dose_scale=endpoint_output)
+                        ep[ep_name] = self.dvh.get_volume_of_dose(x, volume_scale=endpoint_output,
+                                                                  dose_scale=endpoint_input)
 
                     else:
-                        ep[ep_name] = self.dvh.get_dose_to_volume(x, dose_scale=endpoint_input,
-                                                                  volume_scale=endpoint_output)
+                        ep[ep_name] = self.dvh.get_dose_to_volume(x, dose_scale=endpoint_output,
+                                                                  volume_scale=endpoint_input)
 
         self.data_table.set_data(ep, columns)
         self.data_table.set_column_width(0, 150)
@@ -110,6 +110,7 @@ class EndpointFrame:
         dlg = AddEndpointDialog(title='Add Endpoint')
         res = dlg.ShowModal()
         if res == wx.ID_OK and dlg.is_endpoint_valid:
+            print(dlg.endpoint_row)
             self.endpoint_defs.append_row(dlg.endpoint_row)
             self.calculate_endpoints()
             self.enable_buttons()
