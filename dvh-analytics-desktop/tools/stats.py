@@ -54,7 +54,7 @@ class StatsData:
                 elif table == 'Beams':
                     src = self.table_data[table]
 
-                    if str_starts_with_any_in_list(var, ['Beam Complexity', 'Beam Area', 'CP MU',
+                    if str_starts_with_any_in_list(var, ['Beam Complexity', 'Beam Area', 'Control Point MU',
                                                          'Beam Perimeter', 'Beam Energy']):
                         # stats of these four variable types have min, mean, median, and max types in DB
                         # The following will take min, mean, median, or max of all values for a UID based on var type
