@@ -56,6 +56,7 @@ class RegressionFrame:
         self.parent.Bind(wx.EVT_SPIN, self.spin_y, id=self.spin_button_y_axis.GetId())
         self.parent.Bind(wx.EVT_CHECKBOX, self.on_checkbox, id=self.checkbox.GetId())
         self.pane_tree.Bind(wx.EVT_BUTTON, self.on_regression, id=self.button_multi_var_reg_model.GetId())
+        self.pane_tree.Bind(wx.EVT_TREE_SEL_CHANGED, self.on_tree_select, id=self.tree_ctrl.GetId())
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -192,7 +193,6 @@ class RegressionFrame:
         dlg = MultiVarResultsFrame(y_variable, x_variables, self.stats_data)
         dlg.Show()
 
-
     @staticmethod
     def get_p_values(X, y, predictions, params):
         # https://stackoverflow.com/questions/27928275/find-p-value-significance-in-scikit-learn-linearregression
@@ -204,6 +204,26 @@ class RegressionFrame:
         ts_b = params / sd_b
 
         return [2 * (1 - stats.t.cdf(np.abs(i), (len(newX) - 1))) for i in ts_b], sd_b, ts_b
+
+    def on_tree_select(self, evt):
+        selection = evt.GetItem()
+        x_var, y_var = self.get_x_y_of_node(selection)
+        if y_var is not None:
+            self.combo_box_y_axis.SetValue(y_var)
+        if x_var is not None:
+            self.combo_box_x_axis.SetValue(x_var)
+
+        if any([x_var, y_var]):
+            self.update_plot()
+
+    def get_x_y_of_node(self, node):
+        for y_var in list(self.x_variable_nodes):
+            if node == self.y_variable_nodes[y_var]:
+                return None, y_var
+            for x_var, x_node in self.x_variable_nodes[y_var].items():
+                if node == x_node:
+                    return x_var, y_var
+        return None, None
 
 
 class MultiVarResultsFrame(wx.Frame):
