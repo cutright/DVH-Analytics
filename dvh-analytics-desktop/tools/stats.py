@@ -1,5 +1,4 @@
 from db import sql_columns
-from db.sql_connector import DVH_SQL
 import numpy as np
 from scipy import stats
 from sklearn import linear_model
@@ -35,7 +34,7 @@ class StatsData:
 
     def map_data(self):
         self.data = {}
-        stats = ['min', 'mean', 'median', 'max']
+        stat_types = ['min', 'mean', 'median', 'max']
         for var in self.correlation_variables:
             if var in self.column_info.keys():
                 var_name = self.column_info[var]['var_name']
@@ -65,7 +64,7 @@ class StatsData:
                             indices = self.get_beam_indices(uid)
                             beam_data = getattr(self.table_data['Beams'], var_name)
                             values = [beam_data[i] for i in indices if beam_data[i] != 'None']
-                            for stat in stats:
+                            for stat in stat_types:
                                 if stat in var.lower():
                                     if values:
                                         temp.append(getattr(np, stat)(values))
@@ -74,9 +73,9 @@ class StatsData:
                         self.data[var] = {'units': self.column_info[var]['units'],
                                           'values': temp}
                     else:
-                        temp = {s: [] for s in stats}
+                        temp = {s: [] for s in stat_types}
                         for uid in self.uids:
-                            for stat in stats:
+                            for stat in stat_types:
                                 values = self.get_src_values(src, var_name, uid)
                                 values = [v for v in values if v != 'None']
                                 if values:
@@ -84,7 +83,7 @@ class StatsData:
                                 else:
                                     temp[stat].append(None)
 
-                        for stat in stats:
+                        for stat in stat_types:
                             corr_key = "%s (%s)" % (var, stat.capitalize())
                             self.data[corr_key] = {'units': self.column_info[var]['units'],
                                                    'values': temp[stat]}

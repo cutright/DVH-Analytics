@@ -1,8 +1,6 @@
 import wx
 from models.plot import PlotControlChart
 from db import sql_columns
-from datetime import datetime
-from dateutil import parser
 
 
 class ControlChartFrame:

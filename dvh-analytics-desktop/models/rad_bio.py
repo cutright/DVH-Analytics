@@ -28,6 +28,7 @@ class RadBioFrame:
         self.dvh = dvh
         self.time_series = time_series
         self.regression = regression
+        self.control_chart = control_chart
 
         self.table_published_values = wx.ListCtrl(self.parent, wx.ID_ANY,
                                                   style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
@@ -195,12 +196,12 @@ class RadBioFrame:
         if self.time_series.combo_box_y_axis.GetValue() in ['EUD', 'NTCP or TCP']:
             self.time_series.update_plot()
 
-        self.control_chart.update_y_axis_options()
+        self.regression.stats_data.update_endpoints_and_radbio()
+        self.regression.update_combo_box_choices()
+
+        self.control_chart.update_combo_box_choices()
         if self.control_chart.combo_box_y_axis.GetValue() in ['EUD', 'NTCP or TCP']:
             self.control_chart.update_plot()
-
-        self.regression.data.update_endpoints_and_radbio()
-        self.regression.update_combo_box_choices()
 
     def clear_data(self):
         self.data_table_rad_bio.delete_all_rows()

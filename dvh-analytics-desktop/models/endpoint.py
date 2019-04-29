@@ -115,10 +115,10 @@ class EndpointFrame:
             self.enable_buttons()
             self.update_endpoints_in_dvh()
             self.time_series.update_y_axis_options()
-            self.control_chart.update_y_axis_options()
         dlg.Destroy()
-        self.regression.data.update_endpoints_and_radbio()
+        self.regression.stats_data.update_endpoints_and_radbio()
         self.regression.update_combo_box_choices()
+        self.control_chart.update_combo_box_choices()
 
     def del_ep_button_click(self, evt):
         dlg = DelEndpointDialog(self.data_table.columns, title='Delete Endpoint')
@@ -130,11 +130,11 @@ class EndpointFrame:
                 self.update_endpoints_in_dvh()
                 self.endpoint_defs.delete_row(endpoint_def_row)
             self.time_series.update_y_axis_options()
-            self.control_chart.update_y_axis_options()
         dlg.Destroy()
 
-        self.regression.data.update_endpoints_and_radbio()
+        self.regression.stats_data.update_endpoints_and_radbio()
         self.regression.update_combo_box_choices()
+        self.control_chart.update_combo_box_choices()
 
         if self.data_table.column_count == 2:
             self.button['del'].Disable()
