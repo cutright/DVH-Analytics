@@ -21,7 +21,7 @@ from models.roi_map import ROIMapDialog
 from db.sql_to_python import QuerySQL
 from db.sql_connector import echo_sql_db
 from paths import LOGO_PATH
-from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, initialize_directories_and_settings
+from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux, initialize_directories_and_settings
 from tools.stats import StatsData
 
 
@@ -95,7 +95,7 @@ class MainFrame(wx.Frame):
 
         for key in self.toolbar_keys:
             bitmap = wx.Bitmap(files[key], wx.BITMAP_TYPE_ANY)
-            if is_windows():
+            if is_windows() or is_linux():
                 bitmap = scale_bitmap(bitmap, 16, 16)
             self.frame_toolbar.AddTool(self.toolbar_ids[key], key, bitmap,
                                        wx.NullBitmap, wx.ITEM_NORMAL, description[key], "")
