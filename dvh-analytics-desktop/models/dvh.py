@@ -312,6 +312,7 @@ class DVH:
                    "Max dose (Gy): %0.2f, %0.2f, %0.2f" % (min(self.max_dose),
                                                            sum(self.max_dose) / self.count,
                                                            max(self.max_dose))]
+        cnx.close()
         return '\n'.join(summary)
 
     def __set_ptv_data(self):
@@ -326,10 +327,11 @@ class DVH:
         self.ptv_volume = []
 
         for uid in self.uid:
-            ptv_coordinates_strings = DVH_SQL().query('dvhs',
-                                                      'roi_coord_string',
-                                                      "study_instance_uid = '%s' and roi_type like 'PTV%%'"
-                                                      % uid)
+            cnx = DVH_SQL()
+            ptv_coordinates_strings = cnx.query('dvhs',
+                                                'roi_coord_string',
+                                                "study_instance_uid = '%s' and roi_type like 'PTV%%'"
+                                                % uid)
 
             if ptv_coordinates_strings:
                 ptvs = [roi_form.get_planes_from_string(ptv[0]) for ptv in ptv_coordinates_strings]
@@ -340,10 +342,10 @@ class DVH:
                 surface_area = roi_geom.surface_area(tv, coord_type='sets_of_points')
                 volume = roi_geom.volume(tv)
 
-                max_dose = DVH_SQL().get_max_value('dvhs', 'max_dose',
-                                                   condition="study_instance_uid = '%s' and roi_type like 'PTV%%'" % uid)
-                min_dose = DVH_SQL().get_min_value('dvhs', 'min_dose',
-                                                   condition="study_instance_uid = '%s' and roi_type like 'PTV%%'" % uid)
+                max_dose = cnx.get_max_value('dvhs', 'max_dose',
+                                             condition="study_instance_uid = '%s' and roi_type like 'PTV%%'" % uid)
+                min_dose = cnx.get_min_value('dvhs', 'min_dose',
+                                             condition="study_instance_uid = '%s' and roi_type like 'PTV%%'" % uid)
 
                 self.ptv_cross_section_max.append(cross_section['max'])
                 self.ptv_cross_section_median.append(cross_section['median'])
@@ -364,6 +366,7 @@ class DVH:
                 self.ptv_spread_z.append(None)
                 self.ptv_surface_area.append(None)
                 self.ptv_volume.append(None)
+            cnx.close()
 
 
 # Returns the isodose level outlining the given volume

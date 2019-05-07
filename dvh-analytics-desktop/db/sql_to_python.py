@@ -12,22 +12,23 @@ class QuerySQL:
         if table_name in {'beams', 'dvhs', 'plans', 'rxs'}:
             self.table_name = table_name
             self.condition_str = condition_str
-            self.cnx = DVH_SQL()
+            cnx = DVH_SQL()
 
             # column names, use as property names
-            column_cursor = self.cnx.get_column_names(table_name)
+            column_cursor = cnx.get_column_names(table_name)
 
             for row in column_cursor:
                 column = str(row).strip()
                 if column not in {'roi_coord_string, distances_to_ptv, dth_string'}:
-                    self.cursor = self.cnx.query(self.table_name,
-                                                 column,
-                                                 self.condition_str)
+                    self.cursor = cnx.query(self.table_name,
+                                            column,
+                                            self.condition_str)
                 if unique:
                     rtn_list = get_unique_list(self.cursor_to_list())
                 else:
                     rtn_list = self.cursor_to_list()
                 setattr(self, column, rtn_list)
+            cnx.close()
         else:
             print('Table name in valid. Please select from Beams, DVHs, Plans, or Rxs.')
 

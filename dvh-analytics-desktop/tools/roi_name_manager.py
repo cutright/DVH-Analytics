@@ -582,6 +582,7 @@ def get_physician_from_uid(uid):
     cnx = DVH_SQL()
     condition = "study_instance_uid = '" + uid + "'"
     results = cnx.query('Plans', 'physician', condition)
+    cnx.close()
 
     if len(results) > 1:
         print('Warning: multiple plans with this study_instance_uid exist')

@@ -26,7 +26,9 @@ class ImportDICOM_Dialog(wx.Dialog):
     def __init__(self, inbox=None, *args, **kwds):
         wx.Dialog.__init__(self, None, title='Import DICOM')
 
-        DVH_SQL().initialize_database()
+        cnx = DVH_SQL()
+        cnx.initialize_database()
+        cnx.close()
 
         self.SetSize((1350, 800))
 
@@ -792,11 +794,11 @@ class ImportWorker(Thread):
         self.start()  # start the thread
 
     def run(self):
-
+        cnx = DVH_SQL()
         study_total = len(self.checked_uids)
         for study_counter, uid in enumerate(self.checked_uids):
             if uid in list(self.data):
-                if DVH_SQL().is_uid_imported(self.data[uid].study_instance_uid_to_be_imported):
+                if cnx.is_uid_imported(self.data[uid].study_instance_uid_to_be_imported):
                     print("WARNING: This Study Instance UID is already imported in Database. Skipping Import.")
                     print("\t%s" % self.data[uid].study_instance_uid_to_be_imported)
                 else:
@@ -812,6 +814,7 @@ class ImportWorker(Thread):
                 print('WARNING: This study could not be parsed. Skipping import. '
                       'Did you supply RT Structure, Dose, and Plan?')
                 print('\tStudy Instance UID: %s' % uid)
+        cnx.close()
         wx.CallAfter(pub.sendMessage, "close")
 
     def import_study(self, uid):
