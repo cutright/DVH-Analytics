@@ -343,6 +343,21 @@ class PlotRegression:
         html_str = get_layout_html(self.bokeh_layout)
         self.layout.SetPage(html_str, "")
 
+    def clear_plot(self):
+        self.clear_sources()
+        self.figure.xaxis.axis_label = ''
+        self.figure.yaxis.axis_label = ''
+        html_str = get_layout_html(self.bokeh_layout)
+        self.layout.SetPage(html_str, "")
+
+    def clear_source(self, source_key):
+        data = {data_key: [] for data_key in list(self.source[source_key].data)}
+        self.source[source_key].data = data
+
+    def clear_sources(self):
+        for key in list(self.source):
+            self.clear_source(key)
+
     def update_trend(self, x_var):
         x, y, mrn = self.clean_data(self.source['plot'].data['x'],
                                     self.source['plot'].data['y'],
@@ -608,6 +623,22 @@ class PlotControlChart:
         self.div_center_line.text = "<b>Center line</b>: %0.3f" % center_line
         self.div_ucl.text = "<b>UCL</b>: %0.3f" % ucl
         self.div_lcl.text = "<b>LCL</b>: %0.3f" % lcl
+
+        html_str = get_layout_html(self.bokeh_layout)
+        self.layout.SetPage(html_str, "")
+
+    def clear_plot(self):
+        self.source['plot'].data = {'x': [], 'y': [], 'mrn': [], 'color': [], 'alpha': []}
+
+        self.source['patch'].data = {'x': [], 'y': []}
+        self.source['center_line'].data = {'x': [], 'y': [], 'mrn': []}
+
+        self.source['lcl_line'].data = {'x': [], 'y': [], 'mrn': []}
+        self.source['ucl_line'].data = {'x': [], 'y': [], 'mrn': []}
+
+        self.div_center_line.text = "<b>Center line</b>:"
+        self.div_ucl.text = "<b>UCL</b>:"
+        self.div_lcl.text = "<b>LCL</b>:"
 
         html_str = get_layout_html(self.bokeh_layout)
         self.layout.SetPage(html_str, "")

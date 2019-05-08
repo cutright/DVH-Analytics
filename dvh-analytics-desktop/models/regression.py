@@ -130,15 +130,22 @@ class RegressionFrame:
         self.update_plot()
 
     def update_plot(self):
-        self.plot.update_plot(self.stats_data.get_bokeh_data(self.x_axis, self.y_axis),
-                              self.combo_box_x_axis.GetValue(),
-                              self.stats_data.get_axis_title(self.x_axis),
-                              self.stats_data.get_axis_title(self.y_axis))
+        if self.combo_box_x_axis.GetValue() == self.combo_box_y_axis.GetValue():
+            self.plot.clear_plot()
+        else:
+            self.plot.update_plot(self.stats_data.get_bokeh_data(self.x_axis, self.y_axis),
+                                  self.combo_box_x_axis.GetValue(),
+                                  self.stats_data.get_axis_title(self.x_axis),
+                                  self.stats_data.get_axis_title(self.y_axis))
 
         if self.y_axis in list(self.y_variable_nodes) and self.x_axis in list(self.x_variable_nodes[self.y_axis]):
                 self.checkbox.SetValue(True)
         else:
             self.checkbox.SetValue(False)
+        if self.combo_box_x_axis.GetValue() == self.combo_box_y_axis.GetValue():
+            self.checkbox.Disable()
+        else:
+            self.checkbox.Enable()
 
     def spin_x(self, evt):
         new_index = len(self.choices)-1 - int(self.spin_button_x_axis.GetValue())
