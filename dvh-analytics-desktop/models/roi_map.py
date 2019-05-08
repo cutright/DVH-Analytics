@@ -1,6 +1,7 @@
 import wx
 import wx.html2
 from tools.roi_name_manager import DatabaseROIs
+from dialogs.roi_map import PhysicianAdd
 
 
 class ROIMapDialog(wx.Dialog):
@@ -38,6 +39,7 @@ class ROIMapDialog(wx.Dialog):
         self.button_merge = wx.Button(self.window_editor, wx.ID_ANY, "Merge")
 
         self.__set_properties()
+        self.__do_bind()
         self.__do_layout()
 
     def __set_properties(self):
@@ -50,6 +52,9 @@ class ROIMapDialog(wx.Dialog):
         self.combo_box_physician_roi_a.SetMinSize((250, 25))
         self.combo_box_physician_roi_b.SetMinSize((250, 25))
         # self.window.SetMinimumPaneSize(20)
+
+    def __do_bind(self):
+        self.window_editor.Bind(wx.EVT_BUTTON, self.add_physician, id=self.button_add_physician.GetId())
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.HORIZONTAL)
@@ -147,6 +152,10 @@ class ROIMapDialog(wx.Dialog):
         self.SetSizer(sizer_wrapper)
         self.Layout()
         self.Centre()
+
+    def add_physician(self, evt):
+        dlg = PhysicianAdd()
+        dlg.ShowModal()
 
 
 class RoiTree:
