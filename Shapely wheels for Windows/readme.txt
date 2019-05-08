@@ -1,4 +1,4 @@
-Shapely is notoriously frustating to install on Windows. Attached are wheels to make that
+Shapely is notoriously frustrating to install on Windows. Attached are wheels to make that
 process much easier. Files were downloaded from [here](https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely).
 
 instead of typing:
