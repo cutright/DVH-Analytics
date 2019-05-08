@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-from options import DefaultOptions
 
 requires = [
     'wxpython',
@@ -7,11 +6,7 @@ requires = [
     'numpy',
     'scipy',
     'pydicom >= 0.9.9',
-    'matplotlib',
-    'six >= 1.5',
     'dicompyler-core',
-    'Jinja2',
-    'PyYaml',
     'bokeh >= 1.0.4',
     'python-dateutil',
     'psycopg2-binary',
@@ -25,19 +20,19 @@ setup(
     name='dvh-analytics-desktop',
     include_package_data=True,
     packages=find_packages(),
-    version=VERSION,
+    version=0.6,
     description='Create a database of DVHs, GUI with wxPython, plots with Bokeh',
     author='Dan Cutright',
     author_email='dan.cutright@gmail.com',
     url='https://github.com/cutright/DVH-Analytics',
-    download_url='https://github.com/cutright/DVH-Analytics/archive/master.zip',
+    download_url='https://github.com/cutright/DVH-Analytics-Desktop/archive/master.zip',
     license="MIT License",
     keywords=['dvh', 'radiation therapy', 'research', 'dicom', 'dicom-rt', 'bokeh', 'analytics', 'wxpython'],
     classifiers=[],
     install_requires=requires,
     entry_points={
         'console_scripts': [
-            'dvh=dvh.__main__:main',
+            'dvha=dvh-analytics-desktop.main:DVHApp',
         ],
     },
     long_description="""DVH Database for Clinicians and Researchers
