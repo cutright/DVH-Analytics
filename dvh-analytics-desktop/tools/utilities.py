@@ -403,3 +403,10 @@ def get_dose_to_volume(dvhs, volumes, roi_fraction):
         doses.append(dose)
 
     return doses
+
+
+def float_or_none(value):
+    try:
+        return float(value)
+    except ValueError:
+        return 'None'

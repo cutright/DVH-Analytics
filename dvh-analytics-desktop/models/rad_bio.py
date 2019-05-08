@@ -6,7 +6,7 @@ from models.datatable import DataTable
 from models.dvh import calc_eud, calc_tcp
 # import wx.lib.mixins.listctrl as listmix
 from copy import deepcopy
-from tools.utilities import convert_value_to_str, get_selected_listctrl_items
+from tools.utilities import convert_value_to_str, get_selected_listctrl_items, float_or_none
 from dialogs.export import data_table_to_csv as export_dlg
 
 
@@ -177,20 +177,32 @@ class RadBioFrame:
         selected_indices = get_selected_listctrl_items(self.table_rad_bio)
         if not selected_indices:
             selected_indices = range(self.data_table_rad_bio.row_count)
+
+        eud_a = float_or_none(self.text_input_eud_a.GetValue())
+        gamma_50 = float_or_none(self.text_input_gamma_50.GetValue())
+        td_50 = float_or_none(self.text_input_td_50.GetValue())
+
         for i in selected_indices:
             current_row = self.data_table_rad_bio.get_row(i)
-            current_row[7] = convert_value_to_str(current_row[7])
-            current_row[9] = convert_value_to_str(current_row[9])
+            for j in [7, 9]:
+                current_row[i] = convert_value_to_str(current_row[i])
             new_row = deepcopy(current_row)
-            new_row[2] = self.text_input_eud_a.GetValue()
-            new_row[3] = self.text_input_gamma_50.GetValue()
-            new_row[4] = self.text_input_td_50.GetValue()
-            new_row[5] = "%0.2f" % round(calc_eud(self.dvh.dvh[:, i], float(new_row[2])), 2)
-            new_row[6] = "%0.2f" % round(calc_tcp(float(new_row[3]), float(new_row[4]), float(new_row[5])), 3)
+            new_row[2], new_row[3], new_row[4] = eud_a, gamma_50, td_50
+            try:
+                new_row[5] = "%0.2f" % round(calc_eud(self.dvh.dvh[:, i], eud_a), 2)
+            except:
+                new_row[5] = 'None'
+            try:
+                new_row[6] = "%0.2f" % round(calc_tcp(gamma_50, td_50, float(new_row[5])), 3)
+            except:
+                new_row[6] = 'None'
             self.data_table_rad_bio.edit_row(new_row, i)
 
-        self.dvh.eud = [float(eud) for eud in self.data_table_rad_bio.data['EUD']]
-        self.dvh.ntcp_or_tcp = [float(ntcp_or_tcp) for ntcp_or_tcp in self.data_table_rad_bio.data['NTCP or TCP']]
+        self.dvh.eud = []
+        self.dvh.ntcp_or_tcp = []
+        for i, eud in enumerate(self.data_table_rad_bio.data['EUD']):
+            self.dvh.eud.append(float_or_none(eud))
+            self.dvh.ntcp_or_tcp.append(float_or_none(self.data_table_rad_bio.data['NTCP or TCP'][i]))
 
         self.time_series.update_y_axis_options()
         if self.time_series.combo_box_y_axis.GetValue() in ['EUD', 'NTCP or TCP']:
