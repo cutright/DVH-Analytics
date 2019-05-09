@@ -15,40 +15,74 @@ from tools.stats import multi_variable_regression, get_control_limits
 options = Options()
 
 
-def get_base_plot(parent, x_axis_label='X Axis', y_axis_label='Y Axis', plot_width=800, plot_height=500,
-                  frame_size=(900, 900), x_axis_type='linear'):
+class Plot:
+    def __init__(self, parent, x_axis_label='X Axis', y_axis_label='Y Axis',
+                 plot_width=800, plot_height=500, frame_size=(900, 900), x_axis_type='linear'):
 
-    wxlayout = wx.html2.WebView.New(parent, size=frame_size)
+        self.layout = wx.html2.WebView.New(parent, size=frame_size)
+        self.bokeh_layout = None
 
-    fig = figure(plot_width=plot_width, plot_height=plot_height, x_axis_type=x_axis_type)
-    fig.xaxis.axis_label = x_axis_label
-    fig.yaxis.axis_label = y_axis_label
+        self.figure = figure(plot_width=plot_width, plot_height=plot_height, x_axis_type=x_axis_type)
+        self.figure.xaxis.axis_label = x_axis_label
+        self.figure.yaxis.axis_label = y_axis_label
 
-    apply_default_options(fig)
+        self.source = {}  # Will be a dictionary of bokeh ColumnDataSources
 
-    return fig, wxlayout
+        self.__apply_default_figure_options()
+
+    def __apply_default_figure_options(self):
+        self.figure.xaxis.axis_label_text_font_size = options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.figure.yaxis.axis_label_text_font_size = options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.figure.xaxis.major_label_text_font_size = options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.figure.yaxis.major_label_text_font_size = options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.figure.min_border_bottom = options.MIN_BORDER
+        self.figure.yaxis.axis_label_text_baseline = "bottom"
+
+    def clear_plot(self):
+        if self.bokeh_layout:
+            self.clear_sources()
+            self.figure.xaxis.axis_label = ''
+            self.figure.yaxis.axis_label = ''
+            self.update_bokeh_layout_in_wx_python()
+
+    def clear_source(self, source_key):
+        data = {data_key: [] for data_key in list(self.source[source_key].data)}
+        self.source[source_key].data = data
+
+    def clear_sources(self):
+        for key in list(self.source):
+            self.clear_source(key)
+
+    def update_bokeh_layout_in_wx_python(self):
+        html_str = get_layout_html(self.bokeh_layout)
+        self.layout.SetPage(html_str, "")
+
+    @staticmethod
+    def clean_data(*data, mrn=None):
+        bad_indices = []
+        for var in data:
+            bad_indices.extend([i for i, value in enumerate(var) if value == 'None'])
+        bad_indices = list(set(bad_indices))
+
+        ans = []
+        for var in data:
+            ans.append([value for i, value in enumerate(var) if i not in bad_indices])
+        if mrn:
+            ans.append([value for i, value in enumerate(mrn) if i not in bad_indices])
+
+        return tuple(ans)
 
 
-def apply_default_options(fig):
-    fig.xaxis.axis_label_text_font_size = options.PLOT_AXIS_LABEL_FONT_SIZE
-    fig.yaxis.axis_label_text_font_size = options.PLOT_AXIS_LABEL_FONT_SIZE
-    fig.xaxis.major_label_text_font_size = options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-    fig.yaxis.major_label_text_font_size = options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-    fig.min_border_bottom = options.MIN_BORDER
-    fig.yaxis.axis_label_text_baseline = "bottom"
-
-
-class PlotStatDVH:
+class PlotStatDVH(Plot):
     def __init__(self, parent, dvh):
+        Plot.__init__(self, parent, x_axis_label='Dose (cGy)', y_axis_label='Relative Volume',
+                      plot_width=800, plot_height=400)
 
-        self.figure, self.layout = get_base_plot(parent, x_axis_label='Dose (cGy)', y_axis_label='Relative Volume',
-                                                 plot_width=800, plot_height=400)
+        self.source = {'dvh': ColumnDataSource(data=dict(x=[], y=[], mrn=[], roi_name=[], roi_type=[], rx_dose=[],
+                                                         volume=[], min_dose=[], mean_dose=[], max_dose=[])),
+                       'stats': ColumnDataSource(data=dict(x=[], min=[], mean=[], median=[], max=[], mrn=[])),
+                       'patch': ColumnDataSource(data=dict(x=[], y=[]))}
 
-        self.source = ColumnDataSource(data=dict(x=[], y=[], mrn=[], roi_name=[], roi_type=[], rx_dose=[], volume=[],
-                                                 min_dose=[], mean_dose=[], max_dose=[]))
-
-        self.source_stats = ColumnDataSource(data=dict(x=[], min=[], mean=[], median=[], max=[], mrn=[]))
-        self.source_patch = ColumnDataSource(data=dict(x=[], y=[]))
         self.layout_done = False
         self.dvh = dvh
         self.stat_dvhs = {key: np.array(0) for key in ['min', 'q1', 'mean', 'median', 'q3', 'max']}
@@ -68,26 +102,26 @@ class PlotStatDVH:
         """
         self.figure.add_tools(custom_hover)
 
-        self.figure.multi_line('x', 'y', source=self.source, selection_color='color', line_width=options.DVH_LINE_WIDTH,
+        self.figure.multi_line('x', 'y', source=self.source['dvh'], selection_color='color', line_width=options.DVH_LINE_WIDTH,
                                alpha=0, line_dash=options.DVH_LINE_DASH, nonselection_alpha=0, selection_alpha=1)
 
         # Add statistical plots to figure
-        stats_max = self.figure.line('x', 'max', source=self.source_stats, line_width=options.STATS_MAX_LINE_WIDTH,
+        stats_max = self.figure.line('x', 'max', source=self.source['stats'], line_width=options.STATS_MAX_LINE_WIDTH,
                                      color=options.PLOT_COLOR, line_dash=options.STATS_MAX_LINE_DASH,
                                      alpha=options.STATS_MAX_ALPHA)
-        stats_median = self.figure.line('x', 'median', source=self.source_stats,
+        stats_median = self.figure.line('x', 'median', source=self.source['stats'],
                                         line_width=options.STATS_MEDIAN_LINE_WIDTH,
                                         color=options.PLOT_COLOR, line_dash=options.STATS_MEDIAN_LINE_DASH,
                                         alpha=options.STATS_MEDIAN_ALPHA)
-        stats_mean = self.figure.line('x', 'mean', source=self.source_stats, line_width=options.STATS_MEAN_LINE_WIDTH,
+        stats_mean = self.figure.line('x', 'mean', source=self.source['stats'], line_width=options.STATS_MEAN_LINE_WIDTH,
                                       color=options.PLOT_COLOR, line_dash=options.STATS_MEAN_LINE_DASH,
                                       alpha=options.STATS_MEAN_ALPHA)
-        stats_min = self.figure.line('x', 'min', source=self.source_stats, line_width=options.STATS_MIN_LINE_WIDTH,
+        stats_min = self.figure.line('x', 'min', source=self.source['stats'], line_width=options.STATS_MIN_LINE_WIDTH,
                                      color=options.PLOT_COLOR, line_dash=options.STATS_MIN_LINE_DASH,
                                      alpha=options.STATS_MIN_ALPHA)
 
         # Shaded region between Q1 and Q3
-        iqr = self.figure.patch('x', 'y', source=self.source_patch, alpha=options.IQR_ALPHA, color=options.PLOT_COLOR)
+        iqr = self.figure.patch('x', 'y', source=self.source['patch'], alpha=options.IQR_ALPHA, color=options.PLOT_COLOR)
 
         # Set the legend (for stat dvhs only)
         legend_stats = Legend(items=[("Max  ", [stats_max]),
@@ -112,7 +146,7 @@ class PlotStatDVH:
                                formatter=NumberFormatter(format="0.00")),
                    TableColumn(field="max_dose", title="Max Dose", width=80,
                                formatter=NumberFormatter(format="0.00")), ]
-        self.table = DataTable(source=self.source, columns=columns, height=275, width=800)
+        self.table = DataTable(source=self.source['dvh'], columns=columns, height=275, width=800)
 
         self.bokeh_layout = column(self.figure, self.table)
 
@@ -124,35 +158,24 @@ class PlotStatDVH:
         data['mrn'] = dvh.mrn
         colors = itertools.cycle(palette)
         data['color'] = [color for j, color in zip(range(dvh.count), colors)]
-        self.source.data = data
+        self.source['dvh'].data = data
         self.x = list(range(dvh.bin_count))
 
         self.stat_dvhs = dvh.get_standard_stat_dvh()
         stats_data = {key: self.stat_dvhs[key] for key in ['max', 'median', 'mean', 'min']}
         stats_data['x'] = self.x
-        self.source_stats.data = stats_data
+        self.source['stats'].data = stats_data
 
-        self.source_patch.data = {'x': self.x + self.x[::-1],
-                                  'y': self.stat_dvhs['q3'].tolist() + self.stat_dvhs['q1'][::-1].tolist()}
+        self.source['patch'].data = {'x': self.x + self.x[::-1],
+                                     'y': self.stat_dvhs['q3'].tolist() + self.stat_dvhs['q1'][::-1].tolist()}
 
-        html_str = get_layout_html(self.bokeh_layout)
-        self.layout.SetPage(html_str, "")
-
-    def clear_plot(self):
-        self.source.data = {key: [] for key in ['x', 'y', 'mrn', 'color']}
-        self.source_stats.data = {key: [] for key in ['x', 'max', 'median', 'mean', 'min']}
-        self.source_patch.data = {key: [] for key in ['x', 'y']}
-        html_str = get_layout_html(self.bokeh_layout)
-        self.layout.SetPage(html_str, "")
+        self.update_bokeh_layout_in_wx_python()
 
 
-class PlotTimeSeries:
-    def __init__(self, parent, x=[], y=[], mrn=[]):
-
-        plot_width = 800  # store of histograms and divider bar
-
-        self.figure, self.layout = get_base_plot(parent, x_axis_label='Simulation Date',
-                                                 plot_width=plot_width, plot_height=325, x_axis_type='datetime')
+class PlotTimeSeries(Plot):
+    def __init__(self, parent, x=[], y=[], mrn=[], plot_width=800):
+        Plot.__init__(self, parent, x_axis_label='Simulation Date',
+                      plot_width=plot_width, plot_height=325, x_axis_type='datetime')
 
         self.source = {'plot': ColumnDataSource(data=dict(x=x, y=y, mrn=mrn)),
                        'hist': ColumnDataSource(data=dict(x=[], top=[], width=[])),
@@ -231,10 +254,10 @@ class PlotTimeSeries:
         if x:
             self.update_trend(avg_len, percentile)
         else:
-            self.clear_additional_plot_sources()
+            for key in ['trend', 'bound', 'patch']:
+                self.clear_source(key)
 
-        html_str = get_layout_html(self.bokeh_layout)
-        self.layout.SetPage(html_str, "")
+        self.update_bokeh_layout_in_wx_python()
 
     def update_trend(self, avg_len, percentile):
 
@@ -266,16 +289,10 @@ class PlotTimeSeries:
             self.source['bound'].data = {'x': [], 'mrn': [], 'upper': [], 'avg': [], 'lower': []}
             self.source['patch'].data = {'x': [], 'y': []}
 
-    def clear_additional_plot_sources(self):
-        self.source['trend'].data = {'x': [], 'y': [], 'mrn': []}
-        self.source['bound'].data = {'x': [], 'mrn': [], 'upper': [], 'avg': [], 'lower': []}
-        self.source['patch'].data = {'x': [], 'y': []}
 
-
-class PlotRegression:
+class PlotRegression(Plot):
     def __init__(self, parent):
-
-        self.figure, self.layout = get_base_plot(parent, plot_width=550, plot_height=400)
+        Plot.__init__(self, parent, plot_width=550, plot_height=400)
 
         self.figure_residual_fits = figure(plot_width=275, plot_height=200)
         self.figure_residual_fits.xaxis.axis_label = 'Fitted Values'
@@ -341,28 +358,12 @@ class PlotRegression:
         self.update_trend(x_var)
         self.figure.xaxis.axis_label = x_axis_title
         self.figure.yaxis.axis_label = y_axis_title
-        html_str = get_layout_html(self.bokeh_layout)
-        self.layout.SetPage(html_str, "")
-
-    def clear_plot(self):
-        self.clear_sources()
-        self.figure.xaxis.axis_label = ''
-        self.figure.yaxis.axis_label = ''
-        html_str = get_layout_html(self.bokeh_layout)
-        self.layout.SetPage(html_str, "")
-
-    def clear_source(self, source_key):
-        data = {data_key: [] for data_key in list(self.source[source_key].data)}
-        self.source[source_key].data = data
-
-    def clear_sources(self):
-        for key in list(self.source):
-            self.clear_source(key)
+        self.update_bokeh_layout_in_wx_python()
 
     def update_trend(self, x_var):
         x, y, mrn = self.clean_data(self.source['plot'].data['x'],
                                     self.source['plot'].data['y'],
-                                    self.source['plot'].data['mrn'])
+                                    mrn=self.source['plot'].data['mrn'])
 
         data = np.array([y, x])
         clean_data = data[:, ~np.any(np.isnan(data), axis=0)]
@@ -400,29 +401,16 @@ class PlotRegression:
                                      'y': y_trend,
                                      'mrn': ['Trend'] * 2}
 
-    @staticmethod
-    def clean_data(x, y, mrn):
-        bad_indices = [i for i, value in enumerate(x) if value == 'None']
-        bad_indices.extend([i for i, value in enumerate(y) if value == 'None'])
-        bad_indices = list(set(bad_indices))
 
-        return [value for i, value in enumerate(x) if i not in bad_indices],\
-               [value for i, value in enumerate(y) if i not in bad_indices], \
-               [value for i, value in enumerate(mrn) if i not in bad_indices]
-
-
-class PlotMultiVarRegression:
+class PlotMultiVarRegression(Plot):
     def __init__(self, parent):
+        Plot.__init__(self, parent, plot_width=400, plot_height=400, frame_size=(900, 600))
 
         self.X, self.y = None, None
 
-        self.figure_residual_fits, self.layout = get_base_plot(parent, plot_width=400, plot_height=400,
-                                                               frame_size=(900, 600))
-
-        self.figure_residual_fits.xaxis.axis_label = 'Fitted Values'
-        self.figure_residual_fits.yaxis.axis_label = 'Residuals'
+        self.figure.xaxis.axis_label = 'Fitted Values'
+        self.figure.yaxis.axis_label = 'Residuals'
         self.figure_prob_plot = figure(plot_width=400, plot_height=400)
-        apply_default_options(self.figure_prob_plot)
         self.figure_prob_plot.xaxis.axis_label = 'Quantiles'
         self.figure_prob_plot.yaxis.axis_label = 'Ordered Values'
 
@@ -435,15 +423,15 @@ class PlotMultiVarRegression:
                        'table': ColumnDataSource(data=dict(var=[], coef=[], std_err=[], t_value=[], p_value=[],
                                                            spacer=[], fit_param=[]))}
 
-        self.plot_residuals = self.figure_residual_fits.circle('x', 'y', source=self.source['residuals'],
-                                                               size=options.REGRESSION_RESIDUAL_CIRCLE_SIZE,
-                                                               alpha=options.REGRESSION_RESIDUAL_ALPHA,
-                                                               color=options.PLOT_COLOR)
-        self.plot_residuals_zero = self.figure_residual_fits.line('x', 'y', source=self.source['residuals_zero'],
-                                                                  line_width=options.REGRESSION_RESIDUAL_LINE_WIDTH,
-                                                                  line_dash=options.REGRESSION_RESIDUAL_LINE_DASH,
-                                                                  alpha=options.REGRESSION_RESIDUAL_ALPHA,
-                                                                  color=options.REGRESSION_RESIDUAL_LINE_COLOR)
+        self.plot_residuals = self.figure.circle('x', 'y', source=self.source['residuals'],
+                                                 size=options.REGRESSION_RESIDUAL_CIRCLE_SIZE,
+                                                 alpha=options.REGRESSION_RESIDUAL_ALPHA,
+                                                 color=options.PLOT_COLOR)
+        self.plot_residuals_zero = self.figure.line('x', 'y', source=self.source['residuals_zero'],
+                                                    line_width=options.REGRESSION_RESIDUAL_LINE_WIDTH,
+                                                    line_dash=options.REGRESSION_RESIDUAL_LINE_DASH,
+                                                    alpha=options.REGRESSION_RESIDUAL_ALPHA,
+                                                    color=options.REGRESSION_RESIDUAL_LINE_COLOR)
         self.plot_prob = self.figure_prob_plot.circle('x', 'y', source=self.source['prob'],
                                                       size=options.REGRESSION_RESIDUAL_CIRCLE_SIZE,
                                                       alpha=options.REGRESSION_RESIDUAL_ALPHA,
@@ -463,7 +451,7 @@ class PlotMultiVarRegression:
                    TableColumn(field="fit_param", title="", width=75)]
         self.regression_table = DataTable(source=self.source['table'], columns=columns, width=800, index_position=None)
 
-        self.bokeh_layout = column(row(self.figure_prob_plot, self.figure_residual_fits),
+        self.bokeh_layout = column(row(self.figure_prob_plot, self.figure),
                                    self.regression_table)
 
     def update_plot(self, y_variable, x_variables, stats_data):
@@ -495,8 +483,7 @@ class PlotMultiVarRegression:
                                      'spacer': [''] * (len(x_variables) + 1),
                                      'fit_param': fit_param}
 
-        html_str = get_layout_html(self.bokeh_layout)
-        self.layout.SetPage(html_str, "")
+        self.update_bokeh_layout_in_wx_python()
 
     def get_X_and_y(self, y_variable, x_variables, stats_data):
         data = []
@@ -518,13 +505,10 @@ class PlotMultiVarRegression:
         return X, y
 
 
-class PlotControlChart:
-    def __init__(self, parent, x=[], y=[], mrn=[]):
+class PlotControlChart(Plot):
+    def __init__(self, parent, x=[], y=[], mrn=[], plot_width=800):
+        Plot.__init__(self, parent, x_axis_label='Study', plot_width=plot_width, plot_height=325)
 
-        plot_width = 800  # store of histograms and divider bar
-
-        self.figure, self.layout = get_base_plot(parent, x_axis_label='Study',
-                                                 plot_width=plot_width, plot_height=325)
         color = [options.PLOT_COLOR] * len(x)
         alpha = [options.CONTROL_CHART_CIRCLE_ALPHA] * len(x)
         self.source = {'plot': ColumnDataSource(data=dict(x=x, y=y, mrn=mrn, color=color, alpha=alpha)),
@@ -593,11 +577,8 @@ class PlotControlChart:
 
     def update_plot(self, x, y, mrn, y_axis_label='Y Axis'):
         self.figure.yaxis.axis_label = y_axis_label
-        valid_indices = [i for i, value in enumerate(y) if value != 'None']
 
-        x = [value for i, value in enumerate(x) if i in valid_indices]
-        y = [value for i, value in enumerate(y) if i in valid_indices]
-        mrn = [value for i, value in enumerate(mrn) if i in valid_indices]
+        x, y, mrn = self.clean_data(x, y, mrn=mrn)
 
         center_line, ucl, lcl = get_control_limits(y)
 
@@ -625,41 +606,31 @@ class PlotControlChart:
         self.div_ucl.text = "<b>UCL</b>: %0.3f" % ucl
         self.div_lcl.text = "<b>LCL</b>: %0.3f" % lcl
 
-        html_str = get_layout_html(self.bokeh_layout)
-        self.layout.SetPage(html_str, "")
+        self.update_bokeh_layout_in_wx_python()
 
     def clear_plot(self):
-        self.source['plot'].data = {'x': [], 'y': [], 'mrn': [], 'color': [], 'alpha': []}
+        self.clear_div()  # super class does not have these Div objects
+        super().clear_plot()
 
-        self.source['patch'].data = {'x': [], 'y': []}
-        self.source['center_line'].data = {'x': [], 'y': [], 'mrn': []}
-
-        self.source['lcl_line'].data = {'x': [], 'y': [], 'mrn': []}
-        self.source['ucl_line'].data = {'x': [], 'y': [], 'mrn': []}
-
+    def clear_div(self):
         self.div_center_line.text = "<b>Center line</b>:"
         self.div_ucl.text = "<b>UCL</b>:"
         self.div_lcl.text = "<b>LCL</b>:"
 
-        html_str = get_layout_html(self.bokeh_layout)
-        self.layout.SetPage(html_str, "")
 
-
-class PlotRandomForest:
+class PlotRandomForest(Plot):
     def __init__(self, parent, y, y_predict, mse):
-        self.y, self.y_predict = y, y_predict
+        Plot.__init__(self, parent, plot_width=400, plot_height=400, frame_size=(900, 600))
+
+        self.y, = y
+        self.y_predict = y_predict
         self.mse = mse
-
         self.x = list(range(1, len(self.y)+1))
-
-        self.figure_predictions, self.layout = get_base_plot(parent, plot_width=400, plot_height=400,
-                                                             frame_size=(900, 600))
 
         self.source = ColumnDataSource(data=dict(x=self.x, y=self.y, y_predict=self.y_predict))
 
-        self.figure_predictions.circle('x', 'y', source=self.source, color='blue')
-        self.figure_predictions.circle('x', 'y_predict', source=self.source, color='red')
+        self.figure.circle('x', 'y', source=self.source, color='blue')
+        self.figure.circle('x', 'y_predict', source=self.source, color='red')
 
-        self.bokeh_layout = column(self.figure_predictions)
-        html_str = get_layout_html(self.bokeh_layout)
-        self.layout.SetPage(html_str, "")
+        self.bokeh_layout = column(self.figure)
+        self.update_bokeh_layout_in_wx_python()
