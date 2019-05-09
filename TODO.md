@@ -65,3 +65,7 @@
 9. **Plan/Rx/Beam Data**
     * Pure bokeh version of DVHA allowed user to explore plan, rx, and beam data in a tabular format
     * Data is already stored during application run, just needs a GUI
+
+10. **Documentation**
+    * Review code, add doc strings and comments
+    * Rewrite/Update DVH Analytics manual
