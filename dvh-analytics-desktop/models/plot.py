@@ -47,7 +47,7 @@ class PlotStatDVH:
         self.source = ColumnDataSource(data=dict(x=[], y=[], mrn=[], roi_name=[], roi_type=[], rx_dose=[], volume=[],
                                                  min_dose=[], mean_dose=[], max_dose=[]))
 
-        self.source_stats = ColumnDataSource(data=dict(x=[], min=[], mean=[], median=[], max=[]))
+        self.source_stats = ColumnDataSource(data=dict(x=[], min=[], mean=[], median=[], max=[], mrn=[]))
         self.source_patch = ColumnDataSource(data=dict(x=[], y=[]))
         self.layout_done = False
         self.dvh = dvh
@@ -62,6 +62,7 @@ class PlotStatDVH:
                 .bk-tooltip>div:not(:first-child) {display:none;}
             </style>
 
+            <b>MRN: </b> @mrn <br>
             <b>Dose: </b> $x{i} cGy <br>
             <b>Volume: </b> $y
         """
