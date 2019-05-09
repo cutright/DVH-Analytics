@@ -48,10 +48,14 @@
 6. **Database Editor**
     * UIs are built, and their associated functions are largely already written, just need to connect them
 
-7. **Windows Plotting**
-    * wx.html2 has issues on Windows generating javascript views
-    * Tried SetPage() and LoadURL(), tested on Windows 7 with latest IE, maybe Windows 10 works?
-    * Registry edit needed? [html2.WebView and "blocked content" on Windows/IE](https://groups.google.com/forum/#!topic/wxpython-dev/epBVWHC7l6E)
+7. **Windows/Linux Plotting**
+    * Windows:
+        * wx.html2 has issues on Windows generating javascript views
+        * Tried SetPage() and LoadURL(), tested on Windows 7 with latest IE, maybe Windows 10 works?
+        * Registry edit needed? [html2.WebView and "blocked content" on Windows/IE](https://groups.google.com/forum/#!topic/wxpython-dev/epBVWHC7l6E)
+    * Linux:
+        * Plot is displayed, but no interactivity
+        * Issue [#4](https://github.com/cutright/DVH-Analytics-Desktop/issues/4)
 
 8. **Icons**
     * I borrowed (stole) icons from dicompyler for the DICOM file tree.  Should make my own.
