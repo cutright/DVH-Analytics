@@ -11,7 +11,7 @@ class DefaultOptions:
     def __init__(self):
         self.VERSION = '0.6'
 
-        self.MIN_BORDER = 5
+        self.MIN_BORDER = 50
 
         self.MAX_FIELD_SIZE_X = 400  # in mm
         self.MAX_FIELD_SIZE_Y = 400  # in mm
