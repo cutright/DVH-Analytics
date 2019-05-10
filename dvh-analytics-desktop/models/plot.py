@@ -160,6 +160,7 @@ class PlotStatDVH(Plot):
         self.table = DataTable(source=self.source['dvh'], columns=columns, height=275, width=800)
 
     def update_plot(self, dvh):
+        self.clear_sources()
         self.dvh = dvh
         self.x = list(range(dvh.bin_count))
         self.stat_dvhs = dvh.get_standard_stat_dvh()
@@ -263,27 +264,28 @@ class PlotTimeSeries(Plot):
                                    self.histogram)
 
     def update_plot(self, x, y, mrn, y_axis_label='Y Axis', avg_len=1, percentile=90., bin_size=10):
+        self.clear_sources()
         self.figure.yaxis.axis_label = y_axis_label
         self.histogram.xaxis.axis_label = y_axis_label
+
+        self.update_plot_data(x, y, mrn)
+        self.update_histogram(bin_size=bin_size)
+        self.update_trend(avg_len, percentile)
+
+        self.update_bokeh_layout_in_wx_python()
+
+    def update_plot_data(self, x, y, mrn):
         valid_indices = [i for i, value in enumerate(y) if value != 'None']
         self.source['plot'].data = {'x': [value for i, value in enumerate(x) if i in valid_indices],
                                     'y': [value for i, value in enumerate(y) if i in valid_indices],
                                     'mrn': [value for i, value in enumerate(mrn) if i in valid_indices]}
 
-        # histograms
+    def update_histogram(self, bin_size=10):
         width_fraction = 0.9
         hist, bins = np.histogram(self.source['plot'].data['y'], bins=bin_size)
         width = [width_fraction * (bins[1] - bins[0])] * bin_size
         center = (bins[:-1] + bins[1:]) / 2.
         self.source['hist'].data = {'x': center, 'top': hist, 'width': width}
-
-        if x:
-            self.update_trend(avg_len, percentile)
-        else:
-            for key in ['trend', 'bound', 'patch']:
-                self.clear_source(key)
-
-        self.update_bokeh_layout_in_wx_python()
 
     def update_trend(self, avg_len, percentile):
 
@@ -310,14 +312,11 @@ class PlotTimeSeries(Plot):
                                          'lower': [lower_bound] * x_len}
             self.source['patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
                                          'y': [upper_bound, upper_bound, lower_bound, lower_bound]}
-        else:
-            for key in ['trend', 'bound', 'patch']:
-                self.clear_source(key)
 
 
 class PlotRegression(Plot):
     def __init__(self, parent):
-        Plot.__init__(self, parent, plot_width=550, plot_height=400)
+        Plot.__init__(self, parent, plot_width=550, plot_height=300)
 
         self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[])),
                        'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
@@ -390,6 +389,7 @@ class PlotRegression(Plot):
                                    row(self.figure_residual_fits, self.figure_prob_plot))
 
     def update_plot(self, plot_data, x_var, x_axis_title, y_axis_title):
+        self.clear_sources()
         self.source['plot'].data = plot_data
         self.update_trend(x_var)
         self.figure.xaxis.axis_label = x_axis_title
@@ -497,6 +497,7 @@ class PlotMultiVarRegression(Plot):
                                    self.regression_table)
 
     def update_plot(self, y_variable, x_variables, stats_data):
+        self.clear_sources()
         x_len = len(x_variables)
         self.X, self.y = stats_data.get_X_and_y(y_variable, x_variables)
         reg = multi_variable_regression(self.X, self.y)
@@ -605,6 +606,7 @@ class PlotControlChart(Plot):
                                    row(self.div_center_line, self.div_ucl, self.div_lcl))
 
     def update_plot(self, x, y, mrn, y_axis_label='Y Axis'):
+        self.clear_sources()
         self.figure.yaxis.axis_label = y_axis_label
 
         x, y, mrn = self.clean_data(x, y, mrn=mrn)
@@ -651,12 +653,12 @@ class PlotRandomForest(Plot):
     def __init__(self, parent, y, y_predict, mse):
         Plot.__init__(self, parent, plot_width=400, plot_height=400, frame_size=(900, 600))
 
-        self.y, = y
+        self.y = y
         self.y_predict = y_predict
         self.mse = mse
         self.x = list(range(1, len(self.y)+1))
 
-        self.source = ColumnDataSource(data=dict(x=self.x, y=self.y, y_predict=self.y_predict))
+        self.source = {'plot': ColumnDataSource(data=dict(x=self.x, y=self.y, y_predict=self.y_predict))}
 
         self.__add_plot_data()
         self.__do_layout()
@@ -664,8 +666,8 @@ class PlotRandomForest(Plot):
         self.update_bokeh_layout_in_wx_python()
 
     def __add_plot_data(self):
-        self.figure.circle('x', 'y', source=self.source, color='blue')
-        self.figure.circle('x', 'y_predict', source=self.source, color='red')
+        self.figure.circle('x', 'y', source=self.source['plot'], color='blue')
+        self.figure.circle('x', 'y_predict', source=self.source['plot'], color='red')
 
     def __do_layout(self):
         self.bokeh_layout = column(self.figure)
