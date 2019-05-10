@@ -4,17 +4,13 @@
 
 import wx
 from dialogs.database import ChangePatientIdentifierDialog, DeletePatientDialog, ReimportDialog, EditDatabaseDialog,\
-    CalculationsDialog
+    CalculationsDialog, DeleteAllData, RebuildDB
 from db.sql_to_python import get_database_tree
 from db.sql_connector import DVH_SQL
 from models.datatable import DataTable
 from dialogs.export import data_table_to_csv as export_dlg
 from models.import_dicom import ImportDICOM_Dialog
-from paths import IMPORTED_DIR, INBOX_DIR
-from os.path import join
-from os import mkdir, rename
-from datetime import datetime
-from tools.utilities import delete_directory_contents
+from paths import IMPORTED_DIR
 
 
 class DatabaseEditorDialog(wx.Frame):
@@ -201,49 +197,10 @@ class DatabaseEditorDialog(wx.Frame):
         CalculationsDialog()
 
     def on_rebuild_db(self, evt):
-        # TODO: make this a class like other on_ functions
-        dlg = wx.MessageDialog(self, "Are you sure?", "Rebuild Database from DICOM",
-                               wx.ICON_WARNING | wx.OK | wx.CANCEL | wx.CANCEL_DEFAULT)
-        res = dlg.ShowModal()
-        if res == wx.ID_OK:
-            with DVH_SQL() as cnx:
-                cnx.reinitialize_database()
-
-            dlg2 = ImportDICOM_Dialog(inbox=IMPORTED_DIR)
-            dlg2.ShowModal()
-            dlg2.Destroy()
-
-        dlg.Destroy()
+        RebuildDB()
 
     def on_delete_all_data(self, evt):
-        # TODO: make this a class like other on_ functions
-        dlg = wx.MessageDialog(self, "Are you sure?", "Delete All Data in Database",
-                               wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT)
-        res = dlg.ShowModal()
-        if res == wx.ID_YES:
-            # delete data from database
-            with DVH_SQL() as cnx:
-                cnx.reinitialize_database()
-            dlg.Destroy()
-
-            dlg = wx.MessageDialog(self, "Are you sure?", "Move files to inbox?",
-                                   wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT)
-            res = dlg.ShowModal()
-            if res == wx.ID_YES:
-                new_dir = join(INBOX_DIR, "previously_imported %s" %
-                               str(datetime.now()).split('.')[0].replace(':', '-').replace(' ', '_'))
-                rename(IMPORTED_DIR, new_dir)
-                mkdir(IMPORTED_DIR)
-
-                dlg.Destroy()
-            else:
-                dlg.Destroy()
-                dlg = wx.MessageDialog(self, "Are you sure?", "Delete Imported Directory?",
-                                       wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT)
-                res = dlg.ShowModal()
-                if res == wx.ID_YES:
-                    delete_directory_contents(IMPORTED_DIR)
-                dlg.Destroy()
+        DeleteAllData(self)
 
     def on_export_csv(self, evt):
         export_dlg(self, "Export Data Table to CSV", self.data_query_results)

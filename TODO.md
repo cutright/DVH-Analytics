@@ -15,6 +15,7 @@
         * Should probably have a layer of verification with SOP Instance checks
     * Better ROI map integration
     * Unchecking anything in the ROI tree does nothing
+    * Thread the file/dicom parsing process so UI updates on the fly in Windows (works as is on Mac, and maybe linux too)
 
 3. **Regression**
     * Machine learning modules in Regression tab (after running multi-variable regression) aren't complete 

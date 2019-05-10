@@ -4,7 +4,12 @@
 import wx
 from db.sql_connector import DVH_SQL, echo_sql_db
 from db.sql_settings import write_sql_connection_settings, validate_sql_connection
-from paths import SQL_CNF_PATH, parse_settings_file
+from paths import SQL_CNF_PATH, parse_settings_file, IMPORTED_DIR, INBOX_DIR
+from os.path import join
+from os import mkdir, rename
+from tools.utilities import delete_directory_contents
+from datetime import datetime
+from models.import_dicom import ImportDICOM_Dialog
 
 
 class CalculationsDialog(wx.Dialog):
@@ -416,3 +421,67 @@ def run_sql_settings_dlg():
     dlg.Destroy()
 
     return res
+
+
+class MessageDialog:
+    def __init__(self, parent, caption, message="Are you sure?",
+                 flags=wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT):
+        self.dlg = wx.MessageDialog(parent, message, caption, flags)
+        self.parent = parent
+        self.run()
+
+    def run(self):
+        res = self.dlg.ShowModal()
+        [self.action_no, self.action_yes][res == wx.ID_YES]()
+        self.dlg.Destroy()
+
+    def action_yes(self):
+        pass
+
+    def action_no(self):
+        pass
+
+
+class DeleteAllData(MessageDialog):
+    def __init__(self, parent):
+        MessageDialog.__init__(self, parent, "Delete All Data in Database")
+
+    def action_yes(self):
+        with DVH_SQL() as cnx:
+            cnx.reinitialize_database()
+        MoveFilesToInbox(self.parent)
+
+
+class MoveFilesToInbox(MessageDialog):
+    def __init__(self, parent):
+        MessageDialog.__init__(self, parent, "Move files to inbox?")
+
+    def action_yes(self):
+        new_dir = join(INBOX_DIR, "previously_imported %s" %
+                       str(datetime.now()).split('.')[0].replace(':', '-').replace(' ', '_'))
+        rename(IMPORTED_DIR, new_dir)
+        mkdir(IMPORTED_DIR)
+
+    def action_no(self):
+        DeleteImportedDirectory(self.parent)
+
+
+class DeleteImportedDirectory(MessageDialog):
+    def __init__(self, parent):
+        MessageDialog.__init__(self, parent, "Delete Imported Directory?")
+
+    def action_yes(self):
+        delete_directory_contents(IMPORTED_DIR)
+
+
+class RebuildDB(MessageDialog):
+    def __init__(self, parent):
+        MessageDialog.__init__(self, parent, "Rebuild Database from DICOM")
+
+    def action(self):
+        with DVH_SQL() as cnx:
+            cnx.reinitialize_database()
+
+        dlg = ImportDICOM_Dialog(inbox=IMPORTED_DIR)
+        dlg.ShowModal()
+        dlg.Destroy()

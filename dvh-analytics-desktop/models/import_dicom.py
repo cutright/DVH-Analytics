@@ -302,6 +302,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.Center()
 
     def parse_directory(self):
+        # TODO: Thread this function (parse_directory)
         wait = wx.BusyCursor()
         self.gauge.Show()
         file_count = self.dicom_dir.file_count
@@ -591,6 +592,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.Close()
 
     def parse_dicom_data(self):
+        # TODO: Thread this function (parse_dicom_data)
         wait = wx.BusyCursor()
         parsed_uids = list(self.parsed_dicom_data)
         study_total = len(list(self.dicom_dir.study_nodes))
@@ -749,7 +751,7 @@ class ImportStatusDialog(wx.Dialog):
         self.label_structure = wx.StaticText(self, wx.ID_ANY, "Structure: Name (1 of 50)")
         sizer_calculation.Add(self.label_structure, 0, 0, 0)
         sizer_calculation.Add(self.gauge_calculation, 0, wx.EXPAND, 0)
-        sizer_progress.Add(sizer_calculation, 0, wx.ALL | wx.EXPAND, 10)
+        sizer_progress.Add(sizer_calculation, 0, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_progress, 0, wx.EXPAND | wx.ALL, 5)
         self.label_elapsed_time = wx.StaticText(self, wx.ID_ANY, "Elapsed time:")
         sizer_time_cancel.Add(self.label_elapsed_time, 1, wx.EXPAND | wx.ALL, 5)

@@ -194,13 +194,11 @@ class DVH_SQL:
         self.cnx.commit()
 
     def drop_tables(self):
-        print('Dropping tables')
         for table in self.tables:
             self.cursor.execute("DROP TABLE IF EXISTS %s;" % table)
             self.cnx.commit()
 
     def drop_table(self, table):
-        print("Dropping table: %s" % table)
         self.cursor.execute("DROP TABLE IF EXISTS %s;" % table)
         self.cnx.commit()
 
