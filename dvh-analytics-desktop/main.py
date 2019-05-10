@@ -5,7 +5,7 @@
 import wx
 from dialogs.main.query import query_dlg
 from dialogs.main.settings import UserSettings
-from dialogs.database import run_sql_settings_dlg
+from dialogs.database import SQLSettingsDialog
 from models.import_dicom import ImportDICOM_Dialog
 from models.database_editor import DatabaseEditorDialog
 from db import sql_columns
@@ -109,7 +109,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.on_toolbar_settings, id=self.toolbar_ids['Settings'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_roi_map, id=self.toolbar_ids['ROI Map'])
         self.Bind(wx.EVT_TOOL, self.OnClose, id=self.toolbar_ids['Close'])
-        self.Bind(wx.EVT_TOOL, self.OnImport, id=self.toolbar_ids['Import'])
+        self.Bind(wx.EVT_TOOL, self.on_import, id=self.toolbar_ids['Import'])
 
     def __add_menubar(self):
 
@@ -540,27 +540,23 @@ class MainFrame(wx.Frame):
             dlg.save_options()
         dlg.Destroy()
 
-    def OnImport(self, evt):
+    def on_import(self, evt):
         if not echo_sql_db():
             self.OnSQL(None)
 
         if echo_sql_db():
-            dlg = ImportDICOM_Dialog()
-            dlg.ShowModal()
-            dlg.Destroy()
+            ImportDICOM_Dialog()
         else:
             wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
                           wx.OK | wx.ICON_WARNING)
 
     def OnSQL(self, evt):
-        res = run_sql_settings_dlg()
-        if res == wx.ID_OK:
-            [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db()]()
+        SQLSettingsDialog()
+        [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db()]()
 
-    def on_toolbar_roi_map(self, evt):
-        dlg = ROIMapDialog()
-        dlg.ShowModal()
-        dlg.Destroy()
+    @staticmethod
+    def on_toolbar_roi_map(evt):
+        ROIMapDialog()
 
 
 class DVHApp(wx.App):

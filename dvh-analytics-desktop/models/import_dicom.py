@@ -23,7 +23,7 @@ ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV', 'EXTERNAL',
 
 
 class ImportDICOM_Dialog(wx.Dialog):
-    def __init__(self, inbox=None, *args, **kwds):
+    def __init__(self, inbox=None):
         wx.Dialog.__init__(self, None, title='Import DICOM')
 
         with DVH_SQL() as cnx:
@@ -105,6 +105,8 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.parse_directory()
 
         self.incomplete_studies = []
+
+        self.run()
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_browse, id=self.button_browse.GetId())
@@ -300,6 +302,10 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.SetSizer(sizer_wrapper)
         self.Layout()
         self.Center()
+
+    def run(self):
+        self.ShowModal()
+        self.Destroy()
 
     def parse_directory(self):
         # TODO: Thread this function (parse_directory)

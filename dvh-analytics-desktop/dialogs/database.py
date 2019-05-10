@@ -13,7 +13,7 @@ from models.import_dicom import ImportDICOM_Dialog
 
 
 class CalculationsDialog(wx.Dialog):
-    def __init__(self, *args, **kw):
+    def __init__(self):
         wx.Dialog.__init__(self, None, title="Calculations")
 
         choices = ["PTV Distances", "PTV Overlap", "ROI Centroid", "ROI Spread", "ROI Cross-Section",
@@ -149,7 +149,7 @@ class BaseClass(wx.Dialog):
 
 
 class ChangePatientIdentifierDialog(BaseClass):
-    def __init__(self, mrn=None, study_instance_uid=None, *args, **kw):
+    def __init__(self, mrn=None, study_instance_uid=None):
         BaseClass.__init__(self, 'Value:', 'New Value:', 'Change', "Change Patient Identifier",
                            mrn=mrn, study_instance_uid=study_instance_uid)
 
@@ -177,7 +177,7 @@ class ChangePatientIdentifierDialog(BaseClass):
 
 
 class DeletePatientDialog(BaseClass):
-    def __init__(self, mrn=None, study_instance_uid=None, *args, **kw):
+    def __init__(self, mrn=None, study_instance_uid=None):
         BaseClass.__init__(self, 'Delete:', 'Type "delete" to authorize:', 'Delete', "Delete Patient",
                            mrn=mrn, study_instance_uid=study_instance_uid)
 
@@ -192,7 +192,7 @@ class DeletePatientDialog(BaseClass):
 
 
 class EditDatabaseDialog(wx.Dialog):
-    def __init__(self, *args, **kw):
+    def __init__(self):
         wx.Dialog.__init__(self, None, title="Edit Database Values")
 
         self.combo_box_table = wx.ComboBox(self, wx.ID_ANY, choices=self.get_tables(),
@@ -213,13 +213,9 @@ class EditDatabaseDialog(wx.Dialog):
         self.run()
 
     def __set_properties(self):
-        # begin wxGlade: MyFrame.__set_properties
-        # self.SetTitle("frame")
-        # end wxGlade
         pass
 
     def __do_layout(self):
-        # begin wxGlade: MyFrame.__do_layout
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_wrapper_inner = wx.BoxSizer(wx.VERTICAL)
         sizer_ok_cancel = wx.BoxSizer(wx.HORIZONTAL)
@@ -281,7 +277,7 @@ class EditDatabaseDialog(wx.Dialog):
 
 
 class ReimportDialog(wx.Dialog):
-    def __init__(self, *args, **kw):
+    def __init__(self):
         wx.Dialog.__init__(self, None, title="Reimport from DICOM")
 
         self.text_ctrl_mrn = wx.TextCtrl(self, wx.ID_ANY, "")
@@ -344,7 +340,7 @@ class ReimportDialog(wx.Dialog):
 
 
 class SQLSettingsDialog(wx.Dialog):
-    def __init__(self, *args, **kw):
+    def __init__(self):
         wx.Dialog.__init__(self, None, title="Database Connection Settings")
 
         self.keys = ['host', 'port', 'dbname', 'user', 'password']
@@ -408,19 +404,16 @@ class SQLSettingsDialog(wx.Dialog):
         config = {key: self.input[key].GetValue() for key in self.keys if self.input[key].GetValue()}
         return echo_sql_db(config)
 
-
-def run_sql_settings_dlg():
-    dlg = SQLSettingsDialog()
-    res = dlg.ShowModal()
-    if res == wx.ID_OK:
-        new_config = {key: dlg.input[key].GetValue() for key in dlg.keys if dlg.input[key].GetValue()}
-        write_sql_connection_settings(new_config)
-        if not validate_sql_connection(new_config):
-            dlg = wx.MessageDialog(dlg, 'Connection to database could not be established.', 'ERROR!', wx.OK | wx.ICON_ERROR)
-            dlg.ShowModal()
-    dlg.Destroy()
-
-    return res
+    def run(self):
+        res = self.ShowModal()
+        if res == wx.ID_OK:
+            new_config = {key: self.input[key].GetValue() for key in self.keys if self.input[key].GetValue()}
+            write_sql_connection_settings(new_config)
+            if not validate_sql_connection(new_config):
+                dlg = wx.MessageDialog(self, 'Connection to database could not be established.', 'ERROR!',
+                                       wx.OK | wx.ICON_ERROR)
+                dlg.ShowModal()
+        self.Destroy()
 
 
 class MessageDialog:
@@ -478,7 +471,7 @@ class RebuildDB(MessageDialog):
     def __init__(self, parent):
         MessageDialog.__init__(self, parent, "Rebuild Database from DICOM")
 
-    def action(self):
+    def action_yes(self):
         with DVH_SQL() as cnx:
             cnx.reinitialize_database()
 
