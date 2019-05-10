@@ -160,6 +160,25 @@ class StatsData:
         for var in bad_vars:
             self.data.pop(var)
 
+    def get_X_and_y(self, y_variable, x_variables):
+        data = []
+        y_var_data = []
+        for value in self.data[y_variable]['values']:
+            y_var_data.append([value, np.nan][value == 'None'])
+        data.append(y_var_data)
+        for var in x_variables:
+            x_var_data = []
+            for value in self.data[var]['values']:
+                x_var_data.append([value, np.nan][value == 'None'])
+            data.append(x_var_data)
+
+        data = np.array(data)
+        clean_data = data[:, ~np.any(np.isnan(data), axis=0)]
+        X = np.transpose(clean_data[1:])
+        y = clean_data[0]
+
+        return X, y
+
 
 def str_starts_with_any_in_list(string_a, string_list):
     for string_b in string_list:
@@ -250,3 +269,23 @@ def get_random_forest(X, y, n_estimators=100, max_features=None):
     mse = np.mean(np.square(np.subtract(y_pred, y)))
 
     return y_pred, mse
+
+
+def get_X_and_y(y_variable, x_variables, stats_data):
+    data = []
+    y_var_data = []
+    for value in stats_data.data[y_variable]['values']:
+        y_var_data.append([value, np.nan][value == 'None'])
+    data.append(y_var_data)
+    for var in x_variables:
+        x_var_data = []
+        for value in stats_data.data[var]['values']:
+            x_var_data.append([value, np.nan][value == 'None'])
+        data.append(x_var_data)
+
+    data = np.array(data)
+    clean_data = data[:, ~np.any(np.isnan(data), axis=0)]
+    X = np.transpose(clean_data[1:])
+    y = clean_data[0]
+
+    return X, y
