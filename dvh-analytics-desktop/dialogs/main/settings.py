@@ -60,6 +60,8 @@ class UserSettings(wx.Dialog):
 
         self.Center()
 
+        self.run()
+
     def __set_properties(self):
         self.text_ctrl_inbox.SetToolTip("Default directory for batch processing of incoming DICOM files")
         self.text_ctrl_inbox.SetMinSize((100, 21))
@@ -183,6 +185,12 @@ class UserSettings(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self.update_line_width_val, id=self.spin_ctrl_line_widths_input.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.update_line_style_val, id=self.combo_box_line_styles_selection.GetId())
         self.Bind(wx.EVT_TEXT, self.update_alpha_val, id=self.spin_ctrl_alpha_input.GetId())
+
+    def run(self):
+        res = self.ShowModal()
+        if res == wx.ID_OK:
+            self.save_options()
+        self.Destroy()
 
     def inbox_dir_dlg(self, evt):
         starting_dir = self.text_ctrl_inbox.GetValue()
