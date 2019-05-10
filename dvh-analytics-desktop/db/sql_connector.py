@@ -14,6 +14,12 @@ from paths import SCRIPT_DIR, DATA_DIR, SQL_CNF_PATH, parse_settings_file
 
 
 class DVH_SQL:
+    """
+    To ensure SQL connection is closed on every use, best practice is to use this class like so:
+    with DVH_SQL() as cnx:
+        something = cnx.function()
+        some_more_code_here
+    """
     def __init__(self, *config):
         if config:
             config = config[0]
@@ -28,6 +34,12 @@ class DVH_SQL:
         self.cnx = cnx
         self.cursor = cnx.cursor()
         self.tables = ['DVHs', 'Plans', 'Rxs', 'Beams', 'DICOM_Files']
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, ctx_type, ctx_value, ctx_traceback):
+        self.close()
 
     def close(self):
         self.cnx.close()

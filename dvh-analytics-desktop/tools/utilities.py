@@ -95,9 +95,9 @@ def get_file_paths(start_path, search_subfolders=False):
 
 
 def get_study_instance_uids(**kwargs):
-    cnx = DVH_SQL()
-    uids = {table: cnx.get_unique_values(table, 'study_instance_uid', condition) for table, condition in kwargs.items()}
-    cnx.close()
+    with DVH_SQL() as cnx:
+        uids = {table: cnx.get_unique_values(table, 'study_instance_uid', condition)
+                for table, condition in kwargs.items()}
 
     complete_list = flatten_list_of_lists(list(uids.values()), remove_duplicates=True)
 

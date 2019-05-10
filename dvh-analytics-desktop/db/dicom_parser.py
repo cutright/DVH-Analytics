@@ -384,9 +384,8 @@ class DICOM_Parser:
     def is_uid_valid(uid):
         valid = False
         if uid:
-            cnx = DVH_SQL()
-            valid = not cnx.is_study_instance_uid_in_table('Plans', uid)
-            cnx.close()
+            with DVH_SQL() as cnx:
+                valid = not cnx.is_study_instance_uid_in_table('Plans', uid)
         return valid
 
     @property

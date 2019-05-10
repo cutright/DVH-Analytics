@@ -26,9 +26,8 @@ class ImportDICOM_Dialog(wx.Dialog):
     def __init__(self, inbox=None, *args, **kwds):
         wx.Dialog.__init__(self, None, title='Import DICOM')
 
-        cnx = DVH_SQL()
-        cnx.initialize_database()
-        cnx.close()
+        with DVH_SQL() as cnx:
+            cnx.initialize_database()
 
         self.SetSize((1350, 800))
 
@@ -49,15 +48,16 @@ class ImportDICOM_Dialog(wx.Dialog):
 
         self.text_ctrl_directory = wx.TextCtrl(self, wx.ID_ANY, '', style=wx.TE_READONLY)
 
-        cnx = DVH_SQL()
+        with DVH_SQL() as cnx:
+            tx_sites = cnx.get_unique_values('Plans', 'tx_site')
+
         self.input = {'mrn': wx.TextCtrl(self, wx.ID_ANY, ""),
                       'study_instance_uid': wx.TextCtrl(self, wx.ID_ANY, ""),
                       'birth_date': wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_READONLY),
                       'sim_study_date': wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_READONLY),
                       'physician': wx.ComboBox(self, wx.ID_ANY, choices=self.roi_map.get_physicians(),
                                                style=wx.CB_DROPDOWN),
-                      'tx_site': wx.ComboBox(self, wx.ID_ANY, choices=cnx.get_unique_values('Plans', 'tx_site'),
-                                             style=wx.CB_DROPDOWN),
+                      'tx_site': wx.ComboBox(self, wx.ID_ANY, choices=tx_sites, style=wx.CB_DROPDOWN),
                       'rx_dose': wx.TextCtrl(self, wx.ID_ANY, "")}
         self.button_edit_sim_study_date = wx.Button(self, wx.ID_ANY, "Edit")
         self.button_edit_birth_date = wx.Button(self, wx.ID_ANY, "Edit")
@@ -81,8 +81,6 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.input_roi['type'].SetValue('')
         self.button_autodetect_targets = wx.Button(self, wx.ID_ANY, "Autodetect Target/Tumor ROIs")
         self.disable_roi_inputs()
-
-        cnx.close()
 
         styles = TR_AUTO_CHECK_CHILD | TR_AUTO_CHECK_PARENT | TR_DEFAULT_STYLE
         self.tree_ctrl_import = CustomTreeCtrl(self.panel_study_tree, wx.ID_ANY, agwStyle=styles)
@@ -563,9 +561,9 @@ class ImportDICOM_Dialog(wx.Dialog):
 
     @staticmethod
     def is_uid_valid(uid):
-        cnx = DVH_SQL()
-        valid_uid = not cnx.is_study_instance_uid_in_table('Plans', uid)
-        cnx.close()
+        with DVH_SQL() as cnx:
+            valid_uid = not cnx.is_study_instance_uid_in_table('Plans', uid)
+
         if valid_uid:
             return True
         return False
@@ -666,19 +664,19 @@ class ImportDICOM_Dialog(wx.Dialog):
 
     def on_delete_study(self, evt):
         uid = self.input['study_instance_uid'].GetValue()
-        cnx = DVH_SQL()
-        if cnx.is_uid_imported(uid):
-            dlg = wx.MessageDialog(self, "Delete all data in database with this UID?", caption='Delete Study',
-                                   style=wx.YES | wx.NO | wx.NO_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
-        else:
-            dlg = wx.MessageDialog(self, "Study Instance UID not found in Database", caption='Delete Study',
-                                   style=wx.OK | wx.CENTER | wx.ICON_EXCLAMATION)
+        with DVH_SQL() as cnx:
+            if cnx.is_uid_imported(uid):
+                dlg = wx.MessageDialog(self, "Delete all data in database with this UID?", caption='Delete Study',
+                                       style=wx.YES | wx.NO | wx.NO_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
+            else:
+                dlg = wx.MessageDialog(self, "Study Instance UID not found in Database", caption='Delete Study',
+                                       style=wx.OK | wx.CENTER | wx.ICON_EXCLAMATION)
 
-        res = dlg.ShowModal()
-        dlg.Center()
-        if res == wx.ID_YES:
-            cnx.delete_rows("study_instance_uid = '%s'" % uid)
-        cnx.close()
+            res = dlg.ShowModal()
+            dlg.Center()
+            if res == wx.ID_YES:
+                cnx.delete_rows("study_instance_uid = '%s'" % uid)
+
         dlg.Destroy()
 
         self.validate(uid=self.selected_uid)
@@ -794,27 +792,27 @@ class ImportWorker(Thread):
         self.start()  # start the thread
 
     def run(self):
-        cnx = DVH_SQL()
-        study_total = len(self.checked_uids)
-        for study_counter, uid in enumerate(self.checked_uids):
-            if uid in list(self.data):
-                if cnx.is_uid_imported(self.data[uid].study_instance_uid_to_be_imported):
-                    print("WARNING: This Study Instance UID is already imported in Database. Skipping Import.")
-                    print("\t%s" % self.data[uid].study_instance_uid_to_be_imported)
+        with DVH_SQL() as cnx:
+            study_total = len(self.checked_uids)
+            for study_counter, uid in enumerate(self.checked_uids):
+                if uid in list(self.data):
+                    if cnx.is_uid_imported(self.data[uid].study_instance_uid_to_be_imported):
+                        print("WARNING: This Study Instance UID is already imported in Database. Skipping Import.")
+                        print("\t%s" % self.data[uid].study_instance_uid_to_be_imported)
+                    else:
+                        msg = {'patient_name': self.data[uid].patient_name,
+                               'uid': self.data[uid].study_instance_uid_to_be_imported,
+                               'progress': int(100 * study_counter / study_total),
+                               'study_number': study_counter+1,
+                               'study_total': study_total}
+                        wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
+                        wx.CallAfter(pub.sendMessage, "update_elapsed_time")
+                        self.import_study(uid)
                 else:
-                    msg = {'patient_name': self.data[uid].patient_name,
-                           'uid': self.data[uid].study_instance_uid_to_be_imported,
-                           'progress': int(100 * study_counter / study_total),
-                           'study_number': study_counter+1,
-                           'study_total': study_total}
-                    wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
-                    wx.CallAfter(pub.sendMessage, "update_elapsed_time")
-                    self.import_study(uid)
-            else:
-                print('WARNING: This study could not be parsed. Skipping import. '
-                      'Did you supply RT Structure, Dose, and Plan?')
-                print('\tStudy Instance UID: %s' % uid)
-        cnx.close()
+                    print('WARNING: This study could not be parsed. Skipping import. '
+                          'Did you supply RT Structure, Dose, and Plan?')
+                    print('\tStudy Instance UID: %s' % uid)
+
         wx.CallAfter(pub.sendMessage, "close")
 
     def import_study(self, uid):
@@ -904,11 +902,10 @@ class ImportWorker(Thread):
 
     @staticmethod
     def push(data_to_import):
-        cnx = DVH_SQL()
-        for key in list(data_to_import):
-            for row in data_to_import[key]:
-                cnx.insert_row(key, row)
-        cnx.close()
+        with DVH_SQL() as cnx:
+            for key in list(data_to_import):
+                for row in data_to_import[key]:
+                    cnx.insert_row(key, row)
 
     @staticmethod
     def post_import_calc(title, uid, rois, func, pre_calc):

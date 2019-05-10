@@ -5,7 +5,7 @@
 import wx
 from dialogs.main.query import query_dlg
 from dialogs.main.settings import UserSettings
-from dialogs.database.sql_settings import run_sql_settings_dlg
+from dialogs.database import run_sql_settings_dlg
 from models.import_dicom import ImportDICOM_Dialog
 from models.database_editor import DatabaseEditorDialog
 from db import sql_columns
@@ -21,10 +21,12 @@ from models.roi_map import ROIMapDialog
 from db.sql_to_python import QuerySQL
 from db.sql_connector import echo_sql_db
 from paths import LOGO_PATH
-from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux, initialize_directories_and_settings
+from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux,\
+    initialize_directories_and_settings
 from tools.stats import StatsData
 
 
+# TODO: Clean-up dialog functionality, have the classes themselves run and handle modal returns
 class MainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE

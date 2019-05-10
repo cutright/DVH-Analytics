@@ -579,10 +579,8 @@ def get_physicians_from_roi_files():
 
 
 def get_physician_from_uid(uid):
-    cnx = DVH_SQL()
-    condition = "study_instance_uid = '" + uid + "'"
-    results = cnx.query('Plans', 'physician', condition)
-    cnx.close()
+    with DVH_SQL() as cnx:
+        results = cnx.query('Plans', 'physician', "study_instance_uid = '" + uid + "'")
 
     if len(results) > 1:
         print('Warning: multiple plans with this study_instance_uid exist')
@@ -593,45 +591,41 @@ def get_physician_from_uid(uid):
 def update_uncategorized_rois_in_database():
     roi_map = DatabaseROIs()
     dvh_data = QuerySQL('DVHs', "physician_roi = 'uncategorized'")
-    cnx = DVH_SQL()
 
-    for i in range(len(dvh_data.roi_name)):
-        uid = dvh_data.study_instance_uid[i]
-        mrn = dvh_data.mrn[i]
-        physician = get_physician_from_uid(uid)
-        roi_name = dvh_data.roi_name[i]
+    with DVH_SQL() as cnx:
+        for i in range(len(dvh_data.roi_name)):
+            uid = dvh_data.study_instance_uid[i]
+            mrn = dvh_data.mrn[i]
+            physician = get_physician_from_uid(uid)
+            roi_name = dvh_data.roi_name[i]
 
-        new_physician_roi = roi_map.get_physician_roi(physician, roi_name)
-        new_institutional_roi = roi_map.get_institutional_roi(physician, roi_name)
+            new_physician_roi = roi_map.get_physician_roi(physician, roi_name)
+            new_institutional_roi = roi_map.get_institutional_roi(physician, roi_name)
 
-        if new_physician_roi != 'uncategorized':
-            print(mrn, physician, new_institutional_roi, new_physician_roi, roi_name, sep=' ')
-            condition = "study_instance_uid = '" + uid + "'" + "and roi_name = '" + roi_name + "'"
-            cnx.update('DVHs', 'physician_roi', new_physician_roi, condition)
-            cnx.update('DVHs', 'institutional_roi', new_institutional_roi, condition)
-
-    cnx.close()
+            if new_physician_roi != 'uncategorized':
+                print(mrn, physician, new_institutional_roi, new_physician_roi, roi_name, sep=' ')
+                condition = "study_instance_uid = '" + uid + "'" + "and roi_name = '" + roi_name + "'"
+                cnx.update('DVHs', 'physician_roi', new_physician_roi, condition)
+                cnx.update('DVHs', 'institutional_roi', new_institutional_roi, condition)
 
 
 def reinitialize_roi_categories_in_database():
     roi_map = DatabaseROIs()
     dvh_data = QuerySQL('DVHs', "mrn != ''")
-    cnx = DVH_SQL()
 
-    for i in range(len(dvh_data.roi_name)):
-        uid = dvh_data.study_instance_uid[i]
-        physician = get_physician_from_uid(uid)
-        roi_name = dvh_data.roi_name[i]
+    with DVH_SQL() as cnx:
+        for i in range(len(dvh_data.roi_name)):
+            uid = dvh_data.study_instance_uid[i]
+            physician = get_physician_from_uid(uid)
+            roi_name = dvh_data.roi_name[i]
 
-        new_physician_roi = roi_map.get_physician_roi(physician, roi_name)
-        new_institutional_roi = roi_map.get_institutional_roi(physician, roi_name)
+            new_physician_roi = roi_map.get_physician_roi(physician, roi_name)
+            new_institutional_roi = roi_map.get_institutional_roi(physician, roi_name)
 
-        print(i, physician, new_institutional_roi, new_physician_roi, roi_name, sep=' ')
-        condition = "study_instance_uid = '" + uid + "'" + "and roi_name = '" + roi_name + "'"
-        cnx.update('DVHs', 'physician_roi', new_physician_roi, condition)
-        cnx.update('DVHs', 'institutional_roi', new_institutional_roi, condition)
-
-    cnx.close()
+            print(i, physician, new_institutional_roi, new_physician_roi, roi_name, sep=' ')
+            condition = "study_instance_uid = '" + uid + "'" + "and roi_name = '" + roi_name + "'"
+            cnx.update('DVHs', 'physician_roi', new_physician_roi, condition)
+            cnx.update('DVHs', 'institutional_roi', new_institutional_roi, condition)
 
 
 def print_uncategorized_rois():
