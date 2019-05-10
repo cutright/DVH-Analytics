@@ -6,8 +6,7 @@ import wx
 from db import sql_columns
 from db.sql_to_python import QuerySQL
 from db.sql_connector import echo_sql_db
-from dialogs.main.query import query_dlg
-from dialogs.main.settings import UserSettings
+from dialogs.main import query_dlg, UserSettings
 from dialogs.database import SQLSettingsDialog
 from models.import_dicom import ImportDICOM_Dialog
 from models.database_editor import DatabaseEditorDialog

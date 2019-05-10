@@ -1,21 +1,21 @@
 import wx
 import wx.adv
+from wx.lib.agw.customtreectrl import CustomTreeCtrl, TR_AUTO_CHECK_CHILD, TR_AUTO_CHECK_PARENT, TR_DEFAULT_STYLE
+from datetime import date as datetime_obj, datetime
+from dateutil.parser import parse as parse_date
+from db import update as db_update
+from db.sql_connector import DVH_SQL
 from db.dicom_importer import DICOM_Importer
 from db.dicom_parser import DICOM_Parser
+from dialogs.main import DatePicker
 from dicompylercore import dicomparser
 from os.path import isdir, join, dirname
 from os import listdir, rmdir
-from wx.lib.agw.customtreectrl import CustomTreeCtrl, TR_AUTO_CHECK_CHILD, TR_AUTO_CHECK_PARENT, TR_DEFAULT_STYLE
-from tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95
-from db.sql_connector import DVH_SQL
-from tools.roi_name_manager import DatabaseROIs, clean_name
-from dateutil.parser import parse as parse_date
-from datetime import date as datetime_obj, datetime
-from threading import Thread
-from pubsub import pub
-from db import update as db_update
-from dialogs.main.date_picker import DatePicker
 from paths import IMPORT_SETTINGS_PATH, parse_settings_file
+from pubsub import pub
+from tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95
+from tools.roi_name_manager import DatabaseROIs, clean_name
+from threading import Thread
 
 
 ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV', 'EXTERNAL',

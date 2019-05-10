@@ -1,12 +1,12 @@
+import wx
+import wx.html2
 from bokeh.plotting import figure
 from bokeh.io.export import get_layout_html
-from options import Options
 from bokeh.models import Legend, HoverTool, ColumnDataSource, DataTable, TableColumn, NumberFormatter, Div
 from bokeh.layouts import column, row
 from bokeh.palettes import Colorblind8 as palette
 import itertools
-import wx
-import wx.html2
+from options import Options
 import numpy as np
 from tools.utilities import collapse_into_single_dates, moving_avg
 from tools.stats import multi_variable_regression, get_control_limits

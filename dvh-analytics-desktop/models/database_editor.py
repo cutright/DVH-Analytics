@@ -9,8 +9,6 @@ from db.sql_to_python import get_database_tree
 from db.sql_connector import DVH_SQL
 from models.datatable import DataTable
 from dialogs.export import data_table_to_csv as export_dlg
-from models.import_dicom import ImportDICOM_Dialog
-from paths import IMPORTED_DIR
 
 
 class DatabaseEditorDialog(wx.Frame):
