@@ -3,12 +3,13 @@ from db.sql_connector import DVH_SQL
 from datetime import datetime
 from dateutil.parser import parse as parse_date
 import numpy as np
-from os import walk, listdir, unlink
+from os import walk, listdir, unlink, mkdir
 from os.path import join, isfile, isdir
 import os
 import shutil
 from paths import IMPORT_SETTINGS_PATH, SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
     APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR
+import pydicom as dicom
 
 
 def is_windows():
@@ -312,14 +313,80 @@ def move_files_to_new_path(files, new_dir):
 def delete_directory_contents(dir_to_delete):
     # https://stackoverflow.com/questions/185936/how-to-delete-the-contents-of-a-folder-in-python
     for the_file in listdir(dir_to_delete):
-        file_path = join(dir_to_delete, the_file)
-        try:
-            if isfile(file_path):
-                unlink(file_path)
-            elif isdir(file_path):
-                shutil.rmtree(file_path)
-        except Exception as e:
-            print(e)
+        delete_file(join(dir_to_delete, the_file))
+
+
+def delete_file(file_path):
+    try:
+        if isfile(file_path):
+            unlink(file_path)
+        elif isdir(file_path):
+            shutil.rmtree(file_path)
+    except Exception as e:
+        print(e)
+
+
+def delete_imported_dicom_files(dicom_files):
+    """
+    delete imported dicom files
+    :param dicom_files: the return from DVH_SQL().get_dicom_file_paths
+    :type dicom_files: dict
+    """
+    for i, directory in enumerate(dicom_files['folder_path']):
+        # Delete associated plan, structure, and dose files
+        for key in ['plan_file', 'structure_file', 'dose_file']:
+            delete_file(join(directory, dicom_files[key][i]))
+
+        # Delete misc dicom files for given study instance uid
+        remaining_files = listdir(directory)
+        for f in remaining_files:
+            try:
+                uid = str(dicom.read_file(join(directory, f)).StudyInstanceUID)
+                if uid == str(dicom_files['study_instance_uid'][i]):
+                    delete_file(f)
+            except:
+                pass
+
+        # Directory is empty, delete it
+        # Directories are by patient mrn, so it might contain files for a different study for the same patient
+        if not listdir(directory):
+            try:
+                os.rmdir(directory)
+            except:
+                pass
+
+
+def move_imported_dicom_files(dicom_files, new_dir):
+    """
+    move imported dicom files
+    :param dicom_files: the return from DVH_SQL().get_dicom_file_paths
+    :type dicom_files: dict
+    """
+    for i, directory in enumerate(dicom_files['folder_path']):
+        files = [join(directory, dicom_files[key][i]) for key in ['plan_file', 'structure_file', 'dose_file']]
+        new_patient_dir = join(new_dir, dicom_files['mrn'][i])
+        move_files_to_new_path(files, new_patient_dir)
+
+        # Move misc dicom files for given study instance uid
+        remaining_files = listdir(directory)
+        files = []
+        for f in remaining_files:
+            try:
+                uid = str(dicom.read_file(join(directory, f)).StudyInstanceUID)
+                if uid == str(dicom_files['study_instance_uid'][i]):
+                    files.append(f)
+            except:
+                pass
+        if files:
+            move_files_to_new_path(files, new_patient_dir)
+
+        # Directory is empty, delete it
+        # Directories are by patient mrn, so it might contain files for a different study for the same patient
+        if not listdir(directory):
+            try:
+                os.rmdir(directory)
+            except:
+                pass
 
 
 # def remove_empty_folders(start_path):

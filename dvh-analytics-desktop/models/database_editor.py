@@ -146,10 +146,12 @@ class DatabaseEditorDialog(wx.Frame):
         columns.insert(0, 'study_instance_uid')
         columns.insert(0, 'mrn')
 
+        condition = self.text_ctrl_condition.GetValue()
+
         wait = wx.BusyCursor()
         with DVH_SQL() as cnx:
-            data = cnx.query(table, ','.join(columns), bokeh_cds=True)
-            self.data_query_results.set_data(data, columns)
+            data = cnx.query(table, ','.join(columns), condition, bokeh_cds=True)
+        self.data_query_results.set_data(data, columns)
         del wait
 
     def on_clear(self, evt):
@@ -177,8 +179,7 @@ class DatabaseEditorDialog(wx.Frame):
     def change_or_delete_dlg(self, class_type):
         selected_data = self.data_query_results.selected_row_data
         if selected_data:
-            class_type(mrn=selected_data[0][0],
-                       study_instance_uid=selected_data[0][1])
+            class_type(mrn=selected_data[0][0], study_instance_uid=selected_data[0][1])
         else:
             class_type()
 
@@ -195,7 +196,7 @@ class DatabaseEditorDialog(wx.Frame):
         CalculationsDialog()
 
     def on_rebuild_db(self, evt):
-        RebuildDB()
+        RebuildDB(self)
 
     def on_delete_all_data(self, evt):
         DeleteAllData(self)

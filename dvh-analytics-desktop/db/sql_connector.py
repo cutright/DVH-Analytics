@@ -172,6 +172,18 @@ class DVH_SQL:
         self.cursor.execute(sql_cmd)
         self.cnx.commit()
 
+    def get_dicom_file_paths(self, mrn=None, uid=None):
+        condition = None
+        if uid:
+            condition = "study_instance_uid = '%s'" % uid
+        elif mrn:
+            condition = "mrn = '%s'" % mrn
+
+        if condition is not None:
+            columns = 'mrn, study_instance_uid, folder_path, plan_file, structure_file, dose_file'
+            return self.query('DICOM_Files', columns, condition, bokeh_cds=True)
+        return None
+
     def delete_rows(self, condition_str, ignore_table=[]):
         tables = [t for t in self.tables if t not in ignore_table]
         for table in tables:

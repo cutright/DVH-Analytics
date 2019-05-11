@@ -19,7 +19,7 @@ from tools.roi_formatter import dicompyler_roi_coord_to_db_string, get_planes_fr
 from tools import roi_geometry as roi_calc
 from tools.mlc_analyzer import Beam as mlca
 from db.sql_connector import DVH_SQL
-from os.path import basename
+from os.path import basename, join
 from paths import IMPORT_SETTINGS_PATH, parse_settings_file
 
 
@@ -348,7 +348,7 @@ class DICOM_Parser:
     def get_dicom_file_row(self):
         return {'mrn': [self.mrn, 'text'],
                 'study_instance_uid': [self.study_instance_uid_to_be_imported, 'text'],
-                'folder_path': [self.import_path, 'text'],
+                'folder_path': [str(join(self.import_path, self.mrn)), 'text'],
                 'plan_file': [basename(self.plan_file), 'text'],
                 'structure_file': [basename(self.structure_file), 'text'],
                 'dose_file': [basename(self.dose_file), 'text'],

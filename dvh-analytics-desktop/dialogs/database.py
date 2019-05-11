@@ -7,7 +7,8 @@ from db.sql_settings import write_sql_connection_settings, validate_sql_connecti
 from paths import SQL_CNF_PATH, parse_settings_file, IMPORTED_DIR, INBOX_DIR
 from os.path import join
 from os import mkdir, rename
-from tools.utilities import delete_directory_contents
+from tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file, delete_imported_dicom_files,\
+    move_imported_dicom_files
 from datetime import datetime
 from models.import_dicom import ImportDICOM_Dialog
 
@@ -70,7 +71,7 @@ class CalculationsDialog(wx.Dialog):
         self.Destroy()
 
 
-class BaseClass(wx.Dialog):
+class ChangeOrDeleteBaseClass(wx.Dialog):
     def __init__(self, text_input_1_label, text_input_2_label, ok_button_label, title,
                  mrn=None, study_instance_uid=None, *args, **kw):
         wx.Dialog.__init__(self, None, title=title)
@@ -148,10 +149,10 @@ class BaseClass(wx.Dialog):
         return self.combo_box_patient_identifier.GetValue().lower().replace(' ', '_')
 
 
-class ChangePatientIdentifierDialog(BaseClass):
+class ChangePatientIdentifierDialog(ChangeOrDeleteBaseClass):
     def __init__(self, mrn=None, study_instance_uid=None):
-        BaseClass.__init__(self, 'Value:', 'New Value:', 'Change', "Change Patient Identifier",
-                           mrn=mrn, study_instance_uid=study_instance_uid)
+        ChangeOrDeleteBaseClass.__init__(self, 'Value:', 'New Value:', 'Change', "Change Patient Identifier",
+                                         mrn=mrn, study_instance_uid=study_instance_uid)
 
         self.run()
 
@@ -163,23 +164,23 @@ class ChangePatientIdentifierDialog(BaseClass):
             validation_func = [cnx.is_uid_imported, cnx.is_mrn_imported][self.selected_id_type == 'mrn']
             change_func = [cnx.change_uid, cnx.change_mrn][self.selected_id_type == 'mrn']
 
-        if validation_func(old_id):
-            if self.selected_id_type == 'study_instance_uid' and validation_func(new_id):
-                wx.MessageBox('This Study Instance UID is already in use.',
+            if validation_func(old_id):
+                if self.selected_id_type == 'study_instance_uid' and validation_func(new_id):
+                    wx.MessageBox('This Study Instance UID is already in use.',
+                                  '%s Error' % self.combo_box_patient_identifier.GetValue(),
+                                  wx.OK | wx.ICON_WARNING)
+                else:
+                    change_func(old_id, new_id)
+            else:
+                wx.MessageBox('No studies found with this %s.' % self.combo_box_patient_identifier.GetValue(),
                               '%s Error' % self.combo_box_patient_identifier.GetValue(),
                               wx.OK | wx.ICON_WARNING)
-            else:
-                change_func(old_id, new_id)
-        else:
-            wx.MessageBox('No studies found with this %s.' % self.combo_box_patient_identifier.GetValue(),
-                          '%s Error' % self.combo_box_patient_identifier.GetValue(),
-                          wx.OK | wx.ICON_WARNING)
 
 
-class DeletePatientDialog(BaseClass):
+class DeletePatientDialog(ChangeOrDeleteBaseClass):
     def __init__(self, mrn=None, study_instance_uid=None):
-        BaseClass.__init__(self, 'Delete:', 'Type "delete" to authorize:', 'Delete', "Delete Patient",
-                           mrn=mrn, study_instance_uid=study_instance_uid)
+        ChangeOrDeleteBaseClass.__init__(self, 'Delete:', 'Type "delete" to authorize:', 'Delete', "Delete Patient",
+                                         mrn=mrn, study_instance_uid=study_instance_uid)
 
         self.run()
 
@@ -188,7 +189,10 @@ class DeletePatientDialog(BaseClass):
             column = self.selected_id_type.lower().replace(' ', '_')
             value = self.text_ctrl_1.GetValue()
             with DVH_SQL() as cnx:
+                dicom_files = cnx.get_dicom_file_paths(**{column: value})
                 cnx.delete_rows("%s = '%s'" % (column, value))
+
+            DeleteFilesFromQuery(self, dicom_files)
 
 
 class EditDatabaseDialog(wx.Dialog):
@@ -416,7 +420,14 @@ class SQLSettingsDialog(wx.Dialog):
         self.Destroy()
 
 
+# --------------------------------------------------
+# Yes/No Dialogs
+# --------------------------------------------------
 class MessageDialog:
+    """
+    This is the base class for Yes/No Dialog boxes
+    Inherit this class, then over-write action_yes and action_no functions with appropriate behaviors
+    """
     def __init__(self, parent, caption, message="Are you sure?",
                  flags=wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT):
         self.dlg = wx.MessageDialog(parent, message, caption, flags)
@@ -467,6 +478,56 @@ class DeleteImportedDirectory(MessageDialog):
         delete_directory_contents(IMPORTED_DIR)
 
 
+class MoveFiles(MessageDialog):
+    def __init__(self, parent, files):
+        self.parent = parent
+        self.files = files
+        MessageDialog.__init__(self, parent, "Move files to another location?")
+
+    def action_yes(self):
+        dlg = wx.DirDialog(self, "Choose directory", "", wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
+        if dlg.ShowModal() == wx.ID_OK:
+            move_files_to_new_path(self.files, dlg.GetPath())
+        dlg.Destroy()
+
+    def action_no(self):
+        DeleteFiles(self.parent)
+
+
+class DeleteFiles(MessageDialog):
+    def __init__(self, parent, files):
+        self.files = files
+        MessageDialog.__init__(self, parent, "Delete associated files?")
+
+    def action_yes(self):
+        for f in self.files:
+            delete_file(f)
+
+
+class DeleteFilesFromQuery(MessageDialog):
+    def __init__(self, parent, dicom_file_query):
+        self.dicom_file_query = dicom_file_query
+        MessageDialog.__init__(self, parent, "Delete associated files?")
+
+    def action_yes(self):
+        delete_imported_dicom_files(self.dicom_file_query)
+
+    def action_no(self):
+        MoveFilesFromQuery(self.parent, self.dicom_file_query)
+
+
+class MoveFilesFromQuery(MessageDialog):
+    def __init__(self, parent, dicom_file_query):
+        self.dicom_file_query = dicom_file_query
+        MessageDialog.__init__(self, parent, "Move associated files?")
+
+    def action_yes(self):
+        dlg = wx.DirDialog(self.parent, "Choose directory", "", wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
+        if dlg.ShowModal() == wx.ID_OK:
+            move_imported_dicom_files(self.dicom_file_query, dlg.GetPath())
+        dlg.Destroy()
+
+
 class RebuildDB(MessageDialog):
     def __init__(self, parent):
         MessageDialog.__init__(self, parent, "Rebuild Database from DICOM")
@@ -475,6 +536,4 @@ class RebuildDB(MessageDialog):
         with DVH_SQL() as cnx:
             cnx.reinitialize_database()
 
-        dlg = ImportDICOM_Dialog(inbox=IMPORTED_DIR)
-        dlg.ShowModal()
-        dlg.Destroy()
+        ImportDICOM_Dialog(inbox=IMPORTED_DIR)
