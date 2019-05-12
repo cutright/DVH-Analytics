@@ -93,6 +93,8 @@ class ChangeOrDeleteBaseClass(wx.Dialog):
         self.__do_bind()
         self.__do_layout()
 
+        self.run()
+
     def __set_properties(self):
         self.text_ctrl_1.SetMinSize((365, 22))
         self.on_identifier_change(None)
@@ -154,8 +156,6 @@ class ChangePatientIdentifierDialog(ChangeOrDeleteBaseClass):
         ChangeOrDeleteBaseClass.__init__(self, 'Value:', 'New Value:', 'Change', "Change Patient Identifier",
                                          mrn=mrn, study_instance_uid=study_instance_uid)
 
-        self.run()
-
     def action(self):
         old_id = self.text_ctrl_1.GetValue()
         new_id = self.text_ctrl_2.GetValue()
@@ -181,8 +181,6 @@ class DeletePatientDialog(ChangeOrDeleteBaseClass):
     def __init__(self, mrn=None, study_instance_uid=None):
         ChangeOrDeleteBaseClass.__init__(self, 'Delete:', 'Type "delete" to authorize:', 'Delete', "Delete Patient",
                                          mrn=mrn, study_instance_uid=study_instance_uid)
-
-        self.run()
 
     def action(self):
         if self.text_ctrl_2.GetValue() == 'delete':
@@ -281,8 +279,10 @@ class EditDatabaseDialog(wx.Dialog):
 
 
 class ReimportDialog(wx.Dialog):
-    def __init__(self):
+    def __init__(self, mrn=None, study_instance_uid=None):
         wx.Dialog.__init__(self, None, title="Reimport from DICOM")
+        self.initial_mrn = mrn
+        self.initial_uid = study_instance_uid
 
         self.text_ctrl_mrn = wx.TextCtrl(self, wx.ID_ANY, "")
         self.radio_box_delete_from_db = wx.RadioBox(self, wx.ID_ANY, "Current Data",
@@ -295,12 +295,18 @@ class ReimportDialog(wx.Dialog):
 
         self.__set_properties()
         self.__do_layout()
+        self.__do_bind()
+        self.__apply_initial_values()
 
         self.run()
 
     def __set_properties(self):
         self.radio_box_delete_from_db.SetSelection(0)
         self.combo_box_study_date.SetMinSize((200, 25))
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_TEXT, self.mrn_ticker, id=self.text_ctrl_mrn.GetId())
+        self.Bind(wx.EVT_COMBOBOX, self.study_date_ticker, id=self.combo_box_study_date.GetId())
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -336,19 +342,74 @@ class ReimportDialog(wx.Dialog):
         self.Layout()
         self.Center()
 
+    def __apply_initial_values(self):
+        if self.initial_mrn is not None:
+            self.text_ctrl_mrn.SetValue(self.initial_mrn)
+        # if self.initial_uid is not None:
+        #     self.combo_box_uid.SetSelection(self.initial_uid)
+
     def run(self):
         res = self.ShowModal()
         if res == wx.ID_OK:
-            pass
+            if self.uid:
+                self.action()
         self.Destroy()
+
+    def mrn_ticker(self, evt):
+        with DVH_SQL() as cnx:
+            is_mrn_valid = cnx.is_mrn_imported(self.mrn)
+        if is_mrn_valid:
+            self.update_study_dates()
+        else:
+            self.combo_box_study_date.SetItems([])
+            self.combo_box_uid.SetItems([])
+
+    def study_date_ticker(self, evt):
+        self.update_uids()
+
+    def update_study_dates(self):
+        with DVH_SQL() as cnx:
+            choices = cnx.get_unique_values('Plans', 'sim_study_date', "mrn = '%s'" % self.mrn)
+        self.combo_box_study_date.SetItems(choices)
+        if choices:
+            self.combo_box_study_date.SetValue(choices[0])
+        self.update_uids()
+
+    def update_uids(self):
+
+        date = ['is NULL', "= '%s'::date" % self.sim_study_date][self.sim_study_date != 'None']
+        condition = "mrn = '%s' and sim_study_date %s" % (self.mrn, date)
+        with DVH_SQL() as cnx:
+            choices = cnx.get_unique_values('Plans', 'study_instance_uid', condition)
+        self.combo_box_uid.SetItems(choices)
+        if choices:
+            self.combo_box_uid.SetValue(choices[0])
+        else:
+            self.combo_box_uid.SetValue(None)
 
     @property
     def delete_from_db(self):
-        return self.radio_box_delete_from_db.GetSelection() == "Delete from DB"
+        return self.radio_box_delete_from_db.GetSelection() == 0
+
+    @property
+    def mrn(self):
+        return self.text_ctrl_mrn.GetValue()
+
+    @property
+    def sim_study_date(self):
+        return self.combo_box_study_date.GetValue()
 
     @property
     def uid(self):
-        return self.combo_box_uid.GetSelection()
+        return self.combo_box_uid.GetValue()
+
+    def action(self):
+        with DVH_SQL() as cnx:
+            dicom_files = cnx.get_dicom_file_paths(uid=self.uid)
+            if self.delete_from_db:
+                cnx.delete_rows("study_instance_uid = '%s'" % self.uid)
+        move_imported_dicom_files(dicom_files, INBOX_DIR)
+        ImportDICOM_Dialog(inbox=INBOX_DIR)
 
 
 class SQLSettingsDialog(wx.Dialog):

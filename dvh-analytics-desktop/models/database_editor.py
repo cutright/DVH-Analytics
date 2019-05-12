@@ -183,9 +183,12 @@ class DatabaseEditorDialog(wx.Frame):
         else:
             class_type()
 
-    @staticmethod
-    def on_reimport(evt):
-        ReimportDialog()
+    def on_reimport(self, evt):
+        selected_data = self.data_query_results.selected_row_data
+        if selected_data:
+            ReimportDialog(mrn=selected_data[0][0], study_instance_uid=selected_data[0][1])
+        else:
+            ReimportDialog()
 
     @staticmethod
     def on_edit_db(evt):

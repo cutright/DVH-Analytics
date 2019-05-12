@@ -55,8 +55,8 @@
         - [ ] Tried SetPage() and LoadURL(), tested on Windows 7 with latest IE, maybe Windows 10 works?
         - [ ] Registry edit needed? [html2.WebView and "blocked content" on Windows/IE](https://groups.google.com/forum/#!topic/wxpython-dev/epBVWHC7l6E)
     * Linux:
-        - [ ] Plot is displayed, but no interactivity
-        - [ ] Issue [#4](https://github.com/cutright/DVH-Analytics-Desktop/issues/4)
+        - [X] Plot is displayed, but no interactivity
+        - [X] Issue [#4](https://github.com/cutright/DVH-Analytics-Desktop/issues/4): Turns out not a Linux issue
 
 8. **Icons**
     - [ ] I borrowed (stole) icons from dicompyler for the DICOM file tree.  Should make my own.

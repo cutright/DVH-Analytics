@@ -301,13 +301,14 @@ def calc_stats(data):
 
 def move_files_to_new_path(files, new_dir):
     for file_path in files:
-        file_name = os.path.basename(file_path)
-        old_dir = os.path.dirname(file_path)
-        new = os.path.join(new_dir, file_name)
-        if not os.path.isdir(new_dir):
-            os.mkdir(new_dir)
-        if old_dir != new_dir:
-            shutil.move(file_path, new)
+        if isfile(file_path):
+            file_name = os.path.basename(file_path)
+            old_dir = os.path.dirname(file_path)
+            new = os.path.join(new_dir, file_name)
+            if not os.path.isdir(new_dir):
+                os.mkdir(new_dir)
+            if old_dir != new_dir:
+                shutil.move(file_path, new)
 
 
 def delete_directory_contents(dir_to_delete):

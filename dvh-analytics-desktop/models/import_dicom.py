@@ -25,6 +25,7 @@ ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV', 'EXTERNAL',
 class ImportDICOM_Dialog(wx.Dialog):
     def __init__(self, inbox=None):
         wx.Dialog.__init__(self, None, title='Import DICOM')
+        self.initial_inbox = inbox
 
         with DVH_SQL() as cnx:
             cnx.initialize_database()
@@ -99,10 +100,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.__do_layout()
 
         self.is_all_data_parsed = False
-        if inbox is None or not isdir(inbox):
-            inbox = ''
-        self.dicom_dir = DICOM_Importer(inbox, self.tree_ctrl_import, self.tree_ctrl_roi, self.tree_ctrl_roi_root)
-        self.parse_directory()
+        self.dicom_dir = None
 
         self.incomplete_studies = []
 
@@ -304,8 +302,12 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.Center()
 
     def run(self):
-        self.ShowModal()
-        self.Destroy()
+        self.Show()
+        if self.initial_inbox is None or not isdir(self.initial_inbox):
+            self.initial_inbox = ''
+        self.text_ctrl_directory.SetValue(self.initial_inbox)
+        self.dicom_dir = DICOM_Importer(self.initial_inbox, self.tree_ctrl_import, self.tree_ctrl_roi, self.tree_ctrl_roi_root)
+        self.parse_directory()
 
     def parse_directory(self):
         # TODO: Thread this function (parse_directory)
