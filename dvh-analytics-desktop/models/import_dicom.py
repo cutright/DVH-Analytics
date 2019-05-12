@@ -8,6 +8,7 @@ from db.sql_connector import DVH_SQL
 from db.dicom_importer import DICOM_Importer
 from db.dicom_parser import DICOM_Parser
 from dialogs.main import DatePicker
+from dialogs.roi_map import PhysicianAdd
 from dicompylercore import dicomparser
 from os.path import isdir, join, dirname
 from os import listdir, rmdir
@@ -67,6 +68,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.button_apply_plan_data = wx.Button(self, wx.ID_ANY, "Apply")
         self.button_delete_study = wx.Button(self, wx.ID_ANY, "Delete Study in Database with this UID")
         self.button_delete_study.Disable()
+        self.button_add_physician = wx.Button(self, wx.ID_ANY, "Add Physician")
         self.disable_inputs()
 
         self.button_browse = wx.Button(self, wx.ID_ANY, u"Browse…")
@@ -133,6 +135,7 @@ class ImportDICOM_Dialog(wx.Dialog):
 
         self.Bind(wx.EVT_BUTTON, self.on_edit_birth_date, id=self.button_edit_birth_date.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_edit_sim_study_date, id=self.button_edit_sim_study_date.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_add_physician, id=self.button_add_physician.GetId())
 
         self.Bind(wx.EVT_BUTTON, self.on_import, id=self.button_import.GetId())
 
@@ -169,6 +172,8 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_tx_site = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
         sizer_tx_site_checkbox = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
+        sizer_physician_input = wx.BoxSizer(wx.VERTICAL)
+        sizer_physician_input_and_button = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician_checkbox = wx.BoxSizer(wx.HORIZONTAL)
         sizer_sim_study_date = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
         sizer_sim_study_date_text_button = wx.BoxSizer(wx.HORIZONTAL)
@@ -241,10 +246,13 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_plan_data.Add(sizer_sim_study_date, 1, wx.ALL | wx.EXPAND, 5)
 
         self.label['physician'] = wx.StaticText(self, wx.ID_ANY, "Physician:")
-        sizer_physician.Add(self.label['physician'], 0, 0, 0)
-        sizer_physician.Add(self.input['physician'], 0, 0, 0)
+        sizer_physician_input.Add(self.label['physician'], 0, 0, 0)
+        sizer_physician_input_and_button.Add(self.input['physician'], 0, 0, 0)
+        sizer_physician_input_and_button.Add(self.button_add_physician, 0, wx.LEFT, 5)
         sizer_physician_checkbox.Add(self.checkbox['physician_1'], 0, wx.RIGHT, 20)
         sizer_physician_checkbox.Add(self.checkbox['physician_2'], 0, 0, 0)
+        sizer_physician.Add(sizer_physician_input, 0, 0, 0)
+        sizer_physician.Add(sizer_physician_input_and_button, 0, wx.EXPAND, 0)
         sizer_physician.Add(sizer_physician_checkbox, 1, wx.EXPAND, 0)
         sizer_plan_data.Add(sizer_physician, 1, wx.ALL | wx.EXPAND, 5)
 
@@ -482,6 +490,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.button_edit_birth_date.Disable()
         self.button_apply_plan_data.Disable()
         self.button_delete_study.Disable()
+        self.button_add_physician.Disable()
         for check_box in self.checkbox.values():
             check_box.Disable()
 
@@ -492,6 +501,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.button_edit_birth_date.Enable()
         self.button_apply_plan_data.Enable()
         self.button_delete_study.Enable()
+        self.button_add_physician.Enable()
         for check_box in self.checkbox.values():
             check_box.Enable()
 
@@ -715,6 +725,10 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.update_roi_inputs()
         self.validate(self.selected_uid)
         self.update_warning_label()
+
+    def on_add_physician(self, evt):
+        PhysicianAdd()
+        self.Focus
 
 
 class ImportStatusDialog(wx.Dialog):

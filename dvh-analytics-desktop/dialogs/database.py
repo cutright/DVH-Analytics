@@ -25,6 +25,7 @@ class CalculationsDialog(wx.Dialog):
         self.text_ctrl_condition = wx.TextCtrl(self, wx.ID_ANY, "")
         self.button_ok = wx.Button(self, wx.ID_OK, "Calculate")
         # TODO: Add functionality to OK button
+        self.button_ok.Disable()  # Remove this line once functionality is added
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
         self.__set_properties()
@@ -36,7 +37,6 @@ class CalculationsDialog(wx.Dialog):
         self.checkbox.SetValue(1)
 
     def __do_layout(self):
-        # begin wxGlade: MyFrame.__do_layout
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_wrapper_inner = wx.BoxSizer(wx.VERTICAL)
         sizer_ok_cancel = wx.BoxSizer(wx.HORIZONTAL)
