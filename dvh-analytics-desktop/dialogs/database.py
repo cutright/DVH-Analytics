@@ -76,8 +76,8 @@ class ChangeOrDeleteBaseClass(wx.Dialog):
                  mrn=None, study_instance_uid=None, *args, **kw):
         wx.Dialog.__init__(self, None, title=title)
 
-        self.mrn = mrn
-        self.study_instance_uid = study_instance_uid
+        self.initial_mrn = mrn
+        self.initial_study_instance_uid = study_instance_uid
 
         self.text_input_1_label = text_input_1_label
         self.text_input_2_label = text_input_2_label
@@ -87,6 +87,7 @@ class ChangeOrDeleteBaseClass(wx.Dialog):
         self.text_ctrl_1 = wx.TextCtrl(self, wx.ID_ANY, "")
         self.text_ctrl_2 = wx.TextCtrl(self, wx.ID_ANY, "")
         self.button_ok = wx.Button(self, wx.ID_OK, ok_button_label)
+        self.button_ok.Disable()
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
         self.__set_properties()
@@ -129,6 +130,11 @@ class ChangeOrDeleteBaseClass(wx.Dialog):
 
     def __do_bind(self):
         self.Bind(wx.EVT_COMBOBOX, self.on_identifier_change, id=self.combo_box_patient_identifier.GetId())
+        self.Bind(wx.EVT_TEXT, self.text_ticker, id=self.text_ctrl_1.GetId())
+        self.Bind(wx.EVT_TEXT, self.text_ticker, id=self.text_ctrl_2.GetId())
+
+    def text_ticker(self, evt):
+        [self.button_ok.Disable, self.button_ok.Enable][self.is_action_allowed]()
 
     def run(self):
         res = self.ShowModal()
@@ -140,15 +146,26 @@ class ChangeOrDeleteBaseClass(wx.Dialog):
         pass
 
     def on_identifier_change(self, evt):
-        value = {'Study Instance UID': self.study_instance_uid,
-                 'MRN': self.mrn}[self.combo_box_patient_identifier.GetValue()]
+        value = {'Study Instance UID': self.initial_study_instance_uid,
+                 'MRN': self.initial_mrn}[self.combo_box_patient_identifier.GetValue()]
         if value is not None:
             self.text_ctrl_1.SetValue(value)
             wx.CallAfter(self.text_ctrl_2.SetFocus)
 
     @property
-    def selected_id_type(self):
+    def sql_column(self):
         return self.combo_box_patient_identifier.GetValue().lower().replace(' ', '_')
+
+    @property
+    def is_id_valid(self):
+        with DVH_SQL() as cnx:
+            func = [cnx.is_uid_imported, cnx.is_mrn_imported][self.combo_box_patient_identifier.GetValue() == 'MRN']
+            ans = func(self.text_ctrl_1.GetValue())
+        return ans
+
+    @property
+    def is_action_allowed(self):
+        return self.is_id_valid and bool(self.text_ctrl_2.GetValue())
 
 
 class ChangePatientIdentifierDialog(ChangeOrDeleteBaseClass):
@@ -161,11 +178,11 @@ class ChangePatientIdentifierDialog(ChangeOrDeleteBaseClass):
         new_id = self.text_ctrl_2.GetValue()
 
         with DVH_SQL() as cnx:
-            validation_func = [cnx.is_uid_imported, cnx.is_mrn_imported][self.selected_id_type == 'mrn']
-            change_func = [cnx.change_uid, cnx.change_mrn][self.selected_id_type == 'mrn']
+            validation_func = [cnx.is_uid_imported, cnx.is_mrn_imported][self.sql_column == 'mrn']
+            change_func = [cnx.change_uid, cnx.change_mrn][self.sql_column == 'mrn']
 
             if validation_func(old_id):
-                if self.selected_id_type == 'study_instance_uid' and validation_func(new_id):
+                if self.sql_column == 'study_instance_uid' and validation_func(new_id):
                     wx.MessageBox('This Study Instance UID is already in use.',
                                   '%s Error' % self.combo_box_patient_identifier.GetValue(),
                                   wx.OK | wx.ICON_WARNING)
@@ -184,28 +201,33 @@ class DeletePatientDialog(ChangeOrDeleteBaseClass):
 
     def action(self):
         if self.text_ctrl_2.GetValue() == 'delete':
-            column = self.selected_id_type.lower().replace(' ', '_')
             value = self.text_ctrl_1.GetValue()
             with DVH_SQL() as cnx:
-                dicom_files = cnx.get_dicom_file_paths(**{column: value})
-                cnx.delete_rows("%s = '%s'" % (column, value))
+                dicom_files = cnx.get_dicom_file_paths(**{self.sql_column: value})
+                cnx.delete_rows("%s = '%s'" % (self.sql_column, value))
 
             DeleteFilesFromQuery(self, dicom_files)
+
+    @property
+    def is_action_allowed(self):
+        return self.is_id_valid and self.text_ctrl_2.GetValue() == 'delete'
 
 
 class EditDatabaseDialog(wx.Dialog):
     def __init__(self):
         wx.Dialog.__init__(self, None, title="Edit Database Values")
 
-        self.combo_box_table = wx.ComboBox(self, wx.ID_ANY, choices=self.get_tables(),
+        self.combo_box_table = wx.ComboBox(self, wx.ID_ANY, choices=self.tables,
                                            style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_column = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.text_ctrl_value = wx.TextCtrl(self, wx.ID_ANY, "")
         self.text_ctrl_condition = wx.TextCtrl(self, wx.ID_ANY, "")
         self.button_ok = wx.Button(self, wx.ID_OK, "Update")
+        self.button_ok.Disable()
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
-        self.Bind(wx.EVT_COMBOBOX, self.OnTable, id=self.combo_box_table.GetId())
+        self.Bind(wx.EVT_COMBOBOX, self.table_ticker, id=self.combo_box_table.GetId())
+        self.Bind(wx.EVT_TEXT, self.condition_ticker, id=self.text_ctrl_condition.GetId())
 
         self.__set_properties()
         self.__do_layout()
@@ -254,11 +276,36 @@ class EditDatabaseDialog(wx.Dialog):
         self.Layout()
         self.Center()
 
-    @staticmethod
-    def get_tables():
+    @property
+    def tables(self):
         with DVH_SQL() as cnx:
             tables = cnx.tables
         return tables
+
+    @property
+    def table(self):
+        return self.combo_box_table.GetValue()
+
+    @property
+    def column(self):
+        return self.combo_box_column.GetValue()
+
+    @property
+    def condition(self):
+        return self.text_ctrl_condition.GetValue()
+
+    @property
+    def value(self):
+        v = self.text_ctrl_value.GetValue()
+        if v:
+            return v
+        return 'NULL'
+
+    def condition_ticker(self, evt):
+        if self.condition:
+            self.button_ok.Enable()
+        else:
+            self.button_ok.Disable()
 
     def update_columns(self):
         table = self.combo_box_table.GetValue()
@@ -268,14 +315,20 @@ class EditDatabaseDialog(wx.Dialog):
         if self.combo_box_column.GetValue() not in columns:
             self.combo_box_column.SetValue(columns[0])
 
-    def OnTable(self, evt):
+    def table_ticker(self, evt):
         self.update_columns()
 
     def run(self):
         res = self.ShowModal()
         if res == wx.ID_OK:
-            pass
+            self.update_db()
         self.Destroy()
+
+    def update_db(self):
+        with DVH_SQL() as cnx:
+            dvh_sql_exception = cnx.update(self.table, self.column, self.value, self.condition)
+        if dvh_sql_exception:
+            SQLWarningDialog(self, dvh_sql_exception)
 
 
 class ReimportDialog(wx.Dialog):
@@ -291,6 +344,7 @@ class ReimportDialog(wx.Dialog):
         self.combo_box_study_date = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_uid = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.button_reimport = wx.Button(self, wx.ID_OK, "Reimport")
+        self.button_reimport.Disable()
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
         self.__set_properties()
@@ -307,6 +361,7 @@ class ReimportDialog(wx.Dialog):
     def __do_bind(self):
         self.Bind(wx.EVT_TEXT, self.mrn_ticker, id=self.text_ctrl_mrn.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.study_date_ticker, id=self.combo_box_study_date.GetId())
+        self.Bind(wx.EVT_COMBOBOX, self.uid_ticker, id=self.combo_box_uid.GetId())
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -363,9 +418,16 @@ class ReimportDialog(wx.Dialog):
         else:
             self.combo_box_study_date.SetItems([])
             self.combo_box_uid.SetItems([])
+            self.button_reimport.Disable()
 
     def study_date_ticker(self, evt):
         self.update_uids()
+
+    def uid_ticker(self, evt):
+        if self.combo_box_uid.GetValue():
+            self.button_reimport.Enable()
+        else:
+            self.button_reimport.Disable()
 
     def update_study_dates(self):
         with DVH_SQL() as cnx:
@@ -386,6 +448,7 @@ class ReimportDialog(wx.Dialog):
             self.combo_box_uid.SetValue(choices[0])
         else:
             self.combo_box_uid.SetValue(None)
+        self.uid_ticker(None)
 
     @property
     def delete_from_db(self):
@@ -606,3 +669,16 @@ class RebuildDB(MessageDialog):
             cnx.reinitialize_database()
 
         ImportDICOM_Dialog(inbox=IMPORTED_DIR)
+
+
+class WarningDialog:
+    def __init__(self, parent, message, caption, flags=wx.ICON_WARNING | wx.OK | wx.OK_DEFAULT):
+        self.dlg = wx.MessageDialog(parent, message, caption, flags)
+        self.dlg.ShowModal()
+        self.dlg.Destroy()
+
+
+class SQLWarningDialog(WarningDialog):
+    # TODO: Create a layout to provide space to show entire error
+    def __init__(self, parent, dvh_sql_error):
+        WarningDialog.__init__(self, parent, dvh_sql_error['error'], "SQL Syntax Error")

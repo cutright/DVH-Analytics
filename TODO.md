@@ -48,6 +48,8 @@
 
 6. **Database Editor**
     - [X] UIs are built, and their associated functions are largely already written, just need to connect them
+    - [ ] Calculations button is still non-functional. Will require threading. All other buttons functional.
+    - [ ] Build new message dialog on sql exceptions so the entire error is shown
 
 7. **Windows/Linux Plotting**
     * Windows:

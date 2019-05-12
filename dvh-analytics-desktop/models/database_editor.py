@@ -4,7 +4,7 @@
 
 import wx
 from dialogs.database import ChangePatientIdentifierDialog, DeletePatientDialog, ReimportDialog, EditDatabaseDialog,\
-    CalculationsDialog, DeleteAllData, RebuildDB
+    CalculationsDialog, DeleteAllData, RebuildDB, SQLWarningDialog
 from db.sql_to_python import get_database_tree
 from db.sql_connector import DVH_SQL
 from models.datatable import DataTable
@@ -151,7 +151,11 @@ class DatabaseEditorDialog(wx.Frame):
         wait = wx.BusyCursor()
         with DVH_SQL() as cnx:
             data = cnx.query(table, ','.join(columns), condition, bokeh_cds=True)
-        self.data_query_results.set_data(data, columns)
+        if 'error' in list(data):
+            SQLWarningDialog(self, data)
+            self.data_query_results.clear()
+        else:
+            self.data_query_results.set_data(data, columns)
         del wait
 
     def on_clear(self, evt):

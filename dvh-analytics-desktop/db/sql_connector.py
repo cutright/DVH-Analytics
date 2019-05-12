@@ -86,8 +86,12 @@ class DVH_SQL:
         if order and order_by:
             query = "%s Order By %s %s;" % (query[:-1], order_by, order)
 
-        self.cursor.execute(query)
-        results = self.cursor.fetchall()
+        try:
+            self.cursor.execute(query)
+            results = self.cursor.fetchall()
+        except Exception as e:
+            return {'error': str(e).replace('^', '').strip(),
+                    'sql_cmd': "SQL CMD:\n%s" % query}
 
         if 'bokeh_cds' in kwargs and kwargs['bokeh_cds']:
             keys = [c.strip() for c in return_col_str.split(',')]
@@ -120,8 +124,14 @@ class DVH_SQL:
             value = "'%s'" % str(value)  # need quotes to input a string
 
         update = "Update %s SET %s = %s WHERE %s" % (table_name, column, value, condition_str)
-        self.cursor.execute(update)
-        self.cnx.commit()
+
+        try:
+            self.cursor.execute(update)
+            self.cnx.commit()
+            return None
+        except Exception as e:
+            return {'error': str(e).replace('^', '').strip(),
+                    'sql_cmd': "SQL CMD:\n%s" % update}
 
     def is_study_instance_uid_in_table(self, table_name, study_instance_uid):
         return self.is_value_in_table(table_name, study_instance_uid, 'study_instance_uid')
