@@ -377,8 +377,7 @@ def move_imported_dicom_files(dicom_files, new_dir):
                     files.append(f)
             except:
                 pass
-        if files:
-            move_files_to_new_path(files, new_patient_dir)
+        move_files_to_new_path(files, new_patient_dir)
 
         # Directory is empty, delete it
         # Directories are by patient mrn, so it might contain files for a different study for the same patient

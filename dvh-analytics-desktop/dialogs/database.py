@@ -342,6 +342,14 @@ class ReimportDialog(wx.Dialog):
             pass
         self.Destroy()
 
+    @property
+    def delete_from_db(self):
+        return self.radio_box_delete_from_db.GetSelection() == "Delete from DB"
+
+    @property
+    def uid(self):
+        return self.combo_box_uid.GetSelection()
+
 
 class SQLSettingsDialog(wx.Dialog):
     def __init__(self):
