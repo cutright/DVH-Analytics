@@ -3,7 +3,7 @@
 
 import wx
 from models.datatable import DataTable
-from dialogs.main.endpoint import AddEndpointDialog, DelEndpointDialog
+from dialogs.main import AddEndpointDialog, DelEndpointDialog
 from dialogs.export import data_table_to_csv as export_dlg
 from copy import deepcopy
 

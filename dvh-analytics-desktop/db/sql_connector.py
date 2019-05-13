@@ -14,6 +14,12 @@ from paths import SCRIPT_DIR, DATA_DIR, SQL_CNF_PATH, parse_settings_file
 
 
 class DVH_SQL:
+    """
+    To ensure SQL connection is closed on every use, best practice is to use this class like so:
+    with DVH_SQL() as cnx:
+        something = cnx.function()
+        some_more_code_here
+    """
     def __init__(self, *config):
         if config:
             config = config[0]
@@ -28,6 +34,12 @@ class DVH_SQL:
         self.cnx = cnx
         self.cursor = cnx.cursor()
         self.tables = ['DVHs', 'Plans', 'Rxs', 'Beams', 'DICOM_Files']
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, ctx_type, ctx_value, ctx_traceback):
+        self.close()
 
     def close(self):
         self.cnx.close()
@@ -74,8 +86,11 @@ class DVH_SQL:
         if order and order_by:
             query = "%s Order By %s %s;" % (query[:-1], order_by, order)
 
-        self.cursor.execute(query)
-        results = self.cursor.fetchall()
+        try:
+            self.cursor.execute(query)
+            results = self.cursor.fetchall()
+        except Exception as e:
+            raise SQLError(str(e), query)
 
         if 'bokeh_cds' in kwargs and kwargs['bokeh_cds']:
             keys = [c.strip() for c in return_col_str.split(',')]
@@ -108,8 +123,13 @@ class DVH_SQL:
             value = "'%s'" % str(value)  # need quotes to input a string
 
         update = "Update %s SET %s = %s WHERE %s" % (table_name, column, value, condition_str)
-        self.cursor.execute(update)
-        self.cnx.commit()
+
+        try:
+            self.cursor.execute(update)
+            self.cnx.commit()
+            return None
+        except Exception as e:
+            raise SQLError(str(e), update)
 
     def is_study_instance_uid_in_table(self, table_name, study_instance_uid):
         return self.is_value_in_table(table_name, study_instance_uid, 'study_instance_uid')
@@ -160,6 +180,18 @@ class DVH_SQL:
         self.cursor.execute(sql_cmd)
         self.cnx.commit()
 
+    def get_dicom_file_paths(self, mrn=None, uid=None):
+        condition = None
+        if uid:
+            condition = "study_instance_uid = '%s'" % uid
+        elif mrn:
+            condition = "mrn = '%s'" % mrn
+
+        if condition is not None:
+            columns = 'mrn, study_instance_uid, folder_path, plan_file, structure_file, dose_file'
+            return self.query('DICOM_Files', columns, condition, bokeh_cds=True)
+        return None
+
     def delete_rows(self, condition_str, ignore_table=[]):
         tables = [t for t in self.tables if t not in ignore_table]
         for table in tables:
@@ -182,13 +214,11 @@ class DVH_SQL:
         self.cnx.commit()
 
     def drop_tables(self):
-        print('Dropping tables')
         for table in self.tables:
             self.cursor.execute("DROP TABLE IF EXISTS %s;" % table)
             self.cnx.commit()
 
     def drop_table(self, table):
-        print("Dropping table: %s" % table)
         self.cursor.execute("DROP TABLE IF EXISTS %s;" % table)
         self.cnx.commit()
 
@@ -317,3 +347,22 @@ def echo_sql_db(config=None):
         return True
     except OperationalError:
         return False
+
+
+class SQLError(Exception):
+    def __init__(self, error_message, failed_sql_command):
+        """
+        Custom exception class to catch query and update failures in database editor
+        :param error_message: The message to be displayed in the SQLErrorDialog
+        :type error_message: str
+        :param failed_sql_command: the SQL command that failed
+        :type failed_sql_command: str
+        """
+        try:
+            self.message = error_message.split('\n')[0]
+        except:
+            self.message = error_message
+        self.sql_command = failed_sql_command
+
+    def __str__(self):
+        return self.message

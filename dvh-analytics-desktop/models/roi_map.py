@@ -42,6 +42,8 @@ class ROIMapDialog(wx.Dialog):
         self.__do_bind()
         self.__do_layout()
 
+        self.run()
+
     def __set_properties(self):
         self.combo_box_roi_type.SetSelection(0)
         self.combo_box_uncategorized_ignored.SetSelection(0)
@@ -152,6 +154,10 @@ class ROIMapDialog(wx.Dialog):
         self.SetSizer(sizer_wrapper)
         self.Layout()
         self.Centre()
+
+    def run(self):
+        self.ShowModal()
+        self.Destroy()
 
     def add_physician(self, evt):
         dlg = PhysicianAdd()

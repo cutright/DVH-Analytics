@@ -3,12 +3,13 @@
 #
 
 import wx
-from dialogs.main.query import query_dlg
-from dialogs.main.settings import UserSettings
-from dialogs.database.sql_settings import run_sql_settings_dlg
+from db import sql_columns
+from db.sql_to_python import QuerySQL
+from db.sql_connector import echo_sql_db
+from dialogs.main import query_dlg, UserSettings
+from dialogs.database import SQLSettingsDialog
 from models.import_dicom import ImportDICOM_Dialog
 from models.database_editor import DatabaseEditorDialog
-from db import sql_columns
 from models.datatable import DataTable
 from models.plot import PlotStatDVH
 from models.dvh import DVH
@@ -18,13 +19,14 @@ from models.time_series import TimeSeriesFrame
 from models.regression import RegressionFrame
 from models.control_chart import ControlChartFrame
 from models.roi_map import ROIMapDialog
-from db.sql_to_python import QuerySQL
-from db.sql_connector import echo_sql_db
 from paths import LOGO_PATH
-from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux, initialize_directories_and_settings
 from tools.stats import StatsData
+from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux,\
+    initialize_directories_and_settings
 
 
+# TODO: Clean-up dialog functionality, have the classes themselves run and handle modal returns
+# TODO: Compartmentalize this code, main.py should be a relatively small file
 class MainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
@@ -43,7 +45,7 @@ class MainFrame(wx.Frame):
         self.categorical_columns = sql_columns.categorical
         self.numerical_columns = sql_columns.numerical
 
-        # Keep track of currently select row in the query tables
+        # Keep track of currently selected row in the query tables
         self.selected_index_categorical = None
         self.selected_index_numerical = None
         
@@ -56,8 +58,8 @@ class MainFrame(wx.Frame):
         self.__add_notebook_frames()
         self.__do_layout()
 
-        for key in ['categorical', 'numerical']:
-            self.disable_query_buttons(key)
+        self.disable_query_buttons('categorical')
+        self.disable_query_buttons('numerical')
         self.button_query_execute.Disable()
         self.__disable_notebook_tabs()
 
@@ -106,8 +108,8 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.on_toolbar_database, id=self.toolbar_ids['Database'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_settings, id=self.toolbar_ids['Settings'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_roi_map, id=self.toolbar_ids['ROI Map'])
-        self.Bind(wx.EVT_TOOL, self.OnClose, id=self.toolbar_ids['Close'])
-        self.Bind(wx.EVT_TOOL, self.OnImport, id=self.toolbar_ids['Import'])
+        self.Bind(wx.EVT_TOOL, self.on_close, id=self.toolbar_ids['Close'])
+        self.Bind(wx.EVT_TOOL, self.on_import, id=self.toolbar_ids['Import'])
 
     def __add_menubar(self):
 
@@ -134,12 +136,12 @@ class MainFrame(wx.Frame):
         menu_pref = settings_menu.Append(wx.ID_PREFERENCES)
         menu_sql = settings_menu.Append(wx.ID_ANY, '&Database Connection\tCtrl+D')
 
-        self.Bind(wx.EVT_MENU, self.OnQuit, qmi)
-        # self.Bind(wx.EVT_MENU, self.OnOpen, menu_open)
-        self.Bind(wx.EVT_MENU, self.OnClose, menu_close)
-        self.Bind(wx.EVT_MENU, self.OnPref, menu_pref)
-        self.Bind(wx.EVT_MENU, self.OnAbout, menu_about)
-        self.Bind(wx.EVT_MENU, self.OnSQL, menu_sql)
+        self.Bind(wx.EVT_MENU, self.on_quit, qmi)
+        # self.Bind(wx.EVT_MENU, self.on_open, menu_open)
+        self.Bind(wx.EVT_MENU, self.on_close, menu_close)
+        self.Bind(wx.EVT_MENU, self.on_pref, menu_pref)
+        self.Bind(wx.EVT_MENU, self.on_about, menu_about)
+        self.Bind(wx.EVT_MENU, self.on_sql, menu_sql)
 
         self.frame_menubar.Append(file_menu, '&File')
         self.frame_menubar.Append(settings_menu, '&Settings')
@@ -342,7 +344,7 @@ class MainFrame(wx.Frame):
     def on_toolbar_database(self, evt):
 
         if not echo_sql_db():
-            self.OnSQL(None)
+            self.on_sql(None)
 
         if echo_sql_db():
             frame = DatabaseEditorDialog()
@@ -352,7 +354,7 @@ class MainFrame(wx.Frame):
                           wx.OK | wx.ICON_WARNING)
 
     def on_toolbar_settings(self, evt):
-        self.OnPref(None)
+        self.on_pref(None)
 
     # --------------------------------------------------------------------------------------------------------------
     # Query event functions
@@ -403,6 +405,7 @@ class MainFrame(wx.Frame):
             self.disable_query_buttons('numerical')
 
     def exec_query(self, evt):
+        # TODO: Thread this process
         wait = wx.BusyCursor()
 
         self.dvh = None
@@ -492,18 +495,20 @@ class MainFrame(wx.Frame):
     # --------------------------------------------------------------------------------------------------------------
     # Menu bar event functions
     # --------------------------------------------------------------------------------------------------------------
-    def OnQuit(self, evt):
+    def on_quit(self, evt):
         self.Close()
 
-    def OnOpen(self, evt):
+    def on_open(self, evt):
         """ Open a file"""
         # wx.DirDialog()
         dlg = wx.DirDialog(self, "Choose input directory", "", wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:
-            print(dlg.GetPath())
+            # print(dlg.GetPath())
+            pass
         dlg.Destroy()
 
-    def OnClose(self, evt):
+    def on_close(self, evt):
+        # TODO: Review this function and its references/dependencies
         if self.dvh:
             dlg = wx.MessageDialog(self, "Clear all data and plots?", caption='Close',
                                    style=wx.YES | wx.NO | wx.NO_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
@@ -526,39 +531,31 @@ class MainFrame(wx.Frame):
                 self.control_chart.initialize_y_axis_options()
             dlg.Destroy()
 
-    def OnAbout(self, evt):
+    def on_about(self, evt):
         dlg = wx.MessageDialog(self, "DVH Analytics \n in wxPython", "About Sample Editor", wx.OK)
         dlg.ShowModal()
         dlg.Destroy()
 
-    def OnPref(self, evt):
-        dlg = UserSettings()
-        res = dlg.ShowModal()
-        if res == wx.ID_OK:
-            dlg.save_options()
-        dlg.Destroy()
+    def on_pref(self, evt):
+        UserSettings()
 
-    def OnImport(self, evt):
+    def on_import(self, evt):
         if not echo_sql_db():
-            self.OnSQL(None)
+            self.on_sql(None)
 
         if echo_sql_db():
-            dlg = ImportDICOM_Dialog()
-            dlg.ShowModal()
-            dlg.Destroy()
+            ImportDICOM_Dialog()
         else:
             wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
                           wx.OK | wx.ICON_WARNING)
 
-    def OnSQL(self, evt):
-        res = run_sql_settings_dlg()
-        if res == wx.ID_OK:
-            [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db()]()
+    def on_sql(self, evt):
+        SQLSettingsDialog()
+        [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db()]()
 
-    def on_toolbar_roi_map(self, evt):
-        dlg = ROIMapDialog()
-        dlg.ShowModal()
-        dlg.Destroy()
+    @staticmethod
+    def on_toolbar_roi_map(evt):
+        ROIMapDialog()
 
 
 class DVHApp(wx.App):

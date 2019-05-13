@@ -12,23 +12,22 @@ class QuerySQL:
         if table_name in {'beams', 'dvhs', 'plans', 'rxs'}:
             self.table_name = table_name
             self.condition_str = condition_str
-            cnx = DVH_SQL()
+            with DVH_SQL() as cnx:
 
-            # column names, use as property names
-            column_cursor = cnx.get_column_names(table_name)
+                # column names, use as property names
+                column_cursor = cnx.get_column_names(table_name)
 
-            for row in column_cursor:
-                column = str(row).strip()
-                if column not in {'roi_coord_string, distances_to_ptv, dth_string'}:
-                    self.cursor = cnx.query(self.table_name,
-                                            column,
-                                            self.condition_str)
-                if unique:
-                    rtn_list = get_unique_list(self.cursor_to_list())
-                else:
-                    rtn_list = self.cursor_to_list()
-                setattr(self, column, rtn_list)
-            cnx.close()
+                for row in column_cursor:
+                    column = str(row).strip()
+                    if column not in {'roi_coord_string, distances_to_ptv, dth_string'}:
+                        self.cursor = cnx.query(self.table_name,
+                                                column,
+                                                self.condition_str)
+                    if unique:
+                        rtn_list = get_unique_list(self.cursor_to_list())
+                    else:
+                        rtn_list = self.cursor_to_list()
+                    setattr(self, column, rtn_list)
         else:
             print('Table name in valid. Please select from Beams, DVHs, Plans, or Rxs.')
 
@@ -52,8 +51,7 @@ def get_unique_list(input_list):
 
 
 def get_database_tree():
-    cnx = DVH_SQL()
-    tree = {table: cnx.get_column_names(table) for table in cnx.tables}
-    cnx.close()
+    with DVH_SQL() as cnx:
+        tree = {table: cnx.get_column_names(table) for table in cnx.tables}
     return tree
 

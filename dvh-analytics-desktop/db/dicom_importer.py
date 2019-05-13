@@ -278,4 +278,5 @@ def update_dicom_catalogue(mrn, uid, dir_path, plan_file, struct_file, dose_file
         struct_file = "(NULL)"
     if not plan_file:
         dose_file = "(NULL)"
-    DVH_SQL().insert_dicom_file_row(mrn, uid, dir_path, plan_file, struct_file, dose_file)
+    with DVH_SQL() as cnx:
+        cnx.insert_dicom_file_row(mrn, uid, dir_path, plan_file, struct_file, dose_file)

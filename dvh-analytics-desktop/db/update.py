@@ -23,10 +23,8 @@ def centroid(study_instance_uid, roi_name):
     :param roi_name: roi_name as specified in SQL DB
     """
 
-    coordinates_string = DVH_SQL().query('dvhs',
-                                         'roi_coord_string',
-                                         "study_instance_uid = '%s' and roi_name = '%s'"
-                                         % (study_instance_uid, roi_name))
+    coordinates_string = query('dvhs', 'roi_coord_string',
+                               "study_instance_uid = '%s' and roi_name = '%s'" % (study_instance_uid, roi_name))
 
     roi = roi_form.get_planes_from_string(coordinates_string[0][0])
     data = roi_geom.centroid(roi)
@@ -43,10 +41,8 @@ def cross_section(study_instance_uid, roi_name):
     :param roi_name: roi_name as specified in SQL DB
     """
 
-    coordinates_string = DVH_SQL().query('dvhs',
-                                         'roi_coord_string',
-                                         "study_instance_uid = '%s' and roi_name = '%s'"
-                                         % (study_instance_uid, roi_name))
+    coordinates_string = query('dvhs', 'roi_coord_string',
+                               "study_instance_uid = '%s' and roi_name = '%s'" % (study_instance_uid, roi_name))
 
     roi = roi_form.get_planes_from_string(coordinates_string[0][0])
     area = roi_geom.cross_section(roi)
@@ -62,10 +58,8 @@ def spread(study_instance_uid, roi_name):
     :param roi_name: roi_name as specified in SQL DB
     """
 
-    coordinates_string = DVH_SQL().query('dvhs',
-                                         'roi_coord_string',
-                                         "study_instance_uid = '%s' and roi_name = '%s'"
-                                         % (study_instance_uid, roi_name))
+    coordinates_string = query('dvhs', 'roi_coord_string',
+                               "study_instance_uid = '%s' and roi_name = '%s'" % (study_instance_uid, roi_name))
 
     roi = roi_form.get_planes_from_string(coordinates_string[0][0])
     data = roi_geom.spread(roi)
@@ -84,10 +78,8 @@ def dist_to_ptv_centroids(study_instance_uid, roi_name, pre_calc=None):
     :param pre_calc: centroid of combined PTV, return from get_ptv_centroid
     """
 
-    oar_centroid_string = DVH_SQL().query('dvhs',
-                                          'centroid',
-                                          "study_instance_uid = '%s' and roi_name = '%s'"
-                                          % (study_instance_uid, roi_name))
+    oar_centroid_string = query('dvhs', 'centroid',
+                                "study_instance_uid = '%s' and roi_name = '%s'" % (study_instance_uid, roi_name))
     oar_centroid = np.array([float(i) for i in oar_centroid_string[0][0].split(',')])
 
     ptv_centroid = pre_calc
@@ -112,10 +104,8 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
     :param pre_calc: coordinates of combined PTV, return from get_treatment_volume_coord
     """
 
-    oar_coordinates_string = DVH_SQL().query('dvhs',
-                                             'roi_coord_string',
-                                             "study_instance_uid = '%s' and roi_name = '%s'"
-                                             % (study_instance_uid, roi_name))
+    oar_coordinates_string = query('dvhs', 'roi_coord_string',
+                                   "study_instance_uid = '%s' and roi_name = '%s'" % (study_instance_uid, roi_name))
 
     treatment_volume_coord = pre_calc
     if treatment_volume_coord is None:
@@ -153,10 +143,8 @@ def treatment_volume_overlap(study_instance_uid, roi_name, pre_calc=None):
     :param pre_calc: union of PTVs, return from get_treatment_volume
     """
 
-    oar_coordinates_string = DVH_SQL().query('dvhs',
-                                             'roi_coord_string',
-                                             "study_instance_uid = '%s' and roi_name = '%s'"
-                                             % (study_instance_uid, roi_name))
+    oar_coordinates_string = query('dvhs', 'roi_coord_string',
+                                   "study_instance_uid = '%s' and roi_name = '%s'" % (study_instance_uid, roi_name))
     oar = roi_form.get_planes_from_string(oar_coordinates_string[0][0])
 
     treatment_volume = pre_calc
@@ -168,10 +156,8 @@ def treatment_volume_overlap(study_instance_uid, roi_name, pre_calc=None):
 
 
 def get_treatment_volume(study_instance_uid):
-    ptv_coordinates_strings = DVH_SQL().query('dvhs',
-                                              'roi_coord_string',
-                                              "study_instance_uid = '%s' and roi_type like 'PTV%%'"
-                                              % study_instance_uid)
+    ptv_coordinates_strings = query('dvhs', 'roi_coord_string',
+                                    "study_instance_uid = '%s' and roi_type like 'PTV%%'" % study_instance_uid)
 
     ptvs = [roi_form.get_planes_from_string(ptv[0]) for ptv in ptv_coordinates_strings]
 
@@ -185,10 +171,8 @@ def volumes(study_instance_uid, roi_name):
     :param roi_name: roi_name as specified in SQL DB
     """
 
-    coordinates_string = DVH_SQL().query('dvhs',
-                                         'roi_coord_string',
-                                         "study_instance_uid = '%s' and roi_name = '%s'"
-                                         % (study_instance_uid, roi_name))
+    coordinates_string = query('dvhs', 'roi_coord_string',
+                               "study_instance_uid = '%s' and roi_name = '%s'" % (study_instance_uid, roi_name))
 
     roi = roi_form.get_planes_from_string(coordinates_string[0][0])
 
@@ -204,10 +188,8 @@ def surface_area(study_instance_uid, roi_name):
     :param roi_name: roi_name as specified in SQL DB
     """
 
-    coordinates_string = DVH_SQL().query('dvhs',
-                                         'roi_coord_string',
-                                         "study_instance_uid = '%s' and roi_name = '%s'"
-                                         % (study_instance_uid, roi_name))
+    coordinates_string = query('dvhs', 'roi_coord_string',
+                               "study_instance_uid = '%s' and roi_name = '%s'" % (study_instance_uid, roi_name))
 
     roi = roi_form.get_planes_from_string(coordinates_string[0][0])
 
@@ -217,8 +199,9 @@ def surface_area(study_instance_uid, roi_name):
 
 
 def update_dvhs_table(study_instance_uid, roi_name, column, value):
-    DVH_SQL().update('dvhs', column, value,
-                     "study_instance_uid = '%s' and roi_name = '%s'" % (study_instance_uid, roi_name))
+    with DVH_SQL() as cnx:
+        cnx.update('dvhs', column, value,
+                   "study_instance_uid = '%s' and roi_name = '%s'" % (study_instance_uid, roi_name))
 
 
 def update_plan_toxicity_grades(cnx, study_instance_uid):
@@ -231,16 +214,15 @@ def update_plan_toxicity_grades(cnx, study_instance_uid):
 def update_all_plan_toxicity_grades(*condition):
     if condition:
         condition = condition[0]
-    cnx = DVH_SQL()
-    uids = cnx.get_unique_values('Plans', 'study_instance_uid', condition, return_empty=True)
-    for uid in uids:
-        update_plan_toxicity_grades(uid)
-    cnx.close()
+    with DVH_SQL() as cnx:
+        uids = cnx.get_unique_values('Plans', 'study_instance_uid', condition, return_empty=True)
+        for uid in uids:
+            update_plan_toxicity_grades(cnx, uid)
 
 
 def plan_complexity(cnx, study_instance_uid):
     condition = "study_instance_uid = '%s'" % study_instance_uid
-    beam_data = cnx.query('Beams', 'complexity, beam_mu', condition)
+    beam_data = query('Beams', 'complexity, beam_mu', condition)
     scores = [row[0] for row in beam_data]
     include = [i for i, score in enumerate(scores) if score]
     scores = [score for i, score in enumerate(scores) if i in include]
@@ -256,11 +238,10 @@ def plan_complexity(cnx, study_instance_uid):
 def plan_complexities(*condition):
     if condition:
         condition = condition[0]
-    cnx = DVH_SQL()
-    uids = cnx.get_unique_values('Plans', 'study_instance_uid', condition, return_empty=True)
-    for uid in uids:
-        plan_complexity(cnx, uid)
-    cnx.close()
+    with DVH_SQL() as cnx:
+        uids = cnx.get_unique_values('Plans', 'study_instance_uid', condition, return_empty=True)
+        for uid in uids:
+            plan_complexity(cnx, uid)
 
 
 def beam_complexity(cnx, study_instance_uid):
@@ -296,11 +277,10 @@ def beam_complexity(cnx, study_instance_uid):
 def beam_complexities(*condition):
     if condition:
         condition = condition[0]
-    cnx = DVH_SQL()
-    uids = cnx.get_unique_values('Beams', 'study_instance_uid', condition, return_empty=True)
-    for uid in uids:
-        beam_complexity(cnx, uid)
-    cnx.close()
+    with DVH_SQL() as cnx:
+        uids = cnx.get_unique_values('Beams', 'study_instance_uid', condition, return_empty=True)
+        for uid in uids:
+            beam_complexity(cnx, uid)
 
 
 def update_ptv_data(tv, study_instance_uid):
@@ -308,20 +288,26 @@ def update_ptv_data(tv, study_instance_uid):
         ptv_spread = roi_geom.spread(tv)
 
         condition = "study_instance_uid = '%s' and roi_type like 'PTV%%'" % study_instance_uid
-        max_dose = DVH_SQL().get_max_value('dvhs', 'max_dose', condition=condition)
-        min_dose = DVH_SQL().get_min_value('dvhs', 'min_dose', condition=condition)
+        with DVH_SQL() as cnx:
+            max_dose = cnx.get_max_value('dvhs', 'max_dose', condition=condition)
+            min_dose = cnx.get_min_value('dvhs', 'min_dose', condition=condition)
 
-        ptv_data = {'ptv_cross_section_max': ptv_cross_section['max'],
-                    'ptv_cross_section_median': ptv_cross_section['median'],
-                    'ptv_max_dose': max_dose,
-                    'ptv_min_dose': min_dose,
-                    'ptv_spread_x': ptv_spread[0],
-                    'ptv_spread_y': ptv_spread[1],
-                    'ptv_spread_z': ptv_spread[2],
-                    'ptv_surface_area': roi_geom.surface_area(tv, coord_type='sets_of_points'),
-                    'ptv_volume': roi_geom.volume(tv)}
+            ptv_data = {'ptv_cross_section_max': ptv_cross_section['max'],
+                        'ptv_cross_section_median': ptv_cross_section['median'],
+                        'ptv_max_dose': max_dose,
+                        'ptv_min_dose': min_dose,
+                        'ptv_spread_x': ptv_spread[0],
+                        'ptv_spread_y': ptv_spread[1],
+                        'ptv_spread_z': ptv_spread[2],
+                        'ptv_surface_area': roi_geom.surface_area(tv, coord_type='sets_of_points'),
+                        'ptv_volume': roi_geom.volume(tv)}
 
-        cnx = DVH_SQL()
-        for key, value in ptv_data.items():
-            cnx.update('Plans', key, value, "study_instance_uid = '%s'" % study_instance_uid)
-        cnx.close()
+            for key, value in ptv_data.items():
+                cnx.update('Plans', key, value, "study_instance_uid = '%s'" % study_instance_uid)
+
+
+def query(table, column, condition):
+    with DVH_SQL() as cnx:
+        ans = cnx.query(table, column, condition)
+    return ans
+

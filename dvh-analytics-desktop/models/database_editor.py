@@ -3,20 +3,12 @@
 
 
 import wx
-from dialogs.database.change_or_delete_patient import ChangePatientIdentifierDialog, DeletePatientDialog
-from dialogs.database.reimport import ReimportDialog
-from dialogs.database.edit_db import EditDatabaseDialog
-from dialogs.database.post_import_calculations import PostImportCalculationsDialog
+from dialogs.database import ChangePatientIdentifierDialog, DeletePatientDialog, ReimportDialog, EditDatabaseDialog,\
+    CalculationsDialog, DeleteAllData, RebuildDB, SQLErrorDialog
 from db.sql_to_python import get_database_tree
-from db.sql_connector import DVH_SQL
+from db.sql_connector import DVH_SQL, SQLError
 from models.datatable import DataTable
 from dialogs.export import data_table_to_csv as export_dlg
-from models.import_dicom import ImportDICOM_Dialog
-from paths import IMPORTED_DIR, INBOX_DIR
-from os.path import join
-from os import mkdir, rename
-from datetime import datetime
-from tools.utilities import delete_directory_contents
 
 
 class DatabaseEditorDialog(wx.Frame):
@@ -26,27 +18,29 @@ class DatabaseEditorDialog(wx.Frame):
         self.db_tree = self.get_db_tree()
 
         self.SetSize((1330, 820))
-        self.button_delete_all_data = wx.Button(self, wx.ID_ANY, "Delete All Data")
-        self.button_rebuild_db = wx.Button(self, wx.ID_ANY, "Rebuild Database")
-        self.button_post_import_calc = wx.Button(self, wx.ID_ANY, "Post-Import Calculations")
-        self.button_edit_db = wx.Button(self, wx.ID_ANY, "Edit Database")
-        self.button_reimport = wx.Button(self, wx.ID_ANY, "Reimport from DICOM")
-        self.button_delete_study = wx.Button(self, wx.ID_ANY, "Delete Study")
-        self.button_change_mrn_uid = wx.Button(self, wx.ID_ANY, "Change MRN/UID")
+
         self.window_db_editor = wx.SplitterWindow(self, wx.ID_ANY, style=wx.SP_3D)
         self.window_pane_db_tree = wx.ScrolledWindow(self.window_db_editor, wx.ID_ANY,
                                                      style=wx.BORDER_SUNKEN | wx.TAB_TRAVERSAL)
         self.tree_ctrl_db = wx.TreeCtrl(self.window_pane_db_tree, wx.ID_ANY, style=wx.TR_HAS_BUTTONS | wx.TR_MULTIPLE)
         self.window_pane_query = wx.Panel(self.window_db_editor, wx.ID_ANY, style=wx.BORDER_SUNKEN | wx.TAB_TRAVERSAL)
         self.text_ctrl_condition = wx.TextCtrl(self.window_pane_query, wx.ID_ANY, "")
-        self.button_query = wx.Button(self.window_pane_query, wx.ID_ANY, "Query")
-        self.button_clear = wx.Button(self.window_pane_query, wx.ID_ANY, "Clear")
-        self.button_export = wx.Button(self.window_pane_query, wx.ID_ANY, "Export")
         self.list_ctrl_query_results = wx.ListCtrl(self.window_pane_query, wx.ID_ANY,
                                                    style=wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
         self.data_query_results = DataTable(self.list_ctrl_query_results, columns=['mrn', 'study_instance_uid'])
         self.combo_box_query_table = wx.ComboBox(self.window_pane_query, wx.ID_ANY, choices=list(self.db_tree),
                                                  style=wx.CB_DROPDOWN | wx.CB_READONLY)
+
+        self.button = {'delete_all_data': wx.Button(self, wx.ID_ANY, "Delete All Data"),
+                       'rebuild_db': wx.Button(self, wx.ID_ANY, "Rebuild Database"),
+                       # 'calculations': wx.Button(self, wx.ID_ANY, "Calculations"),
+                       'edit_db': wx.Button(self, wx.ID_ANY, "Edit Database"),
+                       'reimport': wx.Button(self, wx.ID_ANY, "Reimport from DICOM"),
+                       'delete_study': wx.Button(self, wx.ID_ANY, "Delete Study"),
+                       'change_mrn_uid': wx.Button(self, wx.ID_ANY, "Change MRN/UID"),
+                       'query': wx.Button(self.window_pane_query, wx.ID_ANY, "Query"),
+                       'clear': wx.Button(self.window_pane_query, wx.ID_ANY, "Clear"),
+                       'export_csv': wx.Button(self.window_pane_query, wx.ID_ANY, "Export")}
 
         self.__set_properties()
         self.__do_layout()
@@ -60,15 +54,9 @@ class DatabaseEditorDialog(wx.Frame):
 
         self.allow_tree_select_change = True
 
-        # end wxGlade
-
     def __set_properties(self):
-        # begin wxGlade: MyFrame.__set_properties
         self.SetTitle("Database Administrator")
         self.window_pane_db_tree.SetScrollRate(10, 10)
-        # self.list_ctrl_query_results.AppendColumn("A", format=wx.LIST_FORMAT_LEFT, width=-1)
-        # self.list_ctrl_query_results.AppendColumn("B", format=wx.LIST_FORMAT_LEFT, width=-1)
-        # self.list_ctrl_query_results.AppendColumn("C", format=wx.LIST_FORMAT_LEFT, width=-1)
         self.window_db_editor.SetMinimumPaneSize(20)
 
         self.db_tree_root = self.tree_ctrl_db.AddRoot('DVH Analytics')
@@ -79,7 +67,6 @@ class DatabaseEditorDialog(wx.Frame):
                 self.column_nodes[table][column] = self.tree_ctrl_db.AppendItem(self.table_nodes[table], column)
 
     def __do_layout(self):
-        # begin wxGlade: MyFrame.__do_layout
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_query = wx.BoxSizer(wx.VERTICAL)
         sizer_query_table = wx.StaticBoxSizer(wx.StaticBox(self.window_pane_query, wx.ID_ANY, "Query Results"),
@@ -92,13 +79,13 @@ class DatabaseEditorDialog(wx.Frame):
         sizer_combo_box = wx.BoxSizer(wx.VERTICAL)
         sizer_db_tree = wx.BoxSizer(wx.HORIZONTAL)
         sizer_dialog_buttons = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_dialog_buttons.Add(self.button_post_import_calc, 0, wx.ALL, 5)
-        sizer_dialog_buttons.Add(self.button_edit_db, 0, wx.ALL, 5)
-        sizer_dialog_buttons.Add(self.button_reimport, 0, wx.ALL, 5)
-        sizer_dialog_buttons.Add(self.button_delete_study, 0, wx.ALL, 5)
-        sizer_dialog_buttons.Add(self.button_change_mrn_uid, 0, wx.ALL, 5)
-        sizer_dialog_buttons.Add(self.button_rebuild_db, 0, wx.ALL, 5)
-        sizer_dialog_buttons.Add(self.button_delete_all_data, 0, wx.ALL, 5)
+        # sizer_dialog_buttons.Add(self.button['calculations'], 0, wx.ALL, 5)
+        sizer_dialog_buttons.Add(self.button['edit_db'], 0, wx.ALL, 5)
+        sizer_dialog_buttons.Add(self.button['reimport'], 0, wx.ALL, 5)
+        sizer_dialog_buttons.Add(self.button['delete_study'], 0, wx.ALL, 5)
+        sizer_dialog_buttons.Add(self.button['change_mrn_uid'], 0, wx.ALL, 5)
+        sizer_dialog_buttons.Add(self.button['rebuild_db'], 0, wx.ALL, 5)
+        sizer_dialog_buttons.Add(self.button['delete_all_data'], 0, wx.ALL, 5)
         sizer_wrapper.Add(sizer_dialog_buttons, 0, wx.ALL, 5)
         sizer_db_tree.Add(self.tree_ctrl_db, 1, wx.EXPAND, 0)
         self.window_pane_db_tree.SetSizer(sizer_db_tree)
@@ -112,15 +99,15 @@ class DatabaseEditorDialog(wx.Frame):
         sizer_condition_buttons.Add(sizer_condition, 1, wx.ALL | wx.EXPAND, 5)
         label_spacer_1 = wx.StaticText(self.window_pane_query, wx.ID_ANY, "")
         sizer_query_button.Add(label_spacer_1, 0, wx.BOTTOM, 5)
-        sizer_query_button.Add(self.button_query, 0, wx.ALL, 5)
+        sizer_query_button.Add(self.button['query'], 0, wx.ALL, 5)
         sizer_condition_buttons.Add(sizer_query_button, 0, wx.ALL, 5)
         label_spacer_2 = wx.StaticText(self.window_pane_query, wx.ID_ANY, "")
         sizer_download_button.Add(label_spacer_2, 0, wx.BOTTOM, 5)
-        sizer_download_button.Add(self.button_export, 0, wx.TOP | wx.BOTTOM, 5)
+        sizer_download_button.Add(self.button['export_csv'], 0, wx.TOP | wx.BOTTOM, 5)
         sizer_condition_buttons.Add(sizer_download_button, 0, wx.ALL, 5)
         label_spacer_3 = wx.StaticText(self.window_pane_query, wx.ID_ANY, "")
         sizer_clear_button.Add(label_spacer_3, 0, wx.BOTTOM, 5)
-        sizer_clear_button.Add(self.button_clear, 0, wx.ALL, 5)
+        sizer_clear_button.Add(self.button['clear'], 0, wx.ALL, 5)
         sizer_condition_buttons.Add(sizer_clear_button, 0, wx.ALL, 5)
         sizer_query.Add(sizer_condition_buttons, 0, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_query_table.Add(self.list_ctrl_query_results, 1, wx.EXPAND, 0)
@@ -134,18 +121,10 @@ class DatabaseEditorDialog(wx.Frame):
 
     def __do_bind(self):
         # self.Bind(wx.EVT_TREE_SEL_CHANGED, self.OnTreeAdd, self.tree_ctrl_db, id=self.tree_ctrl_db.GetId())
-        self.Bind(wx.EVT_BUTTON, self.OnQuery, id=self.button_query.GetId())
-        self.Bind(wx.EVT_BUTTON, self.OnClear, id=self.button_clear.GetId())
-        self.Bind(wx.EVT_BUTTON, self.OnRebuildDB, id=self.button_rebuild_db.GetId())
-        self.Bind(wx.EVT_BUTTON, self.OnPostImportCalc, id=self.button_post_import_calc.GetId())
-        self.Bind(wx.EVT_BUTTON, self.OnEditDB, id=self.button_edit_db.GetId())
-        self.Bind(wx.EVT_BUTTON, self.OnReimport, id=self.button_reimport.GetId())
-        self.Bind(wx.EVT_BUTTON, self.OnDeletePatient, id=self.button_delete_study.GetId())
-        self.Bind(wx.EVT_BUTTON, self.OnChangePatientIdentifier, id=self.button_change_mrn_uid.GetId())
-        self.Bind(wx.EVT_BUTTON, self.OnDeleteAllData, id=self.button_delete_all_data.GetId())
-        self.Bind(wx.EVT_BUTTON, self.on_export_csv, id=self.button_export.GetId())
+        for key, button in self.button.items():
+            self.Bind(wx.EVT_BUTTON, getattr(self, 'on_' + key), id=button.GetId())
 
-    def OnTreeAdd(self, evt):
+    def on_tree_add(self, evt):
         self.update_selected_tree_items()
 
     # def UnselectOtherTables(self, selected_table):
@@ -155,7 +134,7 @@ class DatabaseEditorDialog(wx.Frame):
     #             self.tree_ctrl_db.UnselectItem(node)
     #     self.allow_tree_select_change = True
 
-    def OnQuery(self, evt):
+    def on_query(self, evt):
         self.update_selected_tree_items()
         table = self.combo_box_query_table.GetValue()
         columns = [c for c, sel in self.selected_columns[table].items() if sel and c not in {'mrn', 'study_instance_uid'}]
@@ -167,14 +146,19 @@ class DatabaseEditorDialog(wx.Frame):
         columns.insert(0, 'study_instance_uid')
         columns.insert(0, 'mrn')
 
+        condition = self.text_ctrl_condition.GetValue()
+
         wait = wx.BusyCursor()
-        cnx = DVH_SQL()
-        data = cnx.query(table, ','.join(columns), bokeh_cds=True)
-        self.data_query_results.set_data(data, columns)
-        cnx.close()
+        with DVH_SQL() as cnx:
+            try:
+                data = cnx.query(table, ','.join(columns), condition, bokeh_cds=True)
+                self.data_query_results.set_data(data, columns)
+            except SQLError as e:
+                SQLErrorDialog(self, e)
+            self.data_query_results.clear()
         del wait
 
-    def OnClear(self, evt):
+    def on_clear(self, evt):
         self.data_query_results.clear()
 
     @staticmethod
@@ -190,92 +174,39 @@ class DatabaseEditorDialog(wx.Frame):
             for column, column_item in self.column_nodes[table].items():
                 self.selected_columns[table][column] = self.tree_ctrl_db.IsSelected(column_item)
 
-    def OnChangePatientIdentifier(self, evt):
-        self.ChangeOrDeleteDlg(ChangePatientIdentifierDialog)
+    def on_change_mrn_uid(self, evt):
+        self.change_or_delete_dlg(ChangePatientIdentifierDialog)
 
-    def OnDeletePatient(self, evt):
-        self.ChangeOrDeleteDlg(DeletePatientDialog)
+    def on_delete_study(self, evt):
+        self.change_or_delete_dlg(DeletePatientDialog)
 
-    def ChangeOrDeleteDlg(self, class_type):
+    def change_or_delete_dlg(self, class_type):
         selected_data = self.data_query_results.selected_row_data
         if selected_data:
-            dlg = class_type(mrn=selected_data[0][0],
-                             study_instance_uid=selected_data[0][1])
+            class_type(mrn=selected_data[0][0], study_instance_uid=selected_data[0][1])
         else:
-            dlg = class_type()
-        res = dlg.ShowModal()
-        if res == wx.ID_OK:
-            dlg.action()
-        dlg.Destroy()
-        self.OnQuery(None)
+            class_type()
 
-    def OnReimport(self, evt):
-        dlg = ReimportDialog()
-        res = dlg.ShowModal()
-        if res == wx.ID_OK:
-            pass
-        dlg.Destroy()
+    def on_reimport(self, evt):
+        selected_data = self.data_query_results.selected_row_data
+        if selected_data:
+            ReimportDialog(mrn=selected_data[0][0], study_instance_uid=selected_data[0][1])
+        else:
+            ReimportDialog()
 
-    def OnEditDB(self, evt):
-        dlg = EditDatabaseDialog()
-        res = dlg.ShowModal()
-        if res == wx.ID_OK:
-            pass
-        dlg.Destroy()
+    @staticmethod
+    def on_edit_db(evt):
+        EditDatabaseDialog()
 
-    def OnPostImportCalc(self, evt):
-        dlg = PostImportCalculationsDialog()
-        res = dlg.ShowModal()
-        if res == wx.ID_OK:
-            pass
-        dlg.Destroy()
+    @staticmethod
+    def on_calculations(evt):
+        CalculationsDialog()
 
-    def OnRebuildDB(self, evt):
-        dlg = wx.MessageDialog(self, "Are you sure?", "Rebuild Database from DICOM",
-                               wx.ICON_WARNING | wx.OK | wx.CANCEL | wx.CANCEL_DEFAULT)
-        res = dlg.ShowModal()
-        if res == wx.ID_OK:
-            cnx = DVH_SQL()
-            cnx.reinitialize_database()
-            cnx.close()
+    def on_rebuild_db(self, evt):
+        RebuildDB(self)
 
-            dlg2 = ImportDICOM_Dialog(inbox=IMPORTED_DIR)
-            dlg2.ShowModal()
-            dlg2.Destroy()
-
-        dlg.Destroy()
-
-    def OnDeleteAllData(self, evt):
-        dlg = wx.MessageDialog(self, "Are you sure?", "Delete All Data in Database",
-                               wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT)
-        res = dlg.ShowModal()
-        if res == wx.ID_YES:
-            # delete data from database
-            cnx = DVH_SQL()
-            cnx.reinitialize_database()
-            cnx.close()
-            dlg.Destroy()
-
-            # Move files to inbox?
-            dlg = wx.MessageDialog(self, "Are you sure?", "Move files to inbox?",
-                                   wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT)
-            res = dlg.ShowModal()
-            if res == wx.ID_YES:
-                new_dir = join(INBOX_DIR, "previously_imported %s" %
-                               str(datetime.now()).split('.')[0].replace(':', '-').replace(' ', '_'))
-                rename(IMPORTED_DIR, new_dir)
-                mkdir(IMPORTED_DIR)
-
-                dlg.Destroy()
-            else:
-                dlg.Destroy()
-                # Delete Imported Directory?
-                dlg = wx.MessageDialog(self, "Are you sure?", "Delete Imported Directory?",
-                                       wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT)
-                res = dlg.ShowModal()
-                if res == wx.ID_YES:
-                    delete_directory_contents(IMPORTED_DIR)
-                dlg.Destroy()
+    def on_delete_all_data(self, evt):
+        DeleteAllData(self)
 
     def on_export_csv(self, evt):
         export_dlg(self, "Export Data Table to CSV", self.data_query_results)

@@ -19,6 +19,8 @@ class PhysicianAdd(wx.Dialog):
         self.__set_properties()
         self.__do_layout()
 
+        self.run()
+
     def __set_properties(self):
         self.SetTitle("Add Physician to ROI Map")
         self.checkbox_institutional_mapping.SetValue(1)
@@ -49,3 +51,7 @@ class PhysicianAdd(wx.Dialog):
         self.SetSizer(sizer_wrapper)
         sizer_wrapper.Fit(self)
         self.Layout()
+
+    def run(self):
+        self.ShowModal()
+        self.Destroy()

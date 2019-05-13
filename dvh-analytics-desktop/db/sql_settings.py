@@ -66,14 +66,14 @@ def validate_sql_connection(config=None, verbose=False):
     valid = True
     if config:
         try:
-            cnx = DVH_SQL(config)
-            cnx.close()
+            with DVH_SQL(config) as cnx:
+                pass
         except:
             valid = False
     else:
         try:
-            cnx = DVH_SQL()
-            cnx.close()
+            with DVH_SQL() as cnx:
+                pass
         except:
             valid = False
 

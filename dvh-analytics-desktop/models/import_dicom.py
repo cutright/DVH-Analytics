@@ -1,21 +1,22 @@
 import wx
 import wx.adv
+from wx.lib.agw.customtreectrl import CustomTreeCtrl, TR_AUTO_CHECK_CHILD, TR_AUTO_CHECK_PARENT, TR_DEFAULT_STYLE
+from datetime import date as datetime_obj, datetime
+from dateutil.parser import parse as parse_date
+from db import update as db_update
+from db.sql_connector import DVH_SQL
 from db.dicom_importer import DICOM_Importer
 from db.dicom_parser import DICOM_Parser
+from dialogs.main import DatePicker
+from dialogs.roi_map import PhysicianAdd
 from dicompylercore import dicomparser
 from os.path import isdir, join, dirname
 from os import listdir, rmdir
-from wx.lib.agw.customtreectrl import CustomTreeCtrl, TR_AUTO_CHECK_CHILD, TR_AUTO_CHECK_PARENT, TR_DEFAULT_STYLE
-from tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95
-from db.sql_connector import DVH_SQL
-from tools.roi_name_manager import DatabaseROIs, clean_name
-from dateutil.parser import parse as parse_date
-from datetime import date as datetime_obj, datetime
-from threading import Thread
-from pubsub import pub
-from db import update as db_update
-from dialogs.main.date_picker import DatePicker
 from paths import IMPORT_SETTINGS_PATH, parse_settings_file
+from pubsub import pub
+from tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95
+from tools.roi_name_manager import DatabaseROIs, clean_name
+from threading import Thread
 
 
 ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV', 'EXTERNAL',
@@ -23,12 +24,12 @@ ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV', 'EXTERNAL',
 
 
 class ImportDICOM_Dialog(wx.Dialog):
-    def __init__(self, inbox=None, *args, **kwds):
+    def __init__(self, inbox=None):
         wx.Dialog.__init__(self, None, title='Import DICOM')
+        self.initial_inbox = inbox
 
-        cnx = DVH_SQL()
-        cnx.initialize_database()
-        cnx.close()
+        with DVH_SQL() as cnx:
+            cnx.initialize_database()
 
         self.SetSize((1350, 800))
 
@@ -49,15 +50,16 @@ class ImportDICOM_Dialog(wx.Dialog):
 
         self.text_ctrl_directory = wx.TextCtrl(self, wx.ID_ANY, '', style=wx.TE_READONLY)
 
-        cnx = DVH_SQL()
+        with DVH_SQL() as cnx:
+            tx_sites = cnx.get_unique_values('Plans', 'tx_site')
+
         self.input = {'mrn': wx.TextCtrl(self, wx.ID_ANY, ""),
                       'study_instance_uid': wx.TextCtrl(self, wx.ID_ANY, ""),
                       'birth_date': wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_READONLY),
                       'sim_study_date': wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_READONLY),
                       'physician': wx.ComboBox(self, wx.ID_ANY, choices=self.roi_map.get_physicians(),
                                                style=wx.CB_DROPDOWN),
-                      'tx_site': wx.ComboBox(self, wx.ID_ANY, choices=cnx.get_unique_values('Plans', 'tx_site'),
-                                             style=wx.CB_DROPDOWN),
+                      'tx_site': wx.ComboBox(self, wx.ID_ANY, choices=tx_sites, style=wx.CB_DROPDOWN),
                       'rx_dose': wx.TextCtrl(self, wx.ID_ANY, "")}
         self.button_edit_sim_study_date = wx.Button(self, wx.ID_ANY, "Edit")
         self.button_edit_birth_date = wx.Button(self, wx.ID_ANY, "Edit")
@@ -66,6 +68,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.button_apply_plan_data = wx.Button(self, wx.ID_ANY, "Apply")
         self.button_delete_study = wx.Button(self, wx.ID_ANY, "Delete Study in Database with this UID")
         self.button_delete_study.Disable()
+        self.button_add_physician = wx.Button(self, wx.ID_ANY, "Add Physician")
         self.disable_inputs()
 
         self.button_browse = wx.Button(self, wx.ID_ANY, u"Browse…")
@@ -81,8 +84,6 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.input_roi['type'].SetValue('')
         self.button_autodetect_targets = wx.Button(self, wx.ID_ANY, "Autodetect Target/Tumor ROIs")
         self.disable_roi_inputs()
-
-        cnx.close()
 
         styles = TR_AUTO_CHECK_CHILD | TR_AUTO_CHECK_PARENT | TR_DEFAULT_STYLE
         self.tree_ctrl_import = CustomTreeCtrl(self.panel_study_tree, wx.ID_ANY, agwStyle=styles)
@@ -101,12 +102,11 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.__do_layout()
 
         self.is_all_data_parsed = False
-        if inbox is None or not isdir(inbox):
-            inbox = ''
-        self.dicom_dir = DICOM_Importer(inbox, self.tree_ctrl_import, self.tree_ctrl_roi, self.tree_ctrl_roi_root)
-        self.parse_directory()
+        self.dicom_dir = None
 
         self.incomplete_studies = []
+
+        self.run()
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_browse, id=self.button_browse.GetId())
@@ -135,6 +135,7 @@ class ImportDICOM_Dialog(wx.Dialog):
 
         self.Bind(wx.EVT_BUTTON, self.on_edit_birth_date, id=self.button_edit_birth_date.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_edit_sim_study_date, id=self.button_edit_sim_study_date.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_add_physician, id=self.button_add_physician.GetId())
 
         self.Bind(wx.EVT_BUTTON, self.on_import, id=self.button_import.GetId())
 
@@ -171,6 +172,8 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_tx_site = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
         sizer_tx_site_checkbox = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
+        sizer_physician_input = wx.BoxSizer(wx.VERTICAL)
+        sizer_physician_input_and_button = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician_checkbox = wx.BoxSizer(wx.HORIZONTAL)
         sizer_sim_study_date = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
         sizer_sim_study_date_text_button = wx.BoxSizer(wx.HORIZONTAL)
@@ -243,10 +246,13 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_plan_data.Add(sizer_sim_study_date, 1, wx.ALL | wx.EXPAND, 5)
 
         self.label['physician'] = wx.StaticText(self, wx.ID_ANY, "Physician:")
-        sizer_physician.Add(self.label['physician'], 0, 0, 0)
-        sizer_physician.Add(self.input['physician'], 0, 0, 0)
+        sizer_physician_input.Add(self.label['physician'], 0, 0, 0)
+        sizer_physician_input_and_button.Add(self.input['physician'], 0, 0, 0)
+        sizer_physician_input_and_button.Add(self.button_add_physician, 0, wx.LEFT, 5)
         sizer_physician_checkbox.Add(self.checkbox['physician_1'], 0, wx.RIGHT, 20)
         sizer_physician_checkbox.Add(self.checkbox['physician_2'], 0, 0, 0)
+        sizer_physician.Add(sizer_physician_input, 0, 0, 0)
+        sizer_physician.Add(sizer_physician_input_and_button, 0, wx.EXPAND, 0)
         sizer_physician.Add(sizer_physician_checkbox, 1, wx.EXPAND, 0)
         sizer_plan_data.Add(sizer_physician, 1, wx.ALL | wx.EXPAND, 5)
 
@@ -303,7 +309,16 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.Layout()
         self.Center()
 
+    def run(self):
+        self.Show()
+        if self.initial_inbox is None or not isdir(self.initial_inbox):
+            self.initial_inbox = ''
+        self.text_ctrl_directory.SetValue(self.initial_inbox)
+        self.dicom_dir = DICOM_Importer(self.initial_inbox, self.tree_ctrl_import, self.tree_ctrl_roi, self.tree_ctrl_roi_root)
+        self.parse_directory()
+
     def parse_directory(self):
+        # TODO: Thread this function (parse_directory)
         wait = wx.BusyCursor()
         self.gauge.Show()
         file_count = self.dicom_dir.file_count
@@ -475,6 +490,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.button_edit_birth_date.Disable()
         self.button_apply_plan_data.Disable()
         self.button_delete_study.Disable()
+        self.button_add_physician.Disable()
         for check_box in self.checkbox.values():
             check_box.Disable()
 
@@ -485,6 +501,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.button_edit_birth_date.Enable()
         self.button_apply_plan_data.Enable()
         self.button_delete_study.Enable()
+        self.button_add_physician.Enable()
         for check_box in self.checkbox.values():
             check_box.Enable()
 
@@ -563,9 +580,9 @@ class ImportDICOM_Dialog(wx.Dialog):
 
     @staticmethod
     def is_uid_valid(uid):
-        cnx = DVH_SQL()
-        valid_uid = not cnx.is_study_instance_uid_in_table('Plans', uid)
-        cnx.close()
+        with DVH_SQL() as cnx:
+            valid_uid = not cnx.is_study_instance_uid_in_table('Plans', uid)
+
         if valid_uid:
             return True
         return False
@@ -593,6 +610,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.Close()
 
     def parse_dicom_data(self):
+        # TODO: Thread this function (parse_dicom_data)
         wait = wx.BusyCursor()
         parsed_uids = list(self.parsed_dicom_data)
         study_total = len(list(self.dicom_dir.study_nodes))
@@ -666,19 +684,19 @@ class ImportDICOM_Dialog(wx.Dialog):
 
     def on_delete_study(self, evt):
         uid = self.input['study_instance_uid'].GetValue()
-        cnx = DVH_SQL()
-        if cnx.is_uid_imported(uid):
-            dlg = wx.MessageDialog(self, "Delete all data in database with this UID?", caption='Delete Study',
-                                   style=wx.YES | wx.NO | wx.NO_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
-        else:
-            dlg = wx.MessageDialog(self, "Study Instance UID not found in Database", caption='Delete Study',
-                                   style=wx.OK | wx.CENTER | wx.ICON_EXCLAMATION)
+        with DVH_SQL() as cnx:
+            if cnx.is_uid_imported(uid):
+                dlg = wx.MessageDialog(self, "Delete all data in database with this UID?", caption='Delete Study',
+                                       style=wx.YES | wx.NO | wx.NO_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
+            else:
+                dlg = wx.MessageDialog(self, "Study Instance UID not found in Database", caption='Delete Study',
+                                       style=wx.OK | wx.CENTER | wx.ICON_EXCLAMATION)
 
-        res = dlg.ShowModal()
-        dlg.Center()
-        if res == wx.ID_YES:
-            cnx.delete_rows("study_instance_uid = '%s'" % uid)
-        cnx.close()
+            res = dlg.ShowModal()
+            dlg.Center()
+            if res == wx.ID_YES:
+                cnx.delete_rows("study_instance_uid = '%s'" % uid)
+
         dlg.Destroy()
 
         self.validate(uid=self.selected_uid)
@@ -707,6 +725,10 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.update_roi_inputs()
         self.validate(self.selected_uid)
         self.update_warning_label()
+
+    def on_add_physician(self, evt):
+        PhysicianAdd()
+        self.Focus
 
 
 class ImportStatusDialog(wx.Dialog):
@@ -751,7 +773,7 @@ class ImportStatusDialog(wx.Dialog):
         self.label_structure = wx.StaticText(self, wx.ID_ANY, "Structure: Name (1 of 50)")
         sizer_calculation.Add(self.label_structure, 0, 0, 0)
         sizer_calculation.Add(self.gauge_calculation, 0, wx.EXPAND, 0)
-        sizer_progress.Add(sizer_calculation, 0, wx.ALL | wx.EXPAND, 10)
+        sizer_progress.Add(sizer_calculation, 0, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_progress, 0, wx.EXPAND | wx.ALL, 5)
         self.label_elapsed_time = wx.StaticText(self, wx.ID_ANY, "Elapsed time:")
         sizer_time_cancel.Add(self.label_elapsed_time, 1, wx.EXPAND | wx.ALL, 5)
@@ -794,27 +816,27 @@ class ImportWorker(Thread):
         self.start()  # start the thread
 
     def run(self):
-        cnx = DVH_SQL()
-        study_total = len(self.checked_uids)
-        for study_counter, uid in enumerate(self.checked_uids):
-            if uid in list(self.data):
-                if cnx.is_uid_imported(self.data[uid].study_instance_uid_to_be_imported):
-                    print("WARNING: This Study Instance UID is already imported in Database. Skipping Import.")
-                    print("\t%s" % self.data[uid].study_instance_uid_to_be_imported)
+        with DVH_SQL() as cnx:
+            study_total = len(self.checked_uids)
+            for study_counter, uid in enumerate(self.checked_uids):
+                if uid in list(self.data):
+                    if cnx.is_uid_imported(self.data[uid].study_instance_uid_to_be_imported):
+                        print("WARNING: This Study Instance UID is already imported in Database. Skipping Import.")
+                        print("\t%s" % self.data[uid].study_instance_uid_to_be_imported)
+                    else:
+                        msg = {'patient_name': self.data[uid].patient_name,
+                               'uid': self.data[uid].study_instance_uid_to_be_imported,
+                               'progress': int(100 * study_counter / study_total),
+                               'study_number': study_counter+1,
+                               'study_total': study_total}
+                        wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
+                        wx.CallAfter(pub.sendMessage, "update_elapsed_time")
+                        self.import_study(uid)
                 else:
-                    msg = {'patient_name': self.data[uid].patient_name,
-                           'uid': self.data[uid].study_instance_uid_to_be_imported,
-                           'progress': int(100 * study_counter / study_total),
-                           'study_number': study_counter+1,
-                           'study_total': study_total}
-                    wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
-                    wx.CallAfter(pub.sendMessage, "update_elapsed_time")
-                    self.import_study(uid)
-            else:
-                print('WARNING: This study could not be parsed. Skipping import. '
-                      'Did you supply RT Structure, Dose, and Plan?')
-                print('\tStudy Instance UID: %s' % uid)
-        cnx.close()
+                    print('WARNING: This study could not be parsed. Skipping import. '
+                          'Did you supply RT Structure, Dose, and Plan?')
+                    print('\tStudy Instance UID: %s' % uid)
+
         wx.CallAfter(pub.sendMessage, "close")
 
     def import_study(self, uid):
@@ -904,11 +926,10 @@ class ImportWorker(Thread):
 
     @staticmethod
     def push(data_to_import):
-        cnx = DVH_SQL()
-        for key in list(data_to_import):
-            for row in data_to_import[key]:
-                cnx.insert_row(key, row)
-        cnx.close()
+        with DVH_SQL() as cnx:
+            for key in list(data_to_import):
+                for row in data_to_import[key]:
+                    cnx.insert_row(key, row)
 
     @staticmethod
     def post_import_calc(title, uid, rois, func, pre_calc):
