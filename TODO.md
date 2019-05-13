@@ -46,12 +46,7 @@
         - [ ] Would like to give user ability to export data to a csv, then add custom columns and reimport data
         - [ ] This will allow user to import outcome or QA data to run correlations/stats
 
-6. **Database Editor**
-    - [X] UIs are built, and their associated functions are largely already written, just need to connect them
-    - [ ] Calculations button is non-functional. Will require threading. All other buttons functional.
-    - [X] Build new message dialog on sql exceptions so the entire error is shown
-
-7. **Windows/Linux Plotting**
+6. **Windows/Linux Plotting**
     * Windows:
         - [ ] wx.html2 has issues on Windows generating javascript views
         - [ ] Tried SetPage() and LoadURL(), tested on Windows 7 with latest IE, maybe Windows 10 works?
@@ -60,14 +55,20 @@
         - [X] Plot is displayed, but no interactivity
         - [X] Issue [#4](https://github.com/cutright/DVH-Analytics-Desktop/issues/4): Turns out not a Linux issue
 
-8. **Icons**
+7. **Icons**
     - [ ] I borrowed (stole) icons from dicompyler for the DICOM file tree.  Should make my own.
     - [ ] Be sure toolbar icons are cited properly (they're all for free use)
     - [ ] Regression icons are Star Wars right now... just temporary
 
-9. **Plan/Rx/Beam Data**
+8. **Plan/Rx/Beam Data**
     - [ ] Pure bokeh version of DVHA allowed user to explore plan, rx, and beam data in a tabular format
     - [ ] Data is already stored during application run, just needs a GUI
+
+9. **Database Editor**
+    - [X] UIs are built, and their associated functions are largely already written, just need to connect them
+    - [X] Build new message dialog on sql exceptions so the entire error is shown
+    - [X] Create custom Exception class to more robustly catch DVH_SQL() update and query errors
+    - [ ] Calculations button is non-functional. Will require threading. All other buttons functional.
 
 10. **Documentation**
     - [ ] Review code, add doc strings and comments
