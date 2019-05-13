@@ -20,6 +20,7 @@ from models.regression import RegressionFrame
 from models.control_chart import ControlChartFrame
 from models.roi_map import ROIMapDialog
 from paths import LOGO_PATH
+from tools.roi_name_manager import DatabaseROIs
 from tools.stats import StatsData
 from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux,\
     initialize_directories_and_settings
@@ -48,6 +49,10 @@ class MainFrame(wx.Frame):
         # Keep track of currently selected row in the query tables
         self.selected_index_categorical = None
         self.selected_index_numerical = None
+
+        # Load ROI Map now and pass to other objects for continuity
+        # TODO: Need a method to address multiple users editing roi_map at the same time
+        self.roi_map = DatabaseROIs()
         
         self.__add_menubar()
         self.__add_tool_bar()
@@ -544,7 +549,7 @@ class MainFrame(wx.Frame):
             self.on_sql(None)
 
         if echo_sql_db():
-            ImportDICOM_Dialog()
+            ImportDICOM_Dialog(self.roi_map)
         else:
             wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
                           wx.OK | wx.ICON_WARNING)
@@ -553,9 +558,8 @@ class MainFrame(wx.Frame):
         SQLSettingsDialog()
         [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db()]()
 
-    @staticmethod
-    def on_toolbar_roi_map(evt):
-        ROIMapDialog()
+    def on_toolbar_roi_map(self, evt):
+        ROIMapDialog(self.roi_map)
 
 
 class DVHApp(wx.App):

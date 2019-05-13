@@ -8,14 +8,14 @@ from db.sql_connector import DVH_SQL
 from db.dicom_importer import DICOM_Importer
 from db.dicom_parser import DICOM_Parser
 from dialogs.main import DatePicker
-from dialogs.roi_map import PhysicianAdd
+from dialogs.roi_map import PhysicianAdd, VariationManager
 from dicompylercore import dicomparser
 from os.path import isdir, join, dirname
 from os import listdir, rmdir
 from paths import IMPORT_SETTINGS_PATH, parse_settings_file
 from pubsub import pub
 from tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95
-from tools.roi_name_manager import DatabaseROIs, clean_name
+from tools.roi_name_manager import clean_name
 from threading import Thread
 
 
@@ -23,9 +23,10 @@ ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV', 'EXTERNAL',
              'FIDUCIAL', 'IMPLANT', 'OPTIMIZATION', 'PRV', 'SUPPORT', 'NONE']
 
 
-class ImportDICOM_Dialog(wx.Dialog):
-    def __init__(self, inbox=None):
-        wx.Dialog.__init__(self, None, title='Import DICOM')
+# TODO: Provide methods to write over-rides to DICOM file
+class ImportDICOM_Dialog(wx.Frame):
+    def __init__(self, roi_map, inbox=None):
+        wx.Frame.__init__(self, None, title='Import DICOM')
         self.initial_inbox = inbox
 
         with DVH_SQL() as cnx:
@@ -36,7 +37,7 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.parsed_dicom_data = {}
         self.selected_uid = None
 
-        self.roi_map = DatabaseROIs()
+        self.roi_map = roi_map
         self.selected_roi = None
 
         self.start_path = parse_settings_file(IMPORT_SETTINGS_PATH)['inbox']
@@ -83,6 +84,7 @@ class ImportDICOM_Dialog(wx.Dialog):
                           'type': wx.ComboBox(self, wx.ID_ANY, choices=ROI_TYPES, style=wx.CB_DROPDOWN)}
         self.input_roi['type'].SetValue('')
         self.button_autodetect_targets = wx.Button(self, wx.ID_ANY, "Autodetect Target/Tumor ROIs")
+        self.button_variation_manager = wx.Button(self, wx.ID_ANY, "ROI Variation Manager")
         self.disable_roi_inputs()
 
         styles = TR_AUTO_CHECK_CHILD | TR_AUTO_CHECK_PARENT | TR_DEFAULT_STYLE
@@ -138,8 +140,12 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self.on_add_physician, id=self.button_add_physician.GetId())
 
         self.Bind(wx.EVT_BUTTON, self.on_import, id=self.button_import.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_cancel, id=self.button_cancel.GetId())
 
         self.Bind(wx.EVT_BUTTON, self.on_autodetect_target, id=self.button_autodetect_targets.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_variation_manager, id=self.button_variation_manager.GetId())
+        self.Bind(wx.EVT_COMBOBOX, self.on_physician_roi_change, id=self.input_roi['physician'].GetId())
+        self.Bind(wx.EVT_TEXT_ENTER, self.on_physician_roi_change, id=self.input_roi['physician'].GetId())
 
     def __set_properties(self):
         self.checkbox_subfolders.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
@@ -277,7 +283,8 @@ class ImportDICOM_Dialog(wx.Dialog):
         sizer_roi_tree.Add(self.tree_ctrl_roi, 1, wx.ALL | wx.EXPAND, 0)
         self.panel_roi_tree.SetSizer(sizer_roi_tree)
         sizer_roi_map.Add(self.panel_roi_tree, 1, wx.EXPAND, 0)
-        sizer_roi_map.Add(self.button_autodetect_targets, 0, wx.EXPAND | wx.ALL, 15)
+        sizer_roi_map.Add(self.button_autodetect_targets, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_roi_map.Add(self.button_variation_manager, 0, wx.EXPAND | wx.ALL, 5)
 
         self.label['physician_roi'] = wx.StaticText(self, wx.ID_ANY, "Physician's ROI Label:")
         sizer_physician_roi.Add(self.label['physician_roi'], 0, 0, 0)
@@ -316,6 +323,9 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.text_ctrl_directory.SetValue(self.initial_inbox)
         self.dicom_dir = DICOM_Importer(self.initial_inbox, self.tree_ctrl_import, self.tree_ctrl_roi, self.tree_ctrl_roi_root)
         self.parse_directory()
+
+    def on_cancel(self, evt):
+        self.Destroy()
 
     def parse_directory(self):
         # TODO: Thread this function (parse_directory)
@@ -474,6 +484,7 @@ class ImportDICOM_Dialog(wx.Dialog):
 
         self.update_roi_inputs()
         self.dicom_dir.check_mapped_rois(physician)
+        self.update_roi_inputs()
 
     def update_label_text_color(self, key):
         red_value = [255, 0][self.input[key].GetValue() != '']
@@ -507,11 +518,13 @@ class ImportDICOM_Dialog(wx.Dialog):
 
     def disable_roi_inputs(self):
         self.button_autodetect_targets.Disable()
+        self.button_variation_manager.Disable()
         for input_obj in self.input_roi.values():
             input_obj.Disable()
 
     def enable_roi_inputs(self):
         self.button_autodetect_targets.Enable()
+        self.button_variation_manager.Enable()
         for input_obj in self.input_roi.values():
             input_obj.Enable()
 
@@ -726,9 +739,31 @@ class ImportDICOM_Dialog(wx.Dialog):
         self.validate(self.selected_uid)
         self.update_warning_label()
 
+    def on_variation_manager(self, evt):
+        VariationManager(self, self.roi_map, self.input['physician'].GetValue(), self.input_roi['physician'].GetValue())
+
     def on_add_physician(self, evt):
-        PhysicianAdd()
-        self.Focus
+        PhysicianAdd(self.roi_map)
+        self.update_physician_choices()
+
+    def update_physician_choices(self):
+        old_physicians = self.input['physician'].Items
+        new_physicians = self.roi_map.get_physicians()
+        new_physician = [p for p in new_physicians if p not in old_physicians]
+        self.input['physician'].Clear()
+        self.input['physician'].Append(new_physicians)
+        if new_physician:
+            self.input['physician'].SetValue(new_physician[0])
+
+    def on_physician_roi_change(self, evt):
+        physician = self.input['physician'].GetValue()
+        variation = self.selected_roi
+        physician_roi = self.input_roi['physician'].GetValue()
+
+        if physician_roi not in self.roi_map.get_physician_rois(physician):
+            self.roi_map.add_physician_roi(physician, physician_roi)
+        if variation not in self.roi_map.get_variations(physician, physician_roi):
+            self.roi_map.add_variation(physician, physician_roi, variation)
 
 
 class ImportStatusDialog(wx.Dialog):

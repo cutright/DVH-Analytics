@@ -332,7 +332,6 @@ class QueryCategoryDialog(wx.Dialog):
         col = self.selector_categories[key]['var_name']
         options = cnx.get_unique_values(table, col)
         self.combo_box_2.Clear()
-        self.combo_box_2.Clear()
         self.combo_box_2.Append(options)
         if options:
             self.combo_box_2.SetValue(options[0])

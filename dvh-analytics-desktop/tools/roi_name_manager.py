@@ -13,6 +13,7 @@ from db.sql_to_python import QuerySQL
 from db.sql_connector import DVH_SQL
 from paths import PREF_DIR, SCRIPT_DIR
 from tools.utilities import flatten_list_of_lists
+from copy import deepcopy
 
 
 class Physician:
@@ -34,6 +35,13 @@ class Physician:
             if variation not in self.physician_rois[physician_roi]['variations']:
                 self.physician_rois[physician_roi]['variations'].append(variation)
                 self.physician_rois[physician_roi]['variations'].sort()
+
+    def delete_physician_roi_variations(self, physician_roi):
+        self.physician_rois[physician_roi]['variations'] = [physician_roi]
+
+    def delete_all_physician_roi_variations(self):
+        for physician_roi in list(self.physician_rois):
+            self.delete_physician_roi_variations(physician_roi)
 
 
 class DatabaseROIs:
@@ -108,12 +116,26 @@ class DatabaseROIs:
             for institutional_roi in self.institutional_rois:
                 self.add_physician_roi(physician, institutional_roi, institutional_roi)
 
+    def copy_physician(self, new_physician, copy_from=None, include_variations=True):
+        new_physician = clean_name(new_physician).upper()
+        if copy_from is None or copy_from == 'DEFAULT':
+            self.add_physician(new_physician)
+        elif copy_from in self.get_physicians():
+            self.physicians[new_physician] = deepcopy(self.physicians[copy_from])
+            if not include_variations:
+                self.physicians[new_physician].delete_all_physician_roi_variations()
+
     def delete_physician(self, physician):
         physician = clean_name(physician).upper()
         self.physicians.pop(physician, None)
 
     def get_physicians(self):
-        return list(self.physicians)
+        physicians = list(self.physicians)
+        physicians.sort()
+        if 'DEFAULT' in physicians:
+            physicians.pop(physicians.index('DEFAULT'))
+            physicians.insert(0, 'DEFAULT')
+        return physicians
 
     def get_physician(self, physician):
         return self.physicians[physician]
@@ -125,7 +147,7 @@ class DatabaseROIs:
                 return True
         return False
 
-    def set_physician(self, new_physician, physician):
+    def rename_physician(self, new_physician, physician):
         new_physician = clean_name(new_physician).upper()
         physician = clean_name(physician).upper()
         self.physicians[new_physician] = self.physicians.pop(physician)
