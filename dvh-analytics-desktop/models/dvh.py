@@ -109,7 +109,7 @@ class DVH:
                 final_values[uid] = "%s,%s" % (final_values[uid], values[i])
             else:
                 final_values[uid] = str(values[i])
-        return [final_values[uid] for uid in uids]
+        return [final_values[uid] for uid in self.study_instance_uid]
 
     @property
     def x_data(self):
