@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 import wx
-from db.sql_connector import DVH_SQL, echo_sql_db
+from db.sql_connector import DVH_SQL, echo_sql_db, SQLError
 from db.sql_settings import write_sql_connection_settings, validate_sql_connection
 from paths import SQL_CNF_PATH, parse_settings_file, IMPORTED_DIR, INBOX_DIR
 from os.path import join
@@ -14,6 +14,7 @@ from models.import_dicom import ImportDICOM_Dialog
 
 
 class CalculationsDialog(wx.Dialog):
+    # TODO: Add functionality to OK button
     def __init__(self):
         wx.Dialog.__init__(self, None, title="Calculations")
 
@@ -24,7 +25,6 @@ class CalculationsDialog(wx.Dialog):
         self.checkbox = wx.CheckBox(self, wx.ID_ANY, "Only Calculate Missing Values")
         self.text_ctrl_condition = wx.TextCtrl(self, wx.ID_ANY, "")
         self.button_ok = wx.Button(self, wx.ID_OK, "Calculate")
-        # TODO: Add functionality to OK button
         self.button_ok.Disable()  # Remove this line once functionality is added
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
@@ -214,8 +214,11 @@ class DeletePatientDialog(ChangeOrDeleteBaseClass):
 
 
 class EditDatabaseDialog(wx.Dialog):
-    def __init__(self):
+    def __init__(self, inital_values=None):
         wx.Dialog.__init__(self, None, title="Edit Database Values")
+
+        self.initial_values = inital_values
+        self.error = False
 
         self.combo_box_table = wx.ComboBox(self, wx.ID_ANY, choices=self.tables,
                                            style=wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -237,7 +240,11 @@ class EditDatabaseDialog(wx.Dialog):
         self.run()
 
     def __set_properties(self):
-        pass
+        if self.initial_values:
+            self.combo_box_table.SetValue(self.initial_values['table'])
+            self.combo_box_column.SetValue(self.initial_values['column'])
+            self.text_ctrl_value.SetValue(self.initial_values['value'])
+            self.text_ctrl_condition.SetValue(self.initial_values['condition'])
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -323,12 +330,23 @@ class EditDatabaseDialog(wx.Dialog):
         if res == wx.ID_OK:
             self.update_db()
         self.Destroy()
+        if self.error:
+            EditDatabaseDialog(inital_values=self.values)
 
     def update_db(self):
         with DVH_SQL() as cnx:
-            dvh_sql_exception = cnx.update(self.table, self.column, self.value, self.condition)
-        if dvh_sql_exception:
-            SQLWarningDialog(self, dvh_sql_exception)
+            try:
+                cnx.update(self.table, self.column, self.value, self.condition)
+            except SQLError as sql_exception:
+                SQLErrorDialog(self, sql_exception)
+                self.error = True
+
+    @property
+    def values(self):
+        return {'table': self.combo_box_table.GetValue(),
+                'column': self.combo_box_column.GetValue(),
+                'value': self.text_ctrl_value.GetValue(),
+                'condition': self.text_ctrl_condition.GetValue()}
 
 
 class ReimportDialog(wx.Dialog):
@@ -671,14 +689,19 @@ class RebuildDB(MessageDialog):
         ImportDICOM_Dialog(inbox=IMPORTED_DIR)
 
 
-class WarningDialog:
-    def __init__(self, parent, message, caption, flags=wx.ICON_WARNING | wx.OK | wx.OK_DEFAULT):
+class ErrorDialog:
+    def __init__(self, parent, message, caption, flags=wx.ICON_ERROR | wx.OK | wx.OK_DEFAULT):
         self.dlg = wx.MessageDialog(parent, message, caption, flags)
         self.dlg.ShowModal()
         self.dlg.Destroy()
 
 
-class SQLWarningDialog(WarningDialog):
-    # TODO: Create a layout to provide space to show entire error
+class SQLErrorDialog(ErrorDialog):
     def __init__(self, parent, dvh_sql_error):
-        WarningDialog.__init__(self, parent, dvh_sql_error['error'], "SQL Syntax Error")
+        """
+        Error dialog using custom SQLError class
+        :param parent: the wx parent object
+        :param dvh_sql_error: SQLError exception class
+        :type dvh_sql_error: SQLError
+        """
+        ErrorDialog.__init__(self, parent, str(dvh_sql_error), "SQL Syntax Error")

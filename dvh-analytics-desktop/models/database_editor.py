@@ -4,9 +4,9 @@
 
 import wx
 from dialogs.database import ChangePatientIdentifierDialog, DeletePatientDialog, ReimportDialog, EditDatabaseDialog,\
-    CalculationsDialog, DeleteAllData, RebuildDB, SQLWarningDialog
+    CalculationsDialog, DeleteAllData, RebuildDB, SQLErrorDialog
 from db.sql_to_python import get_database_tree
-from db.sql_connector import DVH_SQL
+from db.sql_connector import DVH_SQL, SQLError
 from models.datatable import DataTable
 from dialogs.export import data_table_to_csv as export_dlg
 
@@ -33,7 +33,7 @@ class DatabaseEditorDialog(wx.Frame):
 
         self.button = {'delete_all_data': wx.Button(self, wx.ID_ANY, "Delete All Data"),
                        'rebuild_db': wx.Button(self, wx.ID_ANY, "Rebuild Database"),
-                       'calculations': wx.Button(self, wx.ID_ANY, "Calculations"),
+                       # 'calculations': wx.Button(self, wx.ID_ANY, "Calculations"),
                        'edit_db': wx.Button(self, wx.ID_ANY, "Edit Database"),
                        'reimport': wx.Button(self, wx.ID_ANY, "Reimport from DICOM"),
                        'delete_study': wx.Button(self, wx.ID_ANY, "Delete Study"),
@@ -79,7 +79,7 @@ class DatabaseEditorDialog(wx.Frame):
         sizer_combo_box = wx.BoxSizer(wx.VERTICAL)
         sizer_db_tree = wx.BoxSizer(wx.HORIZONTAL)
         sizer_dialog_buttons = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_dialog_buttons.Add(self.button['calculations'], 0, wx.ALL, 5)
+        # sizer_dialog_buttons.Add(self.button['calculations'], 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button['edit_db'], 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button['reimport'], 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button['delete_study'], 0, wx.ALL, 5)
@@ -150,12 +150,12 @@ class DatabaseEditorDialog(wx.Frame):
 
         wait = wx.BusyCursor()
         with DVH_SQL() as cnx:
-            data = cnx.query(table, ','.join(columns), condition, bokeh_cds=True)
-        if 'error' in list(data):
-            SQLWarningDialog(self, data)
+            try:
+                data = cnx.query(table, ','.join(columns), condition, bokeh_cds=True)
+                self.data_query_results.set_data(data, columns)
+            except SQLError as e:
+                SQLErrorDialog(self, e)
             self.data_query_results.clear()
-        else:
-            self.data_query_results.set_data(data, columns)
         del wait
 
     def on_clear(self, evt):

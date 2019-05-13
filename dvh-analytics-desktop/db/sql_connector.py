@@ -90,8 +90,7 @@ class DVH_SQL:
             self.cursor.execute(query)
             results = self.cursor.fetchall()
         except Exception as e:
-            return {'error': str(e).replace('^', '').strip(),
-                    'sql_cmd': "SQL CMD:\n%s" % query}
+            raise SQLError(str(e), query)
 
         if 'bokeh_cds' in kwargs and kwargs['bokeh_cds']:
             keys = [c.strip() for c in return_col_str.split(',')]
@@ -130,8 +129,7 @@ class DVH_SQL:
             self.cnx.commit()
             return None
         except Exception as e:
-            return {'error': str(e).replace('^', '').strip(),
-                    'sql_cmd': "SQL CMD:\n%s" % update}
+            raise SQLError(str(e), update)
 
     def is_study_instance_uid_in_table(self, table_name, study_instance_uid):
         return self.is_value_in_table(table_name, study_instance_uid, 'study_instance_uid')
@@ -349,3 +347,22 @@ def echo_sql_db(config=None):
         return True
     except OperationalError:
         return False
+
+
+class SQLError(Exception):
+    def __init__(self, error_message, failed_sql_command):
+        """
+        Custom exception class to catch query and update failures in database editor
+        :param error_message: The message to be displayed in the SQLErrorDialog
+        :type error_message: str
+        :param failed_sql_command: the SQL command that failed
+        :type failed_sql_command: str
+        """
+        try:
+            self.message = error_message.split('\n')[0]
+        except:
+            self.message = error_message
+        self.sql_command = failed_sql_command
+
+    def __str__(self):
+        return self.message
