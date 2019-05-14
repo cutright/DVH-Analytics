@@ -19,6 +19,7 @@ from tools.roi_name_manager import clean_name
 from threading import Thread
 
 
+# TODO: This should come from options
 ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV', 'EXTERNAL',
              'FIDUCIAL', 'IMPLANT', 'OPTIMIZATION', 'PRV', 'SUPPORT', 'NONE']
 
@@ -85,6 +86,8 @@ class ImportDICOM_Dialog(wx.Frame):
         self.input_roi['type'].SetValue('')
         self.button_autodetect_targets = wx.Button(self, wx.ID_ANY, "Autodetect Target/Tumor ROIs")
         self.button_variation_manager = wx.Button(self, wx.ID_ANY, "ROI Variation Manager")
+        self.button_manage_physician_roi = wx.Button(self, wx.ID_ANY, "Manage")
+        self.button_manage_roi_type = wx.Button(self, wx.ID_ANY, "Manage")
         self.disable_roi_inputs()
 
         styles = TR_AUTO_CHECK_CHILD | TR_AUTO_CHECK_PARENT | TR_DEFAULT_STYLE
@@ -144,6 +147,8 @@ class ImportDICOM_Dialog(wx.Frame):
 
         self.Bind(wx.EVT_BUTTON, self.on_autodetect_target, id=self.button_autodetect_targets.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_variation_manager, id=self.button_variation_manager.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_manage_physician_roi, id=self.button_manage_physician_roi.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_manage_roi_type, id=self.button_manage_roi_type.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.on_physician_roi_change, id=self.input_roi['physician'].GetId())
         self.Bind(wx.EVT_TEXT_ENTER, self.on_physician_roi_change, id=self.input_roi['physician'].GetId())
 
@@ -287,15 +292,21 @@ class ImportDICOM_Dialog(wx.Frame):
         sizer_roi_map.Add(self.button_variation_manager, 0, wx.EXPAND | wx.ALL, 5)
 
         self.label['physician_roi'] = wx.StaticText(self, wx.ID_ANY, "Physician's ROI Label:")
+        sizer_physician_roi_with_add = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician_roi.Add(self.label['physician_roi'], 0, 0, 0)
         sizer_physician_roi.Add(self.input_roi['physician'], 0, wx.EXPAND, 0)
+        sizer_physician_roi_with_add.Add(sizer_physician_roi, 1, wx.EXPAND, 0)
+        sizer_physician_roi_with_add.Add(self.button_manage_physician_roi, 0, wx.TOP, 15)
 
         self.label['roi_type'] = wx.StaticText(self, wx.ID_ANY, "ROI Type:")
+        sizer_roi_type_with_add = wx.BoxSizer(wx.HORIZONTAL)
         sizer_roi_type.Add(self.label['roi_type'], 0, 0, 0)
         sizer_roi_type.Add(self.input_roi['type'], 0, wx.EXPAND, 0)
+        sizer_roi_type_with_add.Add(sizer_roi_type, 1, wx.EXPAND, 0)
+        sizer_roi_type_with_add.Add(self.button_manage_roi_type, 0, wx.TOP, 15)
 
-        sizer_selected_roi.Add(sizer_physician_roi, 1, wx.ALL | wx.EXPAND, 5)
-        sizer_selected_roi.Add(sizer_roi_type, 1, wx.ALL | wx.EXPAND, 5)
+        sizer_selected_roi.Add(sizer_physician_roi_with_add, 1, wx.ALL | wx.EXPAND, 5)
+        sizer_selected_roi.Add(sizer_roi_type_with_add, 1, wx.ALL | wx.EXPAND, 5)
 
         sizer_roi_map.Add(sizer_selected_roi, 0, wx.EXPAND, 0)
         sizer_roi_map_wrapper.Add(sizer_roi_map, 1, wx.ALL | wx.EXPAND, 10)
@@ -519,12 +530,16 @@ class ImportDICOM_Dialog(wx.Frame):
     def disable_roi_inputs(self):
         self.button_autodetect_targets.Disable()
         self.button_variation_manager.Disable()
+        self.button_manage_physician_roi.Disable()
+        self.button_manage_roi_type.Disable()
         for input_obj in self.input_roi.values():
             input_obj.Disable()
 
     def enable_roi_inputs(self):
         self.button_autodetect_targets.Enable()
         self.button_variation_manager.Enable()
+        self.button_manage_physician_roi.Enable()
+        self.button_manage_roi_type.Enable()
         for input_obj in self.input_roi.values():
             input_obj.Enable()
 
@@ -743,8 +758,14 @@ class ImportDICOM_Dialog(wx.Frame):
         VariationManager(self, self.roi_map, self.input['physician'].GetValue(), self.input_roi['physician'].GetValue())
 
     def on_add_physician(self, evt):
-        PhysicianAdd(self.roi_map)
+        PhysicianAdd(self.roi_map, initial_physician=self.input['physician'].GetValue())
         self.update_physician_choices()
+
+    def on_manage_physician_roi(self, evt):
+        pass
+
+    def on_manage_roi_type(self, evt):
+        pass
 
     def update_physician_choices(self):
         old_physicians = self.input['physician'].Items

@@ -6,10 +6,11 @@ from tools.roi_name_manager import ROIVariationError
 
 
 class PhysicianAdd(wx.Dialog):
-    def __init__(self, roi_map, *args, **kw):
+    def __init__(self, roi_map, initial_physician=None, *args, **kw):
         wx.Dialog.__init__(self, None)
 
         self.roi_map = roi_map
+        self.initial_physician = initial_physician
 
         self.text_ctrl_physician = wx.TextCtrl(self, wx.ID_ANY, "")
         self.combo_box_copy_from = wx.ComboBox(self, wx.ID_ANY, choices=self.roi_map.get_physicians(),
@@ -28,6 +29,8 @@ class PhysicianAdd(wx.Dialog):
         self.SetTitle("Add Physician to ROI Map")
         # self.checkbox_institutional_mapping.SetValue(1)
         self.checkbox_variations.SetValue(1)
+        if self.initial_physician:
+            self.text_ctrl_physician.SetValue(self.initial_physician)
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -52,8 +55,9 @@ class PhysicianAdd(wx.Dialog):
         sizer_ok_cancel.Add(self.button_cancel, 0, wx.LEFT | wx.RIGHT, 5)
         sizer_wrapper.Add(sizer_ok_cancel, 0, wx.ALIGN_RIGHT | wx.BOTTOM | wx.LEFT | wx.RIGHT, 10)
         self.SetSizer(sizer_wrapper)
-        sizer_wrapper.Fit(self)
         self.Layout()
+        self.Fit()
+        self.Center()
 
     def action(self):
         self.roi_map.copy_physician(self.text_ctrl_physician.GetValue(),
@@ -142,8 +146,8 @@ class VariationManager(wx.Dialog):
         sizer_buttons.Add(self.button_dismiss, 0, wx.ALL, 5)
         sizer_wrapper.Add(sizer_buttons, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
         self.SetSizer(sizer_wrapper)
-        self.Fit()
         self.Layout()
+        self.Fit()
         self.Center()
 
     def run(self):
