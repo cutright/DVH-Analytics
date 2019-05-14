@@ -2,15 +2,16 @@
 # -*- coding: UTF-8 -*-
 
 import wx
-from db.sql_connector import DVH_SQL, echo_sql_db, SQLError
+from datetime import datetime
+from db.sql_connector import DVH_SQL, echo_sql_db
 from db.sql_settings import write_sql_connection_settings, validate_sql_connection
+from models.import_dicom import ImportDICOM_Dialog
 from paths import SQL_CNF_PATH, parse_settings_file, IMPORTED_DIR, INBOX_DIR
-from os.path import join
 from os import mkdir, rename
+from os.path import join
+from tools.errors import SQLError, SQLErrorDialog
 from tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file, delete_imported_dicom_files,\
     move_imported_dicom_files
-from datetime import datetime
-from models.import_dicom import ImportDICOM_Dialog
 
 
 class CalculationsDialog(wx.Dialog):
@@ -687,21 +688,3 @@ class RebuildDB(MessageDialog):
             cnx.reinitialize_database()
 
         ImportDICOM_Dialog(inbox=IMPORTED_DIR)
-
-
-class ErrorDialog:
-    def __init__(self, parent, message, caption, flags=wx.ICON_ERROR | wx.OK | wx.OK_DEFAULT):
-        self.dlg = wx.MessageDialog(parent, message, caption, flags)
-        self.dlg.ShowModal()
-        self.dlg.Destroy()
-
-
-class SQLErrorDialog(ErrorDialog):
-    def __init__(self, parent, dvh_sql_error):
-        """
-        Error dialog using custom SQLError class
-        :param parent: the wx parent object
-        :param dvh_sql_error: SQLError exception class
-        :type dvh_sql_error: SQLError
-        """
-        ErrorDialog.__init__(self, parent, str(dvh_sql_error), "SQL Syntax Error")

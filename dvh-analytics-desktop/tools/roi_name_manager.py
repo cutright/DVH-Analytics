@@ -13,6 +13,7 @@ from db.sql_to_python import QuerySQL
 from db.sql_connector import DVH_SQL
 from paths import PREF_DIR, SCRIPT_DIR
 from tools.utilities import flatten_list_of_lists
+from tools.errors import ROIVariationError
 from copy import deepcopy
 
 
@@ -102,7 +103,8 @@ class DatabaseROIs:
 
                 for i in range(2, len(line)):
                     variation = clean_name(line[i])
-                    self.add_variation(physician, physician_roi, variation)
+                    if variation != physician_roi:
+                        self.add_variation(physician, physician_roi, variation)
 
     ###################################
     # Physician functions
@@ -331,8 +333,13 @@ class DatabaseROIs:
         physician = clean_name(physician).upper()
         physician_roi = clean_name(physician_roi)
         variation = clean_name(variation)
-        if variation and variation not in self.get_variations(physician, physician_roi):
+
+        current_physician_roi = self.get_physician_roi(physician, variation)
+        if current_physician_roi == 'uncategorized':
             self.physicians[physician].add_physician_roi_variation(physician_roi, variation)
+        else:
+            raise ROIVariationError("'%s' is already a variation of %s for %s" %
+                                    (variation, current_physician_roi, physician))
 
     def delete_variation(self, physician, physician_roi, variation):
         physician = clean_name(physician).upper()
@@ -342,6 +349,12 @@ class DatabaseROIs:
             index = self.physicians[physician].physician_rois[physician_roi]['variations'].index(variation)
             self.physicians[physician].physician_rois[physician_roi]['variations'].pop(index)
             self.physicians[physician].physician_rois[physician_roi]['variations'].sort()
+
+    def delete_variations(self, physician, physician_roi, variations):
+        for variation in variations:
+            self.delete_variation(physician, physician_roi, variation)
+        if not self.get_variations(physician, physician_roi):
+            self.add_variation(physician, physician_roi, physician_roi)
 
     def set_variation(self, new_variation, physician, physician_roi, variation):
         new_variation = clean_name(new_variation)

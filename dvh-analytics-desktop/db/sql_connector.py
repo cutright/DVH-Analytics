@@ -11,6 +11,7 @@ import psycopg2
 from psycopg2 import OperationalError
 from datetime import datetime
 from paths import SCRIPT_DIR, DATA_DIR, SQL_CNF_PATH, parse_settings_file
+from tools.errors import SQLError
 
 
 class DVH_SQL:
@@ -347,22 +348,3 @@ def echo_sql_db(config=None):
         return True
     except OperationalError:
         return False
-
-
-class SQLError(Exception):
-    def __init__(self, error_message, failed_sql_command):
-        """
-        Custom exception class to catch query and update failures in database editor
-        :param error_message: The message to be displayed in the SQLErrorDialog
-        :type error_message: str
-        :param failed_sql_command: the SQL command that failed
-        :type failed_sql_command: str
-        """
-        try:
-            self.message = error_message.split('\n')[0]
-        except:
-            self.message = error_message
-        self.sql_command = failed_sql_command
-
-    def __str__(self):
-        return self.message

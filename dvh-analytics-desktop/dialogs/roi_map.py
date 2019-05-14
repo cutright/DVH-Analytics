@@ -1,6 +1,8 @@
 import wx
 from models.datatable import DataTable
+from tools.errors import ROIVariationErrorDialog
 from tools.utilities import get_selected_listctrl_items
+from tools.roi_name_manager import ROIVariationError
 
 
 class PhysicianAdd(wx.Dialog):
@@ -68,6 +70,7 @@ class PhysicianAdd(wx.Dialog):
 class VariationManager(wx.Dialog):
     def __init__(self, parent, roi_map, physician, physician_roi):
         wx.Dialog.__init__(self, parent)
+        self.parent = parent
         self.roi_map = roi_map
         self.initial_physician = physician
         self.initial_physician_roi = physician_roi
@@ -75,11 +78,13 @@ class VariationManager(wx.Dialog):
         self.combo_box_physician = wx.ComboBox(self, wx.ID_ANY, choices=self.roi_map.get_physicians(),
                                                style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_physician_roi = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.list_ctrl_variations = wx.ListCtrl(self, wx.ID_ANY, style=wx.LC_NO_HEADER | wx.LC_REPORT)
+        self.list_ctrl_variations = wx.ListCtrl(self, wx.ID_ANY, style=wx.LC_NO_HEADER | wx.LC_REPORT | wx.BORDER_SUNKEN)
         self.button_select_all = wx.Button(self, wx.ID_ANY, "Select All")
         self.button_deselect_all = wx.Button(self, wx.ID_ANY, "Deselect All")
-        self.button_ok = wx.Button(self, wx.ID_OK, "OK")
-        self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+        self.button_add = wx.Button(self, wx.ID_ANY, "Add")
+        self.button_delete = wx.Button(self, wx.ID_ANY, "Delete")
+        self.button_move = wx.Button(self, wx.ID_ANY, "Move")
+        self.button_dismiss = wx.Button(self, wx.ID_CANCEL, "Dismiss")
 
         self.columns = ['Variations']
         self.data_table = DataTable(self.list_ctrl_variations, columns=self.columns, widths=[400])
@@ -102,11 +107,14 @@ class VariationManager(wx.Dialog):
         self.Bind(wx.EVT_COMBOBOX, self.physician_roi_ticker, id=self.combo_box_physician_roi.GetId())
         self.Bind(wx.EVT_BUTTON, self.select_all, id=self.button_select_all.GetId())
         self.Bind(wx.EVT_BUTTON, self.deselect_all, id=self.button_deselect_all.GetId())
+        self.Bind(wx.EVT_BUTTON, self.add_variation, id=self.button_add.GetId())
+        self.Bind(wx.EVT_BUTTON, self.move_variations, id=self.button_move.GetId())
+        self.Bind(wx.EVT_BUTTON, self.delete_variations, id=self.button_delete.GetId())
 
     def __do_layout(self):
         # begin wxGlade: MyFrame.__do_layout
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
-        sizer_ok_cancel = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_select = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
         sizer_select_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_variations = wx.BoxSizer(wx.VERTICAL)
@@ -128,21 +136,19 @@ class VariationManager(wx.Dialog):
         sizer_select_buttons.Add(self.button_deselect_all, 0, wx.ALL, 5)
         sizer_select.Add(sizer_select_buttons, 0, wx.ALIGN_CENTER | wx.ALL, 0)
         sizer_wrapper.Add(sizer_select, 0, wx.ALL, 5)
-        sizer_ok_cancel.Add(self.button_ok, 0, wx.ALL, 5)
-        sizer_ok_cancel.Add(self.button_cancel, 0, wx.ALL, 5)
-        sizer_wrapper.Add(sizer_ok_cancel, 0, wx.ALIGN_CENTER | wx.ALL, 5)
+        sizer_buttons.Add(self.button_add, 0, wx.ALL, 5)
+        sizer_buttons.Add(self.button_delete, 0, wx.ALL, 5)
+        sizer_buttons.Add(self.button_move, 0, wx.ALL, 5)
+        sizer_buttons.Add(self.button_dismiss, 0, wx.ALL, 5)
+        sizer_wrapper.Add(sizer_buttons, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
         self.SetSizer(sizer_wrapper)
-        sizer_wrapper.Fit(self)
+        self.Fit()
         self.Layout()
+        self.Center()
 
     def run(self):
-        res = self.ShowModal()
-        if res == wx.ID_OK:
-            self.action()
+        self.ShowModal()
         self.Destroy()
-
-    def action(self):
-        pass
 
     def update_physician_rois(self):
         new_physician_rois = self.roi_map.get_physician_rois(self.physician)
@@ -199,3 +205,102 @@ class VariationManager(wx.Dialog):
     def apply_global_selection(self, on=1):
         for i in range(self.variation_count):
             self.list_ctrl_variations.Select(i, on=on)
+
+    def delete_variations(self, evt):
+        self.roi_map.delete_variations(self.physician, self.physician_roi, self.selected_values)
+        self.update_variations()
+
+    def add_variation(self, evt):
+        dlg = AddVariationDialog(self.parent, self.physician, self.physician_roi)
+        res = dlg.ShowModal()
+        if res == wx.ID_OK:
+            try:
+                self.roi_map.add_variation(self.physician, self.physician_roi, dlg.text_ctrl_variation.GetValue())
+                self.update_variations()
+            except ROIVariationError as e:
+                ROIVariationErrorDialog(self.parent, str(e))
+        dlg.Destroy()
+
+    def move_variations(self, evt):
+        # variations = self.variations
+        # self.roi_map.delete_variations(self.physician, self.physician_roi, self.selected_values)
+        # for variation in self.variations:
+        #     pass
+        choices = [roi for roi in self.roi_map.get_physician_rois(self.physician) if roi != self.physician_roi]
+        MoveVariationDialog(self, choices)
+
+
+class AddVariationDialog(wx.Dialog):
+    def __init__(self, parent, physician, physician_roi, *args, **kwds):
+        wx.Dialog.__init__(self, parent, *args, **kwds)
+        self.physician = physician
+        self.physician_roi = physician_roi
+        self.text_ctrl_variation = wx.TextCtrl(self, wx.ID_ANY, "")
+        self.button_ok = wx.Button(self, wx.ID_OK, "OK")
+        self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+
+        self.__set_properties()
+        self.__do_layout()
+
+    def __set_properties(self):
+        self.SetTitle("Add Variation to %s for %s" % (self.physician_roi, self.physician))
+        self.text_ctrl_variation.SetMinSize((300, 22))
+
+    def __do_layout(self):
+        sizer_frame = wx.BoxSizer(wx.VERTICAL)
+        sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_variation = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
+        label_variation = wx.StaticText(self, wx.ID_ANY, "New variation:")
+        sizer_variation.Add(label_variation, 0, 0, 0)
+        sizer_variation.Add(self.text_ctrl_variation, 0, wx.EXPAND, 0)
+        sizer_frame.Add(sizer_variation, 0, wx.EXPAND, 0)
+        sizer_buttons.Add(self.button_ok, 1, wx.ALL | wx.EXPAND, 5)
+        sizer_buttons.Add(self.button_cancel, 1, wx.ALL | wx.EXPAND, 5)
+        sizer_frame.Add(sizer_buttons, 0, wx.ALL | wx.EXPAND, 5)
+        self.SetSizer(sizer_frame)
+        sizer_frame.Fit(self)
+        self.Layout()
+        self.Center()
+
+
+class MoveVariationDialog(wx.Dialog):
+    def __init__(self, parent, choices):
+        wx.Dialog.__init__(self, parent)
+        self.choices = choices
+        self.combo_box = wx.ComboBox(self, wx.ID_ANY, choices=choices, style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.button_ok = wx.Button(self, wx.ID_OK, "OK")
+        self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+
+        self.__set_properties()
+        self.__do_layout()
+
+        self.run()
+
+    def __set_properties(self):
+        self.SetTitle("Move Variations")
+        self.combo_box.SetValue(self.choices[0])
+
+    def __do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_input = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
+        label_physician_roi = wx.StaticText(self, wx.ID_ANY, "Move to Physician ROI:")
+        sizer_input.Add(label_physician_roi, 0, 0, 0)
+        sizer_input.Add(self.combo_box, 0, 0, 0)
+        sizer_wrapper.Add(sizer_input, 0, wx.EXPAND | wx.TOP | wx.LEFT | wx.RIGHT, 5)
+        sizer_buttons.Add(self.button_ok, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_buttons.Add(self.button_cancel, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_wrapper.Add(sizer_buttons, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+        self.SetSizer(sizer_wrapper)
+        self.Layout()
+        self.Fit()
+        self.Center()
+
+    def run(self):
+        res = self.ShowModal()
+        if res == wx.ID_OK:
+            self.action()
+        self.Destroy()
+
+    def action(self):
+        pass
