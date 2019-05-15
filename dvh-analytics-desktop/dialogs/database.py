@@ -11,7 +11,7 @@ from os import mkdir, rename
 from os.path import join
 from tools.errors import SQLError, SQLErrorDialog
 from tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file, delete_imported_dicom_files,\
-    move_imported_dicom_files
+    move_imported_dicom_files, MessageDialog
 
 
 class CalculationsDialog(wx.Dialog):
@@ -574,29 +574,6 @@ class SQLSettingsDialog(wx.Dialog):
 # --------------------------------------------------
 # Yes/No Dialogs
 # --------------------------------------------------
-class MessageDialog:
-    """
-    This is the base class for Yes/No Dialog boxes
-    Inherit this class, then over-write action_yes and action_no functions with appropriate behaviors
-    """
-    def __init__(self, parent, caption, message="Are you sure?",
-                 flags=wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT):
-        self.dlg = wx.MessageDialog(parent, message, caption, flags)
-        self.parent = parent
-        self.run()
-
-    def run(self):
-        res = self.dlg.ShowModal()
-        [self.action_no, self.action_yes][res == wx.ID_YES]()
-        self.dlg.Destroy()
-
-    def action_yes(self):
-        pass
-
-    def action_no(self):
-        pass
-
-
 class DeleteAllData(MessageDialog):
     def __init__(self, parent):
         MessageDialog.__init__(self, parent, "Delete All Data in Database")

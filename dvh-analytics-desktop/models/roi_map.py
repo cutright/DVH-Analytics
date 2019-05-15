@@ -1,6 +1,5 @@
 import wx
 import wx.html2
-from tools.roi_name_manager import DatabaseROIs
 from dialogs.roi_map import AddPhysician
 
 

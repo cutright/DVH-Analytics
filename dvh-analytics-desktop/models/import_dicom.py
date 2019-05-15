@@ -19,16 +19,12 @@ from tools.roi_name_manager import clean_name
 from threading import Thread
 
 
-# TODO: This should come from options
-ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV', 'EXTERNAL',
-             'FIDUCIAL', 'IMPLANT', 'OPTIMIZATION', 'PRV', 'SUPPORT', 'NONE']
-
-
 # TODO: Provide methods to write over-rides to DICOM file
 class ImportDICOM_Dialog(wx.Frame):
-    def __init__(self, roi_map, inbox=None):
+    def __init__(self, roi_map, options, inbox=None):
         wx.Frame.__init__(self, None, title='Import DICOM')
         self.initial_inbox = inbox
+        self.options = options
 
         with DVH_SQL() as cnx:
             cnx.initialize_database()
@@ -82,7 +78,7 @@ class ImportDICOM_Dialog(wx.Frame):
 
         self.panel_roi_tree = wx.Panel(self, wx.ID_ANY, style=wx.BORDER_SUNKEN)
         self.input_roi = {'physician': wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN),
-                          'type': wx.ComboBox(self, wx.ID_ANY, choices=ROI_TYPES, style=wx.CB_DROPDOWN)}
+                          'type': wx.ComboBox(self, wx.ID_ANY, choices=self.options.ROI_TYPES, style=wx.CB_DROPDOWN)}
         self.input_roi['type'].SetValue('')
         self.button_autodetect_targets = wx.Button(self, wx.ID_ANY, "Autodetect Target/Tumor ROIs")
         self.button_variation_manager = wx.Button(self, wx.ID_ANY, "ROI Variation Manager")

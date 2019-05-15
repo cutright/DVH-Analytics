@@ -4,7 +4,7 @@ from db import sql_columns
 
 
 class ControlChartFrame:
-    def __init__(self, parent, dvh, stats_data, *args, **kwds):
+    def __init__(self, parent, dvh, stats_data, options, *args, **kwds):
         self.parent = parent
         self.dvhs = dvh
         self.stats_data = stats_data
@@ -15,7 +15,7 @@ class ControlChartFrame:
         self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
         self.combo_box_model = wx.ComboBox(self.parent, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
         self.button_update_plot = wx.Button(self.parent, wx.ID_ANY, "Update Plot")
-        self.plot = PlotControlChart(self.parent)
+        self.plot = PlotControlChart(self.parent, options)
 
         self.__set_properties()
         self.__do_bind()
