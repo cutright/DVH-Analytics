@@ -5,8 +5,8 @@ from tools.utilities import get_selected_listctrl_items
 from tools.roi_name_manager import ROIVariationError
 
 
-class PhysicianAdd(wx.Dialog):
-    def __init__(self, roi_map, initial_physician=None, *args, **kw):
+class AddPhysician(wx.Dialog):
+    def __init__(self, roi_map, initial_physician=None):
         wx.Dialog.__init__(self, None)
 
         self.roi_map = roi_map
@@ -235,8 +235,8 @@ class VariationManager(wx.Dialog):
 
 
 class AddVariationDialog(wx.Dialog):
-    def __init__(self, parent, physician, physician_roi, *args, **kwds):
-        wx.Dialog.__init__(self, parent, *args, **kwds)
+    def __init__(self, parent, physician, physician_roi):
+        wx.Dialog.__init__(self, parent)
         self.physician = physician
         self.physician_roi = physician_roi
         self.text_ctrl_variation = wx.TextCtrl(self, wx.ID_ANY, "")
@@ -298,6 +298,113 @@ class MoveVariationDialog(wx.Dialog):
         self.SetSizer(sizer_wrapper)
         self.Layout()
         self.Fit()
+        self.Center()
+
+    def run(self):
+        res = self.ShowModal()
+        if res == wx.ID_OK:
+            self.action()
+        self.Destroy()
+
+    def action(self):
+        pass
+
+
+class AddPhysicianROI(wx.Dialog):
+    def __init__(self, parent, physician, institutional_rois):
+        wx.Dialog.__init__(self, parent)
+        self.SetSize((500, 135))
+
+        self.physician = physician
+        self.institutional_rois = institutional_rois
+        self.text_ctrl_physician_roi = wx.TextCtrl(self, wx.ID_ANY, "")
+        self.combo_box_institutional_roi = wx.ComboBox(self, wx.ID_ANY, choices=institutional_rois,
+                                                       style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.button_ok = wx.Button(self, wx.ID_OK, "OK")
+        self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+
+        self.__set_properties()
+        self.__do_layout()
+
+        self.run()
+
+    def __set_properties(self):
+        self.SetTitle("Add Physician ROI for %s" % self.physician)
+        self.text_ctrl_physician_roi.SetToolTip("New entry must be unique from all other institutional, physician, "
+                                                "or variation ROIs for this physician.")
+        self.combo_box_institutional_roi.SetToolTip("If the institutional ROI you’re looking for isn’t here, it may "
+                                                    "already be assigned.")
+        if 'uncategorized' in self.institutional_rois:
+            self.combo_box_institutional_roi.SetValue('uncategorized')
+
+    def __do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_main = wx.BoxSizer(wx.VERTICAL)
+        sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_input = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.HORIZONTAL)
+        sizer_institutional_roi = wx.BoxSizer(wx.VERTICAL)
+        sizer_physician_roi = wx.BoxSizer(wx.VERTICAL)
+        label_physician_roi = wx.StaticText(self, wx.ID_ANY, "New Physician ROI:")
+        sizer_physician_roi.Add(label_physician_roi, 0, 0, 0)
+        sizer_physician_roi.Add(self.text_ctrl_physician_roi, 0, wx.EXPAND, 0)
+        sizer_input.Add(sizer_physician_roi, 1, wx.ALL | wx.EXPAND, 5)
+        label_institutional_roi = wx.StaticText(self, wx.ID_ANY, "Linked Institutional ROI:")
+        sizer_institutional_roi.Add(label_institutional_roi, 0, 0, 0)
+        sizer_institutional_roi.Add(self.combo_box_institutional_roi, 0, wx.EXPAND, 0)
+        sizer_input.Add(sizer_institutional_roi, 1, wx.ALL | wx.EXPAND, 5)
+        sizer_main.Add(sizer_input, 0, wx.EXPAND, 0)
+        sizer_buttons.Add(self.button_ok, 1, wx.ALL, 5)
+        sizer_buttons.Add(self.button_cancel, 1, wx.ALL, 5)
+        sizer_main.Add(sizer_buttons, 0, wx.ALIGN_RIGHT, 0)
+        sizer_wrapper.Add(sizer_main, 1, wx.ALL | wx.EXPAND, 5)
+        self.SetSizer(sizer_wrapper)
+        self.Layout()
+        self.Fit()
+        self.Center()
+
+    def run(self):
+        res = self.ShowModal()
+        if res == wx.ID_OK:
+            self.action()
+        self.Destroy()
+
+    def action(self):
+        pass
+
+
+class AddROIType(wx.Dialog):
+    def __init__(self, parent):
+        wx.Dialog.__init__(self, parent)
+        self.SetSize((250, 135))
+        self.text_ctrl_roi_type = wx.TextCtrl(self, wx.ID_ANY, "")
+        self.button_ok = wx.Button(self, wx.ID_OK, "OK")
+        self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+
+        self.__set_properties()
+        self.__do_layout()
+
+        self.run()
+
+    def __set_properties(self):
+        self.SetTitle("Add New ROI Type")
+
+    def __do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_main = wx.BoxSizer(wx.VERTICAL)
+        sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_input = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.HORIZONTAL)
+        sizer_physician_roi = wx.BoxSizer(wx.VERTICAL)
+        label_roi_type = wx.StaticText(self, wx.ID_ANY, "New ROI Type:")
+        sizer_physician_roi.Add(label_roi_type, 0, 0, 0)
+        sizer_physician_roi.Add(self.text_ctrl_roi_type, 0, wx.EXPAND, 0)
+        sizer_input.Add(sizer_physician_roi, 1, wx.ALL | wx.EXPAND, 5)
+        sizer_main.Add(sizer_input, 0, wx.EXPAND, 0)
+        sizer_buttons.Add(self.button_ok, 1, wx.ALL, 5)
+        sizer_buttons.Add(self.button_cancel, 1, wx.ALL, 5)
+        sizer_main.Add(sizer_buttons, 0, wx.ALIGN_CENTER, 0)
+        sizer_wrapper.Add(sizer_main, 1, wx.ALL | wx.EXPAND, 5)
+        self.SetSizer(sizer_wrapper)
+        self.Layout()
         self.Center()
 
     def run(self):

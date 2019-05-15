@@ -1,7 +1,7 @@
 import wx
 import wx.html2
 from tools.roi_name_manager import DatabaseROIs
-from dialogs.roi_map import PhysicianAdd
+from dialogs.roi_map import AddPhysician
 
 
 class ROIMapDialog(wx.Dialog):
@@ -161,7 +161,7 @@ class ROIMapDialog(wx.Dialog):
         self.Destroy()
 
     def add_physician(self, evt):
-        PhysicianAdd(self.roi_map)
+        AddPhysician(self.roi_map)
         self.update_physician_choices()
 
     def update_physician_choices(self):

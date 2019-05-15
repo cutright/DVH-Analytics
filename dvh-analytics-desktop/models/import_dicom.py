@@ -8,7 +8,7 @@ from db.sql_connector import DVH_SQL
 from db.dicom_importer import DICOM_Importer
 from db.dicom_parser import DICOM_Parser
 from dialogs.main import DatePicker
-from dialogs.roi_map import PhysicianAdd, VariationManager
+from dialogs.roi_map import AddPhysician, AddPhysicianROI, AddROIType, VariationManager
 from dicompylercore import dicomparser
 from os.path import isdir, join, dirname
 from os import listdir, rmdir
@@ -70,11 +70,11 @@ class ImportDICOM_Dialog(wx.Frame):
         self.button_apply_plan_data = wx.Button(self, wx.ID_ANY, "Apply")
         self.button_delete_study = wx.Button(self, wx.ID_ANY, "Delete Study in Database with this UID")
         self.button_delete_study.Disable()
-        self.button_add_physician = wx.Button(self, wx.ID_ANY, "Add Physician")
+        self.button_add_physician = wx.Button(self, wx.ID_ANY, "Add")
         self.disable_inputs()
 
         self.button_browse = wx.Button(self, wx.ID_ANY, u"Browse…")
-        self.checkbox_subfolders = wx.CheckBox(self, wx.ID_ANY, "Search within subfolders")
+        self.checkbox_subfolders = wx.CheckBox(self, wx.ID_ANY, "Search within sub-folders")
         self.panel_study_tree = wx.Panel(self, wx.ID_ANY, style=wx.BORDER_SUNKEN)
         self.gauge = wx.Gauge(self, -1, 100)
         self.button_import = wx.Button(self, wx.ID_ANY, "Import")
@@ -94,6 +94,7 @@ class ImportDICOM_Dialog(wx.Frame):
         self.tree_ctrl_import = CustomTreeCtrl(self.panel_study_tree, wx.ID_ANY, agwStyle=styles)
         self.tree_ctrl_import.SetBackgroundColour(wx.WHITE)
 
+        # TODO: tree_ctrl_roi should have icons not checkboxes indicating map status
         self.tree_ctrl_roi = CustomTreeCtrl(self.panel_roi_tree, wx.ID_ANY, agwStyle=styles)
         self.tree_ctrl_roi.SetBackgroundColour(wx.WHITE)
         self.tree_ctrl_roi_root = self.tree_ctrl_roi.AddRoot('RT Structures', ct_type=1)
@@ -758,14 +759,16 @@ class ImportDICOM_Dialog(wx.Frame):
         VariationManager(self, self.roi_map, self.input['physician'].GetValue(), self.input_roi['physician'].GetValue())
 
     def on_add_physician(self, evt):
-        PhysicianAdd(self.roi_map, initial_physician=self.input['physician'].GetValue())
+        AddPhysician(self.roi_map, initial_physician=self.input['physician'].GetValue())
         self.update_physician_choices()
 
     def on_manage_physician_roi(self, evt):
-        pass
+        physician = self.input['physician'].GetValue()
+        unlinked_institutional_rois = self.roi_map.get_unused_institutional_rois(physician)
+        AddPhysicianROI(self, physician, unlinked_institutional_rois)
 
     def on_manage_roi_type(self, evt):
-        pass
+        AddROIType(self)
 
     def update_physician_choices(self):
         old_physicians = self.input['physician'].Items
