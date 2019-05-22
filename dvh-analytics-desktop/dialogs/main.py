@@ -325,16 +325,15 @@ class QueryCategoryDialog(wx.Dialog):
         self.SetSizer(sizer_wrapper)
 
     def update_category_2(self, evt):
-        cnx = DVH_SQL()
         key = self.combo_box_1.GetValue()
         table = self.selector_categories[key]['table']
         col = self.selector_categories[key]['var_name']
-        options = cnx.get_unique_values(table, col)
+        with DVH_SQL() as cnx:
+            options = cnx.get_unique_values(table, col)
         self.combo_box_2.Clear()
         self.combo_box_2.Append(options)
         if options:
             self.combo_box_2.SetValue(options[0])
-        cnx.close()
 
     def set_category_1(self, value):
         self.combo_box_1.SetValue(value)
@@ -419,14 +418,13 @@ class QueryNumericalDialog(wx.Dialog):
         self.Center()
 
     def update_range(self, evt):
-        cnx = DVH_SQL()
         key = self.combo_box_1.GetValue()
         table = self.numerical_categories[key]['table']
         col = self.numerical_categories[key]['var_name']
         units = self.numerical_categories[key]['units']
-        min_value = cnx.get_min_value(table, col)
-        max_value = cnx.get_max_value(table, col)
-        cnx.close()
+        with DVH_SQL() as cnx:
+            min_value = cnx.get_min_value(table, col)
+            max_value = cnx.get_max_value(table, col)
 
         if units:
             self.text_ctrl_min.SetLabelText('Min (%s):' % units)
@@ -468,15 +466,14 @@ class QueryNumericalDialog(wx.Dialog):
         try:
             new_value = float(old_value)
         except ValueError:
-            cnx = DVH_SQL()
             key = self.combo_box_1.GetValue()
             table = self.numerical_categories[key]['table']
             col = self.numerical_categories[key]['var_name']
-            if input_type == 'min':
-                new_value = cnx.get_min_value(table, col)
-            else:
-                new_value = cnx.get_max_value(table, col)
-            cnx.close()
+            with DVH_SQL() as cnx:
+                if input_type == 'min':
+                    new_value = cnx.get_min_value(table, col)
+                else:
+                    new_value = cnx.get_max_value(table, col)
         return new_value
 
 

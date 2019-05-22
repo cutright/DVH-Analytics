@@ -514,6 +514,8 @@ class SQLSettingsDialog(wx.Dialog):
 
         self.load_sql_settings()
 
+        self.run()
+
     def __set_properties(self):
         self.SetTitle("SQL Connection Settings")
 
