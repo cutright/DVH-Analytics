@@ -198,7 +198,7 @@ class RegressionFrame:
 
         x_variables = list(self.x_variable_nodes[y_variable])
 
-        dlg = MultiVarResultsFrame(y_variable, x_variables, self.stats_data)
+        dlg = MultiVarResultsFrame(y_variable, x_variables, self.stats_data, self.options)
         dlg.Show()
 
     @staticmethod

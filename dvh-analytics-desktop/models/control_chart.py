@@ -69,21 +69,21 @@ class ControlChartFrame:
 
         y_axis_selection = self.combo_box_y_axis.GetValue()
 
-        x_data = self.stats_data.sim_study_dates
+        dates = self.stats_data.sim_study_dates
         y_data = self.stats_data.data[y_axis_selection]['values']
         mrn_data = self.stats_data.mrns
 
-        sort_index = sorted(range(len(x_data)), key=lambda k: x_data[k])
-        x_values_sorted, y_values_sorted, mrn_sorted = [], [], []
+        sort_index = sorted(range(len(dates)), key=lambda k: dates[k])
+        dates_sorted, y_values_sorted, mrn_sorted = [], [], []
 
-        for s in range(len(x_data)):
-            x_values_sorted.append(x_data[sort_index[s]])
+        for s in range(len(dates)):
+            dates_sorted.append(dates[sort_index[s]])
             y_values_sorted.append(y_data[sort_index[s]])
             mrn_sorted.append(mrn_data[sort_index[s]])
 
-        x_final = list(range(1, len(x_data)+1))
+        x = list(range(1, len(dates)+1))
 
-        self.plot.update_plot(x_final, y_values_sorted, mrn_sorted, y_axis_label=y_axis_selection)
+        self.plot.update_plot(x, y_values_sorted, mrn_sorted, dates_sorted, y_axis_label=y_axis_selection)
 
     def update_data(self, dvh, stats_data):
         self.dvhs = dvh

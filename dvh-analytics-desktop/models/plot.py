@@ -57,7 +57,7 @@ class Plot:
         self.layout.SetPage(html_str, "")
 
     @staticmethod
-    def clean_data(*data, mrn=None):
+    def clean_data(*data, mrn=None, dates=None):
         bad_indices = []
         for var in data:
             bad_indices.extend([i for i, value in enumerate(var) if value == 'None'])
@@ -68,6 +68,8 @@ class Plot:
             ans.append([value for i, value in enumerate(var) if i not in bad_indices])
         if mrn:
             ans.append([value for i, value in enumerate(mrn) if i not in bad_indices])
+        if dates:
+            ans.append([value for i, value in enumerate(dates) if i not in bad_indices])
 
         return tuple(ans)
 
@@ -536,7 +538,7 @@ class PlotControlChart(Plot):
     def __init__(self, parent, options, plot_width=800):
         Plot.__init__(self, parent, options, x_axis_label='Study', plot_width=plot_width, plot_height=325)
         self.options = options
-        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], color=[], alpha=[])),
+        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], color=[], alpha=[], dates=[])),
                        'center_line': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'ucl_line': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'lcl_line': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
@@ -579,9 +581,10 @@ class PlotControlChart(Plot):
     def __add_hover(self):
         self.figure.add_tools(HoverTool(show_arrow=True,
                                         tooltips=[('ID', '@mrn'),
-                                                  ('Date', '@x{%F}'),
+                                                  ('Date', '@dates{%F}'),
+                                                  ('Study', '@x'),
                                                   ('Value', '@y{0.2f}')],
-                                        formatters={'x': 'datetime'}))
+                                        formatters={'dates': 'datetime'}))
 
     def __add_legend(self):
         # Set the legend
@@ -605,11 +608,11 @@ class PlotControlChart(Plot):
         self.bokeh_layout = column(self.figure,
                                    row(self.div_center_line, self.div_ucl, self.div_lcl))
 
-    def update_plot(self, x, y, mrn, y_axis_label='Y Axis'):
+    def update_plot(self, x, y, mrn, dates, y_axis_label='Y Axis'):
         self.clear_sources()
         self.figure.yaxis.axis_label = y_axis_label
 
-        x, y, mrn = self.clean_data(x, y, mrn=mrn)
+        x, y, mrn, dates = self.clean_data(x, y, mrn=mrn, dates=dates)
 
         center_line, ucl, lcl = get_control_limits(y)
 
@@ -618,7 +621,7 @@ class PlotControlChart(Plot):
         color = [colors[ucl > value > lcl] for value in y]
         alpha = [alphas[ucl > value > lcl] for value in y]
 
-        self.source['plot'].data = {'x': x, 'y': y, 'mrn': mrn, 'color': color, 'alpha': alpha}
+        self.source['plot'].data = {'x': x, 'y': y, 'mrn': mrn, 'color': color, 'alpha': alpha, 'dates': dates}
 
         self.source['patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
                                      'y': [ucl, ucl, lcl, lcl]}
