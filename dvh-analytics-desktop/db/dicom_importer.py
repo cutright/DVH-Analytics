@@ -8,7 +8,6 @@ from pydicom.errors import InvalidDicomError
 from db.sql_connector import DVH_SQL
 import wx
 from tools.utilities import get_file_paths
-from tools.roi_name_manager import DatabaseROIs
 
 
 FILE_TYPES = {'rtplan', 'rtstruct', 'rtdose'}
@@ -16,13 +15,14 @@ SCRIPT_DIR = os.path.dirname(__file__)
 
 
 class DICOM_Importer:
-    def __init__(self, start_path, tree_ctrl_files, tree_ctrl_rois, tree_ctrl_roi_root, search_subfolders=True):
+    def __init__(self, start_path, tree_ctrl_files, tree_ctrl_rois, tree_ctrl_roi_root, roi_map, search_subfolders=True):
         self.start_path = start_path
         self.tree_ctrl_files = tree_ctrl_files
         self.tree_ctrl_files.DeleteAllItems()
         self.tree_ctrl_rois = tree_ctrl_rois
         self.root_files = None
         self.root_rois = tree_ctrl_roi_root
+        self.database_rois = roi_map
         self.count = {key: 0 for key in ['patient', 'study', 'file']}
         self.patient_nodes = {}
         self.study_nodes = {}
@@ -232,11 +232,10 @@ class DICOM_Importer:
         return studies
 
     def check_mapped_rois(self, physician):
-        roi_map = DatabaseROIs()
-        physician_is_valid = roi_map.is_physician(physician)
+        physician_is_valid = self.database_rois.is_physician(physician)
         for roi in self.roi_name_map.keys():
             node = self.roi_nodes[roi]
-            if physician_is_valid and roi_map.get_physician_roi(physician, roi) not in {'uncategorized'}:
+            if physician_is_valid and self.database_rois.get_physician_roi(physician, roi) not in {'uncategorized'}:
                 self.tree_ctrl_rois.CheckItem(node, True)
             else:
                 self.tree_ctrl_rois.CheckItem(node, False)

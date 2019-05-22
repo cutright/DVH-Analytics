@@ -329,7 +329,8 @@ class ImportDICOM_Dialog(wx.Frame):
         if self.initial_inbox is None or not isdir(self.initial_inbox):
             self.initial_inbox = ''
         self.text_ctrl_directory.SetValue(self.initial_inbox)
-        self.dicom_dir = DICOM_Importer(self.initial_inbox, self.tree_ctrl_import, self.tree_ctrl_roi, self.tree_ctrl_roi_root)
+        self.dicom_dir = DICOM_Importer(self.initial_inbox, self.tree_ctrl_import, self.tree_ctrl_roi,
+                                        self.tree_ctrl_roi_root, self.roi_map)
         self.parse_directory()
 
     def on_cancel(self, evt):
@@ -372,7 +373,7 @@ class ImportDICOM_Dialog(wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:
             self.text_ctrl_directory.SetValue(dlg.GetPath())
             self.dicom_dir = DICOM_Importer(self.text_ctrl_directory.GetValue(), self.tree_ctrl_import,
-                                            self.tree_ctrl_roi, self.tree_ctrl_roi_root,
+                                            self.tree_ctrl_roi, self.tree_ctrl_roi_root, self.roi_map,
                                             search_subfolders=self.checkbox_subfolders.GetValue())
             self.parse_directory()
         dlg.Destroy()
@@ -398,7 +399,8 @@ class ImportDICOM_Dialog(wx.Frame):
                     self.parsed_dicom_data[uid] = DICOM_Parser(plan=file_paths['rtplan']['file_path'],
                                                                structure=file_paths['rtstruct']['file_path'],
                                                                dose=file_paths['rtdose']['file_path'],
-                                                               global_plan_over_rides=self.global_plan_over_rides)
+                                                               global_plan_over_rides=self.global_plan_over_rides,
+                                                               roi_map=self.roi_map)
                 data = self.parsed_dicom_data[uid]
 
                 self.input['mrn'].SetValue(data.mrn)
@@ -651,7 +653,8 @@ class ImportDICOM_Dialog(wx.Frame):
                     self.parsed_dicom_data[uid] = DICOM_Parser(plan=file_paths['rtplan']['file_path'],
                                                                structure=file_paths['rtstruct']['file_path'],
                                                                dose=file_paths['rtdose']['file_path'],
-                                                               global_plan_over_rides=self.global_plan_over_rides)
+                                                               global_plan_over_rides=self.global_plan_over_rides,
+                                                               roi_map=self.roi_map)
 
             self.gauge.SetValue(int(100 * (study_counter+1) / study_total))
             wx.Yield()
