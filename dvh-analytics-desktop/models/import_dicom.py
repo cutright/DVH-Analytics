@@ -772,7 +772,7 @@ class ImportDICOM_Dialog(wx.Frame):
     def update_physician_choices(self):
         old_physicians = self.input['physician'].Items
         new_physicians = self.roi_map.get_physicians()
-        new_physician = [p for p in new_physicians if p not in old_physicians]
+        new_physician = [p for p in new_physicians if p and p not in old_physicians]
         self.input['physician'].Clear()
         self.input['physician'].Append(new_physicians)
         if new_physician:

@@ -222,7 +222,7 @@ class VariationManager(wx.Dialog):
                 self.roi_map.add_variation(self.physician, self.physician_roi, dlg.text_ctrl_variation.GetValue())
                 self.update_variations()
             except ROIVariationError as e:
-                ROIVariationErrorDialog(self.parent, str(e))
+                ROIVariationErrorDialog(self.parent, e)
         dlg.Destroy()
 
     def move_variations(self, evt):
