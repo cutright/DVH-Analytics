@@ -1,4 +1,3 @@
-import wx
 import wx.html2
 from bokeh.plotting import figure
 from bokeh.io.export import get_layout_html
