@@ -6,7 +6,7 @@ from bokeh.layouts import column, row
 from bokeh.palettes import Colorblind8 as palette
 import itertools
 import numpy as np
-from tools.utilities import collapse_into_single_dates, moving_avg
+from tools.utilities import collapse_into_single_dates, moving_avg, is_windows
 from tools.stats import multi_variable_regression, get_control_limits
 
 
@@ -53,7 +53,11 @@ class Plot:
 
     def update_bokeh_layout_in_wx_python(self):
         html_str = get_layout_html(self.bokeh_layout)
-        self.layout.SetPage(html_str, "")
+        web_file = 'C:\\Users\\dcutright\\PycharmProjects\\DVH-Analytics-Desktop\\dvh-analytics-desktop\\test.html'
+        with open(web_file, 'wb') as f:
+            f.write(html_str.encode("utf-8"))
+        # self.layout.SetPage(html_str, "")
+        self.layout.LoadURL(web_file)
 
     @staticmethod
     def clean_data(*data, mrn=None, dates=None):

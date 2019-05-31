@@ -3,6 +3,7 @@
 #
 
 import wx
+from wx.html2 import WebView
 from db import sql_columns
 from db.sql_to_python import QuerySQL
 from db.sql_connector import echo_sql_db
@@ -25,6 +26,7 @@ from tools.roi_name_manager import DatabaseROIs
 from tools.stats import StatsData
 from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux,\
     initialize_directories_and_settings
+from tools.windows_reg_edit import set_reg, get_reg
 
 
 # TODO: Clean-up dialog functionality, have the classes themselves run and handle modal returns
@@ -558,6 +560,7 @@ class MainFrame(wx.Frame):
                           wx.OK | wx.ICON_WARNING)
 
     def on_sql(self, evt):
+        print('oh yeah')
         SQLSettingsDialog()
         [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db()]()
 
@@ -576,5 +579,10 @@ class DVHApp(wx.App):
 
 
 if __name__ == "__main__":
+    if is_windows():
+        # file_name = 'C:\\Users\\dcutright\\AppData\\Local\\Programs\\Python\\Python37-32\\python.exe'
+        set_reg(__file__, 11001)
+        print(get_reg(__file__))
+
     app = DVHApp(0)
     app.MainLoop()
