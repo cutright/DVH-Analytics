@@ -15,11 +15,13 @@ SCRIPT_DIR = os.path.dirname(__file__)
 
 
 class DICOM_Importer:
-    def __init__(self, start_path, tree_ctrl_files, tree_ctrl_rois, tree_ctrl_roi_root, roi_map, search_subfolders=True):
+    def __init__(self, start_path, tree_ctrl_files, tree_ctrl_rois, tree_ctrl_roi_root, tree_ctrl_rois_images,
+                 roi_map, search_subfolders=True):
         self.start_path = start_path
         self.tree_ctrl_files = tree_ctrl_files
         self.tree_ctrl_files.DeleteAllItems()
         self.tree_ctrl_rois = tree_ctrl_rois
+        self.tree_ctrl_rois_images = tree_ctrl_rois_images
         self.root_files = None
         self.root_rois = tree_ctrl_roi_root
         self.database_rois = roi_map
@@ -219,7 +221,7 @@ class DICOM_Importer:
             rois = list(self.roi_name_map)
             rois.sort()
             for roi in rois:
-                self.roi_nodes[roi] = self.tree_ctrl_rois.AppendItem(self.root_rois, roi, ct_type=1)
+                self.roi_nodes[roi] = self.tree_ctrl_rois.AppendItem(self.root_rois, roi, ct_type=0)
         else:
             self.tree_ctrl_rois.SetItemBackgroundColour(self.root_rois, wx.Colour(255, 0, 0))
 
@@ -236,9 +238,16 @@ class DICOM_Importer:
         for roi in self.roi_name_map.keys():
             node = self.roi_nodes[roi]
             if physician_is_valid and self.database_rois.get_physician_roi(physician, roi) not in {'uncategorized'}:
-                self.tree_ctrl_rois.CheckItem(node, True)
+                # self.tree_ctrl_rois.CheckItem(node, True)
+                self.tree_ctrl_rois.SetItemImage(node, self.tree_ctrl_rois_images['yes'], wx.TreeItemIcon_Normal)
             else:
-                self.tree_ctrl_rois.CheckItem(node, False)
+                # self.tree_ctrl_rois.CheckItem(node, False)
+                self.tree_ctrl_rois.SetItemImage(node, self.tree_ctrl_rois_images['no'], wx.TreeItemIcon_Normal)
+
+    def get_used_physician_rois(self, physician):
+        if self.database_rois.is_physician(physician):
+            return list(set([self.database_rois.get_physician_roi(physician, roi) for roi in self.roi_name_map.keys()]))
+        return []
 
 
 def rank_ptvs_by_D95(dvhs):

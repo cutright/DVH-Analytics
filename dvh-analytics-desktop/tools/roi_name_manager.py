@@ -225,6 +225,7 @@ class DatabaseROIs:
         if self.is_physician(physician):
             physician_rois = list(self.physicians[physician].physician_rois)
             if physician_rois:
+                physician_rois = list(set(physician_rois) - {'uncategorized'})
                 physician_rois.sort()
                 return physician_rois
 

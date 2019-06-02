@@ -53,11 +53,11 @@ class Plot:
 
     def update_bokeh_layout_in_wx_python(self):
         html_str = get_layout_html(self.bokeh_layout)
-        web_file = 'C:\\Users\\dcutright\\PycharmProjects\\DVH-Analytics-Desktop\\dvh-analytics-desktop\\test.html'
-        with open(web_file, 'wb') as f:
-            f.write(html_str.encode("utf-8"))
-        # self.layout.SetPage(html_str, "")
-        self.layout.LoadURL(web_file)
+        # web_file = 'C:\\Users\\dcutright\\PycharmProjects\\DVH-Analytics-Desktop\\dvh-analytics-desktop\\test.html'
+        # with open(web_file, 'wb') as f:
+        #     f.write(html_str.encode("utf-8"))
+        self.layout.SetPage(html_str, "")
+        # self.layout.LoadURL(web_file)
 
     @staticmethod
     def clean_data(*data, mrn=None, dates=None):

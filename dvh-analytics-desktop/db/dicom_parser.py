@@ -479,6 +479,8 @@ class DICOM_Parser:
             ans = self.plan_over_rides['physician']
         else:
             ans = str(self.get_attribute('plan', ['PhysiciansOfRecord', 'ReferringPhysicianName'])).upper()
+            if not ans:
+                ans = 'DEFAULT'
         return self.process_global_over_ride('physician', ans)
 
     @property
