@@ -56,6 +56,12 @@ class DatabaseROIs:
             initialize_roi_preference_file('institutional.roi')
             initialize_roi_preference_file('physician_BBM.roi')
 
+        self.branched_institutional_rois = {}
+        self.import_from_file()
+
+    def import_from_file(self):
+        self.physicians = {}
+        self.institutional_rois = []
         # Import institutional roi names
         abs_file_path = os.path.join(PREF_DIR, 'institutional.roi')
         if os.path.isfile(abs_file_path):
@@ -331,6 +337,10 @@ class DatabaseROIs:
             variations = []
         return variations
 
+    def is_variation_used(self, physician, variation):
+        variation = clean_name(variation)
+        return variation in self.get_all_variations_of_physician(physician)
+
     def add_variation(self, physician, physician_roi, variation):
         physician = clean_name(physician).upper()
         physician_roi = clean_name(physician_roi)
@@ -433,13 +443,12 @@ class DatabaseROIs:
     def write_to_file(self):
         file_name = 'institutional.roi'
         abs_file_path = os.path.join(PREF_DIR, file_name)
-        document = open(abs_file_path, 'w')
-        lines = self.institutional_rois
-        lines.sort()
-        lines = '\n'.join(lines)
-        for line in lines:
-            document.write(line)
-        document.close()
+        with open(abs_file_path, 'w') as document:
+            lines = self.institutional_rois
+            lines.sort()
+            lines = '\n'.join(lines)
+            for line in lines:
+                document.write(line)
 
         physicians = self.get_physicians()
         physicians.pop(physicians.index('DEFAULT'))  # remove 'DEFAULT' physician

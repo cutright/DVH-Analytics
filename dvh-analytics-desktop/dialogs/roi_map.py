@@ -71,7 +71,8 @@ class AddPhysician(wx.Dialog):
         self.Destroy()
 
 
-class VariationManager(wx.Dialog):
+# TODO: Disable ability to use Variation Manager on 'DEFAULT' physician
+class RoiManager(wx.Dialog):
     def __init__(self, parent, roi_map, physician, physician_roi):
         wx.Dialog.__init__(self, parent)
         self.parent = parent
@@ -90,6 +91,12 @@ class VariationManager(wx.Dialog):
         self.button_move = wx.Button(self, wx.ID_ANY, "Move")
         self.button_dismiss = wx.Button(self, wx.ID_CANCEL, "Dismiss")
 
+        self.button_move.Disable()
+        self.button_delete.Disable()
+        self.button_deselect_all.Disable()
+
+        self.button_add_physician_roi = wx.Button(self, wx.ID_ANY, "Add")
+
         self.columns = ['Variations']
         self.data_table = DataTable(self.list_ctrl_variations, columns=self.columns, widths=[400])
 
@@ -100,7 +107,7 @@ class VariationManager(wx.Dialog):
         self.run()
 
     def __set_properties(self):
-        self.SetTitle("Variation Manager")
+        self.SetTitle("ROI Manager")
         self.combo_box_physician.SetValue(self.initial_physician)
         self.update_physician_rois()
         self.combo_box_physician_roi.SetValue(self.initial_physician_roi)
@@ -109,42 +116,54 @@ class VariationManager(wx.Dialog):
     def __do_bind(self):
         self.Bind(wx.EVT_COMBOBOX, self.physician_ticker, id=self.combo_box_physician.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.physician_roi_ticker, id=self.combo_box_physician_roi.GetId())
+        self.Bind(wx.EVT_BUTTON, self.add_physician_roi, id=self.button_add_physician_roi.GetId())
         self.Bind(wx.EVT_BUTTON, self.select_all, id=self.button_select_all.GetId())
         self.Bind(wx.EVT_BUTTON, self.deselect_all, id=self.button_deselect_all.GetId())
         self.Bind(wx.EVT_BUTTON, self.add_variation, id=self.button_add.GetId())
         self.Bind(wx.EVT_BUTTON, self.move_variations, id=self.button_move.GetId())
         self.Bind(wx.EVT_BUTTON, self.delete_variations, id=self.button_delete.GetId())
+        self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.update_button_enable, id=self.list_ctrl_variations.GetId())
+        self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.update_button_enable, id=self.list_ctrl_variations.GetId())
 
     def __do_layout(self):
         # begin wxGlade: MyFrame.__do_layout
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_variation_buttons = wx.BoxSizer(wx.VERTICAL)
+        sizer_variation_table = wx.BoxSizer(wx.VERTICAL)
         sizer_select = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
-        sizer_select_buttons = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_variations = wx.BoxSizer(wx.VERTICAL)
+        # sizer_select_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_variations = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician_roi = wx.BoxSizer(wx.VERTICAL)
+        sizer_physician_roi_row_2 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician = wx.BoxSizer(wx.VERTICAL)
         label_physician = wx.StaticText(self, wx.ID_ANY, "Physician:")
-        sizer_physician.Add(label_physician, 0, 0, 0)
-        sizer_physician.Add(self.combo_box_physician, 0, wx.EXPAND, 0)
+        sizer_physician.Add(label_physician, 0, wx.LEFT, 5)
+        sizer_physician.Add(self.combo_box_physician, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_select.Add(sizer_physician, 0, wx.ALL | wx.EXPAND, 5)
         label_physician_roi = wx.StaticText(self, wx.ID_ANY, "Physician ROI:")
-        sizer_physician_roi.Add(label_physician_roi, 0, 0, 0)
-        sizer_physician_roi.Add(self.combo_box_physician_roi, 0, wx.EXPAND, 0)
+        sizer_physician_roi.Add(label_physician_roi, 0, wx.LEFT, 5)
+        sizer_physician_roi_row_2.Add(self.combo_box_physician_roi, 1, wx.EXPAND, 0)
+        sizer_physician_roi_row_2.Add(self.button_add_physician_roi, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+        sizer_physician_roi.Add(sizer_physician_roi_row_2, 0, wx.EXPAND | wx.LEFT, 5)
         sizer_select.Add(sizer_physician_roi, 0, wx.ALL | wx.EXPAND, 5)
         label_variations = wx.StaticText(self, wx.ID_ANY, "Variations:")
-        sizer_variations.Add(label_variations, 0, 0, 0)
-        sizer_variations.Add(self.list_ctrl_variations, 1, wx.ALL | wx.EXPAND, 0)
+        label_variations_buttons = wx.StaticText(self, wx.ID_ANY, " ")
+        sizer_variation_table.Add(label_variations, 0, 0, 0)
+        sizer_variation_table.Add(self.list_ctrl_variations, 1, wx.ALL | wx.EXPAND, 0)
+        sizer_variations.Add(sizer_variation_table, 0, wx.ALL, 5)
+        sizer_variation_buttons.Add(label_variations_buttons, 0, 0, 0)
+        sizer_variation_buttons.Add(self.button_add, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
+        sizer_variation_buttons.Add(self.button_delete, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_variation_buttons.Add(self.button_move, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_variation_buttons.Add(self.button_select_all, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_variation_buttons.Add(self.button_deselect_all, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_variations.Add(sizer_variation_buttons, 0, wx.EXPAND | wx.ALL, 5)
         sizer_select.Add(sizer_variations, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_select_buttons.Add(self.button_select_all, 0, wx.ALL, 5)
-        sizer_select_buttons.Add(self.button_deselect_all, 0, wx.ALL, 5)
-        sizer_select.Add(sizer_select_buttons, 0, wx.ALIGN_CENTER | wx.ALL, 0)
+        # sizer_select.Add(sizer_select_buttons, 0, wx.ALIGN_CENTER | wx.ALL, 0)
         sizer_wrapper.Add(sizer_select, 0, wx.ALL, 5)
-        sizer_buttons.Add(self.button_add, 0, wx.ALL, 5)
-        sizer_buttons.Add(self.button_delete, 0, wx.ALL, 5)
-        sizer_buttons.Add(self.button_move, 0, wx.ALL, 5)
-        sizer_buttons.Add(self.button_dismiss, 0, wx.ALL, 5)
-        sizer_wrapper.Add(sizer_buttons, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+        sizer_buttons.Add(self.button_dismiss, 0, wx.ALIGN_CENTER | wx.ALL, 5)
+        sizer_wrapper.Add(sizer_buttons, 0, wx.ALIGN_CENTER | wx.ALL, 0)
         self.SetSizer(sizer_wrapper)
         self.Layout()
         self.Fit()
@@ -163,6 +182,7 @@ class VariationManager(wx.Dialog):
 
     def update_variations(self):
         self.data_table.set_data(self.variation_table_data, self.columns)
+        self.update_button_enable(None)
 
     def physician_ticker(self, evt):
         self.update_physician_rois()
@@ -181,8 +201,11 @@ class VariationManager(wx.Dialog):
 
     @property
     def variations(self):
-        return self.roi_map.get_variations(self.combo_box_physician.GetValue(),
-                                           self.combo_box_physician_roi.GetValue())
+        variations = self.roi_map.get_variations(self.combo_box_physician.GetValue(),
+                                                 self.combo_box_physician_roi.GetValue())
+        variations = list(set(variations) - {self.combo_box_physician_roi.GetValue()})  # remove physician roi
+        variations.sort()
+        return variations
 
     @property
     def variation_table_data(self):
@@ -215,7 +238,7 @@ class VariationManager(wx.Dialog):
         self.update_variations()
 
     def add_variation(self, evt):
-        dlg = AddVariationDialog(self.parent, self.physician, self.physician_roi)
+        dlg = AddVariationDialog(self.parent, self.physician, self.physician_roi, self.roi_map)
         res = dlg.ShowModal()
         if res == wx.ID_OK:
             try:
@@ -226,29 +249,46 @@ class VariationManager(wx.Dialog):
         dlg.Destroy()
 
     def move_variations(self, evt):
-        # variations = self.variations
-        # self.roi_map.delete_variations(self.physician, self.physician_roi, self.selected_values)
-        # for variation in self.variations:
-        #     pass
         choices = [roi for roi in self.roi_map.get_physician_rois(self.physician) if roi != self.physician_roi]
-        MoveVariationDialog(self, choices)
+        MoveVariationDialog(self, self.selected_values, self.physician, self.physician_roi, choices, self.roi_map)
+        self.update_variations()
+
+    def update_button_enable(self, evt):
+        if self.selected_indices:
+            self.button_move.Enable()
+            self.button_delete.Enable()
+            self.button_deselect_all.Enable()
+        else:
+            self.button_move.Disable()
+            self.button_delete.Disable()
+            self.button_deselect_all.Disable()
+
+    def add_physician_roi(self, evt):
+        AddPhysicianROI(self.parent, self.physician, self.roi_map)
+        self.update_physician_rois()
 
 
 class AddVariationDialog(wx.Dialog):
-    def __init__(self, parent, physician, physician_roi):
+    def __init__(self, parent, physician, physician_roi, roi_map):
         wx.Dialog.__init__(self, parent)
         self.physician = physician
         self.physician_roi = physician_roi
+        self.roi_map = roi_map
         self.text_ctrl_variation = wx.TextCtrl(self, wx.ID_ANY, "")
-        self.button_ok = wx.Button(self, wx.ID_OK, "OK")
+        self.button_ok = wx.Button(self, wx.ID_OK, "Add")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
+        self.__do_bind()
         self.__set_properties()
         self.__do_layout()
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_TEXT, self.enable_add_button, id=self.text_ctrl_variation.GetId())
 
     def __set_properties(self):
         self.SetTitle("Add Variation to %s for %s" % (self.physician_roi, self.physician))
         self.text_ctrl_variation.SetMinSize((300, 22))
+        self.button_ok.SetToolTip("If Add is disabled, requested variation is already in use by %s." % self.physician)
 
     def __do_layout(self):
         sizer_frame = wx.BoxSizer(wx.VERTICAL)
@@ -266,11 +306,21 @@ class AddVariationDialog(wx.Dialog):
         self.Layout()
         self.Center()
 
+    def enable_add_button(self, evt):
+        if self.roi_map.is_variation_used(self.physician, self.text_ctrl_variation.GetValue()):
+            self.button_ok.Disable()
+        else:
+            self.button_ok.Enable()
+
 
 class MoveVariationDialog(wx.Dialog):
-    def __init__(self, parent, choices):
+    def __init__(self, parent, variations, physician, old_physician_roi, choices, roi_map):
         wx.Dialog.__init__(self, parent)
+        self.variations = variations
+        self.physician = physician
+        self.old_physician_roi = old_physician_roi
         self.choices = choices
+        self.roi_map = roi_map
         self.combo_box = wx.ComboBox(self, wx.ID_ANY, choices=choices, style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.button_ok = wx.Button(self, wx.ID_OK, "OK")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
@@ -307,26 +357,33 @@ class MoveVariationDialog(wx.Dialog):
         self.Destroy()
 
     def action(self):
-        pass
+        for variation in self.variations:
+            self.roi_map.delete_variation(self.physician, self.old_physician_roi, variation)
+            self.roi_map.add_variation(self.physician, self.combo_box.GetValue(), variation)
 
 
 class AddPhysicianROI(wx.Dialog):
-    def __init__(self, parent, physician, institutional_rois):
+    def __init__(self, parent, physician, roi_map):
         wx.Dialog.__init__(self, parent)
         self.SetSize((500, 135))
 
         self.physician = physician
-        self.institutional_rois = institutional_rois
+        self.roi_map = roi_map
+        self.institutional_rois = self.roi_map.get_institutional_rois()
         self.text_ctrl_physician_roi = wx.TextCtrl(self, wx.ID_ANY, "")
-        self.combo_box_institutional_roi = wx.ComboBox(self, wx.ID_ANY, choices=institutional_rois,
+        self.combo_box_institutional_roi = wx.ComboBox(self, wx.ID_ANY, choices=self.institutional_rois,
                                                        style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.button_ok = wx.Button(self, wx.ID_OK, "OK")
+        self.button_ok = wx.Button(self, wx.ID_OK, "Add")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
+        self.__do_bind()
         self.__set_properties()
         self.__do_layout()
 
         self.run()
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_TEXT, self.update_enable, id=self.text_ctrl_physician_roi.GetId())
 
     def __set_properties(self):
         self.SetTitle("Add Physician ROI for %s" % self.physician)
@@ -336,6 +393,9 @@ class AddPhysicianROI(wx.Dialog):
                                                     "already be assigned.")
         if 'uncategorized' in self.institutional_rois:
             self.combo_box_institutional_roi.SetValue('uncategorized')
+
+        self.button_ok.SetToolTip("If Add is disabled, new entry is already used in institutional ROIs, "
+                                  "physician ROIs, or ROI variations for %s." % self.physician)
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -369,7 +429,19 @@ class AddPhysicianROI(wx.Dialog):
         self.Destroy()
 
     def action(self):
-        pass
+        self.roi_map.add_physician_roi(self.physician,
+                                       self.combo_box_institutional_roi.GetValue(),
+                                       self.text_ctrl_physician_roi.GetValue())
+
+    def update_enable(self, evt):
+        invalid_choices = set(self.roi_map.get_institutional_rois() +
+                              self.roi_map.get_physician_rois(self.physician) +
+                              self.roi_map.get_all_variations_of_physician(self.physician))
+
+        if self.text_ctrl_physician_roi.GetValue() in invalid_choices:
+            self.button_ok.Disable()
+        else:
+            self.button_ok.Enable()
 
 
 class AddROIType(wx.Dialog):
@@ -377,7 +449,7 @@ class AddROIType(wx.Dialog):
         wx.Dialog.__init__(self, parent)
         self.SetSize((250, 135))
         self.text_ctrl_roi_type = wx.TextCtrl(self, wx.ID_ANY, "")
-        self.button_ok = wx.Button(self, wx.ID_OK, "OK")
+        self.button_ok = wx.Button(self, wx.ID_OK, "Add")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
         self.__set_properties()

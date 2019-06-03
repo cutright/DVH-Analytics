@@ -233,9 +233,13 @@ class DICOM_Importer:
                 studies[uid] = {file_type: file_path for file_type, file_path in self.rt_file_nodes[uid].items()}
         return studies
 
-    def check_mapped_rois(self, physician):
+    def check_mapped_rois(self, physician, specific_roi=None):
         physician_is_valid = self.database_rois.is_physician(physician)
-        for roi in self.roi_name_map.keys():
+        if specific_roi is None:
+            rois = self.roi_name_map.keys()
+        else:
+            rois = [specific_roi]
+        for roi in rois:
             node = self.roi_nodes[roi]
             if physician_is_valid and self.database_rois.get_physician_roi(physician, roi) not in {'uncategorized'}:
                 # self.tree_ctrl_rois.CheckItem(node, True)
