@@ -46,8 +46,8 @@ class RegressionFrame:
         self.x_variable_nodes = {}
 
         self.image_list = wx.ImageList(16, 16)
-        self.images = {'y': self.image_list.Add(wx.Image("icons/iconfinder_letter_Y_blue_1553059.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
-                       'x': self.image_list.Add( wx.Image("icons/iconfinder_letter_X_red_1553096.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())}
+        self.images = {'y': self.image_list.Add(wx.Image("icons/icon_custom_Y.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
+                       'x': self.image_list.Add(wx.Image("icons/icon_custom_X.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())}
         self.tree_ctrl.AssignImageList(self.image_list)
 
     def __do_bind(self):
