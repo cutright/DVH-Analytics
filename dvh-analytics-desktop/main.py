@@ -3,7 +3,7 @@
 #
 
 import wx
-# from wx.html2 import WebView
+from wx.html2 import WebView
 from db import sql_columns
 from db.sql_to_python import QuerySQL
 from db.sql_connector import echo_sql_db
@@ -611,11 +611,5 @@ class DVHApp(wx.App):
 
 
 if __name__ == "__main__":
-    if is_windows():
-        from tools.windows_reg_edit import set_reg, get_reg
-        # file_name = 'C:\\Users\\dcutright\\AppData\\Local\\Programs\\Python\\Python37-32\\python.exe'
-        set_reg(__file__, 11001)
-        print(get_reg(__file__))
-
     app = DVHApp(0)
     app.MainLoop()
