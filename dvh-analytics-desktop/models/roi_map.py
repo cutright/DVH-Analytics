@@ -1,23 +1,23 @@
 import wx
 import wx.html2
-from tools.roi_name_manager import DatabaseROIs
-from dialogs.roi_map import PhysicianAdd
+from dialogs.roi_map import AddPhysician
 
 
 class ROIMapDialog(wx.Dialog):
-    def __init__(self, *args, **kwds):
+    def __init__(self, roi_map, *args, **kwds):
         wx.Dialog.__init__(self, None, title='ROI Map')
+
+        self.roi_map = roi_map
 
         self.SetSize((1000, 600))
         self.window = wx.SplitterWindow(self, wx.ID_ANY)
         self.window_tree = wx.Panel(self.window, wx.ID_ANY, style=wx.BORDER_SUNKEN)
-        self.db_roi_trees = DatabaseROIs()
-        self.roi_tree = RoiTree(self.window_tree, self.db_roi_trees)
+        self.roi_tree = RoiTree(self.window_tree, self.roi_map)
         self.roi_tree.rebuild_tree()
         self.tree_ctrl = self.roi_tree.tree_ctrl
         self.window_editor = wx.Panel(self.window, wx.ID_ANY, style=wx.BORDER_SUNKEN)
         self.combo_box_physician = wx.ComboBox(self.window_editor, wx.ID_ANY,
-                                               choices=self.db_roi_trees.get_physicians(), style=wx.CB_DROPDOWN)
+                                               choices=self.roi_map.get_physicians(), style=wx.CB_DROPDOWN)
         self.button_add_physician = wx.Button(self.window_editor, wx.ID_ANY, "Add")
         self.button_rename_physician = wx.Button(self.window_editor, wx.ID_ANY, "Rename")
         self.button_delete_physician = wx.Button(self.window_editor, wx.ID_ANY, "Delete")
@@ -160,8 +160,18 @@ class ROIMapDialog(wx.Dialog):
         self.Destroy()
 
     def add_physician(self, evt):
-        dlg = PhysicianAdd()
-        dlg.ShowModal()
+        AddPhysician(self.roi_map)
+        self.update_physician_choices()
+
+    def update_physician_choices(self):
+        old_physicians = self.combo_box_physician.Items
+        new_physicians = self.roi_map.get_physicians()
+        new_physician = [p for p in new_physicians if p not in old_physicians]
+        self.combo_box_physician.Clear()
+        self.combo_box_physician.Append(new_physicians)
+        if new_physician:
+            self.combo_box_physician.SetValue(new_physician[0])
+        self.roi_tree.rebuild_tree()
 
 
 class RoiTree:

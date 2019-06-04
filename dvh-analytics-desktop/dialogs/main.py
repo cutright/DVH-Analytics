@@ -1,11 +1,10 @@
 import wx
 import wx.adv
 from dateutil.parser import parse as parse_date
-from tools.utilities import get_selected_listctrl_items
+from tools.utilities import get_selected_listctrl_items, MessageDialog
 from db import sql_columns
 from db.sql_connector import DVH_SQL
 import matplotlib.colors as plot_colors
-from options import Options
 from os.path import isdir
 from paths import IMPORT_SETTINGS_PATH, parse_settings_file
 
@@ -326,17 +325,15 @@ class QueryCategoryDialog(wx.Dialog):
         self.SetSizer(sizer_wrapper)
 
     def update_category_2(self, evt):
-        cnx = DVH_SQL()
         key = self.combo_box_1.GetValue()
         table = self.selector_categories[key]['table']
         col = self.selector_categories[key]['var_name']
-        options = cnx.get_unique_values(table, col)
-        self.combo_box_2.Clear()
+        with DVH_SQL() as cnx:
+            options = cnx.get_unique_values(table, col)
         self.combo_box_2.Clear()
         self.combo_box_2.Append(options)
         if options:
             self.combo_box_2.SetValue(options[0])
-        cnx.close()
 
     def set_category_1(self, value):
         self.combo_box_1.SetValue(value)
@@ -421,14 +418,13 @@ class QueryNumericalDialog(wx.Dialog):
         self.Center()
 
     def update_range(self, evt):
-        cnx = DVH_SQL()
         key = self.combo_box_1.GetValue()
         table = self.numerical_categories[key]['table']
         col = self.numerical_categories[key]['var_name']
         units = self.numerical_categories[key]['units']
-        min_value = cnx.get_min_value(table, col)
-        max_value = cnx.get_max_value(table, col)
-        cnx.close()
+        with DVH_SQL() as cnx:
+            min_value = cnx.get_min_value(table, col)
+            max_value = cnx.get_max_value(table, col)
 
         if units:
             self.text_ctrl_min.SetLabelText('Min (%s):' % units)
@@ -470,24 +466,22 @@ class QueryNumericalDialog(wx.Dialog):
         try:
             new_value = float(old_value)
         except ValueError:
-            cnx = DVH_SQL()
             key = self.combo_box_1.GetValue()
             table = self.numerical_categories[key]['table']
             col = self.numerical_categories[key]['var_name']
-            if input_type == 'min':
-                new_value = cnx.get_min_value(table, col)
-            else:
-                new_value = cnx.get_max_value(table, col)
-            cnx.close()
+            with DVH_SQL() as cnx:
+                if input_type == 'min':
+                    new_value = cnx.get_min_value(table, col)
+                else:
+                    new_value = cnx.get_max_value(table, col)
         return new_value
 
 
-# TODO: Offer a restore defaults method
 class UserSettings(wx.Dialog):
-    def __init__(self, *args, **kw):
+    def __init__(self, options):
         wx.Dialog.__init__(self, None, title="User Settings")
 
-        self.options = Options()
+        self.options = options
 
         colors = list(plot_colors.cnames)
         colors.sort()
@@ -522,6 +516,7 @@ class UserSettings(wx.Dialog):
         self.combo_box_alpha_category = wx.ComboBox(self, wx.ID_ANY, choices=alpha_variables,
                                                     style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.spin_ctrl_alpha_input = wx.SpinCtrlDouble(self, wx.ID_ANY, "0", min=0.1, max=1.0, style=wx.SP_ARROW_KEYS)
+        self.button_restore_defaults = wx.Button(self, wx.ID_ANY, "Restore Defaults")
         self.button_ok = wx.Button(self, wx.ID_OK, "OK")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
@@ -638,6 +633,7 @@ class UserSettings(wx.Dialog):
         sizer_alpha.Add(sizer_alpha_input, 1, wx.EXPAND, 0)
         sizer_plot_options.Add(sizer_alpha, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_plot_options, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10)
+        sizer_ok_cancel.Add(self.button_restore_defaults, 0, wx.RIGHT, 20)
         sizer_ok_cancel.Add(self.button_ok, 0, wx.LEFT | wx.RIGHT, 5)
         sizer_ok_cancel.Add(self.button_cancel, 0, wx.LEFT | wx.RIGHT, 5)
         sizer_wrapper.Add(sizer_ok_cancel, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
@@ -659,6 +655,8 @@ class UserSettings(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self.update_line_width_val, id=self.spin_ctrl_line_widths_input.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.update_line_style_val, id=self.combo_box_line_styles_selection.GetId())
         self.Bind(wx.EVT_TEXT, self.update_alpha_val, id=self.spin_ctrl_alpha_input.GetId())
+
+        self.Bind(wx.EVT_BUTTON, self.restore_defaults, id=self.button_restore_defaults.GetId())
 
     def run(self):
         res = self.ShowModal()
@@ -788,3 +786,8 @@ class UserSettings(wx.Dialog):
         paths = parse_settings_file(IMPORT_SETTINGS_PATH)
         self.text_ctrl_inbox.SetValue(paths['inbox'])
         self.text_ctrl_imported.SetValue(paths['imported'])
+
+    def restore_defaults(self, evt):
+        MessageDialog(self, "Restore default preferences?", action_yes_func=self.options.restore_defaults)
+        self.update_size_val(None)
+        self.load_options()

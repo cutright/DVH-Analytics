@@ -8,7 +8,6 @@ from pydicom.errors import InvalidDicomError
 from db.sql_connector import DVH_SQL
 import wx
 from tools.utilities import get_file_paths
-from tools.roi_name_manager import DatabaseROIs
 
 
 FILE_TYPES = {'rtplan', 'rtstruct', 'rtdose'}
@@ -16,13 +15,16 @@ SCRIPT_DIR = os.path.dirname(__file__)
 
 
 class DICOM_Importer:
-    def __init__(self, start_path, tree_ctrl_files, tree_ctrl_rois, tree_ctrl_roi_root, search_subfolders=True):
+    def __init__(self, start_path, tree_ctrl_files, tree_ctrl_rois, tree_ctrl_roi_root, tree_ctrl_rois_images,
+                 roi_map, search_subfolders=True):
         self.start_path = start_path
         self.tree_ctrl_files = tree_ctrl_files
         self.tree_ctrl_files.DeleteAllItems()
         self.tree_ctrl_rois = tree_ctrl_rois
+        self.tree_ctrl_rois_images = tree_ctrl_rois_images
         self.root_files = None
         self.root_rois = tree_ctrl_roi_root
+        self.database_rois = roi_map
         self.count = {key: 0 for key in ['patient', 'study', 'file']}
         self.patient_nodes = {}
         self.study_nodes = {}
@@ -219,7 +221,7 @@ class DICOM_Importer:
             rois = list(self.roi_name_map)
             rois.sort()
             for roi in rois:
-                self.roi_nodes[roi] = self.tree_ctrl_rois.AppendItem(self.root_rois, roi, ct_type=1)
+                self.roi_nodes[roi] = self.tree_ctrl_rois.AppendItem(self.root_rois, roi, ct_type=0)
         else:
             self.tree_ctrl_rois.SetItemBackgroundColour(self.root_rois, wx.Colour(255, 0, 0))
 
@@ -231,15 +233,25 @@ class DICOM_Importer:
                 studies[uid] = {file_type: file_path for file_type, file_path in self.rt_file_nodes[uid].items()}
         return studies
 
-    def check_mapped_rois(self, physician):
-        roi_map = DatabaseROIs()
-        physician_is_valid = roi_map.is_physician(physician)
-        for roi in self.roi_name_map.keys():
+    def check_mapped_rois(self, physician, specific_roi=None):
+        physician_is_valid = self.database_rois.is_physician(physician)
+        if specific_roi is None:
+            rois = self.roi_name_map.keys()
+        else:
+            rois = [specific_roi]
+        for roi in rois:
             node = self.roi_nodes[roi]
-            if physician_is_valid and roi_map.get_physician_roi(physician, roi) not in {'uncategorized'}:
-                self.tree_ctrl_rois.CheckItem(node, True)
+            if physician_is_valid and self.database_rois.get_physician_roi(physician, roi) not in {'uncategorized'}:
+                # self.tree_ctrl_rois.CheckItem(node, True)
+                self.tree_ctrl_rois.SetItemImage(node, self.tree_ctrl_rois_images['yes'], wx.TreeItemIcon_Normal)
             else:
-                self.tree_ctrl_rois.CheckItem(node, False)
+                # self.tree_ctrl_rois.CheckItem(node, False)
+                self.tree_ctrl_rois.SetItemImage(node, self.tree_ctrl_rois_images['no'], wx.TreeItemIcon_Normal)
+
+    def get_used_physician_rois(self, physician):
+        if self.database_rois.is_physician(physician):
+            return list(set([self.database_rois.get_physician_roi(physician, roi) for roi in self.roi_name_map.keys()]))
+        return []
 
 
 def rank_ptvs_by_D95(dvhs):

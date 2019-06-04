@@ -10,8 +10,9 @@ from pubsub import pub
 
 
 class RegressionFrame:
-    def __init__(self, parent, data, *args, **kwds):
+    def __init__(self, parent, data, options, *args, **kwds):
         self.parent = parent
+        self.options = options
         # self.dvh = dvh
         self.stats_data = data
         self.choices = []
@@ -31,7 +32,7 @@ class RegressionFrame:
         self.combo_box_y_axis = wx.ComboBox(self.pane_plot, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.TE_READONLY)
         self.spin_button_y_axis = wx.SpinButton(self.pane_plot, wx.ID_ANY, style=wx.SP_WRAP)
         self.checkbox = wx.CheckBox(self.pane_plot, wx.ID_ANY, "Include in Multi-Var\nRegression")
-        self.plot = PlotRegression(self.pane_plot)
+        self.plot = PlotRegression(self.pane_plot, self.options)
         self.button_multi_var_reg_model = wx.Button(self.pane_tree, wx.ID_ANY, 'Run Model')
 
     def __set_properties(self):
@@ -197,7 +198,7 @@ class RegressionFrame:
 
         x_variables = list(self.x_variable_nodes[y_variable])
 
-        dlg = MultiVarResultsFrame(y_variable, x_variables, self.stats_data)
+        dlg = MultiVarResultsFrame(y_variable, x_variables, self.stats_data, self.options)
         dlg.Show()
 
     @staticmethod
@@ -234,10 +235,11 @@ class RegressionFrame:
 
 
 class MultiVarResultsFrame(wx.Frame):
-    def __init__(self, y_variable, x_variables, stats_data, *args, **kw):
+    def __init__(self, y_variable, x_variables, stats_data, options, *args, **kw):
         wx.Frame.__init__(self, None, title="Multi-Variable Model for %s" % y_variable)
+        self.options = options
 
-        self.plot = PlotMultiVarRegression(self)
+        self.plot = PlotMultiVarRegression(self, options)
         self.plot.update_plot(y_variable, x_variables, stats_data)
 
         algorithms = ['Random Forest', 'Support Vector Machines', 'Decision Trees', 'Gradient Boosted']
@@ -277,5 +279,5 @@ class MultiVarResultsFrame(wx.Frame):
         RandomForestWorker(self.plot.X, self.plot.y)
 
     def show_plot(self, msg):
-        frame = RandomForestFrame(self.plot.y, msg['y_predict'], msg['mse'])
+        frame = RandomForestFrame(self.plot.y, msg['y_predict'], msg['mse'], self.options)
         frame.Show()

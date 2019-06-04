@@ -6,13 +6,13 @@ from models.plot import PlotRandomForest
 
 
 class RandomForestFrame(wx.Frame):
-    def __init__(self, y, y_predict, mse, *args, **kwds):
+    def __init__(self, y, y_predict, mse, options, *args, **kwds):
         wx.Frame.__init__(self, None, *args, **kwds)
 
         self.y, self.y_predict = y, y_predict
         self.mse = mse
 
-        self.plot = PlotRandomForest(self, y, y_predict, mse)
+        self.plot = PlotRandomForest(self, options, y, y_predict, mse)
 
         self.SetSize((882, 749))
         self.spin_ctrl_trees = wx.SpinCtrl(self, wx.ID_ANY, "100", min=1, max=1000)

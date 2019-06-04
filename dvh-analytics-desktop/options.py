@@ -4,6 +4,7 @@
 import pickle
 from paths import OPTIONS_PATH, OPTIONS_CHECKSUM_PATH
 from os.path import isfile
+from os import unlink
 import hashlib
 
 
@@ -178,3 +179,14 @@ class Options(DefaultOptions):
             pass
         print('Corrupted options file detected. Loading default options.')
         return False
+
+    def restore_defaults(self):
+        if isfile(OPTIONS_PATH):
+            unlink(OPTIONS_PATH)
+        if isfile(OPTIONS_CHECKSUM_PATH):
+            unlink(OPTIONS_CHECKSUM_PATH)
+        default_options = DefaultOptions()
+
+        for attr in default_options.__dict__:
+            if not attr.startswith('_'):
+                setattr(self, attr, getattr(default_options, attr))

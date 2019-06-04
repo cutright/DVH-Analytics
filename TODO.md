@@ -1,20 +1,21 @@
 # TODO
 
 1. **ROI Map**
-    - [ ] User needs a way to create a ROI map, current GUI is largely non-functional
+    - [X] User needs a way to create a ROI map, current GUI is largely non-functional
     - [ ] Needs better visual than current tree, visual from the pure Bokeh app was useful, maybe a wx.CustomListCtrl 
     could work?
-    - [ ] Most ROI Map interaction should be able to occur at time of import, ROI Map in tool bar to be used for 
+    - [X] Most ROI Map interaction should be able to occur at time of import, ROI Map in tool bar to be used for 
     clean up later
-        - [ ] Add ability to add physician map at import dialog, add variations, etc.
+        - [X] Add ability to add physician map at import dialog, add variations, etc.
 
 2. **Import**
     - [ ] Need to test on Windows/Linux
     - [ ] Need to test import of DICOM files other than Plan, Dose, Structure
     - [ ] Currently code connects strictly by StudyInstanceUID and assumes the latest files appropriate
         - [ ] Should probably have a layer of verification with SOP Instance checks
-    - [ ] Better ROI map integration
-    - [ ] Unchecking anything in the ROI tree does nothing
+    - [X] Better ROI map integration
+    - [X] Unchecking anything in the ROI tree does nothing
+        * not more checking
     - [ ] Thread the file/dicom parsing process so UI updates on the fly in Windows (works as is on Mac, and maybe linux too)
 
 3. **Regression**

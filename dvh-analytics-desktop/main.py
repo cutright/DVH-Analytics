@@ -3,6 +3,7 @@
 #
 
 import wx
+# from wx.html2 import WebView
 from db import sql_columns
 from db.sql_to_python import QuerySQL
 from db.sql_connector import echo_sql_db
@@ -19,7 +20,9 @@ from models.time_series import TimeSeriesFrame
 from models.regression import RegressionFrame
 from models.control_chart import ControlChartFrame
 from models.roi_map import ROIMapDialog
+from options import Options
 from paths import LOGO_PATH
+from tools.roi_name_manager import DatabaseROIs
 from tools.stats import StatsData
 from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux,\
     initialize_directories_and_settings
@@ -31,6 +34,8 @@ class MainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
+
+        self.options = Options()
 
         # Initial DVH object and data
         self.dvh = None
@@ -48,6 +53,10 @@ class MainFrame(wx.Frame):
         # Keep track of currently selected row in the query tables
         self.selected_index_categorical = None
         self.selected_index_numerical = None
+
+        # Load ROI Map now and pass to other objects for continuity
+        # TODO: Need a method to address multiple users editing roi_map at the same time
+        self.roi_map = DatabaseROIs()
         
         self.__add_menubar()
         self.__add_tool_bar()
@@ -206,10 +215,10 @@ class MainFrame(wx.Frame):
                                              "filter must be added.")
 
     def __add_notebook_frames(self):
-        self.plot = PlotStatDVH(self.notebook_tab['DVHs'], self.dvh)
-        self.time_series = TimeSeriesFrame(self.notebook_tab['Time Series'], self.dvh, self.data)
-        self.regression = RegressionFrame(self.notebook_tab['Regression'], self.stats_data)
-        self.control_chart = ControlChartFrame(self.notebook_tab['Control Chart'], self.dvh, self.data, self.stats_data)
+        self.plot = PlotStatDVH(self.notebook_tab['DVHs'], self.dvh, self.options)
+        self.time_series = TimeSeriesFrame(self.notebook_tab['Time Series'], self.dvh, self.data, self.options)
+        self.regression = RegressionFrame(self.notebook_tab['Regression'], self.stats_data, self.options)
+        self.control_chart = ControlChartFrame(self.notebook_tab['Control Chart'], self.dvh, self.stats_data, self.options)
         self.radbio = RadBioFrame(self.notebook_tab['Rad Bio'], self.dvh, self.time_series, self.regression,
                                   self.control_chart)
         self.endpoint = EndpointFrame(self.notebook_tab['Endpoints'], self.dvh, self.time_series, self.regression,
@@ -537,25 +546,25 @@ class MainFrame(wx.Frame):
         dlg.Destroy()
 
     def on_pref(self, evt):
-        UserSettings()
+        UserSettings(self.options)
 
     def on_import(self, evt):
         if not echo_sql_db():
             self.on_sql(None)
 
         if echo_sql_db():
-            ImportDICOM_Dialog()
+            ImportDICOM_Dialog(self.roi_map, self.options)
         else:
             wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
                           wx.OK | wx.ICON_WARNING)
 
     def on_sql(self, evt):
+        print('oh yeah')
         SQLSettingsDialog()
         [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db()]()
 
-    @staticmethod
-    def on_toolbar_roi_map(evt):
-        ROIMapDialog()
+    def on_toolbar_roi_map(self, evt):
+        ROIMapDialog(self.roi_map)
 
 
 class DVHApp(wx.App):
@@ -569,5 +578,11 @@ class DVHApp(wx.App):
 
 
 if __name__ == "__main__":
+    if is_windows():
+        from tools.windows_reg_edit import set_reg, get_reg
+        # file_name = 'C:\\Users\\dcutright\\AppData\\Local\\Programs\\Python\\Python37-32\\python.exe'
+        set_reg(__file__, 11001)
+        print(get_reg(__file__))
+
     app = DVHApp(0)
     app.MainLoop()

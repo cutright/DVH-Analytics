@@ -13,6 +13,8 @@ from db.sql_to_python import QuerySQL
 from db.sql_connector import DVH_SQL
 from paths import PREF_DIR, SCRIPT_DIR
 from tools.utilities import flatten_list_of_lists
+from tools.errors import ROIVariationError
+from copy import deepcopy
 
 
 class Physician:
@@ -35,6 +37,13 @@ class Physician:
                 self.physician_rois[physician_roi]['variations'].append(variation)
                 self.physician_rois[physician_roi]['variations'].sort()
 
+    def delete_physician_roi_variations(self, physician_roi):
+        self.physician_rois[physician_roi]['variations'] = [physician_roi]
+
+    def delete_all_physician_roi_variations(self):
+        for physician_roi in list(self.physician_rois):
+            self.delete_physician_roi_variations(physician_roi)
+
 
 class DatabaseROIs:
     def __init__(self):
@@ -47,6 +56,12 @@ class DatabaseROIs:
             initialize_roi_preference_file('institutional.roi')
             initialize_roi_preference_file('physician_BBM.roi')
 
+        self.branched_institutional_rois = {}
+        self.import_from_file()
+
+    def import_from_file(self):
+        self.physicians = {}
+        self.institutional_rois = []
         # Import institutional roi names
         abs_file_path = os.path.join(PREF_DIR, 'institutional.roi')
         if os.path.isfile(abs_file_path):
@@ -81,6 +96,7 @@ class DatabaseROIs:
 
     def import_physician_roi_map(self, abs_file_path, physician):
 
+        # TODO: Store raw input data for diff calc later, for efficient DB remapping after edits
         with open(abs_file_path, 'r') as document:
             for line in document:
                 if not line:
@@ -94,7 +110,8 @@ class DatabaseROIs:
 
                 for i in range(2, len(line)):
                     variation = clean_name(line[i])
-                    self.add_variation(physician, physician_roi, variation)
+                    if variation != physician_roi:
+                        self.add_variation(physician, physician_roi, variation)
 
     ###################################
     # Physician functions
@@ -108,12 +125,26 @@ class DatabaseROIs:
             for institutional_roi in self.institutional_rois:
                 self.add_physician_roi(physician, institutional_roi, institutional_roi)
 
+    def copy_physician(self, new_physician, copy_from=None, include_variations=True):
+        new_physician = clean_name(new_physician).upper()
+        if copy_from is None or copy_from == 'DEFAULT':
+            self.add_physician(new_physician)
+        elif copy_from in self.get_physicians():
+            self.physicians[new_physician] = deepcopy(self.physicians[copy_from])
+            if not include_variations:
+                self.physicians[new_physician].delete_all_physician_roi_variations()
+
     def delete_physician(self, physician):
         physician = clean_name(physician).upper()
         self.physicians.pop(physician, None)
 
     def get_physicians(self):
-        return list(self.physicians)
+        physicians = list(self.physicians)
+        physicians.sort()
+        if 'DEFAULT' in physicians:
+            physicians.pop(physicians.index('DEFAULT'))
+            physicians.insert(0, 'DEFAULT')
+        return physicians
 
     def get_physician(self, physician):
         return self.physicians[physician]
@@ -125,7 +156,7 @@ class DatabaseROIs:
                 return True
         return False
 
-    def set_physician(self, new_physician, physician):
+    def rename_physician(self, new_physician, physician):
         new_physician = clean_name(new_physician).upper()
         physician = clean_name(physician).upper()
         self.physicians[new_physician] = self.physicians.pop(physician)
@@ -200,6 +231,7 @@ class DatabaseROIs:
         if self.is_physician(physician):
             physician_rois = list(self.physicians[physician].physician_rois)
             if physician_rois:
+                physician_rois = list(set(physician_rois) - {'uncategorized'})
                 physician_rois.sort()
                 return physician_rois
 
@@ -305,12 +337,21 @@ class DatabaseROIs:
             variations = []
         return variations
 
+    def is_variation_used(self, physician, variation):
+        variation = clean_name(variation)
+        return variation in self.get_all_variations_of_physician(physician)
+
     def add_variation(self, physician, physician_roi, variation):
         physician = clean_name(physician).upper()
         physician_roi = clean_name(physician_roi)
         variation = clean_name(variation)
-        if variation and variation not in self.get_variations(physician, physician_roi):
+
+        current_physician_roi = self.get_physician_roi(physician, variation)
+        if current_physician_roi == 'uncategorized':
             self.physicians[physician].add_physician_roi_variation(physician_roi, variation)
+        else:
+            raise ROIVariationError("'%s' is already a variation of %s for %s" %
+                                    (variation, current_physician_roi, physician))
 
     def delete_variation(self, physician, physician_roi, variation):
         physician = clean_name(physician).upper()
@@ -320,6 +361,12 @@ class DatabaseROIs:
             index = self.physicians[physician].physician_rois[physician_roi]['variations'].index(variation)
             self.physicians[physician].physician_rois[physician_roi]['variations'].pop(index)
             self.physicians[physician].physician_rois[physician_roi]['variations'].sort()
+
+    def delete_variations(self, physician, physician_roi, variations):
+        for variation in variations:
+            self.delete_variation(physician, physician_roi, variation)
+        if not self.get_variations(physician, physician_roi):
+            self.add_variation(physician, physician_roi, physician_roi)
 
     def set_variation(self, new_variation, physician, physician_roi, variation):
         new_variation = clean_name(new_variation)
@@ -396,13 +443,12 @@ class DatabaseROIs:
     def write_to_file(self):
         file_name = 'institutional.roi'
         abs_file_path = os.path.join(PREF_DIR, file_name)
-        document = open(abs_file_path, 'w')
-        lines = self.institutional_rois
-        lines.sort()
-        lines = '\n'.join(lines)
-        for line in lines:
-            document.write(line)
-        document.close()
+        with open(abs_file_path, 'w') as document:
+            lines = self.institutional_rois
+            lines.sort()
+            lines = '\n'.join(lines)
+            for line in lines:
+                document.write(line)
 
         physicians = self.get_physicians()
         physicians.pop(physicians.index('DEFAULT'))  # remove 'DEFAULT' physician

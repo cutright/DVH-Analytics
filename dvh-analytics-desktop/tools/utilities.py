@@ -477,3 +477,30 @@ def float_or_none(value):
         return float(value)
     except ValueError:
         return 'None'
+
+
+class MessageDialog:
+    """
+    This is the base class for Yes/No Dialog boxes
+    Inherit this class, then over-write action_yes and action_no functions with appropriate behaviors
+    """
+    def __init__(self, parent, caption, message="Are you sure?", action_yes_func=None, action_no_func=None,
+                 flags=wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT):
+        self.dlg = wx.MessageDialog(parent, message, caption, flags)
+        self.parent = parent
+        self.action_yes_func = action_yes_func
+        self.action_no_func = action_no_func
+        self.run()
+
+    def run(self):
+        res = self.dlg.ShowModal()
+        [self.action_no, self.action_yes][res == wx.ID_YES]()
+        self.dlg.Destroy()
+
+    def action_yes(self):
+        if self.action_yes_func is not None:
+            self.action_yes_func()
+
+    def action_no(self):
+        if self.action_no_func is not None:
+            self.action_no_func()

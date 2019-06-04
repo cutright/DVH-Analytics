@@ -2,15 +2,16 @@
 # -*- coding: UTF-8 -*-
 
 import wx
-from db.sql_connector import DVH_SQL, echo_sql_db, SQLError
-from db.sql_settings import write_sql_connection_settings, validate_sql_connection
-from paths import SQL_CNF_PATH, parse_settings_file, IMPORTED_DIR, INBOX_DIR
-from os.path import join
-from os import mkdir, rename
-from tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file, delete_imported_dicom_files,\
-    move_imported_dicom_files
 from datetime import datetime
+from db.sql_connector import DVH_SQL, echo_sql_db
+from db.sql_settings import write_sql_connection_settings, validate_sql_connection
 from models.import_dicom import ImportDICOM_Dialog
+from paths import SQL_CNF_PATH, parse_settings_file, IMPORTED_DIR, INBOX_DIR
+from os import mkdir, rename
+from os.path import join
+from tools.errors import SQLError, SQLErrorDialog
+from tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file, delete_imported_dicom_files,\
+    move_imported_dicom_files, MessageDialog
 
 
 class CalculationsDialog(wx.Dialog):
@@ -513,6 +514,8 @@ class SQLSettingsDialog(wx.Dialog):
 
         self.load_sql_settings()
 
+        self.run()
+
     def __set_properties(self):
         self.SetTitle("SQL Connection Settings")
 
@@ -573,29 +576,6 @@ class SQLSettingsDialog(wx.Dialog):
 # --------------------------------------------------
 # Yes/No Dialogs
 # --------------------------------------------------
-class MessageDialog:
-    """
-    This is the base class for Yes/No Dialog boxes
-    Inherit this class, then over-write action_yes and action_no functions with appropriate behaviors
-    """
-    def __init__(self, parent, caption, message="Are you sure?",
-                 flags=wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT):
-        self.dlg = wx.MessageDialog(parent, message, caption, flags)
-        self.parent = parent
-        self.run()
-
-    def run(self):
-        res = self.dlg.ShowModal()
-        [self.action_no, self.action_yes][res == wx.ID_YES]()
-        self.dlg.Destroy()
-
-    def action_yes(self):
-        pass
-
-    def action_no(self):
-        pass
-
-
 class DeleteAllData(MessageDialog):
     def __init__(self, parent):
         MessageDialog.__init__(self, parent, "Delete All Data in Database")
@@ -687,21 +667,3 @@ class RebuildDB(MessageDialog):
             cnx.reinitialize_database()
 
         ImportDICOM_Dialog(inbox=IMPORTED_DIR)
-
-
-class ErrorDialog:
-    def __init__(self, parent, message, caption, flags=wx.ICON_ERROR | wx.OK | wx.OK_DEFAULT):
-        self.dlg = wx.MessageDialog(parent, message, caption, flags)
-        self.dlg.ShowModal()
-        self.dlg.Destroy()
-
-
-class SQLErrorDialog(ErrorDialog):
-    def __init__(self, parent, dvh_sql_error):
-        """
-        Error dialog using custom SQLError class
-        :param parent: the wx parent object
-        :param dvh_sql_error: SQLError exception class
-        :type dvh_sql_error: SQLError
-        """
-        ErrorDialog.__init__(self, parent, str(dvh_sql_error), "SQL Syntax Error")
