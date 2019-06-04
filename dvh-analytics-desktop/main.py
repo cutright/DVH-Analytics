@@ -26,7 +26,7 @@ from tools.roi_name_manager import DatabaseROIs
 from tools.stats import StatsData
 from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux,\
     initialize_directories_and_settings, save_object_to_file, load_object_from_file
-from copy import deepcopy
+from datetime import datetime
 
 
 # TODO: Clean-up dialog functionality, have the classes themselves run and handle modal returns
@@ -359,7 +359,7 @@ class MainFrame(wx.Frame):
         dlg = wx.FileDialog(self, "Save queried data", "", wildcard='*.dvha',
                             style=wx.FD_FILE_MUST_EXIST | wx.FD_SAVE)
         if dlg.ShowModal() == wx.ID_OK:
-            print(dlg.GetPath())
+            self.save_data_obj()
             save_object_to_file(self.save_data, dlg.GetPath())
         dlg.Destroy()
 
@@ -367,9 +367,21 @@ class MainFrame(wx.Frame):
         dlg = wx.FileDialog(self, "Open saved data", "", wildcard='*.dvha',
                             style=wx.FD_FILE_MUST_EXIST | wx.FD_OPEN)
         if dlg.ShowModal() == wx.ID_OK:
-            self.exec_query(saved_data=load_object_from_file(dlg.GetPath()))
+            self.load_data_obj(dlg.GetPath())
+            self.exec_query(load_saved_dvh_data=True)
 
         dlg.Destroy()
+
+    def save_data_obj(self):
+        self.save_data['dvh'] = self.dvh
+        self.save_data['main_data'] = self.data
+        self.save_data['time_stamp'] = datetime.now()
+        self.save_data['version'] = self.options.VERSION
+
+    def load_data_obj(self, abs_file_path):
+        self.save_data = load_object_from_file(abs_file_path)
+        self.dvh = self.save_data['dvh']
+        self.data = self.save_data['main_data']
 
     def on_toolbar_database(self, evt):
 
@@ -438,10 +450,10 @@ class MainFrame(wx.Frame):
         # TODO: Thread this process
         self.exec_query()
 
-    def exec_query(self, saved_data=None):
+    def exec_query(self, load_saved_dvh_data=False):
         wait = wx.BusyCursor()
 
-        self.dvh = None
+        # self.dvh = None
         self.plot.clear_plot()
         self.endpoint.clear_data()
         self.time_series.clear_data()
@@ -450,18 +462,16 @@ class MainFrame(wx.Frame):
         self.control_chart.initialize_y_axis_options()
         self.radbio.clear_data()
 
-        uids, dvh_str = self.get_query()
-        if saved_data is None:
+        if not load_saved_dvh_data:
+            uids, dvh_str = self.get_query()
             self.dvh = DVH(dvh_condition=dvh_str, uid=uids)
-        else:
-            self.dvh = deepcopy(saved_data['dvh'])
-        self.save_data['dvh'] = deepcopy(self.dvh)
+
         self.endpoint.update_dvh(self.dvh)
         self.text_summary.SetLabelText(self.dvh.get_summary())
         self.plot.update_plot(self.dvh)
         del wait
         self.notebook_main_view.SetSelection(1)
-        self.update_data()
+        self.update_data(load_saved_dvh_data=load_saved_dvh_data)
         self.time_series.update_data(self.dvh, self.data)
         self.control_chart.update_data(self.dvh, self.stats_data)
         self.radbio.update_dvh_data(self.dvh)
@@ -510,12 +520,13 @@ class MainFrame(wx.Frame):
 
         return uids, queries['DVHs']
 
-    def update_data(self):
+    def update_data(self, load_saved_dvh_data=False):
         wait = wx.BusyCursor()
         tables = ['Plans', 'Rxs', 'Beams']
         if hasattr(self.dvh, 'study_instance_uid'):
-            condition_str = "study_instance_uid in ('%s')" % "','".join(self.dvh.study_instance_uid)
-            self.data = {key: QuerySQL(key, condition_str) for key in tables}
+            if not load_saved_dvh_data:
+                condition_str = "study_instance_uid in ('%s')" % "','".join(self.dvh.study_instance_uid)
+                self.data = {key: QuerySQL(key, condition_str) for key in tables}
         else:
             self.data = {key: None for key in tables}
         del wait

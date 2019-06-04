@@ -10,6 +10,7 @@ from db.sql_connector import DVH_SQL
 from db.sql_to_python import QuerySQL
 from tools import roi_geometry as roi_geom
 from tools import roi_formatter as roi_form
+from tools.utilities import convert_value_to_str
 
 
 # This class retrieves DVH data from the SQL database and calculates statistical DVHs (min, max, quartiles)
@@ -86,6 +87,14 @@ class DVH:
                 self.dth.append(np.array(self.dth_string[i].split(','), dtype='|S4').astype(np.float))
             except:
                 self.dth.append(np.array([0]))
+
+        # Store these now so they can be saved in DVH object without needing to query later
+        with DVH_SQL() as cnx:
+            self.physician_count = len(cnx.get_unique_values('Plans', 'physician',
+                                                             "study_instance_uid in ('%s')" % "','".join(self.uid)))
+        self.total_fxs = [convert_value_to_str(v, round=0) for v in self.get_plan_values('fxs')]
+        self.fx_dose = [convert_value_to_str(v, round=2) for v in self.get_rx_values('fx_dose')]
+        self.ptv_overlap = [convert_value_to_str(v, round=2) for v in self.ptv_overlap]
 
     def get_plan_values(self, plan_column):
         with DVH_SQL() as cnx:
@@ -288,30 +297,27 @@ class DVH:
         return x2, y2
 
     def get_summary(self):
-        with DVH_SQL() as cnx:
-            summary = ["Study count: %s" % len(set(self.study_instance_uid)),
-                       "DVH count: %s" % self.count,
-                       "Institutional ROI count: %s" % len(set(self.institutional_roi)),
-                       "Physician ROI count: %s" % len(set(self.physician_roi)),
-                       "ROI type count: %s" % len(set(self.roi_type)),
-                       "Physician count: %s" % len(cnx.get_unique_values('Plans', 'physician',
-                                                                         "study_instance_uid in ('%s')" %
-                                                                         "','".join(self.uid))),
-                       "\nMin, Mean, Max",
-                       "Rx dose (Gy): %0.2f, %0.2f, %0.2f" % (min(self.rx_dose),
-                                                              sum(self.rx_dose) / self.count,
-                                                              max(self.rx_dose)),
-                       "Volume (cc): %0.2f, %0.2f, %0.2f" % (min(self.volume),
-                                                             sum(self.volume) / self.count,
-                                                             max(self.volume)),
-                       "Min dose (Gy): %0.2f, %0.2f, %0.2f" % (min(self.min_dose),
-                                                               sum(self.min_dose) / self.count,
-                                                               max(self.min_dose)),
-                       "Mean dose (Gy): %0.2f, %0.2f, %0.2f" % (min(self.mean_dose),
-                                                                sum(self.mean_dose) / self.count,
-                                                                max(self.mean_dose)),
-                       "Max dose (Gy): %0.2f, %0.2f, %0.2f" % (min(self.max_dose),
-                                                               sum(self.max_dose) / self.count,
+        summary = ["Study count: %s" % len(set(self.study_instance_uid)),
+                   "DVH count: %s" % self.count,
+                   "Institutional ROI count: %s" % len(set(self.institutional_roi)),
+                   "Physician ROI count: %s" % len(set(self.physician_roi)),
+                   "ROI type count: %s" % len(set(self.roi_type)),
+                   "Physician count: %s" % self.physician_count,
+                   "\nMin, Mean, Max",
+                   "Rx dose (Gy): %0.2f, %0.2f, %0.2f" % (min(self.rx_dose),
+                                                          sum(self.rx_dose) / self.count,
+                                                          max(self.rx_dose)),
+                   "Volume (cc): %0.2f, %0.2f, %0.2f" % (min(self.volume),
+                                                         sum(self.volume) / self.count,
+                                                         max(self.volume)),
+                   "Min dose (Gy): %0.2f, %0.2f, %0.2f" % (min(self.min_dose),
+                                                           sum(self.min_dose) / self.count,
+                                                           max(self.min_dose)),
+                   "Mean dose (Gy): %0.2f, %0.2f, %0.2f" % (min(self.mean_dose),
+                                                            sum(self.mean_dose) / self.count,
+                                                            max(self.mean_dose)),
+                   "Max dose (Gy): %0.2f, %0.2f, %0.2f" % (min(self.max_dose),
+                                                           sum(self.max_dose) / self.count,
                                                                max(self.max_dose))]
         return '\n'.join(summary)
 

@@ -156,9 +156,6 @@ class RadBioFrame:
 
     def update_dvh_data(self, dvh):
         self.dvh = dvh
-        total_fxs = [convert_value_to_str(v, round=0) for v in self.dvh.get_plan_values('fxs')]
-        fx_dose = [convert_value_to_str(v, round=2) for v in self.dvh.get_rx_values('fx_dose')]
-        ptv_overlap = [convert_value_to_str(v, round=2) for v in self.dvh.ptv_overlap]
         data = {'MRN': self.dvh.mrn,
                 'ROI Name': self.dvh.roi_name,
                 'a': [''] * self.dvh.count,
@@ -166,11 +163,11 @@ class RadBioFrame:
                 'TD or TCD': [''] * self.dvh.count,
                 'EUD': [''] * self.dvh.count,
                 'NTCP or TCP': [''] * self.dvh.count,
-                'PTV Overlap': ptv_overlap,
+                'PTV Overlap': self.dvh.ptv_overlap,
                 'ROI Type': self.dvh.roi_type,
                 'Rx Dose': self.dvh.rx_dose,
-                'Total Fxs': total_fxs,
-                'Fx Dose': fx_dose}
+                'Total Fxs': self.dvh.total_fxs,
+                'Fx Dose': self.dvh.fx_dose}
         self.data_table_rad_bio.set_data(data, self.columns)
 
     def apply_parameters(self, evt):
