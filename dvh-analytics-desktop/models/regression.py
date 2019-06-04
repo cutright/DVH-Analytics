@@ -46,8 +46,8 @@ class RegressionFrame:
         self.x_variable_nodes = {}
 
         self.image_list = wx.ImageList(16, 16)
-        self.images = {'y': self.image_list.Add(wx.Image("icons/iconfinder_r2d2_216973.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
-                       'x': self.image_list.Add( wx.Image("icons/iconfinder_x-wing_298963.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())}
+        self.images = {'y': self.image_list.Add(wx.Image("icons/iconfinder_letter_Y_blue_1553059.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
+                       'x': self.image_list.Add( wx.Image("icons/iconfinder_letter_X_red_1553096.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())}
         self.tree_ctrl.AssignImageList(self.image_list)
 
     def __do_bind(self):
@@ -171,13 +171,13 @@ class RegressionFrame:
 
         if self.checkbox.GetValue():
             if y_value not in list(self.y_variable_nodes):
-                self.y_variable_nodes[y_value] = self.tree_ctrl.AppendItem(self.tree_ctrl_root, "y_var: %s" % y_value)
+                self.y_variable_nodes[y_value] = self.tree_ctrl.AppendItem(self.tree_ctrl_root, y_value)
                 self.tree_ctrl.SetItemData(self.y_variable_nodes[y_value], None)
                 self.tree_ctrl.SetItemImage(self.y_variable_nodes[y_value], self.images['y'], wx.TreeItemIcon_Normal)
             if y_value not in list(self.x_variable_nodes):
                 self.x_variable_nodes[y_value] = {}
             if x_value not in self.x_variable_nodes[y_value]:
-                self.x_variable_nodes[y_value][x_value] = self.tree_ctrl.AppendItem(self.y_variable_nodes[y_value], "x_var: %s" % x_value)
+                self.x_variable_nodes[y_value][x_value] = self.tree_ctrl.AppendItem(self.y_variable_nodes[y_value], x_value)
                 self.tree_ctrl.SetItemData(self.x_variable_nodes[y_value][x_value], None)
                 self.tree_ctrl.SetItemImage(self.x_variable_nodes[y_value][x_value], self.images['x'], wx.TreeItemIcon_Normal)
             self.tree_ctrl.ExpandAll()

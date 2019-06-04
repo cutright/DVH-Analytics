@@ -37,13 +37,13 @@ class DICOM_Importer:
         self.file_tree = {}
 
         self.image_list = wx.ImageList(16, 16)
-        self.images = {'rtplan': self.image_list.Add(wx.Image("icons/chart_bar.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
-                       'rtstruct': self.image_list.Add(wx.Image("icons/pencil.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
-                       'rtdose': self.image_list.Add(wx.Image("icons/chart_curve.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
+        self.images = {'rtplan': self.image_list.Add(wx.Image("icons/iconfinder_Clipboard-Plan_379537_2.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
+                       'rtstruct': self.image_list.Add(wx.Image("icons/iconfinder_Education-Filled_7_3672892.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
+                       'rtdose': self.image_list.Add(wx.Image("icons/iconfinder_package-supported_24220.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
                        'other': self.image_list.Add( wx.Image("icons/error.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
-                       'studies': self.image_list.Add(wx.Image("icons/group.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
-                       'study': self.image_list.Add(wx.Image("icons/book.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
-                       'patient': self.image_list.Add(wx.Image("icons/user.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())}
+                       'studies': self.image_list.Add(wx.Image("icons/iconfinder_User_Customers_1218712.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
+                       'study': self.image_list.Add(wx.Image("icons/iconfinder_Travel-Filled-07_3671983.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
+                       'patient': self.image_list.Add(wx.Image("icons/iconfinder_User_Yuppie_3_1218716.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())}
         self.tree_ctrl_files.AssignImageList(self.image_list)
 
         self.roi_name_map = {}

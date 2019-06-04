@@ -15,7 +15,7 @@ from os import listdir, rmdir
 from paths import IMPORT_SETTINGS_PATH, parse_settings_file
 from pubsub import pub
 from tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95
-from tools.roi_name_manager import clean_name, DatabaseROIs
+from tools.roi_name_manager import clean_name
 from threading import Thread
 
 

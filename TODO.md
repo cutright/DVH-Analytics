@@ -59,9 +59,9 @@
         - [X] Issue [#4](https://github.com/cutright/DVH-Analytics-Desktop/issues/4): Turns out not a Linux issue
 
 7. **Icons**
-    - [ ] I borrowed (stole) icons from dicompyler for the DICOM file tree.  Should make my own.
+    - [X] I borrowed (stole) icons from dicompyler for the DICOM file tree.  Should make my own.
     - [ ] Be sure toolbar icons are cited properly (they're all for free use)
-    - [ ] Regression icons are Star Wars right now... just temporary
+    - [X] Regression icons are Star Wars right now... just temporary
 
 8. **Plan/Rx/Beam Data**
     - [ ] Pure bokeh version of DVHA allowed user to explore plan, rx, and beam data in a tabular format
