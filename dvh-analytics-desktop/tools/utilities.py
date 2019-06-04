@@ -10,6 +10,7 @@ import shutil
 from paths import IMPORT_SETTINGS_PATH, SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
     APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR
 import pydicom as dicom
+import pickle
 
 
 def is_windows():
@@ -504,3 +505,17 @@ class MessageDialog:
     def action_no(self):
         if self.action_no_func is not None:
             self.action_no_func()
+
+
+def save_object_to_file(obj, abs_file_path):
+    with open(abs_file_path, 'wb') as outfile:
+        pickle.dump(obj, outfile)
+
+
+def load_object_from_file(abs_file_path):
+    if os.path.isfile(abs_file_path):
+        with open(abs_file_path, 'rb') as infile:
+            obj = pickle.load(infile)
+        return obj
+    else:
+        return None

@@ -25,7 +25,8 @@ from paths import LOGO_PATH
 from tools.roi_name_manager import DatabaseROIs
 from tools.stats import StatsData
 from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux,\
-    initialize_directories_and_settings
+    initialize_directories_and_settings, save_object_to_file, load_object_from_file
+from copy import deepcopy
 
 
 # TODO: Clean-up dialog functionality, have the classes themselves run and handle modal returns
@@ -41,6 +42,7 @@ class MainFrame(wx.Frame):
         self.dvh = None
         self.data = {key: None for key in ['Plans', 'Beams', 'Rxs']}
         self.stats_data = None
+        self.save_data = {}
 
         self.toolbar_keys = ['Open', 'Close', 'Save', 'Print', 'Export', 'Import', 'Database', 'ROI Map', 'Settings']
         self.toolbar_ids = {key: i+1000 for i, key in enumerate(self.toolbar_keys)}
@@ -114,6 +116,8 @@ class MainFrame(wx.Frame):
             if key in {'Close', 'Export', 'ROI Map'}:
                 self.frame_toolbar.AddSeparator()
 
+        self.Bind(wx.EVT_TOOL, self.on_save, id=self.toolbar_ids['Save'])
+        self.Bind(wx.EVT_TOOL, self.on_open, id=self.toolbar_ids['Open'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_database, id=self.toolbar_ids['Database'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_settings, id=self.toolbar_ids['Settings'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_roi_map, id=self.toolbar_ids['ROI Map'])
@@ -188,7 +192,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.edit_row_numerical, id=self.button_numerical['edit'].GetId())
         self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.doubleclick_numerical, self.table_numerical)
 
-        self.Bind(wx.EVT_BUTTON, self.exec_query, id=self.button_query_execute.GetId())
+        self.Bind(wx.EVT_BUTTON, self.exec_query_button, id=self.button_query_execute.GetId())
 
     def __set_properties(self):
         self.SetTitle("DVH Analytics")
@@ -350,6 +354,23 @@ class MainFrame(wx.Frame):
     # --------------------------------------------------------------------------------------------------------------
     # Menu bar event functions
     # --------------------------------------------------------------------------------------------------------------
+    def on_save(self, evt):
+        # wx.DirDialog()
+        dlg = wx.FileDialog(self, "Save queried data", "", wildcard='*.dvha',
+                            style=wx.FD_FILE_MUST_EXIST | wx.FD_SAVE)
+        if dlg.ShowModal() == wx.ID_OK:
+            print(dlg.GetPath())
+            save_object_to_file(self.save_data, dlg.GetPath())
+        dlg.Destroy()
+
+    def on_open(self, evt):
+        dlg = wx.FileDialog(self, "Open saved data", "", wildcard='*.dvha',
+                            style=wx.FD_FILE_MUST_EXIST | wx.FD_OPEN)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.exec_query(saved_data=load_object_from_file(dlg.GetPath()))
+
+        dlg.Destroy()
+
     def on_toolbar_database(self, evt):
 
         if not echo_sql_db():
@@ -413,8 +434,11 @@ class MainFrame(wx.Frame):
         if self.data_table_numerical.row_count == 0:
             self.disable_query_buttons('numerical')
 
-    def exec_query(self, evt):
+    def exec_query_button(self, evt):
         # TODO: Thread this process
+        self.exec_query()
+
+    def exec_query(self, saved_data=None):
         wait = wx.BusyCursor()
 
         self.dvh = None
@@ -427,7 +451,11 @@ class MainFrame(wx.Frame):
         self.radbio.clear_data()
 
         uids, dvh_str = self.get_query()
-        self.dvh = DVH(dvh_condition=dvh_str, uid=uids)
+        if saved_data is None:
+            self.dvh = DVH(dvh_condition=dvh_str, uid=uids)
+        else:
+            self.dvh = deepcopy(saved_data['dvh'])
+        self.save_data['dvh'] = deepcopy(self.dvh)
         self.endpoint.update_dvh(self.dvh)
         self.text_summary.SetLabelText(self.dvh.get_summary())
         self.plot.update_plot(self.dvh)
@@ -506,15 +534,6 @@ class MainFrame(wx.Frame):
     # --------------------------------------------------------------------------------------------------------------
     def on_quit(self, evt):
         self.Close()
-
-    def on_open(self, evt):
-        """ Open a file"""
-        # wx.DirDialog()
-        dlg = wx.DirDialog(self, "Choose input directory", "", wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
-        if dlg.ShowModal() == wx.ID_OK:
-            # print(dlg.GetPath())
-            pass
-        dlg.Destroy()
 
     def on_close(self, evt):
         # TODO: Review this function and its references/dependencies
