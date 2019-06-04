@@ -529,6 +529,7 @@ class MainFrame(wx.Frame):
                 self.data_table_numerical.delete_all_rows()
                 self.plot.clear_plot()
                 self.endpoint.clear_data()
+                self.radbio.clear_data()
                 self.time_series.clear_data()
                 self.notebook_main_view.SetSelection(0)
                 self.text_summary.SetLabelText("")
@@ -537,7 +538,9 @@ class MainFrame(wx.Frame):
                     self.disable_query_buttons(key)
                 self.button_query_execute.Disable()
                 self.time_series.initialize_y_axis_options()
+                self.regression.plot.clear_plot()
                 self.control_chart.initialize_y_axis_options()
+                self.control_chart.plot.clear_plot()
             dlg.Destroy()
 
     def on_about(self, evt):

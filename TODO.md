@@ -34,8 +34,8 @@
         - [ ] Remaining data could be recalculated
         - [ ] Maybe just pickle the QuerySQL objects stored in MainFrame.data in main.py?
     * *Close*
-        - [ ] This function has not been updated in a while, is surely not clearing all data anymore
-        - [ ] Perhaps could hijack the method used for open/save, and a save a state at app launch?
+        - [X] This function has not been updated in a while, is surely not clearing all data anymore
+            * Still need to properly clear endpoints
     * *Print*
         - [ ] Need a report generator
     * *Export*

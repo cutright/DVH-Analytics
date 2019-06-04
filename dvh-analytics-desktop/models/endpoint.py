@@ -110,7 +110,6 @@ class EndpointFrame:
         dlg = AddEndpointDialog(title='Add Endpoint')
         res = dlg.ShowModal()
         if res == wx.ID_OK and dlg.is_endpoint_valid:
-            print(dlg.endpoint_row)
             self.endpoint_defs.append_row(dlg.endpoint_row)
             self.calculate_endpoints()
             self.enable_buttons()
@@ -150,9 +149,9 @@ class EndpointFrame:
             self.dvh.endpoints['defs'] = self.endpoint_defs.data
 
     def clear_data(self):
+        # TODO: endpoint columns are not cleared
         self.data_table.delete_all_rows()
         self.endpoint_defs.delete_all_rows()
-        # self.dvh = None
 
     def enable_buttons(self):
         for key in list(self.button):

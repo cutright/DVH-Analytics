@@ -185,7 +185,7 @@ class RadBioFrame:
         for i in selected_indices:
             current_row = self.data_table_rad_bio.get_row(i)
             for j in [7, 9]:
-                current_row[i] = convert_value_to_str(current_row[i])
+                current_row[j] = convert_value_to_str(current_row[j])
             new_row = deepcopy(current_row)
             new_row[2], new_row[3], new_row[4] = eud_a, gamma_50, td_50
             try:
