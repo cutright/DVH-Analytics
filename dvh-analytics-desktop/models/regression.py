@@ -140,9 +140,11 @@ class RegressionFrame:
                                   self.stats_data.get_axis_title(self.y_axis))
 
         if self.y_axis in list(self.y_variable_nodes) and self.x_axis in list(self.x_variable_nodes[self.y_axis]):
-                self.checkbox.SetValue(True)
+            self.checkbox.SetValue(True)
+            self.tree_ctrl.SelectItem(self.x_variable_nodes[self.y_axis][self.x_axis])
         else:
             self.checkbox.SetValue(False)
+            self.tree_ctrl.Unselect()
         if self.combo_box_x_axis.GetValue() == self.combo_box_y_axis.GetValue():
             self.checkbox.Disable()
         else:
@@ -181,6 +183,7 @@ class RegressionFrame:
                 self.tree_ctrl.SetItemData(self.x_variable_nodes[y_value][x_value], None)
                 self.tree_ctrl.SetItemImage(self.x_variable_nodes[y_value][x_value], self.images['x'], wx.TreeItemIcon_Normal)
             self.tree_ctrl.ExpandAll()
+            self.tree_ctrl.SelectItem(self.x_variable_nodes[self.y_axis][self.x_axis])
         else:
             if y_value in list(self.y_variable_nodes):
                 if x_value in list(self.x_variable_nodes[y_value]):
@@ -190,6 +193,7 @@ class RegressionFrame:
                         self.x_variable_nodes.pop(y_value)
                         self.tree_ctrl.Delete(self.y_variable_nodes[y_value])
                         self.y_variable_nodes.pop(y_value)
+            self.tree_ctrl.Unselect()
 
     def on_regression(self, evt):
         self.multi_variable_regression(self.combo_box_y_axis.GetValue())
@@ -223,6 +227,8 @@ class RegressionFrame:
 
         if any([x_var, y_var]):
             self.update_plot()
+
+        self.sync_spin_buttons()
 
     def get_x_y_of_node(self, node):
         for y_var in list(self.x_variable_nodes):
