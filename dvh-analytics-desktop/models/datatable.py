@@ -19,6 +19,17 @@ class DataTable:
 
         self.set_data_in_layout()
 
+    def get_save_data(self):
+        return deepcopy({'data': self.data,
+                         'columns': self.columns,
+                         'widths': self.widths,
+                         'formats': self.formats})
+
+    def load_save_data(self, save_data):
+        for key, item in save_data.items():
+            setattr(self, key, deepcopy(item))
+        self.set_data_in_layout()
+
     def set_data(self, data, columns, formats=None):
         if formats:
             self.formats = formats

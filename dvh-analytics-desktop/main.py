@@ -3,7 +3,6 @@
 #
 
 import wx
-from wx.html2 import WebView
 from db import sql_columns
 from db.sql_to_python import QuerySQL
 from db.sql_connector import echo_sql_db
@@ -377,11 +376,15 @@ class MainFrame(wx.Frame):
         self.save_data['main_data'] = self.data
         self.save_data['time_stamp'] = datetime.now()
         self.save_data['version'] = self.options.VERSION
+        # data_table_categorical and data_table_numerical saved after query to ensure these data reflect
+        # the rest of the saved data
 
     def load_data_obj(self, abs_file_path):
         self.save_data = load_object_from_file(abs_file_path)
         self.dvh = self.save_data['dvh']
         self.data = self.save_data['main_data']
+        self.data_table_categorical.load_save_data(self.save_data['main_categorical'])
+        self.data_table_numerical.load_save_data(self.save_data['main_numerical'])
 
     def on_toolbar_database(self, evt):
 
@@ -477,6 +480,9 @@ class MainFrame(wx.Frame):
         self.radbio.update_dvh_data(self.dvh)
 
         self.__enable_notebook_tabs()
+
+        self.save_data['main_categorical'] = self.data_table_categorical.get_save_data()
+        self.save_data['main_numerical'] = self.data_table_numerical.get_save_data()
 
     def get_query(self):
 
