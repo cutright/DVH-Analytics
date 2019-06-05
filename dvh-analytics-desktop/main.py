@@ -590,7 +590,7 @@ class MainFrame(wx.Frame):
             self.disable_query_buttons(key)
         self.button_query_execute.Disable()
         self.time_series.initialize_y_axis_options()
-        self.regression.plot.clear_plot()
+        self.regression.clear()
         self.control_chart.initialize_y_axis_options()
         self.control_chart.plot.clear_plot()
 

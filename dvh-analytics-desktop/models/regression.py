@@ -10,26 +10,33 @@ from pubsub import pub
 
 
 class RegressionFrame:
-    def __init__(self, parent, data, options, *args, **kwds):
+    def __init__(self, parent, data, options):
         self.parent = parent
         self.options = options
         # self.dvh = dvh
         self.stats_data = data
         self.choices = []
 
+        self.y_variable_nodes = {}
+        self.x_variable_nodes = {}
+
         self.__define_gui_objects()
         self.__set_properties()
         self.__do_bind()
         self.__do_layout()
+
+        self.tree_ctrl_root = self.tree_ctrl.AddRoot('Regressions')
 
     def __define_gui_objects(self):
         self.window = wx.SplitterWindow(self.parent, wx.ID_ANY)
         self.pane_tree = wx.ScrolledWindow(self.window, wx.ID_ANY, style=wx.TAB_TRAVERSAL)
         self.tree_ctrl = wx.TreeCtrl(self.pane_tree, wx.ID_ANY)
         self.pane_plot = wx.Panel(self.window, wx.ID_ANY)
-        self.combo_box_x_axis = wx.ComboBox(self.pane_plot, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.TE_READONLY)
+        self.combo_box_x_axis = wx.ComboBox(self.pane_plot, wx.ID_ANY, choices=[],
+                                            style=wx.CB_DROPDOWN | wx.TE_READONLY)
         self.spin_button_x_axis = wx.SpinButton(self.pane_plot, wx.ID_ANY, style=wx.SP_WRAP)
-        self.combo_box_y_axis = wx.ComboBox(self.pane_plot, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.TE_READONLY)
+        self.combo_box_y_axis = wx.ComboBox(self.pane_plot, wx.ID_ANY, choices=[],
+                                            style=wx.CB_DROPDOWN | wx.TE_READONLY)
         self.spin_button_y_axis = wx.SpinButton(self.pane_plot, wx.ID_ANY, style=wx.SP_WRAP)
         self.checkbox = wx.CheckBox(self.pane_plot, wx.ID_ANY, "Include in Multi-Var\nRegression")
         self.plot = PlotRegression(self.pane_plot, self.options)
@@ -41,13 +48,11 @@ class RegressionFrame:
         self.combo_box_x_axis.SetValue('ROI Max Dose')
         self.combo_box_y_axis.SetValue('ROI Volume')
 
-        self.tree_ctrl_root = self.tree_ctrl.AddRoot('Regressions')
-        self.y_variable_nodes = {}
-        self.x_variable_nodes = {}
-
         self.image_list = wx.ImageList(16, 16)
-        self.images = {'y': self.image_list.Add(wx.Image("icons/icon_custom_Y.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
-                       'x': self.image_list.Add(wx.Image("icons/icon_custom_X.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())}
+        self.images = {'y': self.image_list.Add(wx.Image("icons/icon_custom_Y.png",
+                                                         wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
+                       'x': self.image_list.Add(wx.Image("icons/icon_custom_X.png",
+                                                         wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())}
         self.tree_ctrl.AssignImageList(self.image_list)
 
     def __do_bind(self):
@@ -239,9 +244,16 @@ class RegressionFrame:
                     return x_var, y_var
         return None, None
 
+    def clear(self):
+        self.plot.clear_plot()
+        self.x_variable_nodes = {}
+        self.y_variable_nodes = {}
+        self.tree_ctrl.DeleteAllItems()
+        self.tree_ctrl_root = self.tree_ctrl.AddRoot('Regressions')
+
 
 class MultiVarResultsFrame(wx.Frame):
-    def __init__(self, y_variable, x_variables, stats_data, options, *args, **kw):
+    def __init__(self, y_variable, x_variables, stats_data, options):
         wx.Frame.__init__(self, None, title="Multi-Variable Model for %s" % y_variable)
         self.options = options
 
