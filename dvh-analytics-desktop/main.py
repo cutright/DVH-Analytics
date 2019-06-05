@@ -359,6 +359,11 @@ class MainFrame(wx.Frame):
             else:
                 self.disable_query_buttons(key)
 
+        if self.data_table_numerical.row_count + self.data_table_categorical.row_count > 0:
+            self.button_query_execute.Enable()
+        else:
+            self.button_query_execute.Disable()
+
     # --------------------------------------------------------------------------------------------------------------
     # Menu bar event functions
     # --------------------------------------------------------------------------------------------------------------
@@ -451,13 +456,11 @@ class MainFrame(wx.Frame):
     def add_row_categorical(self, evt):
         query_dlg(self, 'categorical')
         self.button_query_execute.Enable()
-        if self.data_table_categorical.row_count == 1 and self.data_table_numerical == 0:
-            self.button_query_execute.Enable()
+        self.update_all_query_buttons()
 
     def add_row_numerical(self, evt):
         query_dlg(self, 'numerical')
-        if self.data_table_numerical.row_count == 1 and self.data_table_categorical == 0:
-            self.button_query_execute.Enable()
+        self.update_all_query_buttons()
 
     def edit_row_categorical(self, evt):
         if self.selected_index_categorical is not None:
@@ -478,14 +481,12 @@ class MainFrame(wx.Frame):
     def del_row_categorical(self, evt):
         self.data_table_categorical.delete_row(self.selected_index_categorical)
         self.selected_index_categorical = None
-        if self.data_table_categorical.row_count == 0:
-            self.disable_query_buttons('categorical')
+        self.update_all_query_buttons()
 
     def del_row_numerical(self, evt):
         self.data_table_numerical.delete_row(self.selected_index_numerical)
         self.selected_index_numerical = None
-        if self.data_table_numerical.row_count == 0:
-            self.disable_query_buttons('numerical')
+        self.update_all_query_buttons()
 
     def exec_query_button(self, evt):
         # TODO: Thread this process

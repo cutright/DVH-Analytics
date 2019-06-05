@@ -120,11 +120,12 @@ class DataTable:
             self.data[key][index] = row[i]
 
     def delete_row(self, index, layout_only=False):
-        if not layout_only:
-            for key in self.keys:
-                self.data[key].pop(index)
-        if self.layout:
-            self.layout.DeleteItem(index)
+        if index is not None:
+            if not layout_only:
+                for key in self.keys:
+                    self.data[key].pop(index)
+            if self.layout:
+                self.layout.DeleteItem(index)
 
     def delete_all_rows(self, layout_only=False, force_delete_data=False):
         if self.layout:

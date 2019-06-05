@@ -267,7 +267,7 @@ def query_dlg(parent, query_type, title=None, set_values=False):
             data_table.edit_row(row, selected_index)
         else:
             data_table.append_row(row)
-        parent.query_buttons_update_enable(query_type)
+        parent.update_all_query_buttons()
     dlg.Destroy()
 
 
