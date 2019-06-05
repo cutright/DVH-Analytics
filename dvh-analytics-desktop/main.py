@@ -356,7 +356,7 @@ class MainFrame(wx.Frame):
     # --------------------------------------------------------------------------------------------------------------
     def on_save(self, evt):
         # wx.DirDialog()
-        dlg = wx.FileDialog(self, "Save queried data", "", wildcard='*.dvha',
+        dlg = wx.FileDialog(self, "Save your downloaded data to file", "", wildcard='*.dvha',
                             style=wx.FD_FILE_MUST_EXIST | wx.FD_SAVE)
         if dlg.ShowModal() == wx.ID_OK:
             self.save_data_obj()
@@ -380,6 +380,7 @@ class MainFrame(wx.Frame):
         # data_table_categorical and data_table_numerical saved after query to ensure these data reflect
         # the rest of the saved data
         self.save_data['endpoint'] = self.endpoint.get_save_data()
+        self.save_data['time_series'] = self.time_series.get_save_data()
         self.save_data['radbio'] = self.radbio.get_save_data()
 
     def load_data_obj(self, abs_file_path):
@@ -403,6 +404,8 @@ class MainFrame(wx.Frame):
 
         self.endpoint.update_endpoints_in_dvh()
         self.time_series.update_y_axis_options()
+        self.time_series.load_save_data(self.save_data['time_series'])
+        self.time_series.update_plot()
         self.regression.stats_data.update_endpoints_and_radbio()
         self.regression.update_combo_box_choices()
         self.control_chart.update_combo_box_choices()

@@ -37,6 +37,9 @@ class TimeSeriesFrame:
 
         self.disable_buttons()
 
+        self.save_attr = ['combo_box_y_axis', 'text_input_lookback_distance',
+                          'text_inputs_percentile', 'text_input_bin_size']
+
     def __set_properties(self):
         self.choices = list(self.y_axis_options)
         self.choices.sort()
@@ -202,4 +205,9 @@ class TimeSeriesFrame:
         self.combo_box_y_axis.SetItems(self.choices)
         self.combo_box_y_axis.SetValue('ROI Max Dose')
 
+    def get_save_data(self):
+        return {attr: getattr(self, attr).GetValue() for attr in self.save_attr}
 
+    def load_save_data(self, save_data):
+        for attr in self.save_attr:
+            getattr(self, attr).SetValue(save_data[attr])

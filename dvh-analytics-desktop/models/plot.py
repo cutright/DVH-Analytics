@@ -96,6 +96,7 @@ class PlotStatDVH(Plot):
 
         self.__add_hover()
         self.__add_plot_data()
+        self.__add_legend()
         self.__create_table()
 
         self.bokeh_layout = column(self.figure, self.table)
