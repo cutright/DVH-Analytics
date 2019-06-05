@@ -26,6 +26,7 @@ from tools.stats import StatsData
 from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux,\
     initialize_directories_and_settings, save_object_to_file, load_object_from_file
 from datetime import datetime
+from copy import deepcopy
 
 
 # TODO: Clean-up dialog functionality, have the classes themselves run and handle modal returns
@@ -379,19 +380,26 @@ class MainFrame(wx.Frame):
         # data_table_categorical and data_table_numerical saved after query to ensure these data reflect
         # the rest of the saved data
         self.save_data['endpoint'] = self.endpoint.get_save_data()
+        self.save_data['radbio'] = self.radbio.get_save_data()
 
     def load_data_obj(self, abs_file_path):
         self.save_data = load_object_from_file(abs_file_path)
         self.dvh = self.save_data['dvh']
         self.data = self.save_data['main_data']
-        self.data_table_categorical.load_save_data(self.save_data['main_categorical'])
-        self.data_table_numerical.load_save_data(self.save_data['main_numerical'])
+
+        # .load_save_data loses column widths?
+        self.data_table_categorical.data = deepcopy(self.save_data['main_categorical']['data'])
+        self.data_table_numerical.data = deepcopy(self.save_data['main_numerical']['data'])
+        self.data_table_categorical.set_data_in_layout()
+        self.data_table_numerical.set_data_in_layout()
 
         self.exec_query(load_saved_dvh_data=True)
 
         self.endpoint.load_save_data(self.save_data['endpoint'])
         if self.endpoint.has_data:
             self.endpoint.enable_buttons()
+
+        self.radbio.load_save_data(self.save_data['radbio'])
 
         self.endpoint.update_endpoints_in_dvh()
         self.time_series.update_y_axis_options()
@@ -614,7 +622,6 @@ class MainFrame(wx.Frame):
                           wx.OK | wx.ICON_WARNING)
 
     def on_sql(self, evt):
-        print('oh yeah')
         SQLSettingsDialog()
         [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db()]()
 

@@ -217,3 +217,9 @@ class RadBioFrame:
 
     def on_export_csv(self, evt):
         export_dlg(self.parent, "Export RadBio table to CSV", self.data_table_rad_bio)
+
+    def get_save_data(self):
+        return self.data_table_rad_bio.get_save_data()
+
+    def load_save_data(self, save_data):
+        self.data_table_rad_bio.load_save_data(save_data)

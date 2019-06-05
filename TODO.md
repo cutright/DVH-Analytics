@@ -33,7 +33,7 @@
         - [X] Needs a data object that captures the data immediately after query
         - [X] Remaining data could be recalculated
         - [X] Maybe just pickle the QuerySQL objects stored in MainFrame.data in main.py?
-        - [ ] Include filters and add to UI after load
+        - [X] Include filters and add to UI after load
         - [ ] Save endpoints, radbio, regressions
     * *Close*
         - [X] This function has not been updated in a while, is surely not clearing all data anymore

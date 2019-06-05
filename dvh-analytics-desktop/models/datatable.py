@@ -26,13 +26,10 @@ class DataTable:
                          'formats': self.formats})
 
     def load_save_data(self, save_data, ignore_layout=False):
-        for key, item in save_data.items():
-            setattr(self, key, deepcopy(item))
+        self.widths = deepcopy(save_data['widths'])
+        self.set_data(save_data['data'], save_data['columns'], ignore_layout=ignore_layout)
 
-        if not ignore_layout:
-            self.set_data_in_layout()
-
-    def set_data(self, data, columns, formats=None):
+    def set_data(self, data, columns, formats=None, ignore_layout=False):
         if formats:
             self.formats = formats
         elif len(columns) != len(self.formats):
@@ -42,8 +39,10 @@ class DataTable:
         self.columns = deepcopy(columns)
         if delete_rows:
             self.delete_all_rows(layout_only=True)
-        self.set_layout_columns()
-        self.set_data_in_layout()
+
+        if not ignore_layout:
+            self.set_layout_columns()
+            self.set_data_in_layout()
 
         if self.widths:
             self.set_column_widths()

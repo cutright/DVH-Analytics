@@ -10,7 +10,7 @@ from dateutil import parser
 
 
 class TimeSeriesFrame:
-    def __init__(self, parent, dvh, data, options, *args, **kwds):
+    def __init__(self, parent, dvh, data, options):
         self.parent = parent
         self.options = options
         self.dvh = dvh
@@ -153,7 +153,8 @@ class TimeSeriesFrame:
         self.update_plot()
 
     def clear_data(self):
-        self.plot.update_plot([], [], [], '')
+        self.plot.clear_plot()
+        self.combo_box_y_axis.SetLabelText('ROI Max Dose')
 
     def enable_buttons(self):
         self.button_update_plot.Enable()

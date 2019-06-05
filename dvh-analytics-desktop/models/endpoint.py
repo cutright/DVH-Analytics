@@ -80,29 +80,30 @@ class EndpointFrame:
               'ROI Name': self.dvh.roi_name}
 
         ep_defs = self.endpoint_defs.data
-        for i, ep_name in enumerate(ep_defs['label']):
+        if ep_defs:
+            for i, ep_name in enumerate(ep_defs['label']):
 
-            if ep_name not in columns:
-                columns.append(ep_name)
+                if ep_name not in columns:
+                    columns.append(ep_name)
 
-                if ep_name in current_labels:
-                    ep[ep_name] = deepcopy(self.data_table.data[ep_name])
-
-                else:
-                    endpoint_input = ep_defs['input_type'][i]
-                    endpoint_output = ep_defs['output_type'][i]
-
-                    x = float(ep_defs['input_value'][i])
-                    if endpoint_input == 'relative':
-                        x /= 100.
-
-                    if 'V' in ep_name:
-                        ep[ep_name] = self.dvh.get_volume_of_dose(x, volume_scale=endpoint_output,
-                                                                  dose_scale=endpoint_input)
+                    if ep_name in current_labels:
+                        ep[ep_name] = deepcopy(self.data_table.data[ep_name])
 
                     else:
-                        ep[ep_name] = self.dvh.get_dose_to_volume(x, dose_scale=endpoint_output,
-                                                                  volume_scale=endpoint_input)
+                        endpoint_input = ep_defs['input_type'][i]
+                        endpoint_output = ep_defs['output_type'][i]
+
+                        x = float(ep_defs['input_value'][i])
+                        if endpoint_input == 'relative':
+                            x /= 100.
+
+                        if 'V' in ep_name:
+                            ep[ep_name] = self.dvh.get_volume_of_dose(x, volume_scale=endpoint_output,
+                                                                      dose_scale=endpoint_input)
+
+                        else:
+                            ep[ep_name] = self.dvh.get_dose_to_volume(x, dose_scale=endpoint_output,
+                                                                      volume_scale=endpoint_input)
 
         self.data_table.set_data(ep, columns)
         self.data_table.set_column_width(0, 150)
@@ -186,6 +187,6 @@ class EndpointFrame:
 
     @property
     def has_data(self):
-        if self.endpoint_defs.data['label']:
+        if self.endpoint_defs.data and self.endpoint_defs.data['label']:
             return True
         return False
