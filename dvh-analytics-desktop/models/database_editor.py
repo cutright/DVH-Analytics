@@ -155,7 +155,7 @@ class DatabaseEditorDialog(wx.Frame):
                 self.data_query_results.set_data(data, columns)
             except SQLError as e:
                 SQLErrorDialog(self, e)
-            self.data_query_results.clear()
+                self.data_query_results.clear()
         del wait
 
     def on_clear(self, evt):
