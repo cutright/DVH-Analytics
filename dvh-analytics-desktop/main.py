@@ -351,6 +351,14 @@ class MainFrame(wx.Frame):
             {'categorical': self.button_categorical[key],
              'numerical': self.button_numerical[key]}[query_type].Disable()
 
+    def update_all_query_buttons(self):
+        tables = {'numerical': self.data_table_numerical, 'categorical': self.data_table_categorical}
+        for key, table in tables.items():
+            if table.data is not None:
+                [self.disable_query_buttons, self.enable_query_buttons][table.row_count > 0](key)
+            else:
+                self.disable_query_buttons(key)
+
     # --------------------------------------------------------------------------------------------------------------
     # Menu bar event functions
     # --------------------------------------------------------------------------------------------------------------
@@ -394,6 +402,7 @@ class MainFrame(wx.Frame):
         self.data_table_numerical.data = deepcopy(self.save_data['main_numerical']['data'])
         self.data_table_categorical.set_data_in_layout()
         self.data_table_numerical.set_data_in_layout()
+        self.update_all_query_buttons()
 
         self.exec_query(load_saved_dvh_data=True)
 
@@ -602,8 +611,8 @@ class MainFrame(wx.Frame):
         self.notebook_main_view.SetSelection(0)
         self.text_summary.SetLabelText("")
         self.__disable_notebook_tabs()
-        for key in ['categorical', 'numerical']:
-            self.disable_query_buttons(key)
+        self.disable_query_buttons('categorical')
+        self.disable_query_buttons('numerical')
         self.button_query_execute.Disable()
         self.time_series.initialize_y_axis_options()
         self.regression.clear()
