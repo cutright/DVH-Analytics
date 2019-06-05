@@ -114,12 +114,13 @@ class TimeSeriesFrame:
                 x_data.append(str(datetime.now()))
 
         sort_index = sorted(range(len(x_data)), key=lambda k: x_data[k])
-        x_values_sorted, y_values_sorted, mrn_sorted = [], [], []
+        x_values_sorted, y_values_sorted, mrn_sorted, uid_sorted = [], [], [], []
 
         for s in range(len(x_data)):
             x_values_sorted.append(parser.parse(x_data[sort_index[s]]))
             y_values_sorted.append(y_data[sort_index[s]])
             mrn_sorted.append(mrn_data[sort_index[s]])
+            uid_sorted.append(uids[sort_index[s]])
 
         try:
             hist_bins = int(self.text_input_bin_size.GetValue())
@@ -146,7 +147,7 @@ class TimeSeriesFrame:
             units = ''
         if units:
             y_axis = "%s (%s)" % (y_axis, units)
-        self.plot.update_plot(x_values_sorted, y_values_sorted, mrn_sorted,
+        self.plot.update_plot(x_values_sorted, y_values_sorted, mrn_sorted, uid_sorted,
                               y_axis_label=y_axis, avg_len=avg_len,
                               percentile=percentile, bin_size=hist_bins)
 

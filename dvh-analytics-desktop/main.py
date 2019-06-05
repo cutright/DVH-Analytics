@@ -44,7 +44,7 @@ class MainFrame(wx.Frame):
         self.stats_data = None
         self.save_data = {}
 
-        self.toolbar_keys = ['Open', 'Close', 'Save', 'Print', 'Export', 'Import', 'Database', 'ROI Map', 'Settings']
+        self.toolbar_keys = ['Open', 'Close', 'Save', 'Export', 'Import', 'Database', 'ROI Map', 'Settings']
         self.toolbar_ids = {key: i+1000 for i, key in enumerate(self.toolbar_keys)}
 
         # sql_columns.py contains dictionaries of all queryable variables along with their
@@ -89,7 +89,7 @@ class MainFrame(wx.Frame):
         files = {'Open': "icons/iconfinder_Open_1493293.png",
                  'Close': "icons/iconfinder_Close_1493281.png",
                  'Save': "icons/iconfinder_Save_1493294.png",
-                 'Print': "icons/iconfinder_Print_1493286.png",
+                 # 'Print': "icons/iconfinder_Print_1493286.png",
                  'Export': "icons/iconfinder_csv_file_database_extension_data_3876336.png",
                  'Import': "icons/iconfinder_import_4168538.png",
                  'Settings': "icons/iconfinder_Settings_1493289.png",
@@ -99,7 +99,7 @@ class MainFrame(wx.Frame):
         description = {'Open': "Open previously queried data",
                        'Close': "Clear queried data",
                        'Save': "Save queried data",
-                       'Print': "Print a report",
+                       # 'Print': "Print a report",
                        'Export': "Export data to CSV",
                        'Import': "DICOM import wizard",
                        'Settings': "User Settings",
@@ -243,7 +243,7 @@ class MainFrame(wx.Frame):
             sizer_categorical_buttons.Add(self.button_categorical[key], 0, wx.ALL, 5)
             sizer_numerical_buttons.Add(self.button_numerical[key], 0, wx.ALL, 5)
 
-        sizer_query_categorical.Add(sizer_categorical_buttons, 0, wx.EXPAND, 5)
+        sizer_query_categorical.Add(sizer_categorical_buttons, 0, wx.ALL | wx.EXPAND, 5)
         sizer_query_categorical.Add(self.table_categorical, 1, wx.ALL | wx.EXPAND, 10)
 
         sizer_query_numerical.Add(sizer_numerical_buttons, 0, wx.ALL | wx.EXPAND, 5)

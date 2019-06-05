@@ -37,12 +37,10 @@
         - [X] Save endpoints, radbio, regressions
     * *Close*
         - [X] This function has not been updated in a while, is surely not clearing all data anymore
-    * *Print*
-        - [ ] Need a report generator
     * *Export*
         - [ ] Some tabs have a CSV export already, would like to create a dialog for CSV Export on tool that lets 
         you check off which elements can be exported as CSV
-        - [ ] DataTable objects from models/datatable.py have a .csv property already
+        - [X] DataTable objects from models/datatable.py have a .csv property
         - [ ] Need a export method for plots
     * *Import*
         - [ ] Would like to give user ability to export data to a csv, then add custom columns and reimport data

@@ -62,19 +62,17 @@ class Plot:
         # self.layout.LoadURL(web_file)
 
     @staticmethod
-    def clean_data(*data, mrn=None, dates=None):
+    def clean_data(*data, mrn=None, uid=None, dates=None):
         bad_indices = []
         for var in data:
             bad_indices.extend([i for i, value in enumerate(var) if value == 'None'])
-        bad_indices = list(set(bad_indices))
+        bad_indices = set(bad_indices)
 
-        ans = []
-        for var in data:
-            ans.append([value for i, value in enumerate(var) if i not in bad_indices])
-        if mrn:
-            ans.append([value for i, value in enumerate(mrn) if i not in bad_indices])
-        if dates:
-            ans.append([value for i, value in enumerate(dates) if i not in bad_indices])
+        ans = [[value for i, value in enumerate(var) if i not in bad_indices] for var in data]
+
+        for var in [mrn, uid, dates]:
+            if var:
+                ans.append([value for i, value in enumerate(var) if i not in bad_indices])
 
         return tuple(ans)
 
@@ -86,8 +84,8 @@ class PlotStatDVH(Plot):
 
         self.options = options
         self.dvh = dvh
-        self.source = {'dvh': ColumnDataSource(data=dict(x=[], y=[], mrn=[], roi_name=[], roi_type=[], rx_dose=[],
-                                                         volume=[], min_dose=[], mean_dose=[], max_dose=[])),
+        self.source = {'dvh': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], roi_name=[], roi_type=[],
+                                                         x_dose=[], volume=[], min_dose=[], mean_dose=[], max_dose=[])),
                        'stats': ColumnDataSource(data=dict(x=[], min=[], mean=[], median=[], max=[], mrn=[])),
                        'patch': ColumnDataSource(data=dict(x=[], y=[]))}
         self.layout_done = False
@@ -182,6 +180,7 @@ class PlotStatDVH(Plot):
         data['dvh']['x'] = dvh.x_data
         data['dvh']['y'] = dvh.y_data
         data['dvh']['mrn'] = dvh.mrn
+        data['dvh']['roi_name'] = dvh.roi_name
         data['dvh']['color'] = [color for j, color in zip(range(dvh.count), itertools.cycle(palette))]
 
         # Add x-axis to stats dvhs
@@ -195,6 +194,17 @@ class PlotStatDVH(Plot):
         self.figure.yaxis.axis_label = 'Relative Volume'
 
         self.update_bokeh_layout_in_wx_python()
+
+    def get_dvh_csv(self):
+        data = self.source['dvh'].data
+        max_x = max([len(x) for x in data['x']])
+        csv_data = ['MRN,Study Instance UID,ROI Name,Dose bins (cGy) ->,%s' % ','.join([str(x) for x in range(max_x)])]
+        for i, mrn in enumerate(data['mrn']):
+            clean_mrn = mrn.replace(',', '^')
+            clean_uid = data['study_instance_uid'][i].replace(',', '^')
+            csv_data.append("%s,%s,%s,,%s" %
+                            (clean_mrn, clean_uid, data['roi_name'][i], ','.join(str(y) for y in data['y'][i])))
+        return csv_data
 
 
 class PlotTimeSeries(Plot):
@@ -271,22 +281,23 @@ class PlotTimeSeries(Plot):
                                    Div(text='<hr>', width=self.plot_width),
                                    self.histogram)
 
-    def update_plot(self, x, y, mrn, y_axis_label='Y Axis', avg_len=1, percentile=90., bin_size=10):
+    def update_plot(self, x, y, mrn, uid, y_axis_label='Y Axis', avg_len=1, percentile=90., bin_size=10):
         self.clear_sources()
         self.figure.yaxis.axis_label = y_axis_label
         self.histogram.xaxis.axis_label = y_axis_label
 
-        self.update_plot_data(x, y, mrn)
+        self.update_plot_data(x, y, mrn, uid)
         self.update_histogram(bin_size=bin_size)
         self.update_trend(avg_len, percentile)
 
         self.update_bokeh_layout_in_wx_python()
 
-    def update_plot_data(self, x, y, mrn):
+    def update_plot_data(self, x, y, mrn, uid):
         valid_indices = [i for i, value in enumerate(y) if value != 'None']
         self.source['plot'].data = {'x': [value for i, value in enumerate(x) if i in valid_indices],
                                     'y': [value for i, value in enumerate(y) if i in valid_indices],
-                                    'mrn': [value for i, value in enumerate(mrn) if i in valid_indices]}
+                                    'mrn': [value for i, value in enumerate(mrn) if i in valid_indices],
+                                    'uid': [value for i, value in enumerate(uid) if i in valid_indices]}
 
     def update_histogram(self, bin_size=10):
         width_fraction = 0.9
@@ -614,11 +625,11 @@ class PlotControlChart(Plot):
         self.bokeh_layout = column(self.figure,
                                    row(self.div_center_line, self.div_ucl, self.div_lcl))
 
-    def update_plot(self, x, y, mrn, dates, y_axis_label='Y Axis'):
+    def update_plot(self, x, y, mrn, uid, dates, y_axis_label='Y Axis'):
         self.clear_sources()
         self.figure.yaxis.axis_label = y_axis_label
 
-        x, y, mrn, dates = self.clean_data(x, y, mrn=mrn, dates=dates)
+        x, y, mrn, uid, dates = self.clean_data(x, y, mrn=mrn, uid=uid, dates=dates)
 
         center_line, ucl, lcl = get_control_limits(y)
 
@@ -627,7 +638,8 @@ class PlotControlChart(Plot):
         color = [colors[ucl > value > lcl] for value in y]
         alpha = [alphas[ucl > value > lcl] for value in y]
 
-        self.source['plot'].data = {'x': x, 'y': y, 'mrn': mrn, 'color': color, 'alpha': alpha, 'dates': dates}
+        self.source['plot'].data = {'x': x, 'y': y, 'mrn': mrn, 'uid': uid,
+                                    'color': color, 'alpha': alpha, 'dates': dates}
 
         self.source['patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
                                      'y': [ucl, ucl, lcl, lcl]}

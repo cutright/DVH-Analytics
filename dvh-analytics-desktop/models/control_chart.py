@@ -72,18 +72,20 @@ class ControlChartFrame:
         dates = self.stats_data.sim_study_dates
         y_data = self.stats_data.data[y_axis_selection]['values']
         mrn_data = self.stats_data.mrns
+        uid_data = self.stats_data.uids
 
         sort_index = sorted(range(len(dates)), key=lambda k: dates[k])
-        dates_sorted, y_values_sorted, mrn_sorted = [], [], []
+        dates_sorted, y_values_sorted, mrn_sorted, uid_sorted = [], [], [], []
 
         for s in range(len(dates)):
             dates_sorted.append(dates[sort_index[s]])
             y_values_sorted.append(y_data[sort_index[s]])
             mrn_sorted.append(mrn_data[sort_index[s]])
+            uid_sorted.append(uid_data[sort_index[s]])
 
         x = list(range(1, len(dates)+1))
 
-        self.plot.update_plot(x, y_values_sorted, mrn_sorted, dates_sorted, y_axis_label=y_axis_selection)
+        self.plot.update_plot(x, y_values_sorted, mrn_sorted, uid_sorted, dates_sorted, y_axis_label=y_axis_selection)
 
     def update_data(self, dvh, stats_data):
         self.dvhs = dvh
