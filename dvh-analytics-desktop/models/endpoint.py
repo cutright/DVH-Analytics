@@ -12,21 +12,18 @@ ENDPOINT_DEF_COLUMNS = ['label', 'output_type', 'input_type', 'input_value', 'un
 
 
 class EndpointFrame:
-    def __init__(self, parent, dvh, times_series, regression, control_chart, *args, **kwds):
+    def __init__(self, parent, dvh, times_series, regression, control_chart):
 
         self.parent = parent
         self.dvh = dvh
         self.time_series = times_series
         self.regression = regression
         self.control_chart = control_chart
+        self.initial_columns = ['MRN', 'Tx Site', 'ROI Name']
 
         self.button = {'add': wx.Button(self.parent, wx.ID_ANY, "Add Endpoint"),
                        'del': wx.Button(self.parent, wx.ID_ANY, "Delete Endpoint"),
                        'exp': wx.Button(self.parent, wx.ID_ANY, 'Export')}
-
-        self.parent.Bind(wx.EVT_BUTTON, self.add_ep_button_click, id=self.button['add'].GetId())
-        self.parent.Bind(wx.EVT_BUTTON, self.del_ep_button_click, id=self.button['del'].GetId())
-        self.parent.Bind(wx.EVT_BUTTON, self.on_export_csv, id=self.button['exp'].GetId())
 
         self.table = wx.ListCtrl(self.parent, wx.ID_ANY,
                                  style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
@@ -39,15 +36,21 @@ class EndpointFrame:
             self.dvh.endpoints['data'] = self.data_table.data
             self.dvh.endpoints['defs'] = self.endpoint_defs.data
 
+        self.__do_bind()
         self.__set_properties()
         self.__do_layout()
 
         self.disable_buttons()
 
+    def __do_bind(self):
+        self.parent.Bind(wx.EVT_BUTTON, self.add_ep_button_click, id=self.button['add'].GetId())
+        self.parent.Bind(wx.EVT_BUTTON, self.del_ep_button_click, id=self.button['del'].GetId())
+        self.parent.Bind(wx.EVT_BUTTON, self.on_export_csv, id=self.button['exp'].GetId())
+
     def __set_properties(self):
         self.table.AppendColumn("MRN", format=wx.LIST_FORMAT_LEFT, width=150)
+        self.table.AppendColumn("Tx Site", format=wx.LIST_FORMAT_LEFT, width=150)
         self.table.AppendColumn("ROI Name", format=wx.LIST_FORMAT_LEFT, width=250)
-        # self.table.AppendColumn("EP1", format=wx.LIST_FORMAT_LEFT, width=-1)
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -66,7 +69,7 @@ class EndpointFrame:
 
     def calculate_endpoints(self):
 
-        columns = ['MRN', 'Tx Site', 'ROI Name']
+        columns = [c for c in self.initial_columns]
         if self.data_table.data:
             current_labels = [key for key in list(self.data_table.data) if key not in columns]
         else:
@@ -136,8 +139,9 @@ class EndpointFrame:
         self.regression.update_combo_box_choices()
         self.control_chart.update_combo_box_choices()
 
-        if self.data_table.column_count == 2:
+        if self.data_table.column_count == 3:
             self.button['del'].Disable()
+            self.button['exp'].Disable()
 
     def update_dvh(self, dvh):
         self.dvh = dvh
@@ -149,9 +153,13 @@ class EndpointFrame:
             self.dvh.endpoints['defs'] = self.endpoint_defs.data
 
     def clear_data(self):
-        # TODO: endpoint columns are not cleared
         self.data_table.delete_all_rows()
-        self.endpoint_defs.delete_all_rows()
+        self.endpoint_defs.delete_all_rows(force_delete_data=True)  # no attached layout, force delete
+
+        if self.data_table.data:
+            for column in list(self.data_table.data):
+                if column not in self.initial_columns:
+                    self.data_table.delete_column(column)
 
     def enable_buttons(self):
         for key in list(self.button):
@@ -166,3 +174,18 @@ class EndpointFrame:
 
     def on_export_csv(self, evt):
         export_dlg(self.parent, "Export Endpoints to CSV", self.data_table)
+
+    def get_save_data(self):
+        return deepcopy({'data_table': self.data_table.get_save_data(),
+                         'endpoint_defs': self.endpoint_defs.get_save_data()})
+
+    def load_save_data(self, save_data):
+        self.data_table.load_save_data(save_data['data_table'], ignore_layout=True)
+        self.endpoint_defs.load_save_data(save_data['endpoint_defs'], ignore_layout=True)
+        self.calculate_endpoints()
+
+    @property
+    def has_data(self):
+        if self.endpoint_defs.data['label']:
+            return True
+        return False

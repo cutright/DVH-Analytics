@@ -366,8 +366,8 @@ class MainFrame(wx.Frame):
         dlg = wx.FileDialog(self, "Open saved data", "", wildcard='*.dvha',
                             style=wx.FD_FILE_MUST_EXIST | wx.FD_OPEN)
         if dlg.ShowModal() == wx.ID_OK:
+            self.close()
             self.load_data_obj(dlg.GetPath())
-            self.exec_query(load_saved_dvh_data=True)
 
         dlg.Destroy()
 
@@ -378,6 +378,7 @@ class MainFrame(wx.Frame):
         self.save_data['version'] = self.options.VERSION
         # data_table_categorical and data_table_numerical saved after query to ensure these data reflect
         # the rest of the saved data
+        self.save_data['endpoint'] = self.endpoint.get_save_data()
 
     def load_data_obj(self, abs_file_path):
         self.save_data = load_object_from_file(abs_file_path)
@@ -385,6 +386,18 @@ class MainFrame(wx.Frame):
         self.data = self.save_data['main_data']
         self.data_table_categorical.load_save_data(self.save_data['main_categorical'])
         self.data_table_numerical.load_save_data(self.save_data['main_numerical'])
+
+        self.exec_query(load_saved_dvh_data=True)
+
+        self.endpoint.load_save_data(self.save_data['endpoint'])
+        if self.endpoint.has_data:
+            self.endpoint.enable_buttons()
+
+        self.endpoint.update_endpoints_in_dvh()
+        self.time_series.update_y_axis_options()
+        self.regression.stats_data.update_endpoints_and_radbio()
+        self.regression.update_combo_box_choices()
+        self.control_chart.update_combo_box_choices()
 
     def on_toolbar_database(self, evt):
 
@@ -553,31 +566,34 @@ class MainFrame(wx.Frame):
         self.Close()
 
     def on_close(self, evt):
-        # TODO: Review this function and its references/dependencies
         if self.dvh:
             dlg = wx.MessageDialog(self, "Clear all data and plots?", caption='Close',
                                    style=wx.YES | wx.NO | wx.NO_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
             dlg.Center()
             res = dlg.ShowModal()
             if res == wx.ID_YES:
-                self.dvh = None
-                self.data_table_categorical.delete_all_rows()
-                self.data_table_numerical.delete_all_rows()
-                self.plot.clear_plot()
-                self.endpoint.clear_data()
-                self.radbio.clear_data()
-                self.time_series.clear_data()
-                self.notebook_main_view.SetSelection(0)
-                self.text_summary.SetLabelText("")
-                self.__disable_notebook_tabs()
-                for key in ['categorical', 'numerical']:
-                    self.disable_query_buttons(key)
-                self.button_query_execute.Disable()
-                self.time_series.initialize_y_axis_options()
-                self.regression.plot.clear_plot()
-                self.control_chart.initialize_y_axis_options()
-                self.control_chart.plot.clear_plot()
+                self.close()
             dlg.Destroy()
+
+    def close(self):
+        self.dvh = None
+        self.data_table_categorical.delete_all_rows()
+        self.data_table_numerical.delete_all_rows()
+        self.plot.clear_plot()
+        self.endpoint.clear_data()
+        self.radbio.clear_data()
+        self.time_series.clear_data()
+        self.notebook_main_view.SetSelection(0)
+        self.text_summary.SetLabelText("")
+        self.__disable_notebook_tabs()
+        for key in ['categorical', 'numerical']:
+            self.disable_query_buttons(key)
+        self.button_query_execute.Disable()
+        self.time_series.initialize_y_axis_options()
+        self.regression.plot.clear_plot()
+        self.control_chart.initialize_y_axis_options()
+        self.control_chart.plot.clear_plot()
+
 
     def on_about(self, evt):
         dlg = wx.MessageDialog(self, "DVH Analytics \n in wxPython", "About Sample Editor", wx.OK)

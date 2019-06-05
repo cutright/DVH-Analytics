@@ -25,10 +25,12 @@ class DataTable:
                          'widths': self.widths,
                          'formats': self.formats})
 
-    def load_save_data(self, save_data):
+    def load_save_data(self, save_data, ignore_layout=False):
         for key, item in save_data.items():
             setattr(self, key, deepcopy(item))
-        self.set_data_in_layout()
+
+        if not ignore_layout:
+            self.set_data_in_layout()
 
     def set_data(self, data, columns, formats=None):
         if formats:
@@ -125,9 +127,11 @@ class DataTable:
         if self.layout:
             self.layout.DeleteItem(index)
 
-    def delete_all_rows(self, layout_only=False):
+    def delete_all_rows(self, layout_only=False, force_delete_data=False):
         if self.layout:
             self.layout.DeleteAllItems()
+
+        if self.layout or force_delete_data:
             if not layout_only:
                 if self.data:
                     for key in self.keys:
