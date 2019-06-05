@@ -250,6 +250,9 @@ class RegressionFrame:
         self.y_variable_nodes = {}
         self.tree_ctrl.DeleteAllItems()
         self.tree_ctrl_root = self.tree_ctrl.AddRoot('Regressions')
+        self.checkbox.SetValue(False)
+        self.combo_box_x_axis.SetValue('ROI Max Dose')
+        self.combo_box_y_axis.SetValue('ROI Volume')
 
 
 class MultiVarResultsFrame(wx.Frame):
