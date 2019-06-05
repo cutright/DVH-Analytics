@@ -34,10 +34,9 @@
         - [X] Remaining data could be recalculated
         - [X] Maybe just pickle the QuerySQL objects stored in MainFrame.data in main.py?
         - [X] Include filters and add to UI after load
-        - [ ] Save endpoints, radbio, regressions
+        - [X] Save endpoints, radbio, regressions
     * *Close*
         - [X] This function has not been updated in a while, is surely not clearing all data anymore
-            * Still need to properly clear endpoints
     * *Print*
         - [ ] Need a report generator
     * *Export*

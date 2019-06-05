@@ -382,6 +382,7 @@ class MainFrame(wx.Frame):
         self.save_data['endpoint'] = self.endpoint.get_save_data()
         self.save_data['time_series'] = self.time_series.get_save_data()
         self.save_data['radbio'] = self.radbio.get_save_data()
+        self.save_data['regression'] = self.regression.get_save_data()
 
     def load_data_obj(self, abs_file_path):
         self.save_data = load_object_from_file(abs_file_path)
@@ -403,11 +404,15 @@ class MainFrame(wx.Frame):
         self.radbio.load_save_data(self.save_data['radbio'])
 
         self.endpoint.update_endpoints_in_dvh()
+
         self.time_series.update_y_axis_options()
         self.time_series.load_save_data(self.save_data['time_series'])
         self.time_series.update_plot()
+
         self.regression.stats_data.update_endpoints_and_radbio()
         self.regression.update_combo_box_choices()
+        self.regression.load_save_data(self.save_data['regression'])
+
         self.control_chart.update_combo_box_choices()
 
     def on_toolbar_database(self, evt):

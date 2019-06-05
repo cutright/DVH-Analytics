@@ -175,30 +175,34 @@ class RegressionFrame:
     def on_checkbox(self, evt):
         y_value = self.combo_box_y_axis.GetValue()
         x_value = self.combo_box_x_axis.GetValue()
+        [self.del_regression, self.add_regression][self.checkbox.GetValue()](y_value, x_value)
 
-        if self.checkbox.GetValue():
-            if y_value not in list(self.y_variable_nodes):
-                self.y_variable_nodes[y_value] = self.tree_ctrl.AppendItem(self.tree_ctrl_root, y_value)
-                self.tree_ctrl.SetItemData(self.y_variable_nodes[y_value], None)
-                self.tree_ctrl.SetItemImage(self.y_variable_nodes[y_value], self.images['y'], wx.TreeItemIcon_Normal)
-            if y_value not in list(self.x_variable_nodes):
-                self.x_variable_nodes[y_value] = {}
-            if x_value not in self.x_variable_nodes[y_value]:
-                self.x_variable_nodes[y_value][x_value] = self.tree_ctrl.AppendItem(self.y_variable_nodes[y_value], x_value)
-                self.tree_ctrl.SetItemData(self.x_variable_nodes[y_value][x_value], None)
-                self.tree_ctrl.SetItemImage(self.x_variable_nodes[y_value][x_value], self.images['x'], wx.TreeItemIcon_Normal)
-            self.tree_ctrl.ExpandAll()
+    def add_regression(self, y_value, x_value, select_item=True):
+        if y_value not in list(self.y_variable_nodes):
+            self.y_variable_nodes[y_value] = self.tree_ctrl.AppendItem(self.tree_ctrl_root, y_value)
+            self.tree_ctrl.SetItemData(self.y_variable_nodes[y_value], None)
+            self.tree_ctrl.SetItemImage(self.y_variable_nodes[y_value], self.images['y'], wx.TreeItemIcon_Normal)
+        if y_value not in list(self.x_variable_nodes):
+            self.x_variable_nodes[y_value] = {}
+        if x_value not in self.x_variable_nodes[y_value]:
+            self.x_variable_nodes[y_value][x_value] = self.tree_ctrl.AppendItem(self.y_variable_nodes[y_value], x_value)
+            self.tree_ctrl.SetItemData(self.x_variable_nodes[y_value][x_value], None)
+            self.tree_ctrl.SetItemImage(self.x_variable_nodes[y_value][x_value], self.images['x'],
+                                        wx.TreeItemIcon_Normal)
+        self.tree_ctrl.ExpandAll()
+        if select_item:
             self.tree_ctrl.SelectItem(self.x_variable_nodes[self.y_axis][self.x_axis])
-        else:
-            if y_value in list(self.y_variable_nodes):
-                if x_value in list(self.x_variable_nodes[y_value]):
-                    self.tree_ctrl.Delete(self.x_variable_nodes[y_value][x_value])
-                    self.x_variable_nodes[y_value].pop(x_value)
-                    if not list(self.x_variable_nodes[y_value]):
-                        self.x_variable_nodes.pop(y_value)
-                        self.tree_ctrl.Delete(self.y_variable_nodes[y_value])
-                        self.y_variable_nodes.pop(y_value)
-            self.tree_ctrl.Unselect()
+
+    def del_regression(self, y_value, x_value):
+        if y_value in list(self.y_variable_nodes):
+            if x_value in list(self.x_variable_nodes[y_value]):
+                self.tree_ctrl.Delete(self.x_variable_nodes[y_value][x_value])
+                self.x_variable_nodes[y_value].pop(x_value)
+                if not list(self.x_variable_nodes[y_value]):
+                    self.x_variable_nodes.pop(y_value)
+                    self.tree_ctrl.Delete(self.y_variable_nodes[y_value])
+                    self.y_variable_nodes.pop(y_value)
+        self.tree_ctrl.Unselect()
 
     def on_regression(self, evt):
         self.multi_variable_regression(self.combo_box_y_axis.GetValue())
@@ -253,6 +257,20 @@ class RegressionFrame:
         self.checkbox.SetValue(False)
         self.combo_box_x_axis.SetValue('ROI Max Dose')
         self.combo_box_y_axis.SetValue('ROI Volume')
+
+    def get_y_vars(self):
+        return list(self.y_variable_nodes)
+
+    def get_x_vars(self, y_var):
+        return list(self.x_variable_nodes[y_var])
+
+    def get_save_data(self):
+        return {y_var: [x_var for x_var in self.get_x_vars(y_var)] for y_var in self.get_y_vars()}
+
+    def load_save_data(self, save_data):
+        for y_var, x_vars in save_data.items():
+            for x_var in x_vars:
+                self.add_regression(y_var, x_var, select_item=False)
 
 
 class MultiVarResultsFrame(wx.Frame):
