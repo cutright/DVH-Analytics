@@ -4,7 +4,7 @@
 import wx
 from models.datatable import DataTable
 from dialogs.main import AddEndpointDialog, DelEndpointDialog
-from dialogs.export import data_table_to_csv as export_dlg
+from dialogs.export import export_csv
 from copy import deepcopy
 
 
@@ -174,7 +174,7 @@ class EndpointFrame:
         self.button['add'].Enable()
 
     def on_export_csv(self, evt):
-        export_dlg(self.parent, "Export Endpoints to CSV", self.data_table)
+        export_csv(self.parent, "Export Endpoints to CSV", self.data_table.csv)
 
     def get_save_data(self):
         return deepcopy({'data_table': self.data_table.get_save_data(),

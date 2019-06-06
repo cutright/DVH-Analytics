@@ -1,7 +1,7 @@
 import wx
 
 
-def data_table_to_csv(frame, title, data_table):
+def export_csv(frame, title, csv_data):
     # from https://wxpython.org/Phoenix/docs/html/wx.FileDialog.html
 
     with wx.FileDialog(frame, title, wildcard="CSV files (*.csv)|*.csv",
@@ -13,6 +13,6 @@ def data_table_to_csv(frame, title, data_table):
         pathname = fileDialog.GetPath()
         try:
             with open(pathname, 'w') as file:
-                file.write(data_table.csv)
+                file.write(csv_data)
         except IOError:
             wx.LogError("Cannot save current data in file '%s'." % pathname)

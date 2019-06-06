@@ -29,7 +29,6 @@ from datetime import datetime
 from copy import deepcopy
 
 
-# TODO: Clean-up dialog functionality, have the classes themselves run and handle modal returns
 # TODO: Compartmentalize this code, main.py should be a relatively small file
 class MainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -130,9 +129,9 @@ class MainFrame(wx.Frame):
 
         file_menu = wx.Menu()
         # file_menu.Append(wx.ID_NEW, '&New')
-        # menu_open = file_menu.Append(wx.ID_OPEN, '&Open\tCtrl+O')
+        menu_open = file_menu.Append(wx.ID_OPEN, '&Open\tCtrl+O')
         menu_close = file_menu.Append(wx.ID_ANY, '&Close\tCtrl+W')
-        # file_menu.Append(wx.ID_SAVE, '&Save')
+        menu_save = file_menu.Append(wx.ID_ANY, '&Save\tCtrl+S')
         menu_about = file_menu.Append(wx.ID_ANY, '&About\tCtrl+A')
         file_menu.AppendSeparator()
 
@@ -150,8 +149,9 @@ class MainFrame(wx.Frame):
         menu_sql = settings_menu.Append(wx.ID_ANY, '&Database Connection\tCtrl+D')
 
         self.Bind(wx.EVT_MENU, self.on_quit, qmi)
-        # self.Bind(wx.EVT_MENU, self.on_open, menu_open)
+        self.Bind(wx.EVT_MENU, self.on_open, menu_open)
         self.Bind(wx.EVT_MENU, self.on_close, menu_close)
+        self.Bind(wx.EVT_MENU, self.on_save, menu_save)
         self.Bind(wx.EVT_MENU, self.on_pref, menu_pref)
         self.Bind(wx.EVT_MENU, self.on_about, menu_about)
         self.Bind(wx.EVT_MENU, self.on_sql, menu_sql)

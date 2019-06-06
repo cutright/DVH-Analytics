@@ -8,7 +8,7 @@ from dialogs.database import ChangePatientIdentifierDialog, DeletePatientDialog,
 from db.sql_to_python import get_database_tree
 from db.sql_connector import DVH_SQL, SQLError
 from models.datatable import DataTable
-from dialogs.export import data_table_to_csv as export_dlg
+from dialogs.export import export_csv
 
 
 class DatabaseEditorDialog(wx.Frame):
@@ -209,4 +209,4 @@ class DatabaseEditorDialog(wx.Frame):
         DeleteAllData(self)
 
     def on_export_csv(self, evt):
-        export_dlg(self, "Export Data Table to CSV", self.data_query_results)
+        export_csv(self, "Export Data Table to CSV", self.data_query_results.csv)

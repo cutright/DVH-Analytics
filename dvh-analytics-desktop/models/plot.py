@@ -55,9 +55,9 @@ class Plot:
 
     def update_bokeh_layout_in_wx_python(self):
         html_str = get_layout_html(self.bokeh_layout)
-        # web_file = '/Users/nightowl/PycharmProjects/DVH-Analytics-Desktop/dvh-analytics-desktop/test.html'
-        # with open(web_file, 'wb') as f:
-        #     f.write(html_str.encode("utf-8"))
+        web_file = '/Users/nightowl/PycharmProjects/DVH-Analytics-Desktop/dvh-analytics-desktop/test.html'
+        with open(web_file, 'wb') as f:
+            f.write(html_str.encode("utf-8"))
         self.layout.SetPage(html_str, "")
         # self.layout.LoadURL(web_file)
 
@@ -195,16 +195,29 @@ class PlotStatDVH(Plot):
 
         self.update_bokeh_layout_in_wx_python()
 
-    def get_dvh_csv(self):
+    def get_csv(self, include_summary=True, include_dvhs=True):
         data = self.source['dvh'].data
-        max_x = max([len(x) for x in data['x']])
-        csv_data = ['MRN,Study Instance UID,ROI Name,Dose bins (cGy) ->,%s' % ','.join([str(x) for x in range(max_x)])]
-        for i, mrn in enumerate(data['mrn']):
-            clean_mrn = mrn.replace(',', '^')
-            clean_uid = data['study_instance_uid'][i].replace(',', '^')
-            csv_data.append("%s,%s,%s,,%s" %
-                            (clean_mrn, clean_uid, data['roi_name'][i], ','.join(str(y) for y in data['y'][i])))
-        return csv_data
+        summary, dvh_data = [], []
+
+        if include_summary:
+            summary = ['MRN,Study Instance UID,ROI Name,ROI Type,Rx Dose,Volume,Min Dose,Mean Dose,Max Dose']
+            for i, mrn in enumerate(data['mrn']):
+                keys = ['mrn', 'study_instance_uid', 'roi_name', 'roi_type', 'rx_dose',
+                        'volume', 'min_dose', 'mean_dose', 'max_dose']
+                summary.append(','.join([str(data[key][i]).replace(',', '^') for key in keys]))
+            summary.append('')
+
+        if include_dvhs:
+            max_x = max([len(x) for x in data['x']])
+            dvh_data = ['MRN,Study Instance UID,ROI Name,Dose bins (cGy) ->,%s' % ','.join([str(x) for x in range(max_x)])]
+            for i, mrn in enumerate(data['mrn']):
+                clean_mrn = mrn.replace(',', '^')
+                clean_uid = data['study_instance_uid'][i].replace(',', '^')
+                clean_roi = data['roi_name'][i].replace(',', '^')
+                dvh_data.append("%s,%s,%s,,%s" %
+                                (clean_mrn, clean_uid, clean_roi, ','.join(str(y) for y in data['y'][i])))
+
+        return '\n'.join(summary + dvh_data)
 
 
 class PlotTimeSeries(Plot):
@@ -212,11 +225,12 @@ class PlotTimeSeries(Plot):
         Plot.__init__(self, parent, options, x_axis_label='Simulation Date',
                       plot_width=plot_width, plot_height=325, x_axis_type='datetime')
         self.options = options
-        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[])),
                        'hist': ColumnDataSource(data=dict(x=[], top=[], width=[])),
                        'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'bound': ColumnDataSource(data=dict(x=[], mrn=[], upper=[], avg=[], lower=[])),
                        'patch': ColumnDataSource(data=dict(x=[], y=[]))}
+        self.y_axis_label = ''
         self.plot_width = plot_width
 
         self.__add_plot_data()
@@ -282,6 +296,7 @@ class PlotTimeSeries(Plot):
                                    self.histogram)
 
     def update_plot(self, x, y, mrn, uid, y_axis_label='Y Axis', avg_len=1, percentile=90., bin_size=10):
+        self.y_axis_label = y_axis_label
         self.clear_sources()
         self.figure.yaxis.axis_label = y_axis_label
         self.histogram.xaxis.axis_label = y_axis_label
@@ -331,6 +346,13 @@ class PlotTimeSeries(Plot):
                                          'lower': [lower_bound] * x_len}
             self.source['patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
                                          'y': [upper_bound, upper_bound, lower_bound, lower_bound]}
+
+    def get_csv(self):
+        data = self.source['plot'].data
+        csv_data = ['MRN,Study Instance UID,Date,%s' % self.y_axis_label]
+        for i in range(len(data['mrn'])):
+            csv_data.append(','.join(str(data[key][i]).replace(',', '^') for key in ['mrn', 'uid', 'x', 'y']))
+        return '\n'.join(csv_data)
 
 
 class PlotRegression(Plot):

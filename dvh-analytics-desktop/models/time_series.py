@@ -7,6 +7,7 @@ from models.plot import PlotTimeSeries
 from db import sql_columns
 from datetime import datetime
 from dateutil import parser
+from dialogs.export import export_csv
 
 
 class TimeSeriesFrame:
@@ -24,6 +25,7 @@ class TimeSeriesFrame:
         self.text_input_lookback_distance = wx.TextCtrl(self.parent, wx.ID_ANY, "1", style=wx.TE_PROCESS_ENTER)
         self.text_inputs_percentile = wx.TextCtrl(self.parent, wx.ID_ANY, "90", style=wx.TE_PROCESS_ENTER)
         self.button_update_plot = wx.Button(self.parent, wx.ID_ANY, "Update Plot")
+        self.button_export_csv = wx.Button(self.parent, wx.ID_ANY, "Export")
 
         self.parent.Bind(wx.EVT_COMBOBOX, self.combo_box_y_axis_ticker, id=self.combo_box_y_axis.GetId())
         self.parent.Bind(wx.EVT_TEXT_ENTER, self.update_plot_ticker, id=self.text_input_bin_size.GetId())
@@ -34,6 +36,7 @@ class TimeSeriesFrame:
         self.__do_layout()
 
         self.parent.Bind(wx.EVT_BUTTON, self.update_plot_ticker, id=self.button_update_plot.GetId())
+        self.parent.Bind(wx.EVT_BUTTON, self.export_csv, id=self.button_export_csv.GetId())
 
         self.disable_buttons()
 
@@ -71,6 +74,7 @@ class TimeSeriesFrame:
         sizer_widgets.Add(sizer_percentile, 1, wx.EXPAND, 0)
         sizer_widgets.Add(sizer_histogram_bins, 1, wx.EXPAND, 0)
         sizer_widgets.Add(self.button_update_plot, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_widgets.Add(self.button_export_csv, 0, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_widgets, 0, wx.BOTTOM | wx.EXPAND, 5)
         self.plot = PlotTimeSeries(self.parent, self.options)
         sizer_plot.Add(self.plot.layout)
@@ -212,3 +216,6 @@ class TimeSeriesFrame:
     def load_save_data(self, save_data):
         for attr in self.save_attr:
             getattr(self, attr).SetValue(save_data[attr])
+
+    def export_csv(self, evt):
+        export_csv(self.parent, "Export Time Series data to CSV", self.plot.get_csv())
