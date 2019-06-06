@@ -209,4 +209,4 @@ class DatabaseEditorDialog(wx.Frame):
         DeleteAllData(self)
 
     def on_export_csv(self, evt):
-        export_csv(self, "Export Data Table to CSV", self.data_query_results.csv)
+        export_csv(self, "Export Data Table to CSV", self.data_query_results.get_csv())

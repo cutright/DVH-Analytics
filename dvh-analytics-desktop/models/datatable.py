@@ -160,10 +160,28 @@ class DataTable:
         self.delete_all_rows()
         self.layout.DeleteAllColumns()
 
-    @property
-    def csv(self):
+    def get_csv(self, extra_column_data=None):
+        """
+        This function will return a csv string of the data currently in this object
+        :param extra_column_data: if there is additional data you'd like in the csv, pass the column data as a
+        dictionary with keys corresponding to column index, values are dicts like {'title': str, 'data': list_of_data}
+        :type extra_column_data: dict
+        :return: csv string
+        :rtype: str
+        """
 
-        data = [','.join([col for col in self.columns])]
+        data = self.data_for_csv
+        if extra_column_data:
+            self.insert_columns_into_data_for_csv(data, extra_column_data)
+        csv_data = []
+        for row in data:
+            csv_data.append(','.join(str(i) for i in row))
+
+        return '\n'.join(csv_data)
+
+    @property
+    def data_for_csv(self):
+        data = [self.columns]
         for row_index in range(self.row_count):
             row = []
             for key in self.keys:
@@ -173,9 +191,20 @@ class DataTable:
                 else:
                     value = str(raw_value).replace(',', ';')
                 row.append(value)
-            data.append(','.join(row))
+            data.append(row)
+        return data
 
-        return '\n'.join(data)
+    @staticmethod
+    def insert_column_into_data_for_csv(data_for_csv, columns_dict, index):
+        columns_dict['data'].insert(0, columns_dict['title'])
+        for i, row in enumerate(data_for_csv):
+            row.insert(index, columns_dict['data'][i])
+
+    def insert_columns_into_data_for_csv(self, data_for_csv, columns_dict):
+        indices = list(columns_dict)
+        indices.sort()
+        for index in indices:
+            self.insert_column_into_data_for_csv(data_for_csv, columns_dict[index], index)
 
     @property
     def selected_row_data(self):
