@@ -20,9 +20,18 @@ def export_csv(frame, title, csv_data):
 
 
 class ExportCSVDialog(wx.Dialog):
-    def __init__(self, enabled, time_series_variables, control_chart_variables):
+    def __init__(self, app):
         wx.Dialog.__init__(self, None)
-        self.enabled = enabled
+
+        self.app = app
+
+        self.enabled = {'DVHs': self.app.dvh.has_data,
+                        'Endpoints': self.app.endpoint.has_data,
+                        'Radbio': self.app.radbio.has_data,
+                        'Time Series': self.app.time_series.has_data,
+                        'Regression': self.app.regression.has_data,
+                        'Control Chart': self.app.control_chart.has_data}
+
         checkbox_keys = ['DVHs', 'Include Summary', 'Endpoints', 'Radbio', 'Time Series', 'Regression', 'Control Chart']
         self.checkbox = {key: wx.CheckBox(self, wx.ID_ANY, key) for key in checkbox_keys}
 
@@ -33,12 +42,14 @@ class ExportCSVDialog(wx.Dialog):
         self.tree_ctrl_regression = wx.TreeCtrl(self, wx.ID_ANY)
 
         time_series_column = "Time Series Y-Axis"
+        time_series_variables = self.app.time_series.combo_box_y_axis.GetItems()
         time_series_data = {time_series_column: time_series_variables}
         self.data_table_time_series = DataTable(self.list_ctrl['Time Series'],
                                                 columns=[time_series_column], widths=[400])
         self.data_table_time_series.set_data(time_series_data, [time_series_column])
 
         control_chart_column = "Charting Variable"
+        control_chart_variables = self.app.control_chart.combo_box_y_axis.GetItems()
         control_chart_data = {control_chart_column: control_chart_variables}
         self.data_table_control_chart = DataTable(self.list_ctrl['Control Chart'],
                                                   columns=[control_chart_column], widths=[400])

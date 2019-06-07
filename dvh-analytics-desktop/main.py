@@ -626,14 +626,7 @@ class MainFrame(wx.Frame):
 
     def on_export(self, evt):
         if self.dvh is not None:
-            enabled = {'DVHs': self.dvh.has_data,
-                       'Endpoints': self.endpoint.has_data,
-                       'Radbio': self.radbio.has_data,
-                       'Time Series': self.time_series.has_data,
-                       'Regression': self.regression.has_data,
-                       'Control Chart': self.control_chart.has_data}
-            ExportCSVDialog(enabled, self.time_series.combo_box_y_axis.GetItems(),
-                            self.control_chart.combo_box_y_axis.GetItems())
+            ExportCSVDialog(self)
         else:
             wx.MessageBox('There is no data to export! Please query some data first.', 'Export Error',
                           wx.OK | wx.ICON_WARNING)
