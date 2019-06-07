@@ -127,3 +127,7 @@ class ControlChartFrame:
 
     def clear_data(self):
         pass
+
+    @property
+    def has_data(self):
+        return self.combo_box_y_axis.IsEnabled()

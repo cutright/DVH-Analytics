@@ -8,6 +8,7 @@ from db.sql_to_python import QuerySQL
 from db.sql_connector import echo_sql_db
 from dialogs.main import query_dlg, UserSettings
 from dialogs.database import SQLSettingsDialog
+from dialogs.export import ExportCSVDialog
 from models.import_dicom import ImportDICOM_Dialog
 from models.database_editor import DatabaseEditorDialog
 from models.datatable import DataTable
@@ -117,6 +118,7 @@ class MainFrame(wx.Frame):
 
         self.Bind(wx.EVT_TOOL, self.on_save, id=self.toolbar_ids['Save'])
         self.Bind(wx.EVT_TOOL, self.on_open, id=self.toolbar_ids['Open'])
+        self.Bind(wx.EVT_TOOL, self.on_export, id=self.toolbar_ids['Export'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_database, id=self.toolbar_ids['Database'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_settings, id=self.toolbar_ids['Settings'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_roi_map, id=self.toolbar_ids['ROI Map'])
@@ -131,6 +133,7 @@ class MainFrame(wx.Frame):
         # file_menu.Append(wx.ID_NEW, '&New')
         menu_open = file_menu.Append(wx.ID_OPEN, '&Open\tCtrl+O')
         menu_close = file_menu.Append(wx.ID_ANY, '&Close\tCtrl+W')
+        menu_export = file_menu.Append(wx.ID_ANY, '&Export\tCtrl+E')
         menu_save = file_menu.Append(wx.ID_ANY, '&Save\tCtrl+S')
         menu_about = file_menu.Append(wx.ID_ANY, '&About\tCtrl+A')
         file_menu.AppendSeparator()
@@ -151,6 +154,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_quit, qmi)
         self.Bind(wx.EVT_MENU, self.on_open, menu_open)
         self.Bind(wx.EVT_MENU, self.on_close, menu_close)
+        self.Bind(wx.EVT_MENU, self.on_export, menu_export)
         self.Bind(wx.EVT_MENU, self.on_save, menu_save)
         self.Bind(wx.EVT_MENU, self.on_pref, menu_pref)
         self.Bind(wx.EVT_MENU, self.on_about, menu_about)
@@ -620,6 +624,19 @@ class MainFrame(wx.Frame):
         self.control_chart.initialize_y_axis_options()
         self.control_chart.plot.clear_plot()
 
+    def on_export(self, evt):
+        if self.dvh is not None:
+            enabled = {'DVHs': self.dvh.has_data,
+                       'Endpoints': self.endpoint.has_data,
+                       'Radbio': self.radbio.has_data,
+                       'Time Series': self.time_series.has_data,
+                       'Regression': self.regression.has_data,
+                       'Control Chart': self.control_chart.has_data}
+            ExportCSVDialog(enabled, self.time_series.combo_box_y_axis.GetItems(),
+                            self.control_chart.combo_box_y_axis.GetItems())
+        else:
+            wx.MessageBox('There is no data to export! Please query some data first.', 'Export Error',
+                          wx.OK | wx.ICON_WARNING)
 
     def on_about(self, evt):
         dlg = wx.MessageDialog(self, "DVH Analytics \n in wxPython", "About Sample Editor", wx.OK)

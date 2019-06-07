@@ -373,6 +373,10 @@ class DVH:
                     self.ptv_surface_area.append(None)
                     self.ptv_volume.append(None)
 
+    @property
+    def has_data(self):
+        return bool(len(self.mrn))
+
 
 # Returns the isodose level outlining the given volume
 def dose_to_volume(dvh, rel_volume):

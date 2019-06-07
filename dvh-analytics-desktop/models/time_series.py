@@ -219,3 +219,7 @@ class TimeSeriesFrame:
 
     def export_csv(self, evt):
         export_csv(self.parent, "Export Time Series data to CSV", self.plot.get_csv())
+
+    @property
+    def has_data(self):
+        return self.button_export_csv.IsEnabled()

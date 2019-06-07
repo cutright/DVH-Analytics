@@ -272,6 +272,10 @@ class RegressionFrame:
             for x_var in x_vars:
                 self.add_regression(y_var, x_var, select_item=False)
 
+    @property
+    def has_data(self):
+        return bool(len(list(self.y_variable_nodes)))
+
 
 class MultiVarResultsFrame(wx.Frame):
     def __init__(self, y_variable, x_variables, stats_data, options):

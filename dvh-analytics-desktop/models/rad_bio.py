@@ -22,7 +22,7 @@ from dialogs.export import export_csv
 
 
 class RadBioFrame:
-    def __init__(self, parent, dvh, time_series, regression, control_chart, *args, **kwds):
+    def __init__(self, parent, dvh, time_series, regression, control_chart):
 
         self.parent = parent
         self.dvh = dvh
@@ -223,3 +223,7 @@ class RadBioFrame:
 
     def load_save_data(self, save_data):
         self.data_table_rad_bio.load_save_data(save_data)
+
+    @property
+    def has_data(self):
+        return any(self.data_table_rad_bio.data['a'])

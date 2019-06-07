@@ -9,6 +9,7 @@ class DataTable:
 
         self.layout = listctrl
 
+        # TODO: Initializing class with data does not display data?
         self.data = deepcopy(data)
         self.columns = deepcopy(columns)
         self.widths = widths
@@ -209,3 +210,11 @@ class DataTable:
     @property
     def selected_row_data(self):
         return [self.get_row(index) for index in get_selected_listctrl_items(self.layout)]
+
+    def apply_selection_to_all(self, state):
+        for i in range(self.row_count):
+            self.layout.Select(i, on=state)
+
+    @property
+    def has_data(self):
+        return bool(self.row_count)
