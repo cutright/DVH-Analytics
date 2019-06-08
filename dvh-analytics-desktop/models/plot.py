@@ -55,9 +55,9 @@ class Plot:
 
     def update_bokeh_layout_in_wx_python(self):
         html_str = get_layout_html(self.bokeh_layout)
-        web_file = '/Users/nightowl/PycharmProjects/DVH-Analytics-Desktop/dvh-analytics-desktop/test.html'
-        with open(web_file, 'wb') as f:
-            f.write(html_str.encode("utf-8"))
+        # web_file = '/Users/nightowl/PycharmProjects/DVH-Analytics-Desktop/dvh-analytics-desktop/test.html'
+        # with open(web_file, 'wb') as f:
+        #     f.write(html_str.encode("utf-8"))
         self.layout.SetPage(html_str, "")
         # self.layout.LoadURL(web_file)
 
@@ -576,6 +576,7 @@ class PlotMultiVarRegression(Plot):
 class PlotControlChart(Plot):
     def __init__(self, parent, options, plot_width=800):
         Plot.__init__(self, parent, options, x_axis_label='Study', plot_width=plot_width, plot_height=325)
+        self.y_axis_label = ''
         self.options = options
         self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], color=[], alpha=[], dates=[])),
                        'center_line': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
@@ -649,7 +650,8 @@ class PlotControlChart(Plot):
 
     def update_plot(self, x, y, mrn, uid, dates, y_axis_label='Y Axis'):
         self.clear_sources()
-        self.figure.yaxis.axis_label = y_axis_label
+        self.y_axis_label = y_axis_label
+        self.figure.yaxis.axis_label = self.y_axis_label
 
         x, y, mrn, uid, dates = self.clean_data(x, y, mrn=mrn, uid=uid, dates=dates)
 
@@ -690,6 +692,13 @@ class PlotControlChart(Plot):
         self.div_center_line.text = "<b>Center line</b>:"
         self.div_ucl.text = "<b>UCL</b>:"
         self.div_lcl.text = "<b>LCL</b>:"
+
+    def get_csv(self):
+        data = self.source['plot'].data
+        csv_data = ['MRN,Study Instance UID,Study #,Date,%s' % self.y_axis_label]
+        for i in range(len(data['mrn'])):
+            csv_data.append(','.join(str(data[key][i]).replace(',', '^') for key in ['mrn', 'uid', 'x', 'dates', 'y']))
+        return '\n'.join(csv_data)
 
 
 class PlotRandomForest(Plot):

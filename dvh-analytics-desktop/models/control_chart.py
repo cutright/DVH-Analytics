@@ -1,10 +1,11 @@
 import wx
 from models.plot import PlotControlChart
 from db import sql_columns
+from dialogs.export import export_csv
 
 
 class ControlChartFrame:
-    def __init__(self, parent, dvh, stats_data, options, *args, **kwds):
+    def __init__(self, parent, dvh, stats_data, options):
         self.parent = parent
         self.dvhs = dvh
         self.stats_data = stats_data
@@ -127,6 +128,13 @@ class ControlChartFrame:
 
     def clear_data(self):
         pass
+
+    def get_csv(self, selection=None):
+        # TODO: Update to export specified variables
+        return self.plot.get_csv()
+
+    def export_csv(self, evt):
+        export_csv(self.parent, "Export Time Series data to CSV", self.plot.get_csv())
 
     @property
     def has_data(self):

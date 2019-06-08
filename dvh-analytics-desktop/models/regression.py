@@ -41,6 +41,7 @@ class RegressionFrame:
         self.checkbox = wx.CheckBox(self.pane_plot, wx.ID_ANY, "Include in Multi-Var\nRegression")
         self.plot = PlotRegression(self.pane_plot, self.options)
         self.button_multi_var_reg_model = wx.Button(self.pane_tree, wx.ID_ANY, 'Run Model')
+        self.button_multi_var_export = wx.Button(self.pane_tree, wx.ID_ANY, 'Export Data')
 
     def __set_properties(self):
         self.pane_tree.SetScrollRate(10, 10)
@@ -77,8 +78,9 @@ class RegressionFrame:
         sizer_x_axis_select = wx.BoxSizer(wx.HORIZONTAL)
 
         sizer_tree = wx.BoxSizer(wx.VERTICAL)
-        sizer_tree.Add(self.button_multi_var_reg_model, 0, wx.EXPAND, 5)
-        sizer_tree.Add(self.tree_ctrl, 1, wx.EXPAND, 0)
+        sizer_tree.Add(self.button_multi_var_reg_model, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_tree.Add(self.tree_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        sizer_tree.Add(self.button_multi_var_export, 0, wx.EXPAND | wx.ALL, 5)
         self.pane_tree.SetSizer(sizer_tree)
 
         label_x_axis = wx.StaticText(self.pane_plot, wx.ID_ANY, "Independent Variable (x-axis):")

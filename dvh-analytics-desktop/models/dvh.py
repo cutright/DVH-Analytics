@@ -57,6 +57,7 @@ class DVH:
         self.count = len(self.mrn)
         self.study_count = len(uid)
         self.rx_dose = self.get_plan_values('rx_dose')
+        self.sim_study_date = self.get_plan_values('sim_study_date')
         self.keys.append('rx_dose')
         self.endpoints = {'data': None,
                           'defs': None}

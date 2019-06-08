@@ -759,7 +759,7 @@ class DICOM_Parser:
 
     @property
     def validation(self):
-        return {'physician': {'status': self.database_rois.is_physician(self.physician),
+        return {'physician': {'status': self.database_rois.is_physician(self.physician) and self.physician != 'DEFAULT',
                               'value': self.physician,
                               'message': "No physician assigned or physician is not in ROI Map."},
                 'mrn': {'status': self.mrn is not None,

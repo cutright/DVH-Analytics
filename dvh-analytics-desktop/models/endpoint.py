@@ -19,7 +19,8 @@ class EndpointFrame:
         self.time_series = times_series
         self.regression = regression
         self.control_chart = control_chart
-        self.initial_columns = ['MRN', 'Tx Site', 'ROI Name', 'Volume']
+        self.initial_columns = ['MRN', 'Tx Site', 'ROI Name', 'Volume (cc)']
+        self.widths = [150, 150, 250, 100]
 
         self.button = {'add': wx.Button(self.parent, wx.ID_ANY, "Add Endpoint"),
                        'del': wx.Button(self.parent, wx.ID_ANY, "Delete Endpoint"),
@@ -28,7 +29,7 @@ class EndpointFrame:
         self.table = wx.ListCtrl(self.parent, wx.ID_ANY,
                                  style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
         self.table.SetMinSize((1046, 800))
-        self.data_table = DataTable(self.table, columns=['mrn', 'roi_name', 'ep1'])
+        self.data_table = DataTable(self.table)
 
         self.endpoint_defs = DataTable(None, columns=ENDPOINT_DEF_COLUMNS)
 
@@ -48,10 +49,8 @@ class EndpointFrame:
         self.parent.Bind(wx.EVT_BUTTON, self.on_export_csv, id=self.button['exp'].GetId())
 
     def __set_properties(self):
-        self.table.AppendColumn("MRN", format=wx.LIST_FORMAT_LEFT, width=150)
-        self.table.AppendColumn("Tx Site", format=wx.LIST_FORMAT_LEFT, width=150)
-        self.table.AppendColumn("ROI Name", format=wx.LIST_FORMAT_LEFT, width=250)
-        self.table.AppendColumn("Volume", format=wx.LIST_FORMAT_LEFT, width=100)
+        for i, column in enumerate(self.initial_columns):
+            self.table.AppendColumn(column, format=wx.LIST_FORMAT_LEFT, width=self.widths[i])
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -79,7 +78,7 @@ class EndpointFrame:
         ep = {'MRN': self.dvh.mrn,
               'Tx Site': self.dvh.get_plan_values('tx_site'),
               'ROI Name': self.dvh.roi_name,
-              'Volume': self.dvh.volume}
+              'Volume (cc)': self.dvh.volume}
 
         ep_defs = self.endpoint_defs.data
         if ep_defs:
@@ -175,10 +174,13 @@ class EndpointFrame:
     def enable_initial_buttons(self):
         self.button['add'].Enable()
 
-    def on_export_csv(self, evt):
+    def get_csv(self, selection=None):
         uid = {1: {'title': 'Study Instance UID',
                    'data': self.dvh.uid}}
-        export_csv(self.parent, "Export Endpoints to CSV", self.data_table.get_csv(extra_column_data=uid))
+        return self.data_table.get_csv(extra_column_data=uid)
+
+    def on_export_csv(self, evt):
+        export_csv(self.parent, "Export Endpoints to CSV", self.get_csv)
 
     def get_save_data(self):
         return deepcopy({'data_table': self.data_table.get_save_data(),

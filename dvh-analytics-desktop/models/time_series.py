@@ -86,8 +86,13 @@ class TimeSeriesFrame:
             self.update_plot()
 
     def update_plot(self):
-        y_axis_selection = self.combo_box_y_axis.GetValue()
-        uids = getattr(self.dvh, 'study_instance_uid')
+        data = self.get_plot_data()
+        self.plot.update_plot(**data)
+
+    def get_plot_data(self, y_axis_selection=None):
+        if y_axis_selection is None:
+            y_axis_selection = self.combo_box_y_axis.GetValue()
+        uids = self.dvh.study_instance_uid
         mrn_data = self.dvh.mrn
         if y_axis_selection.split('_')[0] in {'D', 'V'}:
             y_data = self.dvh.endpoints['data'][y_axis_selection]
@@ -151,9 +156,15 @@ class TimeSeriesFrame:
             units = ''
         if units:
             y_axis = "%s (%s)" % (y_axis, units)
-        self.plot.update_plot(x_values_sorted, y_values_sorted, mrn_sorted, uid_sorted,
-                              y_axis_label=y_axis, avg_len=avg_len,
-                              percentile=percentile, bin_size=hist_bins)
+
+        return {'x': x_values_sorted,
+                'y': y_values_sorted,
+                'mrn': mrn_sorted,
+                'uid': uid_sorted,
+                'y_axis_label': y_axis,
+                'avg_len': avg_len,
+                'percentile': percentile,
+                'bin_size': hist_bins}
 
     def update_data(self, dvh, data):
         self.dvh = dvh
@@ -216,6 +227,35 @@ class TimeSeriesFrame:
     def load_save_data(self, save_data):
         for attr in self.save_attr:
             getattr(self, attr).SetValue(save_data[attr])
+
+    def get_csv(self, selection=None):
+        if selection is None:
+            return self.plot.get_csv()
+
+        csv = ['MRN,Study Instance UID,Date,%s' % ','.join(selection)]
+
+        uids = self.dvh.study_instance_uid
+        mrns = self.dvh.mrn
+        dates = self.dvh.sim_study_date
+        y_data = {}
+        for y_axis in selection:
+            data = self.get_plot_data(y_axis_selection=y_axis)
+            column = []
+            for uid in uids:
+                if uid in data['uid']:
+                    index = data['uid'].index(uid)
+                    column.append(data['y'][index])
+                else:
+                    column.append('None')
+            y_data[y_axis] = column
+
+        for i, uid in enumerate(uids):
+            row = [mrns[i], uid, str(dates[i])]
+            for y_axis in selection:
+                row.append(str(y_data[y_axis][i]))
+            csv.append(','.join(row))
+
+        return '\n'.join(csv)
 
     def export_csv(self, evt):
         export_csv(self.parent, "Export Time Series data to CSV", self.plot.get_csv())

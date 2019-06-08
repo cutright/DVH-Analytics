@@ -16,7 +16,11 @@ class DataTable:
         if formats:
             self.formats = formats
         else:
-            self.formats = [wx.LIST_FORMAT_LEFT] * len(self.columns)
+            if not self.columns:
+                column_length = 0
+            else:
+                column_length = len(self.columns)
+            self.formats = [wx.LIST_FORMAT_LEFT] * column_length
 
         self.set_data_in_layout()
 

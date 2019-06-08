@@ -215,8 +215,11 @@ class RadBioFrame:
     def clear_data(self):
         self.data_table_rad_bio.delete_all_rows()
 
+    def get_csv(self, selection=None):
+        return self.data_table_rad_bio.get_csv()
+
     def on_export_csv(self, evt):
-        export_csv(self.parent, "Export RadBio table to CSV", self.data_table_rad_bio.get_csv())
+        export_csv(self.parent, "Export RadBio table to CSV", self.get_csv)
 
     def get_save_data(self):
         return self.data_table_rad_bio.get_save_data()
