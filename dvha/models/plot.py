@@ -55,7 +55,7 @@ class Plot:
 
     def update_bokeh_layout_in_wx_python(self):
         html_str = get_layout_html(self.bokeh_layout)
-        # web_file = '/Users/nightowl/PycharmProjects/DVH-Analytics-Desktop/dvh-analytics-desktop/test.html'
+        # web_file = '/Users/nightowl/PycharmProjects/DVH-Analytics-Desktop/dvha/test.html'
         # with open(web_file, 'wb') as f:
         #     f.write(html_str.encode("utf-8"))
         self.layout.SetPage(html_str, "")

@@ -6,7 +6,7 @@ requires = [
     'pypubsub',
     'numpy',
     'scipy',
-    'pydicom >= 0.9.9',
+    'pydicom >= 1.0',
     'dicompyler-core',
     'bokeh >= 1.0.4',
     'python-dateutil',
@@ -18,7 +18,7 @@ requires = [
 ]
 
 setup(
-    name='dvh-analytics-desktop',
+    name='dvha',
     include_package_data=True,
     packages=find_packages(),
     version=DefaultOptions().VERSION,
@@ -33,7 +33,7 @@ setup(
     install_requires=requires,
     entry_points={
         'console_scripts': [
-            'dvha=dvh-analytics-desktop.main:DVHApp',
+            'dvha=dvha.main:start',
         ],
     },
     long_description="""DVH Database for Clinicians and Researchers

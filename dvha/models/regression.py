@@ -211,10 +211,14 @@ class RegressionFrame:
 
     def multi_variable_regression(self, y_variable):
 
-        x_variables = list(self.x_variable_nodes[y_variable])
+        if y_variable in list(self.x_variable_nodes):
+            x_variables = list(self.x_variable_nodes[y_variable])
 
-        dlg = MultiVarResultsFrame(y_variable, x_variables, self.stats_data, self.options)
-        dlg.Show()
+            dlg = MultiVarResultsFrame(y_variable, x_variables, self.stats_data, self.options)
+            dlg.Show()
+        else:
+            wx.MessageBox('No data has been selected for regression.', 'Regression Error',
+                          wx.OK | wx.ICON_WARNING)
 
     @staticmethod
     def get_p_values(X, y, predictions, params):
