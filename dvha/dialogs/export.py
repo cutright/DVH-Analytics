@@ -284,7 +284,7 @@ class ExportCSVDialog(wx.Dialog):
                 else:
                     if key == 'Time Series':
                         selection_indices = get_selected_listctrl_items(self.list_ctrl['Time Series'])
-                        y_choices = self.app.control_chart.combo_box_y_axis.GetItems()
+                        y_choices = self.app.time_series.combo_box_y_axis.GetItems()
                         selection = [y for i, y in enumerate(y_choices) if i in selection_indices]
                     else:
                         selection = None

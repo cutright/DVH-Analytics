@@ -99,7 +99,7 @@ class TimeSeriesFrame:
         elif y_axis_selection in ['EUD', 'NTCP or TCP']:
             y_data = getattr(self.dvh, y_axis_selection.lower().replace(' ', '_'))
         else:
-            data_info = self.y_axis_options[self.combo_box_y_axis.GetValue()]
+            data_info = self.y_axis_options[y_axis_selection]
             table = data_info['table']
             var_name = data_info['var_name']
 
