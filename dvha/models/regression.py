@@ -293,6 +293,9 @@ class MultiVarResultsFrame(wx.Frame):
 
         algorithms = ['Random Forest', 'Support Vector Machines', 'Decision Trees', 'Gradient Boosted']
         self.button = {key: wx.Button(self, wx.ID_ANY, key) for key in algorithms}
+        for key in algorithms:
+            if key != 'Random Forest':
+                self.button[key].Disable()
 
         self.__do_bind()
         self.__do_subscribe()

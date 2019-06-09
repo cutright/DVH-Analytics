@@ -7,7 +7,7 @@ from models.plot import PlotTimeSeries
 from db import sql_columns
 from datetime import datetime
 from dateutil import parser
-from dialogs.export import export_csv
+from dialogs.export import save_string_to_file
 
 
 class TimeSeriesFrame:
@@ -258,7 +258,7 @@ class TimeSeriesFrame:
         return '\n'.join(csv)
 
     def export_csv(self, evt):
-        export_csv(self.parent, "Export Time Series data to CSV", self.plot.get_csv())
+        save_string_to_file(self.parent, "Export Time Series data to CSV", self.plot.get_csv())
 
     @property
     def has_data(self):

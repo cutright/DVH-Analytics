@@ -21,6 +21,7 @@ class Plot:
         if is_windows():
             self.layout.MSWSetEmulationLevel(level=wx.html2.WEBVIEWIE_EMU_IE11)  # requires wxPython >= 4.1.0
         self.bokeh_layout = None
+        self.html_str = ''
 
         self.figure = figure(plot_width=plot_width, plot_height=plot_height, x_axis_type=x_axis_type)
         self.figure.xaxis.axis_label = x_axis_label
@@ -54,11 +55,11 @@ class Plot:
             self.clear_source(key)
 
     def update_bokeh_layout_in_wx_python(self):
-        html_str = get_layout_html(self.bokeh_layout)
+        self.html_str = get_layout_html(self.bokeh_layout)
         # web_file = '/Users/nightowl/PycharmProjects/DVH-Analytics-Desktop/dvha/test.html'
         # with open(web_file, 'wb') as f:
         #     f.write(html_str.encode("utf-8"))
-        self.layout.SetPage(html_str, "")
+        self.layout.SetPage(self.html_str, "")
         # self.layout.LoadURL(web_file)
 
     @staticmethod

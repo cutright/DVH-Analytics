@@ -8,7 +8,7 @@ from db.sql_to_python import QuerySQL
 from db.sql_connector import echo_sql_db
 from dialogs.main import query_dlg, UserSettings
 from dialogs.database import SQLSettingsDialog
-from dialogs.export import ExportCSVDialog
+from dialogs.export import ExportCSVDialog, save_string_to_file
 from models.import_dicom import ImportDICOM_Dialog
 from models.database_editor import DatabaseEditorDialog
 from models.datatable import DataTable
@@ -140,20 +140,23 @@ class DVHAMainFrame(wx.Frame):
         file_menu = wx.Menu()
         # file_menu.Append(wx.ID_NEW, '&New')
         menu_open = file_menu.Append(wx.ID_OPEN, '&Open\tCtrl+O')
-        menu_close = file_menu.Append(wx.ID_ANY, '&Close\tCtrl+W')
-        menu_export = file_menu.Append(wx.ID_ANY, '&Export\tCtrl+E')
         menu_save = file_menu.Append(wx.ID_ANY, '&Save\tCtrl+S')
-        menu_about = file_menu.Append(wx.ID_ANY, '&About\tCtrl+A')
+        menu_close = file_menu.Append(wx.ID_ANY, '&Close\tCtrl+W')
+
+        export_plot = wx.Menu()
+        export_dvhs = export_plot.Append(wx.ID_ANY, 'DVHs')
+        export_time_series = export_plot.Append(wx.ID_ANY, 'Time Series')
+        export_regression = export_plot.Append(wx.ID_ANY, 'Regression')
+        export_control_chart = export_plot.Append(wx.ID_ANY, 'Control Chart')
+
+        export = wx.Menu()
+        export_csv = export.Append(wx.ID_ANY, 'Data to csv')
+        export.AppendSubMenu(export_plot, 'Plot to html')
+        file_menu.AppendSubMenu(export, '&Export')
         file_menu.AppendSeparator()
 
-        # imp = wx.Menu()
-        # imp.Append(wx.ID_ANY, 'Import newsfeed list...')
-        # imp.Append(wx.ID_ANY, 'Import bookmarks...')
-        # imp.Append(wx.ID_ANY, 'Import mail...')
-        #
-        # file_menu.AppendSubMenu(imp, 'I&mport')
-
         qmi = file_menu.Append(wx.ID_ANY, '&Quit\tCtrl+Q')
+        menu_about = file_menu.Append(wx.ID_ANY, '&About\tCtrl+A')
 
         settings_menu = wx.Menu()
         menu_pref = settings_menu.Append(wx.ID_PREFERENCES)
@@ -162,11 +165,16 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_quit, qmi)
         self.Bind(wx.EVT_MENU, self.on_open, menu_open)
         self.Bind(wx.EVT_MENU, self.on_close, menu_close)
-        self.Bind(wx.EVT_MENU, self.on_export, menu_export)
+        self.Bind(wx.EVT_MENU, self.on_export, export_csv)
         self.Bind(wx.EVT_MENU, self.on_save, menu_save)
         self.Bind(wx.EVT_MENU, self.on_pref, menu_pref)
         self.Bind(wx.EVT_MENU, self.on_about, menu_about)
         self.Bind(wx.EVT_MENU, self.on_sql, menu_sql)
+
+        self.Bind(wx.EVT_MENU, self.on_save_plot_dvhs, export_dvhs)
+        self.Bind(wx.EVT_MENU, self.on_save_plot_time_series, export_time_series)
+        self.Bind(wx.EVT_MENU, self.on_save_plot_regression, export_regression)
+        self.Bind(wx.EVT_MENU, self.on_save_plot_control_chart, export_control_chart)
 
         self.frame_menubar.Append(file_menu, '&File')
         self.frame_menubar.Append(settings_menu, '&Settings')
@@ -665,3 +673,19 @@ class DVHAMainFrame(wx.Frame):
 
     def on_toolbar_roi_map(self, evt):
         ROIMapDialog(self.roi_map)
+
+    def on_save_plot_dvhs(self, evt):
+        save_string_to_file(self, 'Save DVHs plot', self.plot.html_str,
+                            wildcard="HTML files (*.html)|*.html")
+
+    def on_save_plot_time_series(self, evt):
+        save_string_to_file(self, 'Save Time Series plot', self.time_series.plot.html_str,
+                            wildcard="HTML files (*.html)|*.html")
+
+    def on_save_plot_regression(self, evt):
+        save_string_to_file(self, 'Save Regression plot', self.regression.plot.html_str,
+                            wildcard="HTML files (*.html)|*.html")
+
+    def on_save_plot_control_chart(self, evt):
+        save_string_to_file(self, 'Save Control Chart plot', self.control_chart.plot.html_str,
+                            wildcard="HTML files (*.html)|*.html")

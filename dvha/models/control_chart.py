@@ -1,7 +1,7 @@
 import wx
 from models.plot import PlotControlChart
 from db import sql_columns
-from dialogs.export import export_csv
+from dialogs.export import save_string_to_file
 
 
 class ControlChartFrame:
@@ -134,7 +134,7 @@ class ControlChartFrame:
         return self.plot.get_csv()
 
     def export_csv(self, evt):
-        export_csv(self.parent, "Export Time Series data to CSV", self.plot.get_csv())
+        save_string_to_file(self.parent, "Export Time Series data to CSV", self.plot.get_csv())
 
     @property
     def has_data(self):

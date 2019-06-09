@@ -6,10 +6,10 @@ from paths import DATA_DIR
 from tools.utilities import get_selected_listctrl_items
 
 
-def export_csv(frame, title, csv_data):
+def save_string_to_file(frame, title, data, wildcard="CSV files (*.csv)|*.csv"):
     # from https://wxpython.org/Phoenix/docs/html/wx.FileDialog.html
 
-    with wx.FileDialog(frame, title, DATA_DIR, wildcard="CSV files (*.csv)|*.csv",
+    with wx.FileDialog(frame, title, DATA_DIR, wildcard=wildcard,
                        style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
 
         if fileDialog.ShowModal() == wx.ID_CANCEL:
@@ -18,7 +18,7 @@ def export_csv(frame, title, csv_data):
         pathname = fileDialog.GetPath()
         try:
             with open(pathname, 'w') as file:
-                file.write(csv_data)
+                file.write(data)
         except IOError:
             wx.LogError("Cannot save current data in file '%s'." % pathname)
 
@@ -259,7 +259,7 @@ class ExportCSVDialog(wx.Dialog):
     def run(self):
         res = self.ShowModal()
         if res == wx.ID_OK:
-            export_csv(self, 'Export CSV Data', self.csv)
+            save_string_to_file(self, 'Export CSV Data', self.csv)
         self.Destroy()
 
     def is_checked(self, key):

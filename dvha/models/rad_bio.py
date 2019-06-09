@@ -7,7 +7,7 @@ from models.dvh import calc_eud, calc_tcp
 # import wx.lib.mixins.listctrl as listmix
 from copy import deepcopy
 from tools.utilities import convert_value_to_str, get_selected_listctrl_items, float_or_none
-from dialogs.export import export_csv
+from dialogs.export import save_string_to_file
 
 
 # class EditableListCtrl(wx.ListCtrl, listmix.TextEditMixin):
@@ -219,7 +219,7 @@ class RadBioFrame:
         return self.data_table_rad_bio.get_csv()
 
     def on_export_csv(self, evt):
-        export_csv(self.parent, "Export RadBio table to CSV", self.get_csv)
+        save_string_to_file(self.parent, "Export RadBio table to CSV", self.get_csv)
 
     def get_save_data(self):
         return self.data_table_rad_bio.get_save_data()
