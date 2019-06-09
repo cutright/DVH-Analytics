@@ -3,14 +3,14 @@
 
 
 import winreg
+import sys
+from os.path import basename
 
-REG_PATH = r"Software\\Microsoft\\Internet Explorer\\Main\\FeatureControl\\FEATURE_BROWSER_EMULATION"
 
-
-def set_reg(name, value):
+def set_reg(name, reg_path, value):
     try:
-        winreg.CreateKey(winreg.HKEY_CURRENT_USER, REG_PATH)
-        registry_key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, REG_PATH, 0, winreg.KEY_WRITE)
+        winreg.CreateKey(winreg.HKEY_CURRENT_USER, reg_path)
+        registry_key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, reg_path, 0, winreg.KEY_WRITE)
         winreg.SetValueEx(registry_key, name, 0, winreg.REG_DWORD, value)
         winreg.CloseKey(registry_key)
         return True
@@ -18,14 +18,21 @@ def set_reg(name, value):
         return False
 
 
-def get_reg(name):
+def get_reg(name, reg_path):
     try:
-        registry_key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, REG_PATH, 0, winreg.KEY_READ)
+        registry_key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, reg_path, 0, winreg.KEY_READ)
         value, regtype = winreg.QueryValueEx(registry_key, name)
         winreg.CloseKey(registry_key)
         return value
     except WindowsError:
         return None
+
+
+def set_ie_emulation_level(value=11001):
+    # See this site for information on which values to use
+    # https://docs.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/general-info/ee330730(v=vs.85)#browser_emulation
+    reg_path = r"Software\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_BROWSER_EMULATION"
+    set_reg(basename(sys.executable), reg_path, value)
 
 
 # Example MouseSensitivity
