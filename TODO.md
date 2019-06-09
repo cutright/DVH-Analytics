@@ -40,9 +40,8 @@
     * *Export*
         - [X] Some tabs have a CSV export already, would like to create a dialog for CSV Export on tool that lets 
         you check off which elements can be exported as CSV
-            - [ ] UI complete, just needs to iterate through get CSV functions and write file
         - [X] DataTable objects from models/datatable.py have a .csv property
-        - [ ] Need a export method for plots
+        - [X] Need a export method for plots
     * *Import*
         - [ ] Would like to give user ability to export data to a csv, then add custom columns and reimport data
         - [ ] This will allow user to import outcome or QA data to run correlations/stats

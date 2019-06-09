@@ -7,6 +7,7 @@ from scipy import stats
 import numpy as np
 from models.random_forest import RandomForestFrame, RandomForestWorker
 from pubsub import pub
+from dialogs.export import save_string_to_file
 
 
 class RegressionFrame:
@@ -40,8 +41,10 @@ class RegressionFrame:
         self.spin_button_y_axis = wx.SpinButton(self.pane_plot, wx.ID_ANY, style=wx.SP_WRAP)
         self.checkbox = wx.CheckBox(self.pane_plot, wx.ID_ANY, "Include in Multi-Var\nRegression")
         self.plot = PlotRegression(self.pane_plot, self.options)
-        self.button_multi_var_reg_model = wx.Button(self.pane_tree, wx.ID_ANY, 'Run Model')
-        self.button_multi_var_export = wx.Button(self.pane_tree, wx.ID_ANY, 'Export Data')
+        self.button_multi_var_reg_model = wx.Button(self.pane_tree, wx.ID_ANY, 'Run Selected Model')
+        self.button_multi_var_reg_model.Disable()
+        self.button_single_var_export = wx.Button(self.pane_tree, wx.ID_ANY, 'Export Plot Data')
+        self.button_single_var_plot_save = wx.Button(self.pane_tree, wx.ID_ANY, 'Save Plot')
 
     def __set_properties(self):
         self.pane_tree.SetScrollRate(10, 10)
@@ -65,6 +68,9 @@ class RegressionFrame:
         self.pane_tree.Bind(wx.EVT_BUTTON, self.on_regression, id=self.button_multi_var_reg_model.GetId())
         self.pane_tree.Bind(wx.EVT_TREE_SEL_CHANGED, self.on_tree_select, id=self.tree_ctrl.GetId())
 
+        self.pane_tree.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_single_var_export.GetId())
+        self.pane_tree.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_single_var_plot_save.GetId())
+
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_plot = wx.BoxSizer(wx.HORIZONTAL)
@@ -77,10 +83,14 @@ class RegressionFrame:
         sizer_x_axis = wx.BoxSizer(wx.VERTICAL)
         sizer_x_axis_select = wx.BoxSizer(wx.HORIZONTAL)
 
+        sizer_single_var_export = wx.BoxSizer(wx.HORIZONTAL)
+
         sizer_tree = wx.BoxSizer(wx.VERTICAL)
         sizer_tree.Add(self.button_multi_var_reg_model, 0, wx.EXPAND | wx.ALL, 5)
         sizer_tree.Add(self.tree_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        sizer_tree.Add(self.button_multi_var_export, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_single_var_export.Add(self.button_single_var_export, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_single_var_export.Add(self.button_single_var_plot_save, 1, wx.EXPAND | wx.ALL, 5)
+        sizer_tree.Add(sizer_single_var_export, 0, wx.EXPAND | wx.ALL, 5)
         self.pane_tree.SetSizer(sizer_tree)
 
         label_x_axis = wx.StaticText(self.pane_plot, wx.ID_ANY, "Independent Variable (x-axis):")
@@ -179,6 +189,8 @@ class RegressionFrame:
         x_value = self.combo_box_x_axis.GetValue()
         [self.del_regression, self.add_regression][self.checkbox.GetValue()](y_value, x_value)
 
+        self.button_multi_var_reg_model.Enable(bool(len(list(self.y_variable_nodes))))
+
     def add_regression(self, y_value, x_value, select_item=True):
         if y_value not in list(self.y_variable_nodes):
             self.y_variable_nodes[y_value] = self.tree_ctrl.AppendItem(self.tree_ctrl_root, y_value)
@@ -192,7 +204,7 @@ class RegressionFrame:
             self.tree_ctrl.SetItemImage(self.x_variable_nodes[y_value][x_value], self.images['x'],
                                         wx.TreeItemIcon_Normal)
         self.tree_ctrl.ExpandAll()
-        if select_item:
+        if select_item and self.tree_ctrl.IsSelected(self.tree_ctrl_root):
             self.tree_ctrl.SelectItem(self.x_variable_nodes[self.y_axis][self.x_axis])
 
     def del_regression(self, y_value, x_value):
@@ -282,6 +294,13 @@ class RegressionFrame:
     def has_data(self):
         return bool(len(list(self.y_variable_nodes)))
 
+    def on_save_plot(self, evt):
+        save_string_to_file(self.pane_tree, 'Save linear regression plot', self.plot.html_str,
+                            wildcard="HTML files (*.html)|*.html")
+
+    def on_export(self, evt):
+        save_string_to_file(self.pane_tree, 'Export linear regression data', self.plot.get_csv_data())
+
 
 class MultiVarResultsFrame(wx.Frame):
     def __init__(self, y_variable, x_variables, stats_data, options):
@@ -294,8 +313,11 @@ class MultiVarResultsFrame(wx.Frame):
         algorithms = ['Random Forest', 'Support Vector Machines', 'Decision Trees', 'Gradient Boosted']
         self.button = {key: wx.Button(self, wx.ID_ANY, key) for key in algorithms}
         for key in algorithms:
-            if key != 'Random Forest':
+            if key not in {'Random Forest'}:
                 self.button[key].Disable()
+
+        self.button_export = wx.Button(self, wx.ID_ANY, 'Export Plot Data')
+        self.button_save_plot = wx.Button(self, wx.ID_ANY, 'Save Plot')
 
         self.__do_bind()
         self.__do_subscribe()
@@ -303,6 +325,8 @@ class MultiVarResultsFrame(wx.Frame):
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_random_forest, id=self.button['Random Forest'].GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
 
     def __do_subscribe(self):
         pub.subscribe(self.show_plot, "random_forest_complete")
@@ -314,6 +338,10 @@ class MultiVarResultsFrame(wx.Frame):
 
         sizer_algo_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_algo_select = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_export_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_export_buttons.Add(self.button_export, 0, wx.ALL, 5)
+        sizer_export_buttons.Add(self.button_save_plot, 0, wx.ALL, 5)
+        sizer_algo_wrapper.Add(sizer_export_buttons, 0, wx.ALL, 5)
         text = wx.StaticText(self, wx.ID_ANY, "Compare with Machine Learning Module")
         sizer_algo_wrapper.Add(text, 0, wx.EXPAND | wx.ALL | wx.ALIGN_CENTER, 5)
         for key, button in self.button.items():
@@ -333,3 +361,10 @@ class MultiVarResultsFrame(wx.Frame):
     def show_plot(self, msg):
         frame = RandomForestFrame(self.plot.y, msg['y_predict'], msg['mse'], self.options)
         frame.Show()
+
+    def on_export(self, evt):
+        save_string_to_file(self, 'Save multi-variable regression data to csv', self.plot.get_csv_data())
+
+    def on_save_plot(self, evt):
+        save_string_to_file(self, 'Save multi-variable regression plot', self.plot.html_str,
+                            wildcard="HTML files (*.html)|*.html")

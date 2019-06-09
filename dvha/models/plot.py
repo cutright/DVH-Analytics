@@ -359,8 +359,10 @@ class PlotTimeSeries(Plot):
 class PlotRegression(Plot):
     def __init__(self, parent, options):
         Plot.__init__(self, parent, options, plot_width=550, plot_height=300)
+        self.x_axis_title, self.y_axis_title = '', ''
+        self.reg = None
         self.options = options
-        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[])),
+        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], dates=[])),
                        'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'residuals': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'residuals_zero': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
@@ -431,6 +433,7 @@ class PlotRegression(Plot):
                                    row(self.figure_residual_fits, self.figure_prob_plot))
 
     def update_plot(self, plot_data, x_var, x_axis_title, y_axis_title):
+        self.x_axis_title, self.y_axis_title = x_axis_title, y_axis_title
         self.clear_sources()
         self.source['plot'].data = plot_data
         self.update_trend(x_var)
@@ -448,36 +451,77 @@ class PlotRegression(Plot):
         X = np.transpose(clean_data[1:])
         y = clean_data[0]
 
-        reg = multi_variable_regression(X, y)
+        self.reg = multi_variable_regression(X, y)
 
         x_trend = [min(x), max(x)]
-        y_trend = np.add(np.multiply(x_trend, reg.slope), reg.y_intercept)
+        y_trend = np.add(np.multiply(x_trend, self.reg.slope), self.reg.y_intercept)
 
-        self.source['residuals'].data = {'x': reg.predictions,
-                                         'y': reg.residuals,
+        self.source['residuals'].data = {'x': self.reg.predictions,
+                                         'y': self.reg.residuals,
                                          'mrn': mrn}
 
-        self.source['residuals_zero'].data = {'x': [min(reg.predictions), max(reg.predictions)],
+        self.source['residuals_zero'].data = {'x': [min(self.reg.predictions), max(self.reg.predictions)],
                                               'y': [0, 0],
                                               'mrn': [None, None]}
 
-        self.source['prob'].data = {'x': reg.norm_prob_plot[0],
-                                    'y': reg.norm_prob_plot[1]}
+        self.source['prob'].data = {'x': self.reg.norm_prob_plot[0],
+                                    'y': self.reg.norm_prob_plot[1]}
 
-        self.source['prob_45'].data = {'x': reg.x_trend_prob,
-                                       'y': reg.y_trend_prob}
+        self.source['prob_45'].data = {'x': self.reg.x_trend_prob,
+                                       'y': self.reg.y_trend_prob}
 
         self.source['table'].data = {'var': ['y-int', x_var],
-                                     'coef': [reg.y_intercept, reg.slope],
-                                     'std_err': reg.sd_b,
-                                     't_value': reg.ts_b,
-                                     'p_value': reg.p_values,
+                                     'coef': [self.reg.y_intercept, self.reg.slope],
+                                     'std_err': self.reg.sd_b,
+                                     't_value': self.reg.ts_b,
+                                     'p_value': self.reg.p_values,
                                      'spacer': ['', ''],
-                                     'fit_param': ["R²: %0.3f" % reg.r_sq, "MSE: %0.3f" % reg.mse]}
+                                     'fit_param': ["R²: %0.3f" % self.reg.r_sq, "MSE: %0.3f" % self.reg.mse]}
 
         self.source['trend'].data = {'x': x_trend,
                                      'y': y_trend,
                                      'mrn': ['Trend'] * 2}
+
+    def get_csv_data(self):
+        plot_data = self.source['plot'].data
+        csv_data = ['Linear Regression',
+                    'Data',
+                    ',MRN,%s' % ','.join(plot_data['mrn']),
+                    ',Study Instance UID,%s' % ','.join(plot_data['uid']),
+                    ',Sim Study Date,%s' % ','.join(plot_data['date']),
+                    'Independent,%s,%s' % (self.y_axis_title, ','.join(str(a) for a in plot_data['y'])),
+                    'Dependent,%s,%s' % (self.x_axis_title, ','.join(str(a) for a in plot_data['x'])),
+                    '',
+                    self.get_csv_model(),
+                    '',
+                    self.get_csv_analysis()]
+
+        return '\n'.join(csv_data)
+
+    def get_csv_model(self):
+        data = self.source['table'].data
+        csv_model = ['Model',
+                     ',Coef,Std. Err.,t-value,p-value']
+        for i in range(len(data['var'])):
+            csv_model.append(self.get_csv_model_row(i))
+
+        csv_model.extend(["R^2,%s" % self.reg.r_sq,
+                          "MSE,%s" % self.reg.mse])
+
+        return '\n'.join(csv_model)
+
+    def get_csv_analysis(self):
+        return '\n'.join(['Analysis',
+                          'Quantiles,%s' % ','.join(str(v) for v in self.reg.norm_prob_plot[0]),
+                          'Ordered Values,%s' % ','.join(str(v) for v in self.reg.norm_prob_plot[1]),
+                          '',
+                          'Residuals,%s' % ','.join(str(v) for v in self.reg.residuals),
+                          'Fitted Values,%s' % ','.join(str(v) for v in self.reg.predictions)])
+
+    def get_csv_model_row(self, index):
+        data = self.source['table'].data
+        variables = ['var', 'coef', 'std_err', 't_value', 'p_value']
+        return ','.join([str(data[var][index]) for var in variables])
 
 
 class PlotMultiVarRegression(Plot):
@@ -485,6 +529,9 @@ class PlotMultiVarRegression(Plot):
         Plot.__init__(self, parent, options, plot_width=400, plot_height=400, frame_size=(900, 600))
         self.options = options
         self.X, self.y = None, None
+        self.x_variables, self.y_variable, self.stats_data = None, None, None
+        self.mrn, self.uid, self.dates = None, None, None
+        self.reg = None
         self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[])),
                        'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'residuals': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
@@ -503,6 +550,11 @@ class PlotMultiVarRegression(Plot):
         self.figure_prob_plot = figure(plot_width=400, plot_height=400)
         self.figure_prob_plot.xaxis.axis_label = 'Quantiles'
         self.figure_prob_plot.yaxis.axis_label = 'Ordered Values'
+
+        self.figure_prob_plot.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.figure_prob_plot.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.figure_prob_plot.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.figure_prob_plot.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
 
     def __add_plot_data(self):
         self.plot_residuals = self.figure.circle('x', 'y', source=self.source['residuals'],
@@ -539,32 +591,35 @@ class PlotMultiVarRegression(Plot):
                                    self.regression_table)
 
     def update_plot(self, y_variable, x_variables, stats_data):
+        self.y_variable, self.x_variables = y_variable, x_variables
+        self.stats_data = stats_data
         self.clear_sources()
         x_len = len(x_variables)
-        self.X, self.y = stats_data.get_X_and_y(y_variable, x_variables)
-        reg = multi_variable_regression(self.X, self.y)
+        self.X, self.y, self.mrn, self.uid, self.dates = stats_data.get_X_and_y(y_variable, x_variables,
+                                                                                include_patient_info=True)
+        self.reg = multi_variable_regression(self.X, self.y)
 
-        self.source['residuals'].data = {'x': reg.predictions,
-                                         'y': reg.residuals}
+        self.source['residuals'].data = {'x': self.reg.predictions,
+                                         'y': self.reg.residuals}
 
-        self.source['residuals_zero'].data = {'x': [min(reg.predictions), max(reg.predictions)],
+        self.source['residuals_zero'].data = {'x': [min(self.reg.predictions), max(self.reg.predictions)],
                                               'y': [0, 0],
                                               'mrn': [None, None]}
 
-        self.source['prob'].data = {'x': reg.norm_prob_plot[0],
-                                    'y': reg.norm_prob_plot[1]}
+        self.source['prob'].data = {'x': self.reg.norm_prob_plot[0],
+                                    'y': self.reg.norm_prob_plot[1]}
 
-        self.source['prob_45'].data = {'x': reg.x_trend_prob,
-                                       'y': reg.y_trend_prob}
+        self.source['prob_45'].data = {'x': self.reg.x_trend_prob,
+                                       'y': self.reg.y_trend_prob}
 
         fit_param = [''] * (x_len + 1)
-        fit_param[0] = "R²: %0.3f ----- MSE: %0.3f" % (reg.r_sq, reg.mse)
-        fit_param[1] = "f stat: %0.3f ---- p value: %0.3f" % (reg.f_stat, reg.f_p_value)
+        fit_param[0] = "R²: %0.3f ----- MSE: %0.3f" % (self.reg.r_sq, self.reg.mse)
+        fit_param[1] = "f stat: %0.3f ---- p value: %0.3f" % (self.reg.f_stat, self.reg.f_p_value)
         self.source['table'].data = {'var': ['y-int'] + x_variables,
-                                     'coef': [reg.y_intercept] + reg.slope.tolist(),
-                                     'std_err': reg.sd_b,
-                                     't_value': reg.ts_b,
-                                     'p_value': reg.p_values,
+                                     'coef': [self.reg.y_intercept] + self.reg.slope.tolist(),
+                                     'std_err': self.reg.sd_b,
+                                     't_value': self.reg.ts_b,
+                                     'p_value': self.reg.p_values,
                                      'spacer': [''] * (x_len + 1),
                                      'fit_param': fit_param}
 
@@ -572,6 +627,56 @@ class PlotMultiVarRegression(Plot):
         self.figure.yaxis.axis_label = 'Residuals'
 
         self.update_bokeh_layout_in_wx_python()
+
+    def get_csv_data(self):
+        csv_data = ['Multi-Variable Regression',
+                    'Data',
+                    ',MRN,%s' % ','.join(self.mrn),
+                    ',Study Instance UID,%s' % ','.join(self.uid),
+                    ',Sim Study Date,%s' % ','.join(self.dates),
+                    self.get_regression_csv_row(self.y_variable, self.y, var_type='Dependent')]
+
+        for i, x_variable in enumerate(self.x_variables):
+            csv_data.append(self.get_regression_csv_row(x_variable, self.X[:, i]))
+
+        csv_data.append('')
+        csv_data.append(self.get_csv_model())
+
+        csv_data.append('')
+        csv_data.append(self.get_csv_analysis())
+
+        return '\n'.join(csv_data)
+
+    def get_csv_model(self):
+        data = self.source['table'].data
+        csv_model = ['Model',
+                     ',Coef,Std. Err.,t-value,p-value']
+        for i in range(len(data['var'])):
+            csv_model.append(self.get_csv_model_row(i))
+
+        csv_model.extend(["R^2,%s" % self.reg.r_sq,
+                          "MSE,%s" % self.reg.mse,
+                          "f-stat,%s" % self.reg.f_stat,
+                          "f p-value,%s" % self.reg.f_p_value])
+
+        return '\n'.join(csv_model)
+
+    def get_csv_analysis(self):
+        return '\n'.join(['Analysis',
+                          'Quantiles,%s' % ','.join(str(v) for v in self.reg.norm_prob_plot[0]),
+                          'Ordered Values,%s' % ','.join(str(v) for v in self.reg.norm_prob_plot[1]),
+                          '',
+                          'Residuals,%s' % ','.join(str(v) for v in self.reg.residuals),
+                          'Fitted Values,%s' % ','.join(str(v) for v in self.reg.predictions)])
+
+    def get_csv_model_row(self, index):
+        data = self.source['table'].data
+        variables = ['var', 'coef', 'std_err', 't_value', 'p_value']
+        return ','.join([str(data[var][index]) for var in variables])
+
+    @staticmethod
+    def get_regression_csv_row(var_name, data, var_type='Independent'):
+        return '%s,%s,%s' % (var_type, var_name, ','.join(str(a) for a in data))
 
 
 class PlotControlChart(Plot):

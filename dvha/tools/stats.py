@@ -111,6 +111,7 @@ class StatsData:
     def get_bokeh_data(self, x, y):
         return {'uid': self.uids,
                 'mrn': self.mrns,
+                'date': self.sim_study_dates,
                 'x': self.data[x]['values'],
                 'y': self.data[y]['values']}
 
@@ -160,11 +161,15 @@ class StatsData:
         for var in bad_vars:
             self.data.pop(var)
 
-    def get_X_and_y(self, y_variable, x_variables):
-        data = []
+    def get_X_and_y(self, y_variable, x_variables, include_patient_info=False):
+        data, mrn, uid, dates = [], [], [], []
         y_var_data = []
-        for value in self.data[y_variable]['values']:
+        for i, value in enumerate(self.data[y_variable]['values']):
             y_var_data.append([value, np.nan][value == 'None'])
+            if value != 'None':
+                mrn.append(self.mrns[i])
+                uid.append(self.uids[i])
+                dates.append(self.sim_study_dates[i])
         data.append(y_var_data)
         for var in x_variables:
             x_var_data = []
@@ -177,7 +182,9 @@ class StatsData:
         X = np.transpose(clean_data[1:])
         y = clean_data[0]
 
-        return X, y
+        if not include_patient_info:
+            return X, y
+        return X, y, mrn, uid, dates
 
 
 def str_starts_with_any_in_list(string_a, string_list):

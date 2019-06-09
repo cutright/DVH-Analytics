@@ -15,7 +15,9 @@ class ControlChartFrame:
 
         self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
         self.combo_box_model = wx.ComboBox(self.parent, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
-        self.button_update_plot = wx.Button(self.parent, wx.ID_ANY, "Update Plot")
+        # self.button_update_plot = wx.Button(self.parent, wx.ID_ANY, "Update Plot")
+        self.button_export = wx.Button(self.parent, wx.ID_ANY, "Export")
+        self.button_save_plot = wx.Button(self.parent, wx.ID_ANY, "Save Plot")
         self.plot = PlotControlChart(self.parent, options)
 
         self.__set_properties()
@@ -25,7 +27,9 @@ class ControlChartFrame:
 
     def __do_bind(self):
         self.parent.Bind(wx.EVT_COMBOBOX, self.on_combo_box_y, id=self.combo_box_y_axis.GetId())
-        self.parent.Bind(wx.EVT_BUTTON, self.update_plot_ticker, id=self.button_update_plot.GetId())
+        # self.parent.Bind(wx.EVT_BUTTON, self.update_plot_ticker, id=self.button_update_plot.GetId())
+        self.parent.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
+        self.parent.Bind(wx.EVT_BUTTON, self.export_csv, id=self.button_export.GetId())
 
     def __set_properties(self):
         pass
@@ -46,7 +50,8 @@ class ControlChartFrame:
         sizer_lookback_units.Add(label_lookback_units, 0, wx.LEFT, 5)
         sizer_lookback_units.Add(self.combo_box_model, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(sizer_lookback_units, 1, wx.EXPAND, 0)
-        sizer_widgets.Add(self.button_update_plot, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_widgets.Add(self.button_export, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_widgets.Add(self.button_save_plot, 0, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_widgets, 0, wx.ALL | wx.EXPAND, 5)
         sizer_plot.Add(self.plot.layout, 0, wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_plot, 1, wx.EXPAND, 0)
@@ -134,7 +139,11 @@ class ControlChartFrame:
         return self.plot.get_csv()
 
     def export_csv(self, evt):
-        save_string_to_file(self.parent, "Export Time Series data to CSV", self.plot.get_csv())
+        save_string_to_file(self.parent, "Export control chart data to CSV", self.plot.get_csv())
+
+    def on_save_plot(self, evt):
+        save_string_to_file(self.parent, 'Save control chart', self.plot.html_str,
+                            wildcard="HTML files (*.html)|*.html")
 
     @property
     def has_data(self):

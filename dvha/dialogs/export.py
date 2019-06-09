@@ -33,30 +33,31 @@ class ExportCSVDialog(wx.Dialog):
                         'DVHs Summary': self.app.dvh.has_data,
                         'Endpoints': self.app.endpoint.has_data,
                         'Radbio': self.app.radbio.has_data,
-                        'Time Series': self.app.time_series.has_data,
-                        'Regression': self.app.regression.has_data,
+                        'Charting Variables': self.app.time_series.has_data,
+                        # 'Regression': self.app.regression.has_data,
                         # 'Control Chart': self.app.control_chart.has_data
                         }
 
-        checkbox_keys = ['DVHs', 'DVHs Summary', 'Endpoints', 'Radbio', 'Time Series', 'Regression']
+        checkbox_keys = ['DVHs', 'DVHs Summary', 'Endpoints', 'Radbio', 'Charting Variables']
         self.checkbox = {key: wx.CheckBox(self, wx.ID_ANY, key) for key in checkbox_keys}
 
-        self.list_ctrl = {'Time Series': wx.ListCtrl(self, wx.ID_ANY, style=wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES),
+        self.list_ctrl = {'Charting Variables': wx.ListCtrl(self, wx.ID_ANY,
+                                                                      style=wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES),
                           # 'Control Chart': wx.ListCtrl(self, wx.ID_ANY,
                           # style=wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
                           }
 
-        styles = TR_AUTO_CHECK_CHILD | TR_AUTO_CHECK_PARENT | TR_DEFAULT_STYLE
-        self.tree_ctrl_regression = CustomTreeCtrl(self, wx.ID_ANY, agwStyle=styles)
-        self.tree_ctrl_regression.SetBackgroundColour(wx.WHITE)
+        # styles = TR_AUTO_CHECK_CHILD | TR_AUTO_CHECK_PARENT | TR_DEFAULT_STYLE
+        # self.tree_ctrl_regression = CustomTreeCtrl(self, wx.ID_ANY, agwStyle=styles)
+        # self.tree_ctrl_regression.SetBackgroundColour(wx.WHITE)
         # self.tree_ctrl_regression = wx.TreeCtrl(self, wx.ID_ANY)
         self.y_variable_nodes = {}
         self.x_variable_nodes = {}
 
-        time_series_column = "Time Series Y-Axis"
+        time_series_column = "Variables"
         time_series_variables = self.app.time_series.combo_box_y_axis.GetItems()
         time_series_data = {time_series_column: time_series_variables}
-        self.data_table_time_series = DataTable(self.list_ctrl['Time Series'],
+        self.data_table_time_series = DataTable(self.list_ctrl['Charting Variables'],
                                                 columns=[time_series_column], widths=[400])
         self.data_table_time_series.set_data(time_series_data, [time_series_column])
 
@@ -67,8 +68,9 @@ class ExportCSVDialog(wx.Dialog):
         #                                           columns=[control_chart_column], widths=[400])
         # self.data_table_control_chart.set_data(control_chart_data, [control_chart_column])
 
-        self.button_select_data = {'Time Series': {'Select': wx.Button(self, wx.ID_ANY, "Select All"),
-                                                   'Deselect': wx.Button(self, wx.ID_ANY, "Deselect All")}}
+        self.button_select_data = {'Charting Variables': {'Select': wx.Button(self, wx.ID_ANY, "Select All"),
+                                                                    'Deselect': wx.Button(self, wx.ID_ANY,
+                                                                                          "Deselect All")}}
         # self.button_select_data = {'Time Series': {'Select': wx.Button(self, wx.ID_ANY, "Select All"),
         #                                            'Deselect': wx.Button(self, wx.ID_ANY, "Deselect All")},
         #                            'Control Chart': {'Select': wx.Button(self, wx.ID_ANY, "Select All"),
@@ -83,14 +85,14 @@ class ExportCSVDialog(wx.Dialog):
         self.__do_bind()
         self.__do_layout()
 
-        self.tree_ctrl_root = self.tree_ctrl_regression.AddRoot('Regressions', ct_type=1)
-        self.image_list = wx.ImageList(16, 16)
-        self.images = {'y': self.image_list.Add(wx.Image("icons/icon_custom_Y.png",
-                                                         wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
-                       'x': self.image_list.Add(wx.Image("icons/icon_custom_X.png",
-                                                         wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())}
-        self.tree_ctrl_regression.AssignImageList(self.image_list)
-        self.build_regression_tree()
+        # self.tree_ctrl_root = self.tree_ctrl_regression.AddRoot('Regressions', ct_type=1)
+        # self.image_list = wx.ImageList(16, 16)
+        # self.images = {'y': self.image_list.Add(wx.Image("icons/icon_custom_Y.png",
+        #                                                  wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
+        #                'x': self.image_list.Add(wx.Image("icons/icon_custom_X.png",
+        #                                                  wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())}
+        # self.tree_ctrl_regression.AssignImageList(self.image_list)
+        # self.build_regression_tree()
 
         self.run()
 
@@ -106,9 +108,9 @@ class ExportCSVDialog(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self.on_select_all, id=self.button_select_all.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_deselect_all, id=self.button_deselect_all.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_time_series_select_all,
-                  id=self.button_select_data['Time Series']['Select'].GetId())
+                  id=self.button_select_data['Charting Variables']['Select'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_time_series_deselect_all,
-                  id=self.button_select_data['Time Series']['Deselect'].GetId())
+                  id=self.button_select_data['Charting Variables']['Deselect'].GetId())
         # self.Bind(wx.EVT_BUTTON, self.on_control_chart_select_all,
         #           id=self.button_select_data['Control Chart']['Select'].GetId())
         # self.Bind(wx.EVT_BUTTON, self.on_control_chart_deselect_all,
@@ -125,8 +127,8 @@ class ExportCSVDialog(wx.Dialog):
         # sizer_control_chart_listctrl = wx.BoxSizer(wx.HORIZONTAL)
         # sizer_control_chart_checkboxes = wx.BoxSizer(wx.HORIZONTAL)
         # sizer_control_chart_buttons = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_regression = wx.BoxSizer(wx.VERTICAL)
-        sizer_regression_treectrl = wx.BoxSizer(wx.HORIZONTAL)
+        # sizer_regression = wx.BoxSizer(wx.VERTICAL)
+        # sizer_regression_treectrl = wx.BoxSizer(wx.HORIZONTAL)
         sizer_time_series = wx.BoxSizer(wx.VERTICAL)
         sizer_time_series_listctrl = wx.BoxSizer(wx.HORIZONTAL)
         sizer_time_series_checkboxes = wx.BoxSizer(wx.HORIZONTAL)
@@ -136,7 +138,7 @@ class ExportCSVDialog(wx.Dialog):
         sizer_dvhs = wx.BoxSizer(wx.VERTICAL)
         sizer_dvhs_checkboxes = wx.BoxSizer(wx.HORIZONTAL)
 
-        keys = ['DVHs', 'Endpoints', 'Radbio', 'Time Series', 'Regression']
+        keys = ['DVHs', 'Endpoints', 'Radbio']
         static_line = {key: wx.StaticLine(self, wx.ID_ANY) for key in keys}
 
         sizer_dvhs_checkboxes.Add(self.checkbox['DVHs'], 1, wx.ALL | wx.EXPAND, 5)
@@ -153,23 +155,23 @@ class ExportCSVDialog(wx.Dialog):
         sizer_radbio.Add(static_line['Radbio'], 0, wx.EXPAND | wx.TOP, 5)
         sizer_data.Add(sizer_radbio, 0, wx.ALL | wx.EXPAND, 5)
 
-        sizer_time_series_checkboxes.Add(self.checkbox['Time Series'], 1, wx.EXPAND, 0)
-        sizer_time_series_buttons.Add(self.button_select_data['Time Series']['Select'], 0, wx.ALL | wx.EXPAND, 5)
-        sizer_time_series_buttons.Add(self.button_select_data['Time Series']['Deselect'], 0, wx.ALL | wx.EXPAND, 5)
+        sizer_time_series_checkboxes.Add(self.checkbox['Charting Variables'], 1, wx.EXPAND, 0)
+        sizer_time_series_buttons.Add(self.button_select_data['Charting Variables']['Select'], 0, wx.ALL | wx.EXPAND, 5)
+        sizer_time_series_buttons.Add(self.button_select_data['Charting Variables']['Deselect'], 0, wx.ALL | wx.EXPAND, 5)
         sizer_time_series_checkboxes.Add(sizer_time_series_buttons, 1, wx.EXPAND, 0)
         sizer_time_series.Add(sizer_time_series_checkboxes, 0, wx.ALL | wx.EXPAND, 5)
         sizer_time_series_listctrl.Add((20, 20), 0, 0, 0)
-        sizer_time_series_listctrl.Add(self.list_ctrl['Time Series'], 1, wx.ALL | wx.EXPAND, 5)
+        sizer_time_series_listctrl.Add(self.list_ctrl['Charting Variables'], 1, wx.ALL | wx.EXPAND, 5)
         sizer_time_series.Add(sizer_time_series_listctrl, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_time_series.Add(static_line['Time Series'], 0, wx.EXPAND | wx.TOP, 5)
+        # sizer_time_series.Add(static_line['Time Series'], 0, wx.EXPAND | wx.TOP, 5)
         sizer_data.Add(sizer_time_series, 0, wx.ALL | wx.EXPAND, 5)
 
-        sizer_regression.Add(self.checkbox['Regression'], 0, wx.ALL, 5)
-        sizer_regression_treectrl.Add((20, 20), 0, 0, 0)
-        sizer_regression_treectrl.Add(self.tree_ctrl_regression, 1, wx.EXPAND, 0)
-        sizer_regression.Add(sizer_regression_treectrl, 0, wx.ALL | wx.EXPAND, 5)
-        # sizer_regression.Add(static_line['Regression'], 0, wx.EXPAND, 0)
-        sizer_data.Add(sizer_regression, 0, wx.ALL | wx.EXPAND, 5)
+        # sizer_regression.Add(self.checkbox['Regression'], 0, wx.ALL, 5)
+        # sizer_regression_treectrl.Add((20, 20), 0, 0, 0)
+        # sizer_regression_treectrl.Add(self.tree_ctrl_regression, 1, wx.EXPAND, 0)
+        # sizer_regression.Add(sizer_regression_treectrl, 0, wx.ALL | wx.EXPAND, 5)
+        # # sizer_regression.Add(static_line['Regression'], 0, wx.EXPAND, 0)
+        # sizer_data.Add(sizer_regression, 0, wx.ALL | wx.EXPAND, 5)
 
         # sizer_control_chart_checkboxes.Add(self.checkbox['Control Chart'], 1, wx.EXPAND, 0)
         # sizer_control_chart_buttons.Add(self.button_select_data['Control Chart']['Select'], 0, wx.ALL | wx.EXPAND, 5)
@@ -197,24 +199,24 @@ class ExportCSVDialog(wx.Dialog):
         self.Fit()
         self.Center()
 
-    def build_regression_tree(self):
-        reg = self.app.regression
-        for y_value in list(reg.y_variable_nodes):
-            for x_value in list(reg.x_variable_nodes[y_value]):
-                if y_value not in list(self.y_variable_nodes):
-                    self.y_variable_nodes[y_value] = self.tree_ctrl_regression.AppendItem(self.tree_ctrl_root, y_value, ct_type=1)
-                    self.tree_ctrl_regression.SetItemData(self.y_variable_nodes[y_value], None)
-                    self.tree_ctrl_regression.SetItemImage(self.y_variable_nodes[y_value], self.images['y'],
-                                                           wx.TreeItemIcon_Normal)
-                if y_value not in list(self.x_variable_nodes):
-                    self.x_variable_nodes[y_value] = {}
-                if x_value not in self.x_variable_nodes[y_value]:
-                    self.x_variable_nodes[y_value][x_value] = \
-                        self.tree_ctrl_regression.AppendItem(self.y_variable_nodes[y_value], x_value, ct_type=1)
-                    self.tree_ctrl_regression.SetItemData(self.x_variable_nodes[y_value][x_value], None)
-                    self.tree_ctrl_regression.SetItemImage(self.x_variable_nodes[y_value][x_value], self.images['x'],
-                                                           wx.TreeItemIcon_Normal)
-            self.tree_ctrl_regression.ExpandAll()
+    # def build_regression_tree(self):
+    #     reg = self.app.regression
+    #     for y_value in list(reg.y_variable_nodes):
+    #         for x_value in list(reg.x_variable_nodes[y_value]):
+    #             if y_value not in list(self.y_variable_nodes):
+    #                 self.y_variable_nodes[y_value] = self.tree_ctrl_regression.AppendItem(self.tree_ctrl_root, y_value, ct_type=1)
+    #                 self.tree_ctrl_regression.SetItemData(self.y_variable_nodes[y_value], None)
+    #                 self.tree_ctrl_regression.SetItemImage(self.y_variable_nodes[y_value], self.images['y'],
+    #                                                        wx.TreeItemIcon_Normal)
+    #             if y_value not in list(self.x_variable_nodes):
+    #                 self.x_variable_nodes[y_value] = {}
+    #             if x_value not in self.x_variable_nodes[y_value]:
+    #                 self.x_variable_nodes[y_value][x_value] = \
+    #                     self.tree_ctrl_regression.AppendItem(self.y_variable_nodes[y_value], x_value, ct_type=1)
+    #                 self.tree_ctrl_regression.SetItemData(self.x_variable_nodes[y_value][x_value], None)
+    #                 self.tree_ctrl_regression.SetItemImage(self.x_variable_nodes[y_value][x_value], self.images['x'],
+    #                                                        wx.TreeItemIcon_Normal)
+    #         self.tree_ctrl_regression.ExpandAll()
 
     def set_checkbox_values(self, value):
         for checkbox in self.checkbox.values():
@@ -241,7 +243,7 @@ class ExportCSVDialog(wx.Dialog):
     #     self.data_table_control_chart.apply_selection_to_all(0)
 
     def validate_ui_objects(self, allow_enable=True):
-        tables = {'Time Series': self.data_table_time_series,
+        tables = {'Charting Variables': self.data_table_time_series,
                   # 'Control Chart': self.data_table_control_chart
                   }
         for key, data_table in tables.items():
@@ -273,7 +275,7 @@ class ExportCSVDialog(wx.Dialog):
     def csv(self):
         csv_data = []
 
-        csv_key = ['DVHs', 'Endpoints', 'Radbio', 'Time Series']
+        csv_key = ['DVHs', 'Endpoints', 'Radbio', 'Charting Variables']
         csv_obj = [None, self.app.endpoint, self.app.radbio, self.app.time_series, self.app.control_chart]
         for i, key in enumerate(csv_key):
             if self.is_checked(key):
@@ -282,8 +284,8 @@ class ExportCSVDialog(wx.Dialog):
                     csv_data.append(self.app.plot.get_csv(include_summary=self.is_checked('DVHs Summary'),
                                                           include_dvhs=self.is_checked('DVHs')))
                 else:
-                    if key == 'Time Series':
-                        selection_indices = get_selected_listctrl_items(self.list_ctrl['Time Series'])
+                    if key == 'Charting Variables':
+                        selection_indices = get_selected_listctrl_items(self.list_ctrl['Charting Variables'])
                         y_choices = self.app.time_series.combo_box_y_axis.GetItems()
                         selection = [y for i, y in enumerate(y_choices) if i in selection_indices]
                     else:
