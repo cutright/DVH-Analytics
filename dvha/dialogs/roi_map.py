@@ -2,7 +2,7 @@ import wx
 from models.datatable import DataTable
 from tools.errors import ROIVariationErrorDialog
 from tools.utilities import get_selected_listctrl_items
-from tools.roi_name_manager import ROIVariationError
+from tools.roi_name_manager import ROIVariationError, clean_name
 
 
 class AddPhysician(wx.Dialog):
@@ -95,6 +95,7 @@ class RoiManager(wx.Dialog):
         self.button_delete.Disable()
         self.button_deselect_all.Disable()
 
+        self.button_add_physician = wx.Button(self, wx.ID_ANY, "Add")
         self.button_add_physician_roi = wx.Button(self, wx.ID_ANY, "Add")
 
         self.columns = ['Variations']
@@ -116,6 +117,7 @@ class RoiManager(wx.Dialog):
     def __do_bind(self):
         self.Bind(wx.EVT_COMBOBOX, self.physician_ticker, id=self.combo_box_physician.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.physician_roi_ticker, id=self.combo_box_physician_roi.GetId())
+        self.Bind(wx.EVT_BUTTON, self.add_physician, id=self.button_add_physician.GetId())
         self.Bind(wx.EVT_BUTTON, self.add_physician_roi, id=self.button_add_physician_roi.GetId())
         self.Bind(wx.EVT_BUTTON, self.select_all, id=self.button_select_all.GetId())
         self.Bind(wx.EVT_BUTTON, self.deselect_all, id=self.button_deselect_all.GetId())
@@ -139,13 +141,16 @@ class RoiManager(wx.Dialog):
         sizer_physician = wx.BoxSizer(wx.VERTICAL)
         label_physician = wx.StaticText(self, wx.ID_ANY, "Physician:")
         sizer_physician.Add(label_physician, 0, wx.LEFT, 5)
-        sizer_physician.Add(self.combo_box_physician, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        sizer_physician_row = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_physician_row.Add(self.combo_box_physician, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        sizer_physician_row.Add(self.button_add_physician, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+        sizer_physician.Add(sizer_physician_row, 1, wx.EXPAND, 0)
         sizer_select.Add(sizer_physician, 0, wx.ALL | wx.EXPAND, 5)
         label_physician_roi = wx.StaticText(self, wx.ID_ANY, "Physician ROI:")
         sizer_physician_roi.Add(label_physician_roi, 0, wx.LEFT, 5)
-        sizer_physician_roi_row_2.Add(self.combo_box_physician_roi, 1, wx.EXPAND, 0)
+        sizer_physician_roi_row_2.Add(self.combo_box_physician_roi, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_physician_roi_row_2.Add(self.button_add_physician_roi, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
-        sizer_physician_roi.Add(sizer_physician_roi_row_2, 0, wx.EXPAND | wx.LEFT, 5)
+        sizer_physician_roi.Add(sizer_physician_roi_row_2, 0, wx.EXPAND, 0)
         sizer_select.Add(sizer_physician_roi, 0, wx.ALL | wx.EXPAND, 5)
         label_variations = wx.StaticText(self, wx.ID_ANY, "Variations:")
         label_variations_buttons = wx.StaticText(self, wx.ID_ANY, " ")
@@ -266,6 +271,9 @@ class RoiManager(wx.Dialog):
     def add_physician_roi(self, evt):
         AddPhysicianROI(self.parent, self.physician, self.roi_map)
         self.update_physician_rois()
+
+    def add_physician(self, evt):
+        AddPhysician(self.roi_map)
 
 
 class AddVariationDialog(wx.Dialog):
@@ -487,3 +495,79 @@ class AddROIType(wx.Dialog):
 
     def action(self):
         pass
+
+
+class ChangePlanROIName(wx.Dialog):
+    def __init__(self, tree_ctrl_roi, tree_item, mrn, study_instance_uid, parsed_dicom_data):
+        wx.Dialog.__init__(self, None, title='Edit %s' % tree_ctrl_roi.GetItemText(tree_item))
+
+        self.tree_ctrl_roi = tree_ctrl_roi
+        self.tree_item = tree_item
+        self.roi = tree_ctrl_roi.GetItemText(tree_item)
+        self.initial_mrn = mrn
+        self.initial_study_instance_uid = study_instance_uid
+
+        self.parsed_dicom_data = parsed_dicom_data
+
+        invalid_options = [''] + parsed_dicom_data.roi_names
+        self.invalid_options = [clean_name(name) for name in invalid_options]
+
+        self.text_input_label = 'Change ROI name to:'
+
+        self.text_ctrl = wx.TextCtrl(self, wx.ID_ANY, "")
+        self.button_ok = wx.Button(self, wx.ID_OK, 'OK')
+        self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+
+        self.__set_properties()
+        self.__do_bind()
+        self.__do_layout()
+
+        self.run()
+
+    def __set_properties(self):
+        self.text_ctrl.SetMinSize((365, 22))
+        self.button_ok.Disable()
+
+    def __do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_ok_cancel = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_input = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
+
+        label_text_input = wx.StaticText(self, wx.ID_ANY, self.text_input_label)
+        sizer_input.Add(label_text_input, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_input.Add(self.text_ctrl, 0, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+
+        sizer_wrapper.Add(sizer_input, 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)
+        sizer_ok_cancel.Add(self.button_ok, 0, wx.ALL, 5)
+        sizer_ok_cancel.Add(self.button_cancel, 0, wx.ALL, 5)
+        sizer_wrapper.Add(sizer_ok_cancel, 0, wx.ALIGN_RIGHT | wx.BOTTOM | wx.RIGHT, 10)
+        self.SetSizer(sizer_wrapper)
+        sizer_wrapper.Fit(self)
+        self.Layout()
+        self.Center()
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_TEXT, self.text_ticker, id=self.text_ctrl.GetId())
+
+    def text_ticker(self, evt):
+        [self.button_ok.Disable, self.button_ok.Enable][self.new_name not in self.invalid_options]()
+
+    @property
+    def roi_key(self):
+        return self.parsed_dicom_data.get_roi_key(self.roi)
+
+    @property
+    def new_name(self):
+        return clean_name(self.text_ctrl.GetValue())
+
+    def run(self):
+        res = self.ShowModal()
+        if res == wx.ID_OK:
+            self.action()
+        self.Destroy()
+
+    def action(self):
+        # TODO: data doesn't propagate everywhere needed?
+        key = self.parsed_dicom_data.get_roi_key(self.roi)
+        self.parsed_dicom_data.set_roi_name(key, self.new_name)
+        self.tree_ctrl_roi.SetItemText(self.tree_item, self.new_name)

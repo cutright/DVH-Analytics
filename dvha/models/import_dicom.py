@@ -8,7 +8,7 @@ from db.sql_connector import DVH_SQL
 from db.dicom_importer import DICOM_Importer
 from db.dicom_parser import DICOM_Parser
 from dialogs.main import DatePicker
-from dialogs.roi_map import AddPhysician, AddPhysicianROI, AddROIType, RoiManager
+from dialogs.roi_map import AddPhysician, AddPhysicianROI, AddROIType, RoiManager, ChangePlanROIName
 from dicompylercore import dicomparser
 from os.path import isdir, join, dirname
 from os import listdir, rmdir
@@ -149,6 +149,8 @@ class ImportDICOM_Dialog(wx.Frame):
         # self.Bind(wx.EVT_BUTTON, self.on_manage_roi_type, id=self.button_manage_roi_type.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.on_physician_roi_change, id=self.input_roi['physician'].GetId())
         # self.Bind(wx.EVT_TEXT_ENTER, self.on_physician_roi_change, id=self.input_roi['physician'].GetId())
+
+        # self.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self.on_roi_tree_double_click, id=self.tree_ctrl_roi.GetId())
 
     def __set_properties(self):
         self.checkbox_subfolders.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
@@ -833,6 +835,15 @@ class ImportDICOM_Dialog(wx.Frame):
 
         self.dicom_dir.check_mapped_rois(physician)
         self.update_input_roi_physician_enable()
+
+    def on_roi_tree_double_click(self, evt):
+        ChangePlanROIName(self.tree_ctrl_roi,
+                          evt.GetItem(),
+                          self.input['mrn'].GetValue(),
+                          self.input['study_instance_uid'].GetValue(),
+                          self.parsed_dicom_data[self.input['study_instance_uid'].GetValue()])
+        # self.dicom_dir = self.parsed_dicom_data[self.input['study_instance_uid'].GetValue()]
+        # self.dicom_dir.check_mapped_rois(self.input['physician'].GetValue())
 
 
 class ImportStatusDialog(wx.Dialog):

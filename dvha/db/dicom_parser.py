@@ -661,6 +661,9 @@ class DICOM_Parser:
     def get_roi_name(self, key):
         return clean_name(self.dicompyler_rt_structures[key]['name'])
 
+    def set_roi_name(self, key, name):
+        self.dicompyler_rt_structures[key]['name'] = clean_name(name)
+
     def get_physician_roi(self, key):
         roi_name = self.get_roi_name(key)
         if self.database_rois.is_roi(roi_name):
@@ -684,6 +687,17 @@ class DICOM_Parser:
                 if self.get_roi_type(key) == 'PTV':
                     return True
         return False
+
+    @property
+    def roi_names(self):
+        return [self.get_roi_name(key) for key in list(self.dicompyler_rt_structures)]
+
+    def get_roi_key(self, roi_name):
+        roi_name = clean_name(roi_name)
+        for key in list(self.dicompyler_rt_structures):
+            if roi_name == clean_name(self.get_roi_name(key)):
+                return key
+        return None
 
     def get_ptv_names(self):
         if self.dicompyler_rt_structures:
