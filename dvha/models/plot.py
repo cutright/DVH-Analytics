@@ -1,7 +1,8 @@
 import wx.html2
 from bokeh.plotting import figure
 from bokeh.io.export import get_layout_html
-from bokeh.models import Legend, HoverTool, ColumnDataSource, DataTable, TableColumn, NumberFormatter, Div
+from bokeh.models import Legend, HoverTool, ColumnDataSource, DataTable, TableColumn,\
+    NumberFormatter, Div, Range1d, LabelSet
 from bokeh.layouts import column, row
 from bokeh.palettes import Colorblind8 as palette
 import itertools
@@ -29,7 +30,8 @@ class Plot:
 
         self.source = {}  # Will be a dictionary of bokeh ColumnDataSources
 
-        self.__apply_default_figure_options()
+        if self.options:
+            self.__apply_default_figure_options()
 
     def __apply_default_figure_options(self):
         self.figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
@@ -829,3 +831,67 @@ class PlotRandomForest(Plot):
 
     def __do_layout(self):
         self.bokeh_layout = column(self.figure)
+
+
+class PlotROIMap(Plot):
+    def __init__(self, parent, roi_map):
+        Plot.__init__(self, parent, None, plot_width=400, plot_height=400, frame_size=(850, 600))
+        self.roi_map = roi_map
+
+        # Plot
+        self.figure = figure(plot_width=800, plot_height=750,
+                             x_range=["Institutional ROI", "Physician ROI", "Variations"],
+                             x_axis_location="above",
+                             title="(Linked by Physician dropdowns)",
+                             tools="reset, ywheel_zoom, ywheel_pan",
+                             active_scroll='ywheel_pan')
+        self.figure.title.align = 'center'
+        # self.roi_map_plot.title.text_font_style = "italic"
+        self.figure.title.text_font_size = "15pt"
+        self.figure.xaxis.axis_line_color = None
+        self.figure.xaxis.major_tick_line_color = None
+        self.figure.xaxis.minor_tick_line_color = None
+        self.figure.xaxis.major_label_text_font_size = "12pt"
+        self.figure.xgrid.grid_line_color = None
+        self.figure.ygrid.grid_line_color = None
+        self.figure.yaxis.visible = False
+        self.figure.outline_line_color = None
+        self.figure.y_range = Range1d(-25, 0)
+        self.figure.border_fill_color = "whitesmoke"
+        self.figure.min_border_left = 50
+        self.figure.min_border_bottom = 30
+
+        self.source_map = ColumnDataSource(data={'name': [], 'color': [], 'x': [], 'y': [],
+                                                 'x0': [], 'y0': [], 'x1': [], 'y1': []})
+        self.figure.circle("x", "y", size=12, source=self.source_map, line_color="black", fill_alpha=0.8,
+                           color='color')
+        labels = LabelSet(x="x", y="y", text="name", y_offset=8, text_color="#555555",
+                          source=self.source_map, text_align='center')
+        self.figure.add_layout(labels)
+        self.figure.segment(x0='x0', y0='y0', x1='x1', y1='y1', source=self.source_map, alpha=0.5)
+
+        self.bokeh_layout = column(self.figure)
+
+    def update_roi_map_source_data(self, physician, plot_type=None):
+        new_data = self.roi_map.get_all_institutional_roi_visual_coordinates(physician)
+
+        i_roi = new_data['institutional_roi']
+        p_roi = new_data['physician_roi']
+        b_roi = self.roi_map.branched_institutional_rois[physician]
+        if plot_type == 'Linked':
+            ignored_roi = [p_roi[i] for i in range(len(i_roi)) if i_roi[i] == 'uncategorized']
+        elif plot_type == 'Unlinked':
+            ignored_roi = [p_roi[i] for i in range(len(i_roi)) if i_roi[i] != 'uncategorized']
+        elif plot_type == 'Branched':
+            ignored_roi = [p_roi[i] for i in range(len(i_roi)) if i_roi[i] not in b_roi]
+        else:
+            ignored_roi = []
+
+        new_data = self.roi_map.get_all_institutional_roi_visual_coordinates(physician,
+                                                                             ignored_physician_rois=ignored_roi)
+
+        self.source_map.data = new_data
+        self.figure.title.text = 'ROI Map for %s' % physician
+        self.figure.y_range.bounds = (min(self.source_map.data['y']) - 3, max(self.source_map.data['y']) + 3)
+
+        self.update_bokeh_layout_in_wx_python()

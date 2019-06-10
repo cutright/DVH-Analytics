@@ -1,6 +1,7 @@
 import wx
 import wx.html2
 from dialogs.roi_map import AddPhysician
+from models.plot import PlotROIMap
 
 
 class ROIMapDialog(wx.Dialog):
@@ -9,12 +10,13 @@ class ROIMapDialog(wx.Dialog):
 
         self.roi_map = roi_map
 
-        self.SetSize((1000, 600))
+        self.SetSize((1500, 800))
         self.window = wx.SplitterWindow(self, wx.ID_ANY)
         self.window_tree = wx.Panel(self.window, wx.ID_ANY, style=wx.BORDER_SUNKEN)
-        self.roi_tree = RoiTree(self.window_tree, self.roi_map)
-        self.roi_tree.rebuild_tree()
-        self.tree_ctrl = self.roi_tree.tree_ctrl
+        # self.roi_tree = RoiTree(self.window_tree, self.roi_map)
+        # self.roi_tree.rebuild_tree()
+        self.plot = PlotROIMap(self.window_tree, roi_map)
+        self.plot.update_roi_map_source_data('BBM')
         self.window_editor = wx.Panel(self.window, wx.ID_ANY, style=wx.BORDER_SUNKEN)
         self.combo_box_physician = wx.ComboBox(self.window_editor, wx.ID_ANY,
                                                choices=self.roi_map.get_physicians(), style=wx.CB_DROPDOWN)
@@ -83,7 +85,7 @@ class ROIMapDialog(wx.Dialog):
         sizer_add_physician = wx.BoxSizer(wx.VERTICAL)
         sizer_physician = wx.BoxSizer(wx.VERTICAL)
         sizer_tree = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_tree.Add(self.tree_ctrl, 1, wx.EXPAND, 0)
+        sizer_tree.Add(self.plot.layout, 1, wx.EXPAND, 0)
         self.window_tree.SetSizer(sizer_tree)
         label_physician = wx.StaticText(self.window_editor, wx.ID_ANY, "Physician:")
         label_physician.SetMinSize((65, 16))
@@ -149,7 +151,7 @@ class ROIMapDialog(wx.Dialog):
         sizer_editor.Add(sizer_physician_roi_merger, 0, wx.ALL | wx.EXPAND, 5)
         self.window_editor.SetSizer(sizer_editor)
         self.window.SplitVertically(self.window_tree, self.window_editor)
-        self.window.SetSashPosition(350)
+        self.window.SetSashPosition(825)
         sizer_wrapper.Add(self.window, 1, wx.EXPAND, 0)
         self.SetSizer(sizer_wrapper)
         self.Layout()
