@@ -16,7 +16,6 @@ class ROIMapDialog(wx.Dialog):
         # self.roi_tree = RoiTree(self.window_tree, self.roi_map)
         # self.roi_tree.rebuild_tree()
         self.plot = PlotROIMap(self.window_tree, roi_map)
-        self.plot.update_roi_map_source_data('BBM')
         self.window_editor = wx.Panel(self.window, wx.ID_ANY, style=wx.BORDER_SUNKEN)
         self.combo_box_physician = wx.ComboBox(self.window_editor, wx.ID_ANY,
                                                choices=self.roi_map.get_physicians(), style=wx.CB_DROPDOWN)
@@ -44,6 +43,8 @@ class ROIMapDialog(wx.Dialog):
         self.__do_bind()
         self.__do_layout()
 
+        self.plot.update_roi_map_source_data(self.physician)
+
         self.run()
 
     def __set_properties(self):
@@ -59,6 +60,7 @@ class ROIMapDialog(wx.Dialog):
 
     def __do_bind(self):
         self.window_editor.Bind(wx.EVT_BUTTON, self.add_physician, id=self.button_add_physician.GetId())
+        self.window_editor.Bind(wx.EVT_COMBOBOX, self.on_physician_change, id=self.combo_box_physician.GetId())
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.HORIZONTAL)
@@ -174,6 +176,17 @@ class ROIMapDialog(wx.Dialog):
         if new_physician:
             self.combo_box_physician.SetValue(new_physician[0])
         self.roi_tree.rebuild_tree()
+
+    def update_roi_map(self):
+        self.plot.update_roi_map_source_data(self.physician)
+
+    @property
+    def physician(self):
+        return self.combo_box_physician.GetValue()
+
+    def on_physician_change(self, evt):
+        self.update_roi_map()
+
 
 
 class RoiTree:
