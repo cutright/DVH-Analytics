@@ -48,11 +48,12 @@
 
 6. **Windows/Linux Plotting**
     * Windows:
-        - [ ] wx.html2 has issues on Windows generating javascript views
-        - [ ] Tried SetPage() and LoadURL(), tested on Windows 7 with latest IE, maybe Windows 10 works?
-        - [ ] Registry edit needed? [html2.WebView and "blocked content" on Windows/IE](https://groups.google.com/forum/#!topic/wxpython-dev/epBVWHC7l6E)
+        - [X] wx.html2 has issues on Windows generating javascript views
+        - [X] Tried SetPage() and LoadURL(), tested on Windows 7 with latest IE, maybe Windows 10 works?
+        - [X] Registry edit needed? [html2.WebView and "blocked content" on Windows/IE](https://groups.google.com/forum/#!topic/wxpython-dev/epBVWHC7l6E)
             * See [latest](https://wxpython.org/Phoenix/docs/html/wx.html2.WebView.html) wxPython dev
             * Use wheel from [here](https://wxpython.org/Phoenix/snapshot-builds/)
+        - [X] [Fixed!](https://github.com/wxWidgets/Phoenix/issues/1256)
     * Linux:
         - [X] Plot is displayed, but no interactivity
         - [X] Issue [#4](https://github.com/cutright/DVH-Analytics-Desktop/issues/4): Turns out not a Linux issue

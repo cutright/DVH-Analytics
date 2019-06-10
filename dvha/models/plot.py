@@ -9,6 +9,8 @@ import itertools
 import numpy as np
 from tools.utilities import collapse_into_single_dates, moving_avg, is_windows
 from tools.stats import multi_variable_regression, get_control_limits
+from os.path import join
+from paths import TEMP_DIR
 
 
 # TODO: have all plot classes load options with a function that runs on update_plot to get latest options
@@ -19,10 +21,12 @@ class Plot:
         self.options = options
 
         self.layout = wx.html2.WebView.New(parent, size=frame_size)
-        if is_windows():
-            self.layout.MSWSetEmulationLevel(level=wx.html2.WEBVIEWIE_EMU_IE11)  # requires wxPython >= 4.1.0
         self.bokeh_layout = None
         self.html_str = ''
+
+        # For windows users, since wx.html2 requires a file to load rather than passing a string
+        # The file name for each plot will be join(TEMP_DIR, "%s.html" % self.type)
+        self.type = None
 
         self.figure = figure(plot_width=plot_width, plot_height=plot_height, x_axis_type=x_axis_type)
         self.figure.xaxis.axis_label = x_axis_label
@@ -58,11 +62,13 @@ class Plot:
 
     def update_bokeh_layout_in_wx_python(self):
         self.html_str = get_layout_html(self.bokeh_layout)
-        # web_file = '/Users/nightowl/PycharmProjects/DVH-Analytics-Desktop/dvha/test.html'
-        # with open(web_file, 'wb') as f:
-        #     f.write(html_str.encode("utf-8"))
-        self.layout.SetPage(self.html_str, "")
-        # self.layout.LoadURL(web_file)
+        if is_windows():  # Windows requires LoadURL() in addition to changing the IE emulation level done in main.py
+            web_file = join(TEMP_DIR, "%s.html")
+            with open(web_file, 'wb') as f:
+                f.write(self.html_str.encode("utf-8"))
+            self.layout.LoadURL(web_file)
+        else:
+            self.layout.SetPage(self.html_str, "")
 
     @staticmethod
     def clean_data(*data, mrn=None, uid=None, dates=None):
@@ -84,6 +90,8 @@ class PlotStatDVH(Plot):
     def __init__(self, parent, dvh, options):
         Plot.__init__(self, parent, options, x_axis_label='Dose (cGy)', y_axis_label='Relative Volume',
                       plot_width=800, plot_height=400)
+
+        self.type = 'dvh'
 
         self.options = options
         self.dvh = dvh
@@ -227,6 +235,9 @@ class PlotTimeSeries(Plot):
     def __init__(self, parent, options, plot_width=800):
         Plot.__init__(self, parent, options, x_axis_label='Simulation Date',
                       plot_width=plot_width, plot_height=325, x_axis_type='datetime')
+
+        self.type = 'time_series'
+
         self.options = options
         self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[])),
                        'hist': ColumnDataSource(data=dict(x=[], top=[], width=[])),
@@ -361,6 +372,9 @@ class PlotTimeSeries(Plot):
 class PlotRegression(Plot):
     def __init__(self, parent, options):
         Plot.__init__(self, parent, options, plot_width=550, plot_height=300)
+
+        self.type = 'regression'
+
         self.x_axis_title, self.y_axis_title = '', ''
         self.reg = None
         self.options = options
@@ -529,6 +543,9 @@ class PlotRegression(Plot):
 class PlotMultiVarRegression(Plot):
     def __init__(self, parent, options):
         Plot.__init__(self, parent, options, plot_width=400, plot_height=400, frame_size=(900, 600))
+
+        self.type = 'multi-variable_regression'
+
         self.options = options
         self.X, self.y = None, None
         self.x_variables, self.y_variable, self.stats_data = None, None, None
@@ -684,6 +701,9 @@ class PlotMultiVarRegression(Plot):
 class PlotControlChart(Plot):
     def __init__(self, parent, options, plot_width=800):
         Plot.__init__(self, parent, options, x_axis_label='Study', plot_width=plot_width, plot_height=325)
+
+        self.type = 'control_chart'
+
         self.y_axis_label = ''
         self.options = options
         self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], color=[], alpha=[], dates=[])),
@@ -812,6 +832,9 @@ class PlotControlChart(Plot):
 class PlotRandomForest(Plot):
     def __init__(self, parent, options, y, y_predict, mse):
         Plot.__init__(self, parent, options, plot_width=400, plot_height=400, frame_size=(900, 600))
+
+        self.type = 'random_forest'
+
         self.options = options
         self.y = y
         self.y_predict = y_predict
@@ -836,6 +859,9 @@ class PlotRandomForest(Plot):
 class PlotROIMap(Plot):
     def __init__(self, parent, roi_map):
         Plot.__init__(self, parent, None, plot_width=400, plot_height=400, frame_size=(850, 600))
+
+        self.type = 'roi_map'
+
         self.roi_map = roi_map
 
         # Plot

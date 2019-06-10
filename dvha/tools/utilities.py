@@ -3,12 +3,12 @@ from db.sql_connector import DVH_SQL
 from datetime import datetime
 from dateutil.parser import parse as parse_date
 import numpy as np
-from os import walk, listdir, unlink, mkdir
+from os import walk, listdir, unlink
 from os.path import join, isfile, isdir
 import os
 import shutil
 from paths import IMPORT_SETTINGS_PATH, SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
-    APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR
+    APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR
 import pydicom as dicom
 import pickle
 
@@ -32,7 +32,7 @@ def initialize_directories_and_settings():
 
 
 def initialize_directories():
-    directories = [APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR, BACKUP_DIR]
+    directories = [APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR, BACKUP_DIR, TEMP_DIR]
     for directory in directories:
         if not os.path.isdir(directory):
             os.mkdir(directory)
