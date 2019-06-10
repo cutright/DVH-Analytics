@@ -14,7 +14,8 @@ from os.path import isdir, join, dirname
 from os import listdir, rmdir
 from paths import IMPORT_SETTINGS_PATH, parse_settings_file
 from pubsub import pub
-from tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95
+from tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
+    set_msw_background_color
 from tools.roi_name_manager import clean_name
 from threading import Thread
 
@@ -23,6 +24,9 @@ from threading import Thread
 class ImportDICOM_Dialog(wx.Frame):
     def __init__(self, roi_map, options, inbox=None):
         wx.Frame.__init__(self, None, title='Import DICOM')
+
+        set_msw_background_color(self)  # If windows, change the background color
+
         self.initial_inbox = inbox
         self.options = options
 
@@ -294,7 +298,7 @@ class ImportDICOM_Dialog(wx.Frame):
         sizer_checkbox_rx.Add(self.checkbox['rx_dose_2'], 0, 0, 0)
         sizer_rx.Add(sizer_checkbox_rx, 1, wx.EXPAND, 0)
         sizer_plan_data.Add(sizer_rx, 1, wx.ALL | wx.EXPAND, 5)
-        sizer_plan_data.Add(self.button_apply_plan_data, 0, wx.ALIGN_CENTER | wx.ALL | wx.EXPAND, 5)
+        sizer_plan_data.Add(self.button_apply_plan_data, 0, wx.ALL | wx.EXPAND, 5)
         sizer_plan_data_wrapper.Add(sizer_plan_data, 1, wx.ALL | wx.EXPAND, 10)
         sizer_main.Add(sizer_plan_data_wrapper, 1, wx.EXPAND, 0)
         sizer_roi_tree.Add(self.tree_ctrl_roi, 1, wx.ALL | wx.EXPAND, 0)
@@ -333,7 +337,7 @@ class ImportDICOM_Dialog(wx.Frame):
         sizer_warning_buttons.Add(sizer_warning, 1, wx.ALL | wx.EXPAND, 5)
         sizer_buttons.Add(self.button_import, 0, wx.ALL, 5)
         sizer_buttons.Add(self.button_cancel, 0, wx.ALL, 5)
-        sizer_warning_buttons.Add(sizer_buttons, 0, wx.ALIGN_RIGHT | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
+        sizer_warning_buttons.Add(sizer_buttons, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
         sizer_wrapper.Add(sizer_warning_buttons, 0, wx.ALL | wx.EXPAND, 5)
 
         self.SetSizer(sizer_wrapper)

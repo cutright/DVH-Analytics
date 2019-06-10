@@ -527,6 +527,71 @@ class AddROIType(wx.Dialog):
         pass
 
 
+class RenamerBaseClass(wx.Dialog):
+    def __init__(self, title, text_input_label, invalid_options, lower_case=True):
+        wx.Dialog.__init__(self, None, title=title)
+
+        self.invalid_options = invalid_options
+        self.lower_case = lower_case
+
+        self.text_input_label = text_input_label
+
+        self.text_ctrl = wx.TextCtrl(self, wx.ID_ANY, "")
+        self.button_ok = wx.Button(self, wx.ID_OK, 'OK')
+        self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+
+        self.__set_properties()
+        self.__do_bind()
+        self.__do_layout()
+
+        self.run()
+
+    def __set_properties(self):
+        self.text_ctrl.SetMinSize((365, 22))
+        self.button_ok.Disable()
+
+    def __do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_ok_cancel = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_input = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
+
+        label_text_input = wx.StaticText(self, wx.ID_ANY, self.text_input_label)
+        sizer_input.Add(label_text_input, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_input.Add(self.text_ctrl, 0, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+
+        sizer_wrapper.Add(sizer_input, 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)
+        sizer_ok_cancel.Add(self.button_ok, 0, wx.ALL, 5)
+        sizer_ok_cancel.Add(self.button_cancel, 0, wx.ALL, 5)
+        sizer_wrapper.Add(sizer_ok_cancel, 0, wx.ALIGN_RIGHT | wx.BOTTOM | wx.RIGHT, 10)
+        self.SetSizer(sizer_wrapper)
+        sizer_wrapper.Fit(self)
+        self.Layout()
+        self.Center()
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_TEXT, self.text_ticker, id=self.text_ctrl.GetId())
+
+    def text_ticker(self, evt):
+        [self.button_ok.Disable, self.button_ok.Enable][self.new_name not in self.invalid_options]()
+
+    @property
+    def new_name(self):
+        new = clean_name(self.text_ctrl.GetValue())
+        if self.lower_case:
+            return new
+        else:
+            return new.upper()
+
+    def run(self):
+        res = self.ShowModal()
+        if res == wx.ID_OK:
+            self.action()
+        self.Destroy()
+
+    def action(self):
+        pass
+
+
 class ChangePlanROIName(wx.Dialog):
     def __init__(self, tree_ctrl_roi, tree_item, mrn, study_instance_uid, parsed_dicom_data):
         wx.Dialog.__init__(self, None, title='Edit %s' % tree_ctrl_roi.GetItemText(tree_item))

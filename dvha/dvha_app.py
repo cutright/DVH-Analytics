@@ -25,7 +25,7 @@ from paths import LOGO_PATH
 from tools.roi_name_manager import DatabaseROIs
 from tools.stats import StatsData
 from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux,\
-    save_object_to_file, load_object_from_file
+    save_object_to_file, load_object_from_file, set_msw_background_color
 from datetime import datetime
 from copy import deepcopy
 
@@ -43,6 +43,8 @@ class DVHAMainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
+
+        set_msw_background_color(self)  # If windows, change the background color
 
         self.options = Options()
 
