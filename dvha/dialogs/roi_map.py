@@ -178,12 +178,32 @@ class RoiManager(wx.Dialog):
         self.ShowModal()
         self.Destroy()
 
-    def update_physician_rois(self):
-        new_physician_rois = self.roi_map.get_physician_rois(self.physician)
-        self.combo_box_physician_roi.Clear()
-        self.combo_box_physician_roi.AppendItems(new_physician_rois)
-        if self.physician_roi not in new_physician_rois:
-            self.combo_box_physician_roi.SetValue(new_physician_rois[0])
+    def update_physicians(self, old_physicians=None):
+
+        choices = self.roi_map.get_physicians()
+        new = choices[0]
+        if old_physicians:
+            new = list(set(choices) - set(old_physicians))
+            if new:
+                new = clean_name(new[0]).upper()
+
+        self.update_combo_box_choices(self.combo_box_physician, choices, new)
+
+    def update_physician_rois(self, old_physician_rois=None):
+        choices = self.roi_map.get_physician_rois(self.physician)
+        new = choices[0]
+        if old_physician_rois:
+            new = list(set(choices) - set(old_physician_rois))
+            if new:
+                new = clean_name(new[0])
+
+        self.update_combo_box_choices(self.combo_box_physician_roi, choices, new)
+
+    @staticmethod
+    def update_combo_box_choices(combo_box, choices, value):
+        combo_box.Clear()
+        combo_box.AppendItems(choices)
+        combo_box.SetValue(value)
 
     def update_variations(self):
         self.data_table.set_data(self.variation_table_data, self.columns)
@@ -269,11 +289,14 @@ class RoiManager(wx.Dialog):
             self.button_deselect_all.Disable()
 
     def add_physician_roi(self, evt):
+        old_physician_rois = self.roi_map.get_physician_rois(self.physician)
         AddPhysicianROI(self.parent, self.physician, self.roi_map)
-        self.update_physician_rois()
+        self.update_physician_rois(old_physician_rois=old_physician_rois)
 
     def add_physician(self, evt):
+        old_physicians = self.roi_map.get_physicians()
         AddPhysician(self.roi_map)
+        self.update_physicians(old_physicians=old_physicians)
 
 
 class AddVariationDialog(wx.Dialog):

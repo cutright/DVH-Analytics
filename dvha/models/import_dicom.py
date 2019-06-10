@@ -109,6 +109,8 @@ class ImportDICOM_Dialog(wx.Frame):
 
         self.incomplete_studies = []
 
+        self.terminate = {'status': False}  # used to terminate thread on cancel in Import Dialog
+
         self.run()
 
     def __do_bind(self):
@@ -169,6 +171,9 @@ class ImportDICOM_Dialog(wx.Frame):
                                  'no': self.image_list.Add(wx.Image("icons/iconfinder_ko-red_53948.png",
                                                                     wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())}
         self.tree_ctrl_roi.AssignImageList(self.image_list)
+
+        self.button_cancel.SetToolTip("Changes to ROI Map will be disregarded.")
+        self.button_import.SetToolTip("Save ROI Map changes and import checked studies.")
 
     def __do_layout(self):
         self.label = {}
@@ -669,8 +674,8 @@ class ImportDICOM_Dialog(wx.Frame):
 
     def on_import(self, evt):
         ImportWorker(self.parsed_dicom_data, list(self.dicom_dir.checked_studies),
-                     self.checkbox_include_uncategorized.GetValue())
-        dlg = ImportStatusDialog()
+                     self.checkbox_include_uncategorized.GetValue(), self.terminate)
+        dlg = ImportStatusDialog(self.terminate)
         dlg.Show()
         self.Close()
 
@@ -794,6 +799,7 @@ class ImportDICOM_Dialog(wx.Frame):
 
     def on_variation_manager(self, evt):
         RoiManager(self, self.roi_map, self.input['physician'].GetValue(), self.input_roi['physician'].GetValue())
+        self.update_physician_choices(keep_old_physician=True)
         self.update_physician_roi_choices()
         self.update_roi_inputs()
         self.dicom_dir.check_mapped_rois(self.input['physician'].GetValue())
@@ -811,14 +817,14 @@ class ImportDICOM_Dialog(wx.Frame):
     def on_manage_roi_type(self, evt):
         AddROIType(self)
 
-    def update_physician_choices(self):
+    def update_physician_choices(self, keep_old_physician=False):
         old_physician = self.input['physician'].GetValue()
         old_physicians = self.input['physician'].Items
         new_physicians = self.roi_map.get_physicians()
         new_physician = [p for p in new_physicians if p and p not in old_physicians]
         self.input['physician'].Clear()
         self.input['physician'].Append(new_physicians)
-        if new_physician:
+        if not keep_old_physician and new_physician:
             self.input['physician'].SetValue(new_physician[0])
         else:
             self.input['physician'].SetValue(old_physician)
@@ -847,15 +853,19 @@ class ImportDICOM_Dialog(wx.Frame):
 
 
 class ImportStatusDialog(wx.Dialog):
-    def __init__(self):
+    def __init__(self, terminate):
         wx.Dialog.__init__(self, None)
         self.gauge_study = wx.Gauge(self, wx.ID_ANY, 100)
         self.gauge_calculation = wx.Gauge(self, wx.ID_ANY, 100)
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
+        self.terminate = terminate
+
         self.__set_properties()
         self.__do_layout()
         self.__do_subscribe()
+
+        self.Bind(wx.EVT_BUTTON, self.set_terminate, id=self.button_cancel.GetId())
 
         self.start_time = datetime.now()
 
@@ -917,17 +927,27 @@ class ImportStatusDialog(wx.Dialog):
         elapsed_time = get_elapsed_time(self.start_time, datetime.now())
         self.label_elapsed_time.SetLabelText("Elapsed Time: %s" % elapsed_time)
 
+    def set_terminate(self, evt):
+        self.terminate['status'] = True
+        self.close()
+
 
 class ImportWorker(Thread):
-    def __init__(self, data, checked_uids, import_uncategorized):
+    def __init__(self, data, checked_uids, import_uncategorized, terminate):
         """
         :param data: parased dicom data
         :type data: dict of DICOM_Parser
         """
         Thread.__init__(self)
+
         self.data = data
         self.checked_uids = checked_uids
         self.import_uncategorized = import_uncategorized
+        self.terminate = terminate
+
+        with DVH_SQL() as cnx:
+            self.last_import_time = cnx.now  # use psql time rather than CPU since time stamps in DB are based on psql
+
         self.start()  # start the thread
 
     def run(self):
@@ -947,6 +967,9 @@ class ImportWorker(Thread):
                         wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
                         wx.CallAfter(pub.sendMessage, "update_elapsed_time")
                         self.import_study(uid)
+                        if self.terminate['status']:
+                            self.delete_partially_updated_study()
+                            return
                 else:
                     print('WARNING: This study could not be parsed. Skipping import. '
                           'Did you supply RT Structure, Dose, and Plan?')
@@ -977,6 +1000,8 @@ class ImportWorker(Thread):
         roi_total = len(roi_name_map)
         ptvs = {key: [] for key in ['dvh', 'volume', 'index']}
         for roi_counter, roi_key in enumerate(list(roi_name_map)):
+            if self.terminate['status']:
+                return
             msg = {'calculation': 'DVH',
                    'roi_num': roi_counter+1,
                    'roi_total': roi_total,
@@ -1009,22 +1034,26 @@ class ImportWorker(Thread):
             for ptv_row, dvh_row_index in enumerate(ptvs['index']):
                 data_to_import['DVHs'][dvh_row_index]['roi_type'][0] = "PTV%s" % (ptv_order[ptv_row]+1)
 
-        self.push(data_to_import)
-
-        self.move_files(uid)
+        self.push(data_to_import)  # Must push data before processing post import calculations
 
         if ptvs['dvh']:
             tv = db_update.get_treatment_volume(uid)
             self.post_import_calc('PTV Overlap Volume', uid, post_import_rois,
                                   db_update.treatment_volume_overlap, tv)
+            if self.terminate['status']:
+                return
 
             tv_centroid = db_update.get_treatment_volume_centroid(tv)
             self.post_import_calc('Centroid Distance to PTV', uid, post_import_rois,
                                   db_update.dist_to_ptv_centroids, tv_centroid)
+            if self.terminate['status']:
+                return
 
             tv_coord = db_update.get_treatment_volume_coord(tv)
             self.post_import_calc('Distances to PTV', uid, post_import_rois,
                                   db_update.min_distances, tv_coord)
+            if self.terminate['status']:
+                return
 
             msg = {'calculation': 'Total Treatment Volume Statistics',
                    'roi_num': 0,
@@ -1035,9 +1064,15 @@ class ImportWorker(Thread):
             db_update.update_ptv_data(tv, uid)
             msg['roi_num'], msg['progress'] = 1, 100
             wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+
         else:
             print("WARNING: No PTV found for %s" % uid)
             print("\tSkipping PTV related calculations.")
+
+        self.move_files(uid)
+
+        with DVH_SQL() as cnx:
+            self.last_import_time = cnx.now
 
     @staticmethod
     def push(data_to_import):
@@ -1046,10 +1081,11 @@ class ImportWorker(Thread):
                 for row in data_to_import[key]:
                     cnx.insert_row(key, row)
 
-    @staticmethod
-    def post_import_calc(title, uid, rois, func, pre_calc):
+    def post_import_calc(self, title, uid, rois, func, pre_calc):
         roi_total = len(rois)
         for roi_counter, roi_name in enumerate(rois):
+            if self.terminate['status']:
+                return
             msg = {'calculation': title,
                    'roi_num': roi_counter + 1,
                    'roi_total': roi_total,
@@ -1059,6 +1095,7 @@ class ImportWorker(Thread):
             func(uid, roi_name, pre_calc=pre_calc)
 
     def move_files(self, uid):
+        print('moving files for %s' % uid)
         files = [self.data[uid].plan_file,
                  self.data[uid].structure_file,
                  self.data[uid].dose_file]
@@ -1071,3 +1108,7 @@ class ImportWorker(Thread):
             old_dir = dirname(file)
             if isdir(old_dir) and not listdir(old_dir):
                 rmdir(old_dir)
+
+    def delete_partially_updated_study(self):
+        with DVH_SQL() as cnx:
+            cnx.delete_rows("import_time_stamp > '%s'::date" % self.last_import_time)

@@ -106,6 +106,10 @@ class DVH_SQL:
         self.cursor.execute(query_str)
         return self.cursor.fetchall()
 
+    @property
+    def now(self):
+        return self.query_generic("Select NOW()")[0][0]
+
     def update(self, table_name, column, value, condition_str):
 
         try:

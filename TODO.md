@@ -14,8 +14,6 @@
     - [ ] Currently code connects strictly by StudyInstanceUID and assumes the latest files appropriate
         - [ ] Should probably have a layer of verification with SOP Instance checks
     - [X] Better ROI map integration
-    - [X] Unchecking anything in the ROI tree does nothing
-        * not more checking
     - [ ] Thread the file/dicom parsing process so UI updates on the fly in Windows (works as is on Mac, and maybe linux too)
 
 3. **Regression**
