@@ -2,11 +2,13 @@
 
 1. **ROI Map**
     - [X] User needs a way to create a ROI map, current GUI is largely non-functional
-    - [ ] Needs better visual than current tree, visual from the pure Bokeh app was useful, maybe a wx.CustomListCtrl 
+    - [X] Needs better visual than current tree, visual from the pure Bokeh app was useful, maybe a wx.CustomListCtrl 
     could work?
+        - Using original visiuallzation
     - [X] Most ROI Map interaction should be able to occur at time of import, ROI Map in tool bar to be used for 
     clean up later
         - [X] Add ability to add physician map at import dialog, add variations, etc.
+    - [ ] Complete functionality
 
 2. **Import**
     - [ ] Need to test on Windows/Linux

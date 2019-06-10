@@ -17,11 +17,13 @@ class AddPhysician(wx.Dialog):
                                                style=wx.CB_DROPDOWN)
         # self.checkbox_institutional_mapping = wx.CheckBox(self, wx.ID_ANY, "Institutional Mapping")
         self.checkbox_variations = wx.CheckBox(self, wx.ID_ANY, "Include Variations")
-        self.button_OK = wx.Button(self, wx.ID_OK, "OK")
+        self.button_ok = wx.Button(self, wx.ID_OK, "OK")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
         self.__set_properties()
         self.__do_layout()
+
+        self.Bind(wx.EVT_TEXT, self.update_enable, id=self.text_ctrl_physician.GetId())
 
         self.run()
 
@@ -51,7 +53,7 @@ class AddPhysician(wx.Dialog):
         # sizer_include.Add(self.checkbox_variations, 0, 0, 0)
         sizer_widgets.Add(self.checkbox_variations, 0, wx.EXPAND | wx.ALL, 10)
         sizer_wrapper.Add(sizer_widgets, 0, wx.ALL | wx.EXPAND, 10)
-        sizer_ok_cancel.Add(self.button_OK, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        sizer_ok_cancel.Add(self.button_ok, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_ok_cancel.Add(self.button_cancel, 0, wx.LEFT | wx.RIGHT, 5)
         sizer_wrapper.Add(sizer_ok_cancel, 0, wx.ALIGN_RIGHT | wx.BOTTOM | wx.LEFT | wx.RIGHT, 10)
         self.SetSizer(sizer_wrapper)
@@ -69,6 +71,11 @@ class AddPhysician(wx.Dialog):
         if res == wx.ID_OK:
             self.action()
         self.Destroy()
+
+    def update_enable(self, evt):
+        invalid_choices = set(self.roi_map.get_physicians())
+        new = clean_name(self.text_ctrl_physician.GetValue()).upper()
+        self.button_ok.Enable(new not in invalid_choices)
 
 
 # TODO: Disable ability to use Variation Manager on 'DEFAULT' physician
@@ -201,6 +208,8 @@ class RoiManager(wx.Dialog):
 
     @staticmethod
     def update_combo_box_choices(combo_box, choices, value):
+        if not value:
+            value = combo_box.GetValue()
         combo_box.Clear()
         combo_box.AppendItems(choices)
         combo_box.SetValue(value)
@@ -469,10 +478,8 @@ class AddPhysicianROI(wx.Dialog):
                               self.roi_map.get_physician_rois(self.physician) +
                               self.roi_map.get_all_variations_of_physician(self.physician))
 
-        if self.text_ctrl_physician_roi.GetValue() in invalid_choices:
-            self.button_ok.Disable()
-        else:
-            self.button_ok.Enable()
+        new = clean_name(self.text_ctrl_physician_roi.GetValue())
+        self.button_ok.Enable(new in invalid_choices)
 
 
 class AddROIType(wx.Dialog):

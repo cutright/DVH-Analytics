@@ -2,6 +2,7 @@ import wx
 import wx.html2
 from dialogs.roi_map import AddPhysician
 from models.plot import PlotROIMap
+from tools.roi_name_manager import clean_name
 
 
 class ROIMapDialog(wx.Dialog):
@@ -164,18 +165,33 @@ class ROIMapDialog(wx.Dialog):
         self.Destroy()
 
     def add_physician(self, evt):
+        physicians = self.roi_map.get_physicians()
         AddPhysician(self.roi_map)
-        self.update_physician_choices()
+        self.update_physicians(old_physicians=physicians)
 
-    def update_physician_choices(self):
-        old_physicians = self.combo_box_physician.Items
-        new_physicians = self.roi_map.get_physicians()
-        new_physician = [p for p in new_physicians if p not in old_physicians]
-        self.combo_box_physician.Clear()
-        self.combo_box_physician.Append(new_physicians)
-        if new_physician:
-            self.combo_box_physician.SetValue(new_physician[0])
-        self.roi_tree.rebuild_tree()
+    def update_physicians(self, old_physicians=None):
+
+        old_physician = self.combo_box_physician.GetValue()
+
+        choices = self.roi_map.get_physicians()
+        new = choices[0]
+        if old_physicians:
+            new = list(set(choices) - set(old_physicians))
+            if new:
+                new = clean_name(new[0]).upper()
+
+        self.update_combo_box_choices(self.combo_box_physician, choices, new)
+
+        if old_physician != self.combo_box_physician.GetValue():
+            self.update_roi_map()
+
+    @staticmethod
+    def update_combo_box_choices(combo_box, choices, value):
+        if not value:
+            value = combo_box.GetValue()
+        combo_box.Clear()
+        combo_box.AppendItems(choices)
+        combo_box.SetValue(value)
 
     def update_roi_map(self):
         self.plot.update_roi_map_source_data(self.physician)
@@ -188,68 +204,67 @@ class ROIMapDialog(wx.Dialog):
         self.update_roi_map()
 
 
-
-class RoiTree:
-    def __init__(self, parent, db_rois):
-
-        self.tree_ctrl = wx.TreeCtrl(parent, wx.ID_ANY)
-        self.db = db_rois
-        self.root = self.tree_ctrl.AddRoot('Physicians')
-        self.physician_nodes = {}
-        self.institutional_status_nodes = {}
-        self.physician_roi_nodes = {}
-        self.roi_variation_nodes = {}
-
-    def rebuild_tree(self):
-        self.tree_ctrl.DeleteChildren(self.root)
-        tree = self.db.tree
-
-        self.physician_nodes = {}
-        self.institutional_status_nodes = {}
-        self.physician_roi_nodes = {}
-        self.roi_variation_nodes = {}
-
-        for physician, linked_statuses in tree.items():
-            self.append_physician(physician)
-            for linked_status, physician_rois in linked_statuses.items():
-                for physician_roi, variations in physician_rois.items():
-                    self.append_physician_roi(physician, physician_roi, linked_status)
-                    for variation in variations:
-                        self.append_variation(physician, physician_roi, variation)
-
-        self.tree_ctrl.Expand(self.root)
-
-    def append_variation(self, physician, physician_roi, variation):
-        parent_node = self.physician_roi_nodes[physician][physician_roi]
-        nodes = self.roi_variation_nodes[physician][physician_roi]
-        self.append_tree_item(parent_node, nodes, variation)
-
-    def append_physician_roi(self, physician, physician_roi, linked_status):
-        parent_node = self.institutional_status_nodes[physician][linked_status]
-        nodes = self.physician_roi_nodes[physician]
-        self.append_tree_item(parent_node, nodes, physician_roi)
-        if physician_roi not in list(self.roi_variation_nodes[physician]):
-            self.roi_variation_nodes[physician][physician_roi] = {}
-        if physician_roi not in list(self.physician_roi_nodes[physician]):
-            self.physician_roi_nodes[physician][physician_roi] = {}
-
-    def append_physician(self, physician):
-        self.append_tree_item(self.root, self.physician_nodes, physician)
-        if physician not in list(self.institutional_status_nodes):
-            self.institutional_status_nodes[physician] = {'Linked to Institutional ROI': [],
-                                                          'Unlinked to Institutional ROI': []}
-        self.append_tree_item(self.physician_nodes[physician],
-                              self.institutional_status_nodes[physician], 'Linked to Institutional ROI')
-        self.append_tree_item(self.physician_nodes[physician],
-                              self.institutional_status_nodes[physician], 'Unlinked to Institutional ROI')
-
-        if physician not in list(self.physician_roi_nodes):
-            self.physician_roi_nodes[physician] = {}
-        if physician not in list(self.roi_variation_nodes):
-            self.roi_variation_nodes[physician] = {}
-
-    def append_tree_item(self, parent_node, nodes, key):
-        nodes[key] = self.tree_ctrl.AppendItem(parent_node, key)
-
-    def sort_tree(self):
-        self.tree_ctrl.SortChildren(self.root)
+# class RoiTree:
+#     def __init__(self, parent, db_rois):
+#
+#         self.tree_ctrl = wx.TreeCtrl(parent, wx.ID_ANY)
+#         self.db = db_rois
+#         self.root = self.tree_ctrl.AddRoot('Physicians')
+#         self.physician_nodes = {}
+#         self.institutional_status_nodes = {}
+#         self.physician_roi_nodes = {}
+#         self.roi_variation_nodes = {}
+#
+#     def rebuild_tree(self):
+#         self.tree_ctrl.DeleteChildren(self.root)
+#         tree = self.db.tree
+#
+#         self.physician_nodes = {}
+#         self.institutional_status_nodes = {}
+#         self.physician_roi_nodes = {}
+#         self.roi_variation_nodes = {}
+#
+#         for physician, linked_statuses in tree.items():
+#             self.append_physician(physician)
+#             for linked_status, physician_rois in linked_statuses.items():
+#                 for physician_roi, variations in physician_rois.items():
+#                     self.append_physician_roi(physician, physician_roi, linked_status)
+#                     for variation in variations:
+#                         self.append_variation(physician, physician_roi, variation)
+#
+#         self.tree_ctrl.Expand(self.root)
+#
+#     def append_variation(self, physician, physician_roi, variation):
+#         parent_node = self.physician_roi_nodes[physician][physician_roi]
+#         nodes = self.roi_variation_nodes[physician][physician_roi]
+#         self.append_tree_item(parent_node, nodes, variation)
+#
+#     def append_physician_roi(self, physician, physician_roi, linked_status):
+#         parent_node = self.institutional_status_nodes[physician][linked_status]
+#         nodes = self.physician_roi_nodes[physician]
+#         self.append_tree_item(parent_node, nodes, physician_roi)
+#         if physician_roi not in list(self.roi_variation_nodes[physician]):
+#             self.roi_variation_nodes[physician][physician_roi] = {}
+#         if physician_roi not in list(self.physician_roi_nodes[physician]):
+#             self.physician_roi_nodes[physician][physician_roi] = {}
+#
+#     def append_physician(self, physician):
+#         self.append_tree_item(self.root, self.physician_nodes, physician)
+#         if physician not in list(self.institutional_status_nodes):
+#             self.institutional_status_nodes[physician] = {'Linked to Institutional ROI': [],
+#                                                           'Unlinked to Institutional ROI': []}
+#         self.append_tree_item(self.physician_nodes[physician],
+#                               self.institutional_status_nodes[physician], 'Linked to Institutional ROI')
+#         self.append_tree_item(self.physician_nodes[physician],
+#                               self.institutional_status_nodes[physician], 'Unlinked to Institutional ROI')
+#
+#         if physician not in list(self.physician_roi_nodes):
+#             self.physician_roi_nodes[physician] = {}
+#         if physician not in list(self.roi_variation_nodes):
+#             self.roi_variation_nodes[physician] = {}
+#
+#     def append_tree_item(self, parent_node, nodes, key):
+#         nodes[key] = self.tree_ctrl.AppendItem(parent_node, key)
+#
+#     def sort_tree(self):
+#         self.tree_ctrl.SortChildren(self.root)
