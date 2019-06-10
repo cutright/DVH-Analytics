@@ -63,7 +63,7 @@ class Plot:
     def update_bokeh_layout_in_wx_python(self):
         self.html_str = get_layout_html(self.bokeh_layout)
         if is_windows():  # Windows requires LoadURL() in addition to changing the IE emulation level done in main.py
-            web_file = join(TEMP_DIR, "%s.html")
+            web_file = join(TEMP_DIR, "%s.html" % self.type)
             with open(web_file, 'wb') as f:
                 f.write(self.html_str.encode("utf-8"))
             self.layout.LoadURL(web_file)
