@@ -916,20 +916,21 @@ class ImportStatusDialog(wx.Dialog):
         self.Destroy()
 
     def update_patient(self, msg):
-        self.label_study_counter.SetLabelText("Study %s of %s" % (msg['study_number'], msg['study_total']))
-        self.label_patient.SetLabelText("Patient: %s" % msg['patient_name'])
-        self.label_study.SetLabelText("Study Instance UID: %s" % msg['uid'])
-        self.gauge_study.SetValue(msg['progress'])
+        wx.CallAfter(self.label_study_counter.SetLabelText, "Study %s of %s" %
+                     (msg['study_number'], msg['study_total']))
+        wx.CallAfter(self.label_patient.SetLabelText, "Patient: %s" % msg['patient_name'])
+        wx.CallAfter(self.label_study.SetLabelText, "Study Instance UID: %s" % msg['uid'])
+        wx.CallAfter(self.gauge_study.SetValue, msg['progress'])
 
     def update_calculation(self, msg):
-        self.label_calculation.SetLabelText("Calculation: %s" % msg['calculation'])
-        self.label_structure.SetLabelText("Structure (%s of %s): %s" %
-                                          (msg['roi_num'], msg['roi_total'], msg['roi_name']))
-        self.gauge_calculation.SetValue(msg['progress'])
+        wx.CallAfter(self.label_calculation.SetLabelText, "Calculation: %s" % msg['calculation'])
+        wx.CallAfter(self.label_structure.SetLabelText, "Structure (%s of %s): %s" %
+                     (msg['roi_num'], msg['roi_total'], msg['roi_name']))
+        wx.CallAfter(self.gauge_calculation.SetValue, msg['progress'])
 
     def update_elapsed_time(self):
         elapsed_time = get_elapsed_time(self.start_time, datetime.now())
-        self.label_elapsed_time.SetLabelText("Elapsed Time: %s" % elapsed_time)
+        wx.CallAfter(self.label_elapsed_time.SetLabelText, "Elapsed Time: %s" % elapsed_time)
 
     def set_terminate(self, evt):
         self.terminate['status'] = True
