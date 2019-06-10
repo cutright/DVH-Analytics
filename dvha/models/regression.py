@@ -8,6 +8,7 @@ import numpy as np
 from models.random_forest import RandomForestFrame, RandomForestWorker
 from pubsub import pub
 from dialogs.export import save_string_to_file
+from tools.utilities import set_msw_background_color
 
 
 class RegressionFrame:
@@ -305,6 +306,9 @@ class RegressionFrame:
 class MultiVarResultsFrame(wx.Frame):
     def __init__(self, y_variable, x_variables, stats_data, options):
         wx.Frame.__init__(self, None, title="Multi-Variable Model for %s" % y_variable)
+
+        set_msw_background_color(self)  # If windows, change the background color
+
         self.options = options
 
         self.plot = PlotMultiVarRegression(self, options)
@@ -343,12 +347,12 @@ class MultiVarResultsFrame(wx.Frame):
         sizer_export_buttons.Add(self.button_save_plot, 0, wx.ALL, 5)
         sizer_algo_wrapper.Add(sizer_export_buttons, 0, wx.ALL, 5)
         text = wx.StaticText(self, wx.ID_ANY, "Compare with Machine Learning Module")
-        sizer_algo_wrapper.Add(text, 0, wx.EXPAND | wx.ALL | wx.ALIGN_CENTER, 5)
+        sizer_algo_wrapper.Add(text, 0, wx.EXPAND | wx.ALL, 5)
         for key, button in self.button.items():
             sizer_algo_select.Add(button, 0, wx.EXPAND | wx.ALL, 5)
         sizer_algo_wrapper.Add(sizer_algo_select, 0, wx.ALL, 5)
 
-        sizer_wrapper.Add(sizer_algo_wrapper, 0, wx.EXPAND | wx.ALL | wx.ALIGN_CENTER, 10)
+        sizer_wrapper.Add(sizer_algo_wrapper, 0, wx.EXPAND | wx.ALL, 10)
 
         self.SetSizer(sizer_wrapper)
         sizer_wrapper.Fit(self)

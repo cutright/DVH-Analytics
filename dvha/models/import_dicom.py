@@ -1100,7 +1100,6 @@ class ImportWorker(Thread):
             func(uid, roi_name, pre_calc=pre_calc)
 
     def move_files(self, uid):
-        print('moving files for %s' % uid)
         files = [self.data[uid].plan_file,
                  self.data[uid].structure_file,
                  self.data[uid].dose_file]

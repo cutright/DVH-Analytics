@@ -3,11 +3,14 @@ from threading import Thread
 from pubsub import pub
 from tools.stats import get_random_forest
 from models.plot import PlotRandomForest
+from tools.utilities import set_msw_background_color
 
 
 class RandomForestFrame(wx.Frame):
     def __init__(self, y, y_predict, mse, options, *args, **kwds):
         wx.Frame.__init__(self, None, *args, **kwds)
+
+        set_msw_background_color(self)  # If windows, change the background color
 
         self.y, self.y_predict = y, y_predict
         self.mse = mse

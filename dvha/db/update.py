@@ -127,7 +127,8 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
         for key, value in data_map.items():
             update_dvhs_table(study_instance_uid, roi_name, key, value)
 
-    except:
+    except Exception as e:
+        print(e)
         print('dist_to_ptv calculation failure, skipping')
 
 
