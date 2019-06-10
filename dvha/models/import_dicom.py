@@ -680,7 +680,7 @@ class ImportDICOM_Dialog(wx.Frame):
         ImportWorker(self.parsed_dicom_data, list(self.dicom_dir.checked_studies),
                      self.checkbox_include_uncategorized.GetValue(), self.terminate)
         dlg = ImportStatusDialog(self.terminate)
-        dlg.Show()
+        dlg.ShowModal()
         self.Close()
 
     def parse_dicom_data(self):
@@ -906,7 +906,7 @@ class ImportStatusDialog(wx.Dialog):
         sizer_wrapper.Add(sizer_progress, 0, wx.EXPAND | wx.ALL, 5)
         self.label_elapsed_time = wx.StaticText(self, wx.ID_ANY, "Elapsed time:")
         sizer_time_cancel.Add(self.label_elapsed_time, 1, wx.EXPAND | wx.ALL, 5)
-        sizer_time_cancel.Add(self.button_cancel, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+        sizer_time_cancel.Add(self.button_cancel, 0, wx.ALL, 5)
         sizer_wrapper.Add(sizer_time_cancel, 1, wx.EXPAND | wx.ALL, 5)
         self.SetSizer(sizer_wrapper)
         self.Layout()
