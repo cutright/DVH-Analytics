@@ -115,6 +115,12 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
 
     try:
         data = roi_geom.min_distances_to_target(oar_coordinates, treatment_volume_coord)
+    except MemoryError:
+        print('Memory error reported for %s with study_instance_uid %s' % (roi_name, study_instance_uid))
+        print('Skipping PTV distance and DTH calculations for this ROI.')
+        data = None
+
+    if data is not None:
         dth = roi_geom.dth(data)
         dth_string = ','.join(['%.3f' % num for num in dth])
 
@@ -126,10 +132,6 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
 
         for key, value in data_map.items():
             update_dvhs_table(study_instance_uid, roi_name, key, value)
-
-    except Exception as e:
-        print(e)
-        print('dist_to_ptv calculation failure, skipping')
 
 
 def get_treatment_volume_coord(tv):

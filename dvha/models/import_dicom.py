@@ -12,7 +12,7 @@ from dialogs.roi_map import AddPhysician, AddPhysicianROI, AddROIType, RoiManage
 from dicompylercore import dicomparser
 from os.path import isdir, join, dirname
 from os import listdir, rmdir
-from paths import IMPORT_SETTINGS_PATH, parse_settings_file
+from paths import IMPORT_SETTINGS_PATH, parse_settings_file, IMPORTED_DIR
 from pubsub import pub
 from tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
     set_msw_background_color
@@ -956,29 +956,41 @@ class ImportWorker(Thread):
         self.start()  # start the thread
 
     def run(self):
-        with DVH_SQL() as cnx:
-            study_total = len(self.checked_uids)
-            for study_counter, uid in enumerate(self.checked_uids):
-                if uid in list(self.data):
-                    if cnx.is_uid_imported(self.data[uid].study_instance_uid_to_be_imported):
-                        print("WARNING: This Study Instance UID is already imported in Database. Skipping Import.")
-                        print("\t%s" % self.data[uid].study_instance_uid_to_be_imported)
+        try:
+            with DVH_SQL() as cnx:
+                study_total = len(self.checked_uids)
+                for study_counter, uid in enumerate(self.checked_uids):
+                    if uid in list(self.data):
+                        if cnx.is_uid_imported(self.data[uid].study_instance_uid_to_be_imported):
+                            print("WARNING: This Study Instance UID is already imported in Database. Skipping Import.")
+                            print("\t%s" % self.data[uid].study_instance_uid_to_be_imported)
+                        else:
+                            msg = {'patient_name': self.data[uid].patient_name,
+                                   'uid': self.data[uid].study_instance_uid_to_be_imported,
+                                   'progress': int(100 * study_counter / study_total),
+                                   'study_number': study_counter+1,
+                                   'study_total': study_total}
+                            wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
+                            wx.CallAfter(pub.sendMessage, "update_elapsed_time")
+                            self.import_study(uid)
+                            if self.terminate['status']:
+                                self.delete_partially_updated_study()
+                                return
                     else:
-                        msg = {'patient_name': self.data[uid].patient_name,
-                               'uid': self.data[uid].study_instance_uid_to_be_imported,
-                               'progress': int(100 * study_counter / study_total),
-                               'study_number': study_counter+1,
-                               'study_total': study_total}
-                        wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
-                        wx.CallAfter(pub.sendMessage, "update_elapsed_time")
-                        self.import_study(uid)
-                        if self.terminate['status']:
-                            self.delete_partially_updated_study()
-                            return
-                else:
-                    print('WARNING: This study could not be parsed. Skipping import. '
-                          'Did you supply RT Structure, Dose, and Plan?')
-                    print('\tStudy Instance UID: %s' % uid)
+                        print('WARNING: This study could not be parsed. Skipping import. '
+                              'Did you supply RT Structure, Dose, and Plan?')
+                        print('\tStudy Instance UID: %s' % uid)
+        except MemoryError as mem_err:
+            print(mem_err)
+
+        except Exception as e:
+            print('Error: ', e)
+            print('Import incomplete. Any studies successfully imported were transferred to your imported folder:')
+            print('\t%s' % IMPORTED_DIR)
+            print('\tIf a study was partially imported, all data has been removed from the database '
+                  'and its DICOM files remain in your inbox.')
+            self.delete_partially_updated_study()
+            return
 
         wx.CallAfter(pub.sendMessage, "close")
 
