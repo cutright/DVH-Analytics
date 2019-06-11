@@ -17,6 +17,7 @@ from pubsub import pub
 from tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
     set_msw_background_color
 from tools.roi_name_manager import clean_name
+from tools.errors import ErrorDialog
 from threading import Thread
 
 
@@ -390,14 +391,26 @@ class ImportDICOM_Dialog(wx.Frame):
             starting_dir = self.start_path
         if not isdir(starting_dir):
             starting_dir = ""
+
         dlg = wx.DirDialog(self, "Select inbox directory", starting_dir, wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:
             self.text_ctrl_directory.SetValue(dlg.GetPath())
             self.dicom_dir = DICOM_Importer(self.text_ctrl_directory.GetValue(), self.tree_ctrl_import,
                                             self.tree_ctrl_roi, self.tree_ctrl_roi_root, self.tree_ctrl_images,
                                             self.roi_map, search_subfolders=self.checkbox_subfolders.GetValue())
-            self.parse_directory()
-        dlg.Destroy()
+            try:
+                self.parse_directory()
+                dlg.Destroy()
+            except MemoryError:
+                print('Memory Error: try importing fewer studies at once.')
+                # TODO: ErrorMessage doesn't want to display?
+                # dlg2 = wx.MessageDialog(self, "Try importing fewer studies at a time.", "Memory Error!",
+                #                         wx.ICON_ERROR | wx.OK | wx.OK_DEFAULT)
+                # dlg2.Center()
+                # dlg2.Show()
+                # dlg2.Destroy()
+                dlg.Destroy()
+                self.on_cancel(None)
 
     def update_progress_message(self, complete=False):
         self.label_progress.SetLabelText("%s%s Patients - %s Studies - %s Files" %
