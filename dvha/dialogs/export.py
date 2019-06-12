@@ -143,7 +143,7 @@ class ExportCSVDialog(wx.Dialog):
 
         sizer_dvhs_checkboxes.Add(self.checkbox['DVHs'], 1, wx.ALL | wx.EXPAND, 5)
         sizer_dvhs_checkboxes.Add(self.checkbox['DVHs Summary'], 1, wx.ALL | wx.EXPAND, 5)
-        sizer_dvhs.Add(sizer_dvhs_checkboxes, 1, wx.ALIGN_CENTER | wx.EXPAND, 0)
+        sizer_dvhs.Add(sizer_dvhs_checkboxes, 1, wx.EXPAND, 0)
         sizer_dvhs.Add(static_line['DVHs'], 0, wx.EXPAND | wx.TOP, 5)
         sizer_data.Add(sizer_dvhs, 0, wx.ALL | wx.EXPAND, 5)
 
