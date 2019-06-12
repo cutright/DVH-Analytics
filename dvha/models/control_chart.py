@@ -96,7 +96,11 @@ class ControlChartFrame:
     def update_data(self, dvh, stats_data):
         self.dvhs = dvh
         self.stats_data = stats_data
-        self.update_plot()
+        try:
+            self.update_plot()
+        except KeyError:
+            # TODO: Print error in GUI
+            pass
 
     @property
     def variables(self):

@@ -179,11 +179,14 @@ class RegressionFrame:
         self.update_plot()
 
     def sync_spin_buttons(self):
-        index = self.choices.index(self.x_axis)
-        self.spin_button_x_axis.SetValue(len(self.choices)-1 - index)
+        if self.x_axis:
+            index = self.choices.index(self.x_axis)
+            self.spin_button_x_axis.SetValue(len(self.choices)-1 - index)
 
-        index = self.choices.index(self.y_axis)
-        self.spin_button_y_axis.SetValue(len(self.choices)-1 - index)
+            index = self.choices.index(self.y_axis)
+            self.spin_button_y_axis.SetValue(len(self.choices)-1 - index)
+        else:
+            print('ERROR: x-axis choice is empty.')
 
     def on_checkbox(self, evt):
         y_value = self.combo_box_y_axis.GetValue()

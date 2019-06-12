@@ -539,6 +539,7 @@ class DVHAMainFrame(wx.Frame):
         self.update_data(load_saved_dvh_data=load_saved_dvh_data)
         self.time_series.update_data(self.dvh, self.data)
         self.control_chart.update_data(self.dvh, self.stats_data)
+
         self.radbio.update_dvh_data(self.dvh)
 
         self.__enable_notebook_tabs()
@@ -605,7 +606,11 @@ class DVHAMainFrame(wx.Frame):
             self.stats_data = StatsData(self.dvh, self.data)
             self.regression.stats_data = self.stats_data
             self.control_chart.stats_data = self.stats_data
-            self.regression.update_combo_box_choices()
+            try:
+                self.regression.update_combo_box_choices()
+            except ValueError:
+                # TODO: Print error in GUI
+                pass
             self.control_chart.update_combo_box_choices()
             del wait
 
