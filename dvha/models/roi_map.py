@@ -18,8 +18,8 @@ class ROIMapDialog(wx.Dialog):
         # self.roi_tree.rebuild_tree()
         self.plot = PlotROIMap(self.window_tree, roi_map)
         self.window_editor = wx.Panel(self.window, wx.ID_ANY, style=wx.BORDER_SUNKEN)
-        self.combo_box_physician = wx.ComboBox(self.window_editor, wx.ID_ANY,
-                                               choices=self.roi_map.get_physicians(), style=wx.CB_DROPDOWN)
+        self.combo_box_physician = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=self.roi_map.get_physicians(),
+                                               style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.button_add_physician = wx.Button(self.window_editor, wx.ID_ANY, "Add")
         self.button_rename_physician = wx.Button(self.window_editor, wx.ID_ANY, "Rename")
         self.button_delete_physician = wx.Button(self.window_editor, wx.ID_ANY, "Delete")
@@ -58,6 +58,8 @@ class ROIMapDialog(wx.Dialog):
         self.combo_box_physician_roi_a.SetMinSize((250, 25))
         self.combo_box_physician_roi_b.SetMinSize((250, 25))
         # self.window.SetMinimumPaneSize(20)
+
+        self.combo_box_physician.SetValue('DEFAULT')
 
     def __do_bind(self):
         self.window_editor.Bind(wx.EVT_BUTTON, self.add_physician, id=self.button_add_physician.GetId())

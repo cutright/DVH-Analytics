@@ -526,7 +526,9 @@ class DatabaseROIs:
 
         return table
 
-    def get_all_institutional_roi_visual_coordinates(self, physician, ignored_physician_rois=[]):
+    def get_all_institutional_roi_visual_coordinates(self, physician, ignored_physician_rois=None):
+        if ignored_physician_rois is None:
+            ignored_physician_rois = []
 
         p_rois = [roi for roi in self.get_physician_rois(physician) if roi not in ignored_physician_rois]
         i_rois = [self.get_institutional_roi(physician, p_roi) for p_roi in p_rois]

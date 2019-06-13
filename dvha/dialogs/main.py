@@ -78,6 +78,7 @@ class AddEndpointDialog(wx.Dialog):
 
     def __set_properties(self):
         self.radio_box_units.SetSelection(0)
+        self.combo_box_output.SetValue('Dose (Gy)')
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
