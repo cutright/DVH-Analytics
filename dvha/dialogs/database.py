@@ -99,6 +99,10 @@ class ChangeOrDeleteBaseClass(wx.Dialog):
 
     def __set_properties(self):
         self.text_ctrl_1.SetMinSize((365, 22))
+        if self.initial_mrn or self.initial_study_instance_uid is None:
+            self.combo_box_patient_identifier.SetValue('MRN')
+        else:
+            self.combo_box_patient_identifier.SetValue('Study Instance UID')
         self.on_identifier_change(None)
 
     def __do_layout(self):
@@ -246,6 +250,8 @@ class EditDatabaseDialog(wx.Dialog):
             self.combo_box_column.SetValue(self.initial_values['column'])
             self.text_ctrl_value.SetValue(self.initial_values['value'])
             self.text_ctrl_condition.SetValue(self.initial_values['condition'])
+        else:
+            self.combo_box_table.SetValue('Plans')
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)

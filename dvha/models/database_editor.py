@@ -9,11 +9,14 @@ from db.sql_to_python import get_database_tree
 from db.sql_connector import DVH_SQL, SQLError
 from models.datatable import DataTable
 from dialogs.export import save_string_to_file
+from tools.utilities import set_msw_background_color
 
 
 class DatabaseEditorDialog(wx.Frame):
     def __init__(self, *args, **kwds):
         wx.Frame.__init__(self, None, title='Database Administrator')
+
+        set_msw_background_color(self)  # If windows, change the background color
 
         self.db_tree = self.get_db_tree()
 
@@ -65,6 +68,7 @@ class DatabaseEditorDialog(wx.Frame):
         for table in self.db_tree:
             for column in self.db_tree[table]:
                 self.column_nodes[table][column] = self.tree_ctrl_db.AppendItem(self.table_nodes[table], column)
+        self.combo_box_query_table.SetValue('Plans')
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
