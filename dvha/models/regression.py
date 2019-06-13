@@ -277,8 +277,8 @@ class RegressionFrame:
         self.tree_ctrl.DeleteAllItems()
         self.tree_ctrl_root = self.tree_ctrl.AddRoot('Regressions')
         self.checkbox.SetValue(False)
-        self.combo_box_x_axis.SetValue('ROI Max Dose')
-        self.combo_box_y_axis.SetValue('ROI Volume')
+        self.combo_box_x_axis.SetValue('ROI Volume')
+        self.combo_box_y_axis.SetValue('ROI Max Dose')
 
     def get_y_vars(self):
         return list(self.y_variable_nodes)

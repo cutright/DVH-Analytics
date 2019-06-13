@@ -299,7 +299,7 @@ class QueryCategoryDialog(wx.Dialog):
         self.update_category_2(None)
         self.Bind(wx.EVT_COMBOBOX, self.update_category_2, id=self.combo_box_1.GetId())
 
-        self.SetSize((500, 160))
+        self.Fit()
         self.Center()
 
     def __do_layout(self):
@@ -415,7 +415,7 @@ class QueryNumericalDialog(wx.Dialog):
         sizer_wrapper.Add(sizer_vbox, 0, wx.ALL | wx.EXPAND, 5)
         self.SetSizer(sizer_wrapper)
 
-        self.SetSize((500, 160))
+        self.Fit()
         self.Center()
 
     def update_range(self, evt):
