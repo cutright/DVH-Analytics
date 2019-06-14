@@ -15,7 +15,7 @@ from os import listdir, rmdir
 from paths import IMPORT_SETTINGS_PATH, parse_settings_file, IMPORTED_DIR
 from pubsub import pub
 from tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
-    set_msw_background_color
+    set_msw_background_color, is_windows
 from tools.roi_name_manager import clean_name
 from tools.errors import ErrorDialog
 from threading import Thread
@@ -693,7 +693,8 @@ class ImportDICOM_Dialog(wx.Frame):
         ImportWorker(self.parsed_dicom_data, list(self.dicom_dir.checked_studies),
                      self.checkbox_include_uncategorized.GetValue(), self.terminate)
         dlg = ImportStatusDialog(self.terminate)
-        dlg.ShowModal()
+        # calling self.Close() below caused issues in Windows if Show() used instead of ShowModal()
+        [dlg.Show, dlg.ShowModal][is_windows()]()
         self.Close()
 
     def parse_dicom_data(self):
@@ -876,6 +877,12 @@ class ImportStatusDialog(wx.Dialog):
         self.gauge_calculation = wx.Gauge(self, wx.ID_ANY, 100)
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
+        self.error_details_pane = wx.CollapsiblePane(self, label='Details')
+        self.error_details_window = wx.ScrolledWindow(self.error_details_pane.GetPane())
+        self.error_details_text = wx.StaticText(self.error_details_window, wx.ID_ANY,
+                                                "Error details go here.\n"
+                                                "Will add things soon.")
+
         self.terminate = terminate
 
         self.__set_properties()
@@ -902,6 +909,10 @@ class ImportStatusDialog(wx.Dialog):
         sizer_calculation = wx.BoxSizer(wx.VERTICAL)
         sizer_study = wx.BoxSizer(wx.VERTICAL)
         sizer_time_cancel = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_error_pane = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_error_window = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_error_text = wx.BoxSizer(wx.HORIZONTAL)
+
         self.label_study_counter = wx.StaticText(self, wx.ID_ANY, "Study 1 of 1")
         sizer_study.Add(self.label_study_counter, 0, wx.ALIGN_CENTER, 0)
         self.label_patient = wx.StaticText(self, wx.ID_ANY, "Patient:")
@@ -909,6 +920,7 @@ class ImportStatusDialog(wx.Dialog):
         self.label_study = wx.StaticText(self, wx.ID_ANY, "Study Instance UID:")
         sizer_study.Add(self.label_study, 0, 0, 0)
         sizer_study.Add(self.gauge_study, 0, wx.EXPAND, 0)
+
         sizer_progress.Add(sizer_study, 0, wx.ALL | wx.EXPAND, 5)
         self.label_calculation = wx.StaticText(self, wx.ID_ANY, "Calculation: DVH")
         sizer_calculation.Add(self.label_calculation, 0, 0, 0)
@@ -917,11 +929,21 @@ class ImportStatusDialog(wx.Dialog):
         sizer_calculation.Add(self.gauge_calculation, 0, wx.EXPAND, 0)
         sizer_progress.Add(sizer_calculation, 0, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_progress, 0, wx.EXPAND | wx.ALL, 5)
+
         self.label_elapsed_time = wx.StaticText(self, wx.ID_ANY, "Elapsed time:")
         sizer_time_cancel.Add(self.label_elapsed_time, 1, wx.EXPAND | wx.ALL, 5)
         sizer_time_cancel.Add(self.button_cancel, 0, wx.ALL, 5)
         sizer_wrapper.Add(sizer_time_cancel, 1, wx.EXPAND | wx.ALL, 5)
-        self.SetSizer(sizer_wrapper)
+
+        # sizer_error_text.Add(self.error_details_text, 0, wx.EXPAND, 0)
+        # sizer_error_window.Add(sizer_error_text, 0, wx.E
+        # self.error_details_window.SetSizer(sizer_error_window)
+        #
+        # sizer_error_pane.Add(self.error_details_pane, 0, wx.ALL, 5)
+        # self.error_details_pane.SetSizer(sizer_error_pane)
+        # sizer_wrapper.Add(self.error_details_pane, 0, 0, 0)
+
+        # self.SetSizer(sizer_wrapper)
         self.Layout()
         self.Center()
 

@@ -76,3 +76,6 @@
 10. **Documentation**
     - [ ] Review code, add doc strings and comments
     - [ ] Rewrite/Update DVH Analytics manual
+
+11. **GUI**
+    - [ ] Dynamically resize plots with parent window
