@@ -865,7 +865,7 @@ class PlotROIMap(Plot):
         self.roi_map = roi_map
 
         # Plot
-        self.figure = figure(plot_width=800, plot_height=750,
+        self.figure = figure(plot_width=800, plot_height=700,
                              x_range=["Institutional ROI", "Physician ROI", "Variations"],
                              x_axis_location="above",
                              title="(Linked by Physician dropdowns)",
