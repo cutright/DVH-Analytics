@@ -161,6 +161,10 @@ class DatabaseROIs:
         physician = clean_name(physician).upper()
         self.physicians[new_physician] = self.physicians.pop(physician)
 
+    def rebuild_default_physician(self):
+        self.delete_physician('DEFAULT')
+        self.add_physician('DEFAULT', add_institutional_rois=True)
+
     #################################
     # Institutional ROI functions
     #################################
@@ -181,7 +185,7 @@ class DatabaseROIs:
             self.institutional_rois.append(roi)
             self.institutional_rois.sort()
 
-    def set_institutional_roi(self, new_institutional_roi, institutional_roi):
+    def rename_institutional_roi(self, new_institutional_roi, institutional_roi):
         new_institutional_roi = clean_name(new_institutional_roi)
         institutional_roi = clean_name(institutional_roi)
         index = self.institutional_rois.index(institutional_roi)
@@ -193,12 +197,13 @@ class DatabaseROIs:
                     physician_roi_obj = self.physicians[physician].physician_rois[physician_roi]
                     if physician_roi_obj['institutional_roi'] == institutional_roi:
                         physician_roi_obj['institutional_roi'] = new_institutional_roi
+        self.rebuild_default_physician()
 
     def set_linked_institutional_roi(self, new_institutional_roi, physician, physician_roi):
         self.physicians[physician].physician_rois[physician_roi]['institutional_roi'] = new_institutional_roi
 
     def delete_institutional_roi(self, roi):
-        self.set_institutional_roi('uncategorized', roi)
+        self.rename_institutional_roi('uncategorized', roi)
 
     def is_institutional_roi(self, roi):
         roi = clean_name(roi)
@@ -264,7 +269,7 @@ class DatabaseROIs:
             if institutional_roi in self.institutional_rois:
                 self.physicians[physician].add_physician_roi(institutional_roi, physician_roi)
 
-    def set_physician_roi(self, new_physician_roi, physician, physician_roi):
+    def rename_physician_roi(self, new_physician_roi, physician, physician_roi):
         new_physician_roi = clean_name(new_physician_roi)
         physician = clean_name(physician).upper()
         physician_roi = clean_name(physician_roi)

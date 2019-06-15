@@ -1,8 +1,9 @@
 import wx
 import wx.html2
-from dialogs.roi_map import AddPhysician, AddPhysicianROI, AddVariationDialog, MoveVariationDialog
+from dialogs.roi_map import AddPhysician, AddPhysicianROI, AddVariationDialog, MoveVariationDialog,\
+    RenamePhysicianDialog, RenamePhysicianROIDialog, RenameInstitutionalROIDialog
 from tools.errors import ROIVariationError, ROIVariationErrorDialog
-from tools.utilities import get_selected_listctrl_items
+from tools.utilities import get_selected_listctrl_items, MessageDialog
 from db.sql_connector import DVH_SQL, echo_sql_db
 from models.datatable import DataTable
 from models.plot import PlotROIMap
@@ -42,8 +43,12 @@ class ROIMapFrame(wx.Frame):
         self.button_variation_delete.Disable()
         self.button_variation_deselect_all.Disable()
 
-        self.button_add_physician = wx.Button(self.window_editor, wx.ID_ANY, "Add")
-        self.button_add_physician_roi = wx.Button(self.window_editor, wx.ID_ANY, "Add")
+        self.button_physician = {'add': wx.Button(self.window_editor, wx.ID_ANY, "+"),
+                                 'del': wx.Button(self.window_editor, wx.ID_ANY, "-"),
+                                 'edit': wx.Button(self.window_editor, wx.ID_ANY, "Δ")}
+        self.button_physician_roi = {'add': wx.Button(self.window_editor, wx.ID_ANY, "+"),
+                                     'del': wx.Button(self.window_editor, wx.ID_ANY, "-"),
+                                     'edit': wx.Button(self.window_editor, wx.ID_ANY, "Δ")}
 
         self.combo_box_uncategorized_ignored = wx.ComboBox(self.window_editor, wx.ID_ANY,
                                                            choices=["Uncategorized", "Ignored"],
@@ -59,7 +64,7 @@ class ROIMapFrame(wx.Frame):
         self.uncategorized_variations = {}
 
         self.columns = ['Variations']
-        self.data_table = DataTable(self.list_ctrl_variations, columns=self.columns, widths=[400])
+        self.data_table = DataTable(self.list_ctrl_variations, columns=self.columns, widths=[490])
 
         self.__set_properties()
         self.__do_bind()
@@ -88,6 +93,13 @@ class ROIMapFrame(wx.Frame):
 
         self.window_tree.SetBackgroundColour('white')
 
+        for button in self.button_physician.values():
+            button.SetMaxSize((25, 25))
+        for button in self.button_physician_roi.values():
+            button.SetMaxSize((25, 25))
+
+        self.update_physician_enable()
+
     def __do_bind(self):
         self.window_tree.Bind(wx.EVT_COMBOBOX, self.on_plot_data_type_change, id=self.combo_box_tree_plot_data.GetId())
 
@@ -96,8 +108,12 @@ class ROIMapFrame(wx.Frame):
 
         self.window_editor.Bind(wx.EVT_COMBOBOX, self.physician_ticker, id=self.combo_box_physician.GetId())
         self.window_editor.Bind(wx.EVT_COMBOBOX, self.physician_roi_ticker, id=self.combo_box_physician_roi.GetId())
-        self.window_editor.Bind(wx.EVT_BUTTON, self.add_physician, id=self.button_add_physician.GetId())
-        self.window_editor.Bind(wx.EVT_BUTTON, self.add_physician_roi, id=self.button_add_physician_roi.GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.add_physician, id=self.button_physician['add'].GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.on_delete_physician, id=self.button_physician['del'].GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.on_edit_physician, id=self.button_physician['edit'].GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.add_physician_roi, id=self.button_physician_roi['add'].GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.on_delete_physician_roi, id=self.button_physician_roi['del'].GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.on_edit_physician_roi, id=self.button_physician_roi['edit'].GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.select_all_variations, id=self.button_variation_select_all.GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.deselect_all_variations, id=self.button_variation_deselect_all.GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.add_variation, id=self.button_variation_add.GetId())
@@ -126,7 +142,6 @@ class ROIMapFrame(wx.Frame):
 
         sizer_tree = wx.BoxSizer(wx.VERTICAL)
         sizer_tree_input = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_tree_physician = wx.BoxSizer(wx.VERTICAL)
         sizer_tree_plot_data = wx.BoxSizer(wx.VERTICAL)
 
         sizer_roi_manager = wx.BoxSizer(wx.VERTICAL)
@@ -141,15 +156,19 @@ class ROIMapFrame(wx.Frame):
         sizer_physician_roi_row = wx.BoxSizer(wx.HORIZONTAL)
 
         label_physician = wx.StaticText(self.window_editor, wx.ID_ANY, "Physician:")
-        sizer_physician.Add(label_physician, 0, wx.LEFT, 5)
-        sizer_physician_row.Add(self.combo_box_physician, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        sizer_physician_row.Add(self.button_add_physician, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+        sizer_physician.Add(label_physician, 0, 0, 0)
+        sizer_physician_row.Add(self.combo_box_physician, 1, wx.EXPAND | wx.RIGHT, 5)
+        sizer_physician_row.Add(self.button_physician['add'], 0, wx.LEFT | wx.RIGHT, 5)
+        sizer_physician_row.Add(self.button_physician['del'], 0, wx.RIGHT, 5)
+        sizer_physician_row.Add(self.button_physician['edit'], 0, wx.RIGHT, 10)
         sizer_physician.Add(sizer_physician_row, 1, wx.EXPAND, 0)
 
-        label_physician_roi = wx.StaticText(self.window_editor, wx.ID_ANY, "Physician ROI:")
-        sizer_physician_roi.Add(label_physician_roi, 0, wx.LEFT, 5)
-        sizer_physician_roi_row.Add(self.combo_box_physician_roi, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        sizer_physician_roi_row.Add(self.button_add_physician_roi, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+        self.label_physician_roi = wx.StaticText(self.window_editor, wx.ID_ANY, "Institutional ROI:")
+        sizer_physician_roi.Add(self.label_physician_roi, 0, 0, 0)
+        sizer_physician_roi_row.Add(self.combo_box_physician_roi, 1, wx.EXPAND | wx.RIGHT, 5)
+        sizer_physician_roi_row.Add(self.button_physician_roi['add'], 0, wx.LEFT | wx.RIGHT, 5)
+        sizer_physician_roi_row.Add(self.button_physician_roi['del'], 0, wx.RIGHT, 5)
+        sizer_physician_roi_row.Add(self.button_physician_roi['edit'], 0, wx.RIGHT, 10)
         sizer_physician_roi.Add(sizer_physician_roi_row, 0, wx.EXPAND, 0)
 
         sizer_select.Add(sizer_physician, 0, wx.ALL | wx.EXPAND, 5)
@@ -167,16 +186,15 @@ class ROIMapFrame(wx.Frame):
         sizer_variation_buttons.Add(self.button_variation_select_all, 0, wx.EXPAND | wx.ALL, 5)
         sizer_variation_buttons.Add(self.button_variation_deselect_all, 0, wx.EXPAND | wx.ALL, 5)
         sizer_variations.Add(sizer_variation_buttons, 0, wx.EXPAND | wx.ALL, 5)
-        sizer_select.Add(sizer_variations, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_select.Add(sizer_variations, 0, wx.EXPAND, 0)
         sizer_roi_manager.Add(sizer_select, 1, wx.EXPAND, 0)
         sizer_editor.Add(sizer_roi_manager, 0, wx.EXPAND | wx.ALL, 5)
 
         label_tree_plot_data = wx.StaticText(self.window_tree, wx.ID_ANY, 'Institutional Data to Display:')
         sizer_tree_plot_data.Add(label_tree_plot_data, 0, wx.LEFT | wx.RIGHT | wx.TOP, 5)
-        sizer_tree_plot_data.Add(self.combo_box_tree_plot_data, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_tree_plot_data.Add(self.combo_box_tree_plot_data, 0, wx.EXPAND | wx.LEFT | wx.BOTTOM | wx.RIGHT, 5)
 
-        sizer_tree_input.Add(sizer_tree_plot_data, 0, wx.EXPAND, 0)
-        sizer_tree_input.Add(sizer_tree_physician, 0, wx.EXPAND, 0)
+        sizer_tree_input.Add(sizer_tree_plot_data, 0, wx.EXPAND | wx.LEFT | wx.TOP, 5)
 
         sizer_tree.Add(sizer_tree_input, 0, wx.EXPAND, 0)
         sizer_tree.Add(self.plot.layout, 1, wx.EXPAND, 0)
@@ -184,14 +202,14 @@ class ROIMapFrame(wx.Frame):
 
         label_uncategorized_ignored = wx.StaticText(self.window_editor, wx.ID_ANY, "Type:")
         label_uncategorized_ignored.SetMinSize((38, 16))
-        sizer_uncategorized_ignored_type.Add(label_uncategorized_ignored, 0, wx.LEFT | wx.RIGHT | wx.TOP, 5)
-        sizer_uncategorized_ignored_type.Add(self.combo_box_uncategorized_ignored, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
-        sizer_uncategorized_ignored.Add(sizer_uncategorized_ignored_type, 0, wx.EXPAND, 0)
+        sizer_uncategorized_ignored_type.Add(label_uncategorized_ignored, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        sizer_uncategorized_ignored_type.Add(self.combo_box_uncategorized_ignored, 1, wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
+        sizer_uncategorized_ignored.Add(sizer_uncategorized_ignored_type, 1, wx.EXPAND, 0)
         label_uncategorized_ignored_roi = wx.StaticText(self.window_editor, wx.ID_ANY, "ROI:")
         label_uncategorized_ignored_roi.SetMinSize((30, 16))
-        sizer_uncategorized_ignored_roi.Add(label_uncategorized_ignored_roi, 0, wx.LEFT | wx.RIGHT | wx.TOP, 5)
-        sizer_uncategorized_ignored_roi.Add(self.combo_box_uncategorized_ignored_roi, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
-        sizer_uncategorized_ignored.Add(sizer_uncategorized_ignored_roi, 0, wx.EXPAND, 0)
+        sizer_uncategorized_ignored_roi.Add(label_uncategorized_ignored_roi, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        sizer_uncategorized_ignored_roi.Add(self.combo_box_uncategorized_ignored_roi, 1, wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
+        sizer_uncategorized_ignored.Add(sizer_uncategorized_ignored_roi, 1, wx.EXPAND, 0)
         sizer_uncategorized_ignored_delete.Add((20, 16), 0, 0, 0)
         sizer_uncategorized_ignored_delete.Add(self.button_uncategorized_ignored_delete, 0, wx.ALL, 5)
         sizer_uncategorized_ignored.Add(sizer_uncategorized_ignored_delete, 0, wx.EXPAND, 0)
@@ -201,15 +219,15 @@ class ROIMapFrame(wx.Frame):
         sizer_editor.Add(sizer_uncategorized_ignored, 0, wx.ALL | wx.EXPAND, 5)
 
         label_physician_roi_a = wx.StaticText(self.window_editor, wx.ID_ANY, "Merge Physician ROI A:")
-        label_physician_roi_a.SetMinSize((200, 16))
-        sizer_physician_roi_a.Add(label_physician_roi_a, 0, wx.LEFT | wx.RIGHT | wx.TOP, 5)
-        sizer_physician_roi_a.Add(self.combo_box_physician_roi_a, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
-        sizer_physician_roi_merger.Add(sizer_physician_roi_a, 0, wx.ALL | wx.EXPAND, 0)
+        # label_physician_roi_a.SetMinSize((200, 16))
+        sizer_physician_roi_a.Add(label_physician_roi_a, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        sizer_physician_roi_a.Add(self.combo_box_physician_roi_a, 1, wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
+        sizer_physician_roi_merger.Add(sizer_physician_roi_a, 1, wx.EXPAND, 0)
         label_physician_roi_b = wx.StaticText(self.window_editor, wx.ID_ANY, "Into Physician ROI B:")
-        label_physician_roi_b.SetMinSize((200, 16))
-        sizer_physician_roi_b.Add(label_physician_roi_b, 0, wx.LEFT | wx.RIGHT | wx.TOP, 5)
-        sizer_physician_roi_b.Add(self.combo_box_physician_roi_b, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
-        sizer_physician_roi_merger.Add(sizer_physician_roi_b, 0, wx.ALL | wx.EXPAND, 0)
+        # label_physician_roi_b.SetMinSize((200, 16))
+        sizer_physician_roi_b.Add(label_physician_roi_b, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        sizer_physician_roi_b.Add(self.combo_box_physician_roi_b, 1, wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
+        sizer_physician_roi_merger.Add(sizer_physician_roi_b, 1, wx.EXPAND, 0)
         sizer_physician_roi_merger_merge.Add((20, 16), 0, 0, 0)
         sizer_physician_roi_merger_merge.Add(self.button_merge, 0, wx.ALL, 5)
         sizer_physician_roi_merger.Add(sizer_physician_roi_merger_merge, 0, wx.ALL | wx.EXPAND, 0)
@@ -250,6 +268,8 @@ class ROIMapFrame(wx.Frame):
         return self.combo_box_tree_plot_data.GetValue()
 
     def physician_ticker(self, evt):
+        self.update_physician_roi_label()
+        self.update_physician_enable()
         self.update_roi_map()
         self.update_uncategorized_ignored_choices(None)
         self.update_physician_rois()
@@ -305,6 +325,8 @@ class ROIMapFrame(wx.Frame):
             self.button_variation_delete.Disable()
             self.button_variation_deselect_all.Disable()
 
+        self.button_variation_select_all.Enable(self.variation_count > 0)
+
     def update_variations(self):
         self.data_table.set_data(self.variation_table_data, self.columns)
         self.update_button_variation_enable(None)
@@ -322,6 +344,8 @@ class ROIMapFrame(wx.Frame):
                 new = clean_name(new[0]).upper()
 
         self.update_combo_box_choices(self.combo_box_physician, choices, new)
+        self.update_physician_roi_label()
+        self.update_physician_enable()
 
     def update_physician_rois(self, old_physician_rois=None):
         choices = self.roi_map.get_physician_rois(self.physician)
@@ -347,12 +371,12 @@ class ROIMapFrame(wx.Frame):
     def add_physician_roi(self, evt):
         old_physician_rois = self.roi_map.get_physician_rois(self.physician)
         AddPhysicianROI(self, self.physician, self.roi_map)
-        self.update_physician_rois(old_physician_rois=old_physician_rois)
+        self.update_all(old_physician_rois=old_physician_rois)
 
     def add_physician(self, evt):
         old_physicians = self.roi_map.get_physicians()
         AddPhysician(self.roi_map)
-        self.update_physicians(old_physicians=old_physicians)
+        self.update_all(old_physicians=old_physicians)
 
     @property
     def variation_count(self):
@@ -391,3 +415,58 @@ class ROIMapFrame(wx.Frame):
         choices = [roi for roi in self.roi_map.get_physician_rois(self.physician) if roi != self.physician_roi]
         MoveVariationDialog(self, self.selected_values, self.physician, self.physician_roi, choices, self.roi_map)
         self.update_variations()
+
+    def on_delete_physician(self, evt):
+        MessageDialog(self, 'Delete Physician %s?' % self.physician, action_yes_func=self.delete_physician)
+
+    def delete_physician(self):
+        self.roi_map.delete_physician(self.physician)
+        self.update_all()
+
+    def on_delete_physician_roi(self, evt):
+        if self.physician == 'DEFAULT':
+            MessageDialog(self, "Delete Institutional ROI %s?" % self.physician_roi,
+                          action_yes_func=self.delete_institutional_roi)
+        else:
+            MessageDialog(self, "Delete Physician ROI %s?" % self.physician_roi,
+                          action_yes_func=self.delete_physician_roi)
+
+    def delete_physician_roi(self):
+        self.roi_map.delete_physician_roi(self.physician, self.physician_roi)
+        self.update_all(skip_physicians=True)
+
+    def delete_institutional_roi(self):
+        self.roi_map.delete_institutional_roi(self.physician_roi)
+        self.update_all(skip_physicians=True)
+
+    def update_all(self, old_physicians=None, old_physician_rois=None, skip_physicians=False):
+        if not skip_physicians:
+            self.update_physicians(old_physicians=old_physicians)
+        self.update_physician_rois(old_physician_rois=old_physician_rois)
+        self.update_variations()
+        self.update_uncategorized_ignored_choices(None)
+        self.update_roi_map()
+
+    def on_edit_physician(self, evt):
+        current_physicians = self.roi_map.get_physicians()
+        dlg = RenamePhysicianDialog(self.physician, self.roi_map)
+        if dlg.res == wx.ID_OK:
+            self.update_all(old_physicians=current_physicians)
+
+    def on_edit_physician_roi(self, evt):
+        current_physician_rois = self.roi_map.get_physician_rois(self.physician)
+        if self.physician == 'DEFAULT':
+            dlg = RenameInstitutionalROIDialog(self.physician_roi, self.roi_map)
+        else:
+            dlg = RenamePhysicianROIDialog(self.physician, self.physician_roi, self.roi_map)
+        if dlg.res == wx.ID_OK:
+            self.update_all(old_physician_rois=current_physician_rois, skip_physicians=True)
+
+    def update_physician_enable(self):
+        self.button_physician['del'].Enable(self.physician != 'DEFAULT')
+        self.button_physician['edit'].Enable(self.physician != 'DEFAULT')
+        self.button_variation_add.Enable(self.physician != 'DEFAULT')
+
+    def update_physician_roi_label(self):
+        label_text = ['Physician ROI:', 'Institutional ROI:'][self.physician == 'DEFAULT']
+        self.label_physician_roi.SetLabelText(label_text)

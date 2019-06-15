@@ -544,6 +544,8 @@ class RenamerBaseClass(wx.Dialog):
         self.__do_bind()
         self.__do_layout()
 
+        self.res = None
+
         self.run()
 
     def __set_properties(self):
@@ -583,8 +585,8 @@ class RenamerBaseClass(wx.Dialog):
             return new.upper()
 
     def run(self):
-        res = self.ShowModal()
-        if res == wx.ID_OK:
+        self.res = self.ShowModal()
+        if self.res == wx.ID_OK:
             self.action()
         self.Destroy()
 
@@ -666,3 +668,37 @@ class ChangePlanROIName(wx.Dialog):
         key = self.parsed_dicom_data.get_roi_key(self.roi)
         self.parsed_dicom_data.set_roi_name(key, self.new_name)
         self.tree_ctrl_roi.SetItemText(self.tree_item, self.new_name)
+
+
+class RenamePhysicianDialog(RenamerBaseClass):
+    def __init__(self, physician, roi_map):
+        self.physician = physician
+        self.roi_map = roi_map
+        RenamerBaseClass.__init__(self, 'Rename %s' % physician,
+                                  'New Physician Name:', roi_map.get_physicians(), lower_case=False)
+
+    def action(self):
+        self.roi_map.rename_physician(self.new_name, self.physician)
+
+
+class RenamePhysicianROIDialog(RenamerBaseClass):
+    def __init__(self, physician, physician_roi, roi_map):
+        self.physician = physician
+        self.physician_roi = physician_roi
+        self.roi_map = roi_map
+        RenamerBaseClass.__init__(self, 'Rename %s for %s' % (physician_roi, physician),
+                                  'New Physician ROI name:', roi_map.get_physician_rois(physician))
+
+    def action(self):
+        self.roi_map.rename_physician_roi(self.new_name, self.physician, self.physician_roi)
+
+
+class RenameInstitutionalROIDialog(RenamerBaseClass):
+    def __init__(self, institutional_roi, roi_map):
+        self.institutional_roi = institutional_roi
+        self.roi_map = roi_map
+        RenamerBaseClass.__init__(self, 'Rename %s' % institutional_roi,
+                                  'New Institutional ROI name:', roi_map.get_institutional_rois())
+
+    def action(self):
+        self.roi_map.rename_institutional_roi(self.new_name, self.institutional_roi)

@@ -899,6 +899,7 @@ class PlotROIMap(Plot):
         self.bokeh_layout = column(self.figure)
 
     def update_roi_map_source_data(self, physician, plot_type=None):
+        # TODO: allow ability to define initial viewing range
         new_data = self.roi_map.get_all_institutional_roi_visual_coordinates(physician)
 
         i_roi = new_data['institutional_roi']
