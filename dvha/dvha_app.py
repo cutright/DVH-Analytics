@@ -19,7 +19,7 @@ from models.rad_bio import RadBioFrame
 from models.time_series import TimeSeriesFrame
 from models.regression import RegressionFrame
 from models.control_chart import ControlChartFrame
-from models.roi_map import ROIMapDialog
+from models.roi_map import ROIMapFrame
 from options import Options
 from paths import LOGO_PATH
 from tools.roi_name_manager import DatabaseROIs
@@ -682,7 +682,7 @@ class DVHAMainFrame(wx.Frame):
         [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db()]()
 
     def on_toolbar_roi_map(self, evt):
-        ROIMapDialog(self.roi_map)
+        ROIMapFrame(self.roi_map)
 
     def on_save_plot_dvhs(self, evt):
         save_string_to_file(self, 'Save DVHs plot', self.plot.html_str,
