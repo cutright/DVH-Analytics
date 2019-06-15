@@ -76,6 +76,7 @@ class ROIMapFrame(wx.Frame):
 
     def __set_properties(self):
         self.combo_box_uncategorized_ignored.SetSelection(0)
+        self.button_uncategorized_ignored_ignore.SetMinSize((110, 20))
         # self.combo_box_uncategorized_ignored_roi.SetMinSize((240, 25))
         # self.combo_box_uncategorized_ignored.SetMinSize((150, 25))
         # self.combo_box_physician_roi_a.SetMinSize((250, 25))
@@ -108,6 +109,7 @@ class ROIMapFrame(wx.Frame):
 
         self.window_editor.Bind(wx.EVT_COMBOBOX, self.physician_ticker, id=self.combo_box_physician.GetId())
         self.window_editor.Bind(wx.EVT_COMBOBOX, self.physician_roi_ticker, id=self.combo_box_physician_roi.GetId())
+        self.window_editor.Bind(wx.EVT_COMBOBOX, self.uncategorized_ticker, id=self.combo_box_uncategorized_ignored.GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.add_physician, id=self.button_physician['add'].GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.on_delete_physician, id=self.button_physician['del'].GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.on_edit_physician, id=self.button_physician['edit'].GetId())
@@ -119,6 +121,8 @@ class ROIMapFrame(wx.Frame):
         self.window_editor.Bind(wx.EVT_BUTTON, self.add_variation, id=self.button_variation_add.GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.move_variations, id=self.button_variation_move.GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.delete_variations, id=self.button_variation_delete.GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.on_delete_dvh, id=self.button_uncategorized_ignored_delete.GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.on_ignore_dvh, id=self.button_uncategorized_ignored_ignore.GetId())
         self.window_editor.Bind(wx.EVT_LIST_ITEM_SELECTED, self.update_button_variation_enable,
                                 id=self.list_ctrl_variations.GetId())
         self.window_editor.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.update_button_variation_enable,
@@ -286,6 +290,11 @@ class ROIMapFrame(wx.Frame):
         choices.sort()
         if not choices:
             choices = ['None']
+            self.button_uncategorized_ignored_delete.Disable()
+            self.button_uncategorized_ignored_ignore.Disable()
+        else:
+            self.button_uncategorized_ignored_delete.Enable()
+            self.button_uncategorized_ignored_ignore.Enable()
         self.combo_box_uncategorized_ignored_roi.Clear()
         self.combo_box_uncategorized_ignored_roi.Append(choices)
         self.combo_box_uncategorized_ignored_roi.SetValue(choices[0])
@@ -370,13 +379,15 @@ class ROIMapFrame(wx.Frame):
 
     def add_physician_roi(self, evt):
         old_physician_rois = self.roi_map.get_physician_rois(self.physician)
-        AddPhysicianROI(self, self.physician, self.roi_map)
-        self.update_all(old_physician_rois=old_physician_rois)
+        dlg = AddPhysicianROI(self, self.physician, self.roi_map)
+        if dlg.res == wx.ID_OK:
+            self.update_all(old_physician_rois=old_physician_rois)
 
     def add_physician(self, evt):
         old_physicians = self.roi_map.get_physicians()
-        AddPhysician(self.roi_map)
-        self.update_all(old_physicians=old_physicians)
+        dlg = AddPhysician(self.roi_map)
+        if dlg.res == wx.ID_OK:
+            self.update_all(old_physicians=old_physicians)
 
     @property
     def variation_count(self):
@@ -439,6 +450,36 @@ class ROIMapFrame(wx.Frame):
         self.roi_map.delete_institutional_roi(self.physician_roi)
         self.update_all(skip_physicians=True)
 
+    def on_delete_dvh(self, evt):
+        MessageDialog(self, "Delete all DVHs named %s for %s?" % (self.dvh, self.physician),
+                      action_yes_func=self.delete_dvh)
+
+    def delete_dvh(self):
+        with DVH_SQL() as cnx:
+            for uid in self.dvh_uids:
+                cnx.delete_dvh(self.dvh, uid)
+        self.update_uncategorized_ignored_choices(None)
+
+    def on_ignore_dvh(self, evt):
+        msg_type = ['Unignore', 'Ignore'][self.button_uncategorized_ignored_ignore.GetLabelText() == 'Ignore DVH']
+        MessageDialog(self, "%s all DVHs named %s for %s?" % (msg_type, self.dvh, self.physician),
+                      action_yes_func=self.ignore_dvh)
+
+    def ignore_dvh(self):
+        unignore = self.button_uncategorized_ignored_ignore.GetLabelText() == 'Unignore DVH'
+        with DVH_SQL() as cnx:
+            for uid in self.dvh_uids:
+                cnx.ignore_dvh(self.dvh, uid, unignore=unignore)
+        self.update_uncategorized_ignored_choices(None)
+
+    @property
+    def dvh(self):
+        return self.combo_box_uncategorized_ignored_roi.GetValue()
+
+    @property
+    def dvh_uids(self):
+        return self.uncategorized_variations[self.dvh]['study_instance_uid']
+
     def update_all(self, old_physicians=None, old_physician_rois=None, skip_physicians=False):
         if not skip_physicians:
             self.update_physicians(old_physicians=old_physicians)
@@ -470,3 +511,10 @@ class ROIMapFrame(wx.Frame):
     def update_physician_roi_label(self):
         label_text = ['Physician ROI:', 'Institutional ROI:'][self.physician == 'DEFAULT']
         self.label_physician_roi.SetLabelText(label_text)
+
+    def uncategorized_ticker(self, evt):
+        if self.combo_box_uncategorized_ignored.GetValue() == 'Uncategorized':
+            self.button_uncategorized_ignored_ignore.SetLabelText('Ignore DVH')
+        else:
+            self.button_uncategorized_ignored_ignore.SetLabelText('Unignore DVH')
+        self.update_uncategorized_ignored_choices(None)

@@ -616,6 +616,12 @@ class DatabaseROIs:
         return {'Linked to Institutional ROI': linked_phys_roi_tree,
                 'Unlinked to Institutional ROI': unlinked_phys_roi_tree}
 
+    def get_invalid_choices(self, roi_type, exclude=None):
+        # TODO: write get_invalid_choices method for GUI
+        if exclude is None:
+            exclude = []
+        pass
+
 
 def clean_name(name):
     return str(name).lower().strip().replace('\'', '`').replace('_', ' ')

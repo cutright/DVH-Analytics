@@ -218,6 +218,11 @@ class DVH_SQL:
                             % (roi_name, study_instance_uid))
         self.cnx.commit()
 
+    def ignore_dvh(self, variation, study_instance_uid, unignore=False):
+        physician_roi = ['ignored', 'uncategorized'][unignore]
+        self.update('dvhs', 'physician_roi', physician_roi,
+                    "roi_name = '%s' and study_instance_uid = '%s'" % (variation, study_instance_uid))
+
     def drop_tables(self):
         for table in self.tables:
             self.cursor.execute("DROP TABLE IF EXISTS %s;" % table)

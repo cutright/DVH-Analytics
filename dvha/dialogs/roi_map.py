@@ -23,6 +23,8 @@ class AddPhysician(wx.Dialog):
         self.__set_properties()
         self.__do_layout()
 
+        self.res = None
+
         self.Bind(wx.EVT_TEXT, self.update_enable, id=self.text_ctrl_physician.GetId())
 
         self.run()
@@ -67,8 +69,8 @@ class AddPhysician(wx.Dialog):
                                     include_variations=self.checkbox_variations.GetValue())
 
     def run(self):
-        res = self.ShowModal()
-        if res == wx.ID_OK:
+        self.res = self.ShowModal()
+        if self.res == wx.ID_OK:
             self.action()
         self.Destroy()
 
@@ -416,6 +418,8 @@ class AddPhysicianROI(wx.Dialog):
         self.button_ok = wx.Button(self, wx.ID_OK, "Add")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
+        self.res = None
+
         self.__do_bind()
         self.__set_properties()
         self.__do_layout()
@@ -463,8 +467,8 @@ class AddPhysicianROI(wx.Dialog):
         self.Center()
 
     def run(self):
-        res = self.ShowModal()
-        if res == wx.ID_OK:
+        self.res = self.ShowModal()
+        if self.res == wx.ID_OK:
             self.action()
         self.Destroy()
 
