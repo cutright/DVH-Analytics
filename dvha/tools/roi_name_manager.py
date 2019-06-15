@@ -550,12 +550,14 @@ class DatabaseROIs:
                 for j in range(len(tables[p_roi][key])):
                     tables[p_roi][key][j] += y_delta - max_y_delta
 
-        table = tables[p_rois[0]]
-        for i in range(1, len(p_rois)):
-            for key in list(table):
-                table[key].extend(tables[p_rois[i]][key])
+        if p_rois and p_rois[0] in tables:
+            table = tables[p_rois[0]]
+            for i in range(1, len(p_rois)):
+                for key in list(table):
+                    table[key].extend(tables[p_rois[i]][key])
 
-        return self.update_duplicate_y_entries(table, physician)
+            return self.update_duplicate_y_entries(table, physician)
+        return None
 
     @staticmethod
     def get_roi_visual_y_values(table):

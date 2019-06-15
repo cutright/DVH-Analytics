@@ -887,14 +887,14 @@ class PlotROIMap(Plot):
         self.figure.min_border_left = 50
         self.figure.min_border_bottom = 30
 
-        self.source_map = ColumnDataSource(data={'name': [], 'color': [], 'x': [], 'y': [],
-                                                 'x0': [], 'y0': [], 'x1': [], 'y1': []})
-        self.figure.circle("x", "y", size=12, source=self.source_map, line_color="black", fill_alpha=0.8,
+        self.source['map'] = ColumnDataSource(data={'name': [], 'color': [], 'x': [], 'y': [],
+                                                    'x0': [], 'y0': [], 'x1': [], 'y1': []})
+        self.figure.circle("x", "y", size=12, source=self.source['map'], line_color="black", fill_alpha=0.8,
                            color='color')
         labels = LabelSet(x="x", y="y", text="name", y_offset=8, text_color="#555555",
-                          source=self.source_map, text_align='center')
+                          source=self.source['map'], text_align='center')
         self.figure.add_layout(labels)
-        self.figure.segment(x0='x0', y0='y0', x1='x1', y1='y1', source=self.source_map, alpha=0.5)
+        self.figure.segment(x0='x0', y0='y0', x1='x1', y1='y1', source=self.source['map'], alpha=0.5)
 
         self.bokeh_layout = column(self.figure)
 
@@ -916,8 +916,11 @@ class PlotROIMap(Plot):
         new_data = self.roi_map.get_all_institutional_roi_visual_coordinates(physician,
                                                                              ignored_physician_rois=ignored_roi)
 
-        self.source_map.data = new_data
         self.figure.title.text = 'ROI Map for %s' % physician
-        self.figure.y_range.bounds = (min(self.source_map.data['y']) - 3, max(self.source_map.data['y']) + 3)
-
-        self.update_bokeh_layout_in_wx_python()
+        if new_data:
+            self.source['map'].data = new_data
+            self.figure.y_range.bounds = (min(self.source['map'].data['y']) - 3, max(self.source['map'].data['y']) + 3)
+            self.update_bokeh_layout_in_wx_python()
+        else:
+            self.clear_source('map')
+            self.clear_plot()

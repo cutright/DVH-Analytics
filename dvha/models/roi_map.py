@@ -1,13 +1,16 @@
 import wx
 import wx.html2
-from dialogs.roi_map import AddPhysician, RoiManager
+from dialogs.roi_map import AddPhysician, AddPhysicianROI, AddVariationDialog, MoveVariationDialog
+from tools.errors import ROIVariationError, ROIVariationErrorDialog
+from tools.utilities import get_selected_listctrl_items
 from db.sql_connector import DVH_SQL, echo_sql_db
+from models.datatable import DataTable
 from models.plot import PlotROIMap
 from tools.roi_name_manager import clean_name
 
 
 class ROIMapFrame(wx.Frame):
-    def __init__(self, roi_map, *args, **kwds):
+    def __init__(self, roi_map):
         wx.Frame.__init__(self, None, title='ROI Map')
 
         self.roi_map = roi_map
@@ -16,11 +19,6 @@ class ROIMapFrame(wx.Frame):
         self.window = wx.SplitterWindow(self, wx.ID_ANY)
         self.window_tree = wx.Panel(self.window, wx.ID_ANY, style=wx.BORDER_SUNKEN)
 
-        # self.roi_tree = RoiTree(self.window_tree, self.roi_map)
-        # self.roi_tree.rebuild_tree()
-        self.combo_box_tree_physician = wx.ComboBox(self.window_tree, wx.ID_ANY,
-                                                    choices=self.roi_map.get_physicians(),
-                                                    style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_tree_plot_data = wx.ComboBox(self.window_tree, wx.ID_ANY,
                                                     choices=['All', 'Linked', 'Unlinked', 'Branched'],
                                                     style=wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -60,6 +58,9 @@ class ROIMapFrame(wx.Frame):
 
         self.uncategorized_variations = {}
 
+        self.columns = ['Variations']
+        self.data_table = DataTable(self.list_ctrl_variations, columns=self.columns, widths=[400])
+
         self.__set_properties()
         self.__do_bind()
         self.__do_layout()
@@ -70,13 +71,17 @@ class ROIMapFrame(wx.Frame):
 
     def __set_properties(self):
         self.combo_box_uncategorized_ignored.SetSelection(0)
-        self.combo_box_uncategorized_ignored_roi.SetMinSize((240, 25))
-        self.combo_box_uncategorized_ignored.SetMinSize((150, 25))
-        self.combo_box_physician_roi_a.SetMinSize((250, 25))
-        self.combo_box_physician_roi_b.SetMinSize((250, 25))
-        # self.window.SetMinimumPaneSize(20)
+        # self.combo_box_uncategorized_ignored_roi.SetMinSize((240, 25))
+        # self.combo_box_uncategorized_ignored.SetMinSize((150, 25))
+        # self.combo_box_physician_roi_a.SetMinSize((250, 25))
+        # self.combo_box_physician_roi_b.SetMinSize((250, 25))
 
-        self.combo_box_tree_physician.SetValue('DEFAULT')
+        self.combo_box_physician.SetValue('DEFAULT')
+        self.update_physician_rois()
+        # self.combo_box_physician_roi.SetValue(self.initial_physician_roi)
+        self.update_variations()
+
+        self.combo_box_physician.SetValue('DEFAULT')
         self.combo_box_tree_plot_data.SetValue('ALL')
 
         self.update_uncategorized_ignored_choices(None)
@@ -84,10 +89,24 @@ class ROIMapFrame(wx.Frame):
         self.window_tree.SetBackgroundColour('white')
 
     def __do_bind(self):
-        self.window_tree.Bind(wx.EVT_COMBOBOX, self.on_physician_change, id=self.combo_box_tree_physician.GetId())
+        self.window_tree.Bind(wx.EVT_COMBOBOX, self.on_plot_data_type_change, id=self.combo_box_tree_plot_data.GetId())
+
         self.window_editor.Bind(wx.EVT_COMBOBOX, self.update_uncategorized_ignored_choices,
                                 id=self.combo_box_uncategorized_ignored.GetId())
-        self.window_tree.Bind(wx.EVT_COMBOBOX, self.on_plot_data_type_change, id=self.combo_box_tree_plot_data.GetId())
+
+        self.window_editor.Bind(wx.EVT_COMBOBOX, self.physician_ticker, id=self.combo_box_physician.GetId())
+        self.window_editor.Bind(wx.EVT_COMBOBOX, self.physician_roi_ticker, id=self.combo_box_physician_roi.GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.add_physician, id=self.button_add_physician.GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.add_physician_roi, id=self.button_add_physician_roi.GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.select_all_variations, id=self.button_variation_select_all.GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.deselect_all_variations, id=self.button_variation_deselect_all.GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.add_variation, id=self.button_variation_add.GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.move_variations, id=self.button_variation_move.GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.delete_variations, id=self.button_variation_delete.GetId())
+        self.window_editor.Bind(wx.EVT_LIST_ITEM_SELECTED, self.update_button_variation_enable,
+                                id=self.list_ctrl_variations.GetId())
+        self.window_editor.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.update_button_variation_enable,
+                                id=self.list_ctrl_variations.GetId())
 
     def __do_layout(self):
 
@@ -156,10 +175,6 @@ class ROIMapFrame(wx.Frame):
         sizer_tree_plot_data.Add(label_tree_plot_data, 0, wx.LEFT | wx.RIGHT | wx.TOP, 5)
         sizer_tree_plot_data.Add(self.combo_box_tree_plot_data, 0, wx.EXPAND | wx.ALL, 5)
 
-        label_tree_physician = wx.StaticText(self.window_tree, wx.ID_ANY, 'Physician:')
-        sizer_tree_physician.Add(label_tree_physician, 0, wx.LEFT | wx.RIGHT | wx.TOP, 5)
-        sizer_tree_physician.Add(self.combo_box_tree_physician, 0, wx.EXPAND | wx.ALL, 5)
-
         sizer_tree_input.Add(sizer_tree_plot_data, 0, wx.EXPAND, 0)
         sizer_tree_input.Add(sizer_tree_physician, 0, wx.EXPAND, 0)
 
@@ -211,27 +226,6 @@ class ROIMapFrame(wx.Frame):
     def run(self):
         self.Show()
 
-    # def add_physician(self, evt):
-    #     physicians = self.roi_map.get_physicians()
-    #     AddPhysician(self.roi_map)
-    #     self.update_physicians(old_physicians=physicians)
-
-    # def update_physicians(self, old_physicians=None):
-    #
-    #     old_physician = self.combo_box_physician.GetValue()
-    #
-    #     choices = self.roi_map.get_physicians()
-    #     new = choices[0]
-    #     if old_physicians:
-    #         new = list(set(choices) - set(old_physicians))
-    #         if new:
-    #             new = clean_name(new[0]).upper()
-    #
-    #     self.update_combo_box_choices(self.combo_box_physician, choices, new)
-    #
-    #     if old_physician != self.combo_box_physician.GetValue():
-    #         self.update_roi_map()
-
     @staticmethod
     def update_combo_box_choices(combo_box, choices, value):
         if not value:
@@ -245,15 +239,21 @@ class ROIMapFrame(wx.Frame):
 
     @property
     def physician(self):
-        return self.combo_box_tree_physician.GetValue()
+        return self.combo_box_physician.GetValue()
+
+    @property
+    def physician_roi(self):
+        return self.combo_box_physician_roi.GetValue()
 
     @property
     def plot_data_type(self):
         return self.combo_box_tree_plot_data.GetValue()
 
-    def on_physician_change(self, evt):
+    def physician_ticker(self, evt):
         self.update_roi_map()
         self.update_uncategorized_ignored_choices(None)
+        self.update_physician_rois()
+        self.update_variations()
 
     def on_plot_data_type_change(self, evt):
         self.update_roi_map()
@@ -291,68 +291,103 @@ class ROIMapFrame(wx.Frame):
                             new_variations[variation]['study_instance_uid'].append(study_instance_uid)
                 return new_variations
 
+    @property
+    def selected_indices(self):
+        return get_selected_listctrl_items(self.list_ctrl_variations)
 
-# class RoiTree:
-#     def __init__(self, parent, db_rois):
-#
-#         self.tree_ctrl = wx.TreeCtrl(parent, wx.ID_ANY)
-#         self.db = db_rois
-#         self.root = self.tree_ctrl.AddRoot('Physicians')
-#         self.physician_nodes = {}
-#         self.institutional_status_nodes = {}
-#         self.physician_roi_nodes = {}
-#         self.roi_variation_nodes = {}
-#
-#     def rebuild_tree(self):
-#         self.tree_ctrl.DeleteChildren(self.root)
-#         tree = self.db.tree
-#
-#         self.physician_nodes = {}
-#         self.institutional_status_nodes = {}
-#         self.physician_roi_nodes = {}
-#         self.roi_variation_nodes = {}
-#
-#         for physician, linked_statuses in tree.items():
-#             self.append_physician(physician)
-#             for linked_status, physician_rois in linked_statuses.items():
-#                 for physician_roi, variations in physician_rois.items():
-#                     self.append_physician_roi(physician, physician_roi, linked_status)
-#                     for variation in variations:
-#                         self.append_variation(physician, physician_roi, variation)
-#
-#         self.tree_ctrl.Expand(self.root)
-#
-#     def append_variation(self, physician, physician_roi, variation):
-#         parent_node = self.physician_roi_nodes[physician][physician_roi]
-#         nodes = self.roi_variation_nodes[physician][physician_roi]
-#         self.append_tree_item(parent_node, nodes, variation)
-#
-#     def append_physician_roi(self, physician, physician_roi, linked_status):
-#         parent_node = self.institutional_status_nodes[physician][linked_status]
-#         nodes = self.physician_roi_nodes[physician]
-#         self.append_tree_item(parent_node, nodes, physician_roi)
-#         if physician_roi not in list(self.roi_variation_nodes[physician]):
-#             self.roi_variation_nodes[physician][physician_roi] = {}
-#         if physician_roi not in list(self.physician_roi_nodes[physician]):
-#             self.physician_roi_nodes[physician][physician_roi] = {}
-#
-#     def append_physician(self, physician):
-#         self.append_tree_item(self.root, self.physician_nodes, physician)
-#         if physician not in list(self.institutional_status_nodes):
-#             self.institutional_status_nodes[physician] = {'Linked to Institutional ROI': [],
-#                                                           'Unlinked to Institutional ROI': []}
-#         self.append_tree_item(self.physician_nodes[physician],
-#                               self.institutional_status_nodes[physician], 'Linked to Institutional ROI')
-#         self.append_tree_item(self.physician_nodes[physician],
-#                               self.institutional_status_nodes[physician], 'Unlinked to Institutional ROI')
-#
-#         if physician not in list(self.physician_roi_nodes):
-#             self.physician_roi_nodes[physician] = {}
-#         if physician not in list(self.roi_variation_nodes):
-#             self.roi_variation_nodes[physician] = {}
-#
-#     def append_tree_item(self, parent_node, nodes, key):
-#         nodes[key] = self.tree_ctrl.AppendItem(parent_node, key)
-#
-#     def sort_tree(self):
-#         self.tree_ctrl.SortChildren(self.root)
+    def update_button_variation_enable(self, evt):
+        if self.selected_indices:
+            self.button_variation_move.Enable()
+            self.button_variation_delete.Enable()
+            self.button_variation_deselect_all.Enable()
+        else:
+            self.button_variation_move.Disable()
+            self.button_variation_delete.Disable()
+            self.button_variation_deselect_all.Disable()
+
+    def update_variations(self):
+        self.data_table.set_data(self.variation_table_data, self.columns)
+        self.update_button_variation_enable(None)
+
+    def physician_roi_ticker(self, evt):
+        self.update_variations()
+
+    def update_physicians(self, old_physicians=None):
+
+        choices = self.roi_map.get_physicians()
+        new = choices[0]
+        if old_physicians:
+            new = list(set(choices) - set(old_physicians))
+            if new:
+                new = clean_name(new[0]).upper()
+
+        self.update_combo_box_choices(self.combo_box_physician, choices, new)
+
+    def update_physician_rois(self, old_physician_rois=None):
+        choices = self.roi_map.get_physician_rois(self.physician)
+        new = choices[0]
+        if old_physician_rois:
+            new = list(set(choices) - set(old_physician_rois))
+            if new:
+                new = clean_name(new[0])
+
+        self.update_combo_box_choices(self.combo_box_physician_roi, choices, new)
+
+    @property
+    def variations(self):
+        variations = self.roi_map.get_variations(self.physician, self.physician_roi)
+        variations = list(set(variations) - {self.physician_roi})  # remove physician roi
+        variations.sort()
+        return variations
+
+    @property
+    def variation_table_data(self):
+        return {'Variations': self.variations}
+
+    def add_physician_roi(self, evt):
+        old_physician_rois = self.roi_map.get_physician_rois(self.physician)
+        AddPhysicianROI(self, self.physician, self.roi_map)
+        self.update_physician_rois(old_physician_rois=old_physician_rois)
+
+    def add_physician(self, evt):
+        old_physicians = self.roi_map.get_physicians()
+        AddPhysician(self.roi_map)
+        self.update_physicians(old_physicians=old_physicians)
+
+    @property
+    def variation_count(self):
+        return len(self.variations)
+
+    @property
+    def selected_values(self):
+        return [self.list_ctrl_variations.GetItem(i, 0).GetText() for i in self.selected_indices]
+
+    def select_all_variations(self, evt):
+        self.apply_global_selection()
+
+    def deselect_all_variations(self, evt):
+        self.apply_global_selection(on=0)
+
+    def apply_global_selection(self, on=1):
+        for i in range(self.variation_count):
+            self.list_ctrl_variations.Select(i, on=on)
+
+    def delete_variations(self, evt):
+        self.roi_map.delete_variations(self.physician, self.physician_roi, self.selected_values)
+        self.update_variations()
+
+    def add_variation(self, evt):
+        dlg = AddVariationDialog(self, self.physician, self.physician_roi, self.roi_map)
+        res = dlg.ShowModal()
+        if res == wx.ID_OK:
+            try:
+                self.roi_map.add_variation(self.physician, self.physician_roi, dlg.text_ctrl_variation.GetValue())
+                self.update_variations()
+            except ROIVariationError as e:
+                ROIVariationErrorDialog(self, e)
+        dlg.Destroy()
+
+    def move_variations(self, evt):
+        choices = [roi for roi in self.roi_map.get_physician_rois(self.physician) if roi != self.physician_roi]
+        MoveVariationDialog(self, self.selected_values, self.physician, self.physician_roi, choices, self.roi_map)
+        self.update_variations()
