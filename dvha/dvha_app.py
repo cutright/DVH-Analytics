@@ -26,7 +26,7 @@ from paths import LOGO_PATH
 from tools.roi_name_manager import DatabaseROIs
 from tools.stats import StatsData
 from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux,\
-    save_object_to_file, load_object_from_file, set_msw_background_color, MessageDialog
+    save_object_to_file, load_object_from_file, set_msw_background_color
 from datetime import datetime
 from copy import deepcopy
 
@@ -155,21 +155,26 @@ class DVHAMainFrame(wx.Frame):
         export = wx.Menu()
         export_csv = export.Append(wx.ID_ANY, 'Data to csv')
         export.AppendSubMenu(export_plot, 'Plot to html')
-        file_menu.AppendSubMenu(export, '&Export')
         file_menu.AppendSeparator()
 
         qmi = file_menu.Append(wx.ID_ANY, '&Quit\tCtrl+Q')
-        menu_about = file_menu.Append(wx.ID_ANY, '&About\tCtrl+A')
 
-        view_menu = wx.Menu()
-        self.view_dvhs = view_menu.Append(wx.ID_ANY, 'DVHs')
-        self.view_plans = view_menu.Append(wx.ID_ANY, 'Plans')
-        self.view_rxs = view_menu.Append(wx.ID_ANY, 'Rxs')
-        self.view_beams = view_menu.Append(wx.ID_ANY, 'Beams')
+        self.data_menu = wx.Menu()
+
+        self.data_views = {key: None for key in ['DVHs', 'Plans', 'Rxs', 'Beams']}
+        self.data_menu.AppendSubMenu(export, '&Export')
+        self.data_menu_items = {'DVHs': self.data_menu.Append(wx.ID_ANY, 'Show DVHs\tCtrl+1'),
+                                'Plans': self.data_menu.Append(wx.ID_ANY, 'Show Plans\tCtrl+2'),
+                                'Rxs': self.data_menu.Append(wx.ID_ANY, 'Show Rxs\tCtrl+3'),
+                                'Beams': self.data_menu.Append(wx.ID_ANY, 'Show Beams\tCtrl+4')}
 
         settings_menu = wx.Menu()
         menu_pref = settings_menu.Append(wx.ID_PREFERENCES)
         menu_sql = settings_menu.Append(wx.ID_ANY, '&Database Connection\tCtrl+D')
+        menu_user_settings = settings_menu.Append(wx.ID_ANY, '&User Settings\tCtrl+,')
+
+        help_menu = wx.Menu()
+        menu_about = help_menu.Append(wx.ID_ANY, '&About\tCtrl+A')
 
         self.Bind(wx.EVT_MENU, self.on_quit, qmi)
         self.Bind(wx.EVT_MENU, self.on_open, menu_open)
@@ -177,6 +182,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_export, export_csv)
         self.Bind(wx.EVT_MENU, self.on_save, menu_save)
         self.Bind(wx.EVT_MENU, self.on_pref, menu_pref)
+        self.Bind(wx.EVT_MENU, self.on_pref, menu_user_settings)
         self.Bind(wx.EVT_MENU, self.on_about, menu_about)
         self.Bind(wx.EVT_MENU, self.on_sql, menu_sql)
 
@@ -184,13 +190,15 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_save_plot_time_series, export_time_series)
         self.Bind(wx.EVT_MENU, self.on_save_plot_regression, export_regression)
         self.Bind(wx.EVT_MENU, self.on_save_plot_control_chart, export_control_chart)
-        self.Bind(wx.EVT_MENU, self.on_view_plans, self.view_plans)
-        self.Bind(wx.EVT_MENU, self.on_view_rxs, self.view_rxs)
-        self.Bind(wx.EVT_MENU, self.on_view_beams, self.view_beams)
+        self.Bind(wx.EVT_MENU, self.on_view_dvhs, self.data_menu_items['DVHs'])
+        self.Bind(wx.EVT_MENU, self.on_view_plans, self.data_menu_items['Plans'])
+        self.Bind(wx.EVT_MENU, self.on_view_rxs, self.data_menu_items['Rxs'])
+        self.Bind(wx.EVT_MENU, self.on_view_beams, self.data_menu_items['Beams'])
 
         self.frame_menubar.Append(file_menu, '&File')
-        self.frame_menubar.Append(view_menu, '&View')
+        self.frame_menubar.Append(self.data_menu, '&Data')
         self.frame_menubar.Append(settings_menu, '&Settings')
+        self.frame_menubar.Append(help_menu, '&Help')
         self.SetMenuBar(self.frame_menubar)
 
     def __add_layout_objects(self):
@@ -402,13 +410,16 @@ class DVHAMainFrame(wx.Frame):
     # Menu bar event functions
     # --------------------------------------------------------------------------------------------------------------
     def on_save(self, evt):
-        # wx.DirDialog()
-        dlg = wx.FileDialog(self, "Save your downloaded data to file", "", wildcard='*.dvha',
-                            style=wx.FD_FILE_MUST_EXIST | wx.FD_SAVE)
-        if dlg.ShowModal() == wx.ID_OK:
-            self.save_data_obj()
-            save_object_to_file(self.save_data, dlg.GetPath())
-        dlg.Destroy()
+        if self.save_data:
+            dlg = wx.FileDialog(self, "Save your downloaded data to file", "", wildcard='*.dvha',
+                                style=wx.FD_FILE_MUST_EXIST | wx.FD_SAVE)
+            if dlg.ShowModal() == wx.ID_OK:
+                self.save_data_obj()
+                save_object_to_file(self.save_data, dlg.GetPath())
+            dlg.Destroy()
+        else:
+            wx.MessageBox('There is no data to save. Please query/open some data first.', 'Save Error',
+                          wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
 
     def on_open(self, evt):
         dlg = wx.FileDialog(self, "Open saved data", "", wildcard='*.dvha',
@@ -466,17 +477,17 @@ class DVHAMainFrame(wx.Frame):
     def on_toolbar_database(self, evt):
 
         if not echo_sql_db():
-            self.on_sql(None)
+            self.on_sql()
 
         if echo_sql_db():
             frame = DatabaseEditorDialog()
             frame.Show()
         else:
             wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
-                          wx.OK | wx.ICON_WARNING)
+                          wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
 
     def on_toolbar_settings(self, evt):
-        self.on_pref(None)
+        self.on_pref()
 
     # --------------------------------------------------------------------------------------------------------------
     # Query event functions
@@ -496,21 +507,21 @@ class DVHAMainFrame(wx.Frame):
         query_dlg(self, 'numerical')
         self.update_all_query_buttons()
 
-    def edit_row_categorical(self, evt):
+    def edit_row_categorical(self, *args):
         if self.selected_index_categorical is not None:
             query_dlg(self, 'categorical', title='Edit Categorical Filter', set_values=True)
 
-    def edit_row_numerical(self, evt):
+    def edit_row_numerical(self, *args):
         if self.selected_index_numerical is not None:
             query_dlg(self, 'numerical', title='Edit Numerical Filter', set_values=True)
 
     def doubleclick_categorical(self, evt):
         self.selected_index_categorical = self.table_categorical.GetFirstSelected()
-        self.edit_row_categorical(None)
+        self.edit_row_categorical()
 
     def doubleclick_numerical(self, evt):
         self.selected_index_numerical = self.table_numerical.GetFirstSelected()
-        self.edit_row_numerical(None)
+        self.edit_row_numerical()
 
     def del_row_categorical(self, evt):
         self.data_table_categorical.delete_row(self.selected_index_categorical)
@@ -675,12 +686,12 @@ class DVHAMainFrame(wx.Frame):
         dlg.ShowModal()
         dlg.Destroy()
 
-    def on_pref(self, evt):
+    def on_pref(self, *args):
         UserSettings(self.options)
 
     def on_import(self, evt):
         if not echo_sql_db():
-            self.on_sql(None)
+            self.on_sql()
 
         if echo_sql_db():
             ImportDICOM_Dialog(self.roi_map, self.options)
@@ -688,7 +699,7 @@ class DVHAMainFrame(wx.Frame):
             wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
                           wx.OK | wx.ICON_WARNING)
 
-    def on_sql(self, evt):
+    def on_sql(self, *args):
         SQLSettingsDialog()
         [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db()]()
 
@@ -711,6 +722,9 @@ class DVHAMainFrame(wx.Frame):
         save_string_to_file(self, 'Save Control Chart plot', self.control_chart.plot.html_str,
                             wildcard="HTML files (*.html)|*.html")
 
+    def on_view_dvhs(self, evt):
+        self.view_table_data('DVHs')
+
     def on_view_plans(self, evt):
         self.view_table_data('Plans')
 
@@ -721,9 +735,19 @@ class DVHAMainFrame(wx.Frame):
         self.view_table_data('Beams')
 
     def view_table_data(self, key):
-        if self.data[key]:
-            QueriedDataFrame('%s Data' % key[0:-1], self.data[key], key)
+        data = [self.data[key], self.dvh][key == 'DVHs']
+
+        if data:
+            if self.get_menu_item_status(key) == 'Show':
+                self.data_views[key] = QueriedDataFrame(data, key, self.data_menu, self.data_menu_items[key].GetId())
+            else:
+                self.data_views[key].on_close()
+                self.data_views[key] = None
         else:
             dlg = wx.MessageDialog(self, 'Please query/open some data first.', 'ERROR!', wx.ICON_ERROR | wx.OK_DEFAULT)
             dlg.ShowModal()
             dlg.Destroy()
+
+    def get_menu_item_status(self, key):
+        show_hide = ['Hide', 'Show']['Show' in self.data_menu.GetLabel(self.data_menu_items[key].GetId())]
+        return show_hide
