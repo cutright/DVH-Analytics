@@ -809,7 +809,7 @@ class About(wx.Dialog):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_text = wx.BoxSizer(wx.VERTICAL)
 
-        scrolled_window.SetScrollRate(10, 10)
+        scrolled_window.SetScrollRate(20, 20)
 
         license_text = wx.StaticText(scrolled_window, wx.ID_ANY, license_text)
         sizer_text.Add(license_text, 0, wx.EXPAND | wx.ALL, 5)

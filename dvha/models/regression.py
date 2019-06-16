@@ -48,7 +48,7 @@ class RegressionFrame:
         self.button_single_var_plot_save = wx.Button(self.pane_tree, wx.ID_ANY, 'Save Plot')
 
     def __set_properties(self):
-        self.pane_tree.SetScrollRate(10, 10)
+        self.pane_tree.SetScrollRate(20, 20)
         self.window.SetMinimumPaneSize(20)
         self.combo_box_x_axis.SetValue('ROI Max Dose')
         self.combo_box_y_axis.SetValue('ROI Volume')
