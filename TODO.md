@@ -8,7 +8,9 @@
     - [X] Most ROI Map interaction should be able to occur at time of import, ROI Map in tool bar to be used for 
     clean up later
         - [X] Add ability to add physician map at import dialog, add variations, etc.
-    - [ ] Complete functionality
+    - [X] Complete functionality
+    - [ ] Just needs to save changes
+        * This should include a difference calculator to auto update database
 
 2. **Import**
     - [ ] Need to test on Windows/Linux

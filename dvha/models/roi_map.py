@@ -1,7 +1,7 @@
 import wx
 import wx.html2
 from dialogs.roi_map import AddPhysician, AddPhysicianROI, AddVariationDialog, MoveVariationDialog,\
-    RenamePhysicianDialog, RenamePhysicianROIDialog, RenameInstitutionalROIDialog
+    RenamePhysicianDialog, RenamePhysicianROIDialog, RenameInstitutionalROIDialog, LinkPhysicianROI
 from tools.errors import ROIVariationError, ROIVariationErrorDialog
 from tools.utilities import get_selected_listctrl_items, MessageDialog
 from db.sql_connector import DVH_SQL, echo_sql_db
@@ -50,6 +50,9 @@ class ROIMapFrame(wx.Frame):
                                      'del': wx.Button(self.window_editor, wx.ID_ANY, "-"),
                                      'edit': wx.Button(self.window_editor, wx.ID_ANY, "Δ")}
 
+        self.button_link_physician_roi = wx.Button(self.window_editor, wx.ID_ANY, "Link")
+        self.button_link_physician_roi.Disable()
+
         self.combo_box_uncategorized_ignored = wx.ComboBox(self.window_editor, wx.ID_ANY,
                                                            choices=["Uncategorized", "Ignored"],
                                                            style=wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -57,8 +60,8 @@ class ROIMapFrame(wx.Frame):
                                                                style=wx.CB_DROPDOWN)
         self.button_uncategorized_ignored_delete = wx.Button(self.window_editor, wx.ID_ANY, "Delete DVH")
         self.button_uncategorized_ignored_ignore = wx.Button(self.window_editor, wx.ID_ANY, "Ignore DVH")
-        self.combo_box_physician_roi_a = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
-        self.combo_box_physician_roi_b = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
+        self.combo_box_physician_roi_merge = {'a': wx.ComboBox(self.window_editor, wx.ID_ANY, style=wx.CB_DROPDOWN),
+                                              'b': wx.ComboBox(self.window_editor, wx.ID_ANY, style=wx.CB_DROPDOWN)}
         self.button_merge = wx.Button(self.window_editor, wx.ID_ANY, "Merge")
 
         self.uncategorized_variations = {}
@@ -90,7 +93,7 @@ class ROIMapFrame(wx.Frame):
         self.combo_box_physician.SetValue('DEFAULT')
         self.combo_box_tree_plot_data.SetValue('ALL')
 
-        self.update_uncategorized_ignored_choices(None)
+        self.update_uncategorized_ignored_choices()
 
         self.window_tree.SetBackgroundColour('white')
 
@@ -100,6 +103,7 @@ class ROIMapFrame(wx.Frame):
             button.SetMaxSize((25, 25))
 
         self.update_physician_enable()
+        self.update_merge_physician_rois()
 
     def __do_bind(self):
         self.window_tree.Bind(wx.EVT_COMBOBOX, self.on_plot_data_type_change, id=self.combo_box_tree_plot_data.GetId())
@@ -110,9 +114,11 @@ class ROIMapFrame(wx.Frame):
         self.window_editor.Bind(wx.EVT_COMBOBOX, self.physician_ticker, id=self.combo_box_physician.GetId())
         self.window_editor.Bind(wx.EVT_COMBOBOX, self.physician_roi_ticker, id=self.combo_box_physician_roi.GetId())
         self.window_editor.Bind(wx.EVT_COMBOBOX, self.uncategorized_ticker, id=self.combo_box_uncategorized_ignored.GetId())
+
         self.window_editor.Bind(wx.EVT_BUTTON, self.add_physician, id=self.button_physician['add'].GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.on_delete_physician, id=self.button_physician['del'].GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.on_edit_physician, id=self.button_physician['edit'].GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.on_link_physician_roi, id=self.button_link_physician_roi.GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.add_physician_roi, id=self.button_physician_roi['add'].GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.on_delete_physician_roi, id=self.button_physician_roi['del'].GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.on_edit_physician_roi, id=self.button_physician_roi['edit'].GetId())
@@ -123,6 +129,12 @@ class ROIMapFrame(wx.Frame):
         self.window_editor.Bind(wx.EVT_BUTTON, self.delete_variations, id=self.button_variation_delete.GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.on_delete_dvh, id=self.button_uncategorized_ignored_delete.GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.on_ignore_dvh, id=self.button_uncategorized_ignored_ignore.GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.on_merge, id=self.button_merge.GetId())
+
+        self.window_editor.Bind(wx.EVT_COMBOBOX, self.update_merge_enable,
+                                id=self.combo_box_physician_roi_merge['a'].GetId())
+        self.window_editor.Bind(wx.EVT_COMBOBOX, self.update_merge_enable,
+                                id=self.combo_box_physician_roi_merge['b'].GetId())
         self.window_editor.Bind(wx.EVT_LIST_ITEM_SELECTED, self.update_button_variation_enable,
                                 id=self.list_ctrl_variations.GetId())
         self.window_editor.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.update_button_variation_enable,
@@ -170,6 +182,7 @@ class ROIMapFrame(wx.Frame):
         self.label_physician_roi = wx.StaticText(self.window_editor, wx.ID_ANY, "Institutional ROI:")
         sizer_physician_roi.Add(self.label_physician_roi, 0, 0, 0)
         sizer_physician_roi_row.Add(self.combo_box_physician_roi, 1, wx.EXPAND | wx.RIGHT, 5)
+        sizer_physician_roi_row.Add(self.button_link_physician_roi, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_physician_roi_row.Add(self.button_physician_roi['add'], 0, wx.LEFT | wx.RIGHT, 5)
         sizer_physician_roi_row.Add(self.button_physician_roi['del'], 0, wx.RIGHT, 5)
         sizer_physician_roi_row.Add(self.button_physician_roi['edit'], 0, wx.RIGHT, 10)
@@ -225,12 +238,12 @@ class ROIMapFrame(wx.Frame):
         label_physician_roi_a = wx.StaticText(self.window_editor, wx.ID_ANY, "Merge Physician ROI A:")
         # label_physician_roi_a.SetMinSize((200, 16))
         sizer_physician_roi_a.Add(label_physician_roi_a, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
-        sizer_physician_roi_a.Add(self.combo_box_physician_roi_a, 1, wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
+        sizer_physician_roi_a.Add(self.combo_box_physician_roi_merge['a'], 1, wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
         sizer_physician_roi_merger.Add(sizer_physician_roi_a, 1, wx.EXPAND, 0)
         label_physician_roi_b = wx.StaticText(self.window_editor, wx.ID_ANY, "Into Physician ROI B:")
         # label_physician_roi_b.SetMinSize((200, 16))
         sizer_physician_roi_b.Add(label_physician_roi_b, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
-        sizer_physician_roi_b.Add(self.combo_box_physician_roi_b, 1, wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
+        sizer_physician_roi_b.Add(self.combo_box_physician_roi_merge['b'], 1, wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
         sizer_physician_roi_merger.Add(sizer_physician_roi_b, 1, wx.EXPAND, 0)
         sizer_physician_roi_merger_merge.Add((20, 16), 0, 0, 0)
         sizer_physician_roi_merger_merge.Add(self.button_merge, 0, wx.ALL, 5)
@@ -274,15 +287,17 @@ class ROIMapFrame(wx.Frame):
     def physician_ticker(self, evt):
         self.update_physician_roi_label()
         self.update_physician_enable()
-        self.update_roi_map()
-        self.update_uncategorized_ignored_choices(None)
-        self.update_physician_rois()
-        self.update_variations()
+        # self.update_roi_map()
+        # self.update_uncategorized_ignored_choices()
+        # self.update_physician_rois()
+        # self.update_variations()
+        # self.update_merge_physician_rois()
+        self.update_all(skip_physicians=True)
 
     def on_plot_data_type_change(self, evt):
         self.update_roi_map()
 
-    def update_uncategorized_ignored_choices(self, evt):
+    def update_uncategorized_ignored_choices(self, *args):
         ignored_variations = self.combo_box_uncategorized_ignored.GetValue() == 'Ignored'
         self.uncategorized_variations = self.get_uncategorized_variations(self.physician,
                                                                           ignored_variations=ignored_variations)
@@ -324,7 +339,7 @@ class ROIMapFrame(wx.Frame):
     def selected_indices(self):
         return get_selected_listctrl_items(self.list_ctrl_variations)
 
-    def update_button_variation_enable(self, evt):
+    def update_button_variation_enable(self, *args):
         if self.selected_indices:
             self.button_variation_move.Enable()
             self.button_variation_delete.Enable()
@@ -338,7 +353,7 @@ class ROIMapFrame(wx.Frame):
 
     def update_variations(self):
         self.data_table.set_data(self.variation_table_data, self.columns)
-        self.update_button_variation_enable(None)
+        self.update_button_variation_enable()
 
     def physician_roi_ticker(self, evt):
         self.update_variations()
@@ -452,13 +467,14 @@ class ROIMapFrame(wx.Frame):
 
     def on_delete_dvh(self, evt):
         MessageDialog(self, "Delete all DVHs named %s for %s?" % (self.dvh, self.physician),
+                      message="Are you sure? This cannot be undone!",
                       action_yes_func=self.delete_dvh)
 
     def delete_dvh(self):
         with DVH_SQL() as cnx:
             for uid in self.dvh_uids:
                 cnx.delete_dvh(self.dvh, uid)
-        self.update_uncategorized_ignored_choices(None)
+        self.update_uncategorized_ignored_choices()
 
     def on_ignore_dvh(self, evt):
         msg_type = ['Unignore', 'Ignore'][self.button_uncategorized_ignored_ignore.GetLabelText() == 'Ignore DVH']
@@ -470,7 +486,7 @@ class ROIMapFrame(wx.Frame):
         with DVH_SQL() as cnx:
             for uid in self.dvh_uids:
                 cnx.ignore_dvh(self.dvh, uid, unignore=unignore)
-        self.update_uncategorized_ignored_choices(None)
+        self.update_uncategorized_ignored_choices()
 
     @property
     def dvh(self):
@@ -485,7 +501,8 @@ class ROIMapFrame(wx.Frame):
             self.update_physicians(old_physicians=old_physicians)
         self.update_physician_rois(old_physician_rois=old_physician_rois)
         self.update_variations()
-        self.update_uncategorized_ignored_choices(None)
+        self.update_uncategorized_ignored_choices()
+        self.update_merge_physician_rois()
         self.update_roi_map()
 
     def on_edit_physician(self, evt):
@@ -511,10 +528,45 @@ class ROIMapFrame(wx.Frame):
     def update_physician_roi_label(self):
         label_text = ['Physician ROI:', 'Institutional ROI:'][self.physician == 'DEFAULT']
         self.label_physician_roi.SetLabelText(label_text)
+        self.button_link_physician_roi.Enable(self.physician != 'DEFAULT')
 
     def uncategorized_ticker(self, evt):
         if self.combo_box_uncategorized_ignored.GetValue() == 'Uncategorized':
             self.button_uncategorized_ignored_ignore.SetLabelText('Ignore DVH')
         else:
             self.button_uncategorized_ignored_ignore.SetLabelText('Unignore DVH')
-        self.update_uncategorized_ignored_choices(None)
+        self.update_uncategorized_ignored_choices()
+
+    def update_merge_physician_rois(self):
+        options = []
+        if self.physician != 'DEFAULT':
+            options = self.roi_map.get_physician_rois(self.physician)
+        if not options:
+            options = ['']
+        for combo_box in self.combo_box_physician_roi_merge.values():
+            combo_box.Clear()
+            combo_box.Append(options)
+            combo_box.SetValue(options[0])
+        self.update_merge_enable()
+
+    @property
+    def merge_a(self):
+        return self.combo_box_physician_roi_merge['a'].GetValue()
+
+    @property
+    def merge_b(self):
+        return self.combo_box_physician_roi_merge['b'].GetValue()
+
+    def on_merge(self, evt):
+        self.roi_map.merge_physician_rois(self.physician, [self.merge_a, self.merge_b], self.merge_b)
+        self.update_all(skip_physicians=True)
+
+    def update_merge_enable(self, *args):  # *args to catch wx.EVT_BUTTON
+        self.combo_box_physician_roi_merge['a'].Enable(bool(self.merge_a and self.merge_b))
+        self.combo_box_physician_roi_merge['b'].Enable(bool(self.merge_a and self.merge_b))
+        self.button_merge.Enable(bool(self.merge_a) and bool(self.merge_b) and self.merge_a != self.merge_b)
+
+    def on_link_physician_roi(self, evt):
+        dlg = LinkPhysicianROI(self, self.physician, self.physician_roi, self.roi_map)
+        if dlg.res == wx.ID_OK:
+            self.update_roi_map()

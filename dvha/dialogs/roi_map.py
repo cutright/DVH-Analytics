@@ -706,3 +706,72 @@ class RenameInstitutionalROIDialog(RenamerBaseClass):
 
     def action(self):
         self.roi_map.rename_institutional_roi(self.new_name, self.institutional_roi)
+
+
+class LinkPhysicianROI(wx.Dialog):
+    def __init__(self, parent, physician, physician_roi, roi_map):
+        wx.Dialog.__init__(self, parent)
+        self.SetMinSize((500, 135))
+
+        self.physician = physician
+        self.physician_roi = physician_roi
+        self.roi_map = roi_map
+        self.institutional_rois = self.roi_map.get_institutional_rois()
+        self.institutional_roi = self.roi_map.get_institutional_roi(self.physician, self.physician_roi)
+        choices = self.roi_map.get_unused_institutional_rois(self.physician)
+        if self.institutional_roi not in choices:
+            choices.append(self.institutional_roi)
+            choices.sort()
+        self.combo_box_institutional_roi = wx.ComboBox(self, wx.ID_ANY, choices=choices,
+                                                       style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.button_ok = wx.Button(self, wx.ID_OK, "OK")
+        self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+
+        self.res = None
+
+        self.__set_properties()
+        self.__do_layout()
+
+        self.run()
+
+    def __set_properties(self):
+        self.SetTitle("Change Institutional ROI for %s" % self.physician_roi)
+        tip = "If the institutional ROI you’re looking for isn’t here, it may already be assigned."
+        self.combo_box_institutional_roi.SetToolTip(tip)
+        self.button_ok.SetToolTip(tip)
+        if 'uncategorized' in self.institutional_rois:
+            self.combo_box_institutional_roi.SetValue('uncategorized')
+
+        self.combo_box_institutional_roi.SetValue(self.institutional_roi)
+
+    def __do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_main = wx.BoxSizer(wx.VERTICAL)
+        sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_input = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.HORIZONTAL)
+        sizer_institutional_roi = wx.BoxSizer(wx.VERTICAL)
+        sizer_physician_roi = wx.BoxSizer(wx.VERTICAL)
+        sizer_input.Add(sizer_physician_roi, 1, wx.ALL | wx.EXPAND, 5)
+        label_institutional_roi = wx.StaticText(self, wx.ID_ANY, "Linked Institutional ROI:")
+        sizer_institutional_roi.Add(label_institutional_roi, 0, 0, 0)
+        sizer_institutional_roi.Add(self.combo_box_institutional_roi, 0, wx.EXPAND, 0)
+        sizer_input.Add(sizer_institutional_roi, 1, wx.ALL | wx.EXPAND, 5)
+        sizer_main.Add(sizer_input, 0, wx.EXPAND, 0)
+        sizer_buttons.Add(self.button_ok, 1, wx.ALL, 5)
+        sizer_buttons.Add(self.button_cancel, 1, wx.ALL, 5)
+        sizer_main.Add(sizer_buttons, 0, wx.ALIGN_RIGHT, 0)
+        sizer_wrapper.Add(sizer_main, 1, wx.ALL | wx.EXPAND, 5)
+        self.SetSizer(sizer_wrapper)
+        self.Layout()
+        self.Fit()
+        self.Center()
+
+    def run(self):
+        self.res = self.ShowModal()
+        if self.res == wx.ID_OK:
+            self.action()
+        self.Destroy()
+
+    def action(self):
+        self.roi_map.set_linked_institutional_roi(self.combo_box_institutional_roi.GetValue(),
+                                                  self.physician, self.physician_roi)

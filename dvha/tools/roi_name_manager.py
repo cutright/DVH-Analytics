@@ -309,7 +309,7 @@ class DatabaseROIs:
         variation_lists = [self.get_variations(physician, physician_roi) for physician_roi in physician_rois]
         variations = flatten_list_of_lists(variation_lists, remove_duplicates=True)
         for variation in variations:
-            self.add_variation(physician, final_physician_roi, variation)
+            self.add_variation(physician, final_physician_roi, variation, force=True)
 
         for physician_roi in physician_rois:
             if physician_roi != final_physician_roi:
@@ -346,13 +346,13 @@ class DatabaseROIs:
         variation = clean_name(variation)
         return variation in self.get_all_variations_of_physician(physician)
 
-    def add_variation(self, physician, physician_roi, variation):
+    def add_variation(self, physician, physician_roi, variation, force=False):
         physician = clean_name(physician).upper()
         physician_roi = clean_name(physician_roi)
         variation = clean_name(variation)
 
         current_physician_roi = self.get_physician_roi(physician, variation)
-        if current_physician_roi == 'uncategorized':
+        if force or current_physician_roi == 'uncategorized':
             self.physicians[physician].add_physician_roi_variation(physician_roi, variation)
         else:
             raise ROIVariationError("'%s' is already a variation of %s for %s" %
