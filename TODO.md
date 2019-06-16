@@ -66,8 +66,10 @@
     - [X] Regression icons are Star Wars right now... just temporary
 
 8. **Plan/Rx/Beam Data**
-    - [ ] Pure bokeh version of DVHA allowed user to explore plan, rx, and beam data in a tabular format
-    - [ ] Data is already stored during application run, just needs a GUI
+    - [X] Pure bokeh version of DVHA allowed user to explore plan, rx, and beam data in a tabular format
+    - [X] Data is already stored during application run, just needs a GUI
+    - [ ] Needs export functionality
+    - [ ] Filters
 
 9. **Database Editor**
     - [X] UIs are built, and their associated functions are largely already written, just need to connect them

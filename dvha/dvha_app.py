@@ -15,6 +15,7 @@ from models.datatable import DataTable
 from models.plot import PlotStatDVH
 from models.dvh import DVH
 from models.endpoint import EndpointFrame
+from models.queried_data import QueriedDataFrame
 from models.rad_bio import RadBioFrame
 from models.time_series import TimeSeriesFrame
 from models.regression import RegressionFrame
@@ -25,7 +26,7 @@ from paths import LOGO_PATH
 from tools.roi_name_manager import DatabaseROIs
 from tools.stats import StatsData
 from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux,\
-    save_object_to_file, load_object_from_file, set_msw_background_color
+    save_object_to_file, load_object_from_file, set_msw_background_color, MessageDialog
 from datetime import datetime
 from copy import deepcopy
 
@@ -160,6 +161,12 @@ class DVHAMainFrame(wx.Frame):
         qmi = file_menu.Append(wx.ID_ANY, '&Quit\tCtrl+Q')
         menu_about = file_menu.Append(wx.ID_ANY, '&About\tCtrl+A')
 
+        view_menu = wx.Menu()
+        self.view_dvhs = view_menu.Append(wx.ID_ANY, 'DVHs')
+        self.view_plans = view_menu.Append(wx.ID_ANY, 'Plans')
+        self.view_rxs = view_menu.Append(wx.ID_ANY, 'Rxs')
+        self.view_beams = view_menu.Append(wx.ID_ANY, 'Beams')
+
         settings_menu = wx.Menu()
         menu_pref = settings_menu.Append(wx.ID_PREFERENCES)
         menu_sql = settings_menu.Append(wx.ID_ANY, '&Database Connection\tCtrl+D')
@@ -177,8 +184,12 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_save_plot_time_series, export_time_series)
         self.Bind(wx.EVT_MENU, self.on_save_plot_regression, export_regression)
         self.Bind(wx.EVT_MENU, self.on_save_plot_control_chart, export_control_chart)
+        self.Bind(wx.EVT_MENU, self.on_view_plans, self.view_plans)
+        self.Bind(wx.EVT_MENU, self.on_view_rxs, self.view_rxs)
+        self.Bind(wx.EVT_MENU, self.on_view_beams, self.view_beams)
 
         self.frame_menubar.Append(file_menu, '&File')
+        self.frame_menubar.Append(view_menu, '&View')
         self.frame_menubar.Append(settings_menu, '&Settings')
         self.SetMenuBar(self.frame_menubar)
 
@@ -699,3 +710,20 @@ class DVHAMainFrame(wx.Frame):
     def on_save_plot_control_chart(self, evt):
         save_string_to_file(self, 'Save Control Chart plot', self.control_chart.plot.html_str,
                             wildcard="HTML files (*.html)|*.html")
+
+    def on_view_plans(self, evt):
+        self.view_table_data('Plans')
+
+    def on_view_rxs(self, evt):
+        self.view_table_data('Rxs')
+
+    def on_view_beams(self, evt):
+        self.view_table_data('Beams')
+
+    def view_table_data(self, key):
+        if self.data[key]:
+            QueriedDataFrame('%s Data' % key[0:-1], self.data[key], key)
+        else:
+            dlg = wx.MessageDialog(self, 'Please query/open some data first.', 'ERROR!', wx.ICON_ERROR | wx.OK_DEFAULT)
+            dlg.ShowModal()
+            dlg.Destroy()

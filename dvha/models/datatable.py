@@ -5,9 +5,9 @@ from tools.utilities import get_selected_listctrl_items
 
 class DataTable:
 
-    def __init__(self, listctrl, data=None, columns=None, widths=None, formats=None):
+    def __init__(self, list_ctrl, data=None, columns=None, widths=None, formats=None):
 
-        self.layout = listctrl
+        self.layout = list_ctrl
 
         # TODO: Initializing class with data does not display data?
         self.data = deepcopy(data)
@@ -21,7 +21,8 @@ class DataTable:
             else:
                 column_length = len(self.columns)
             self.formats = [wx.LIST_FORMAT_LEFT] * column_length
-
+        if data:
+            self.set_data(data, columns, formats)
         self.set_data_in_layout()
 
     def get_save_data(self):
