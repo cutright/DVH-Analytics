@@ -6,7 +6,7 @@ import wx
 from db import sql_columns
 from db.sql_to_python import QuerySQL
 from db.sql_connector import echo_sql_db
-from dialogs.main import query_dlg, UserSettings
+from dialogs.main import query_dlg, UserSettings, About
 from dialogs.database import SQLSettingsDialog
 from dialogs.export import ExportCSVDialog, save_string_to_file
 from models.import_dicom import ImportDICOM_Dialog
@@ -104,7 +104,7 @@ class DVHAMainFrame(wx.Frame):
                  'Export': "icons/iconfinder_csv_file_database_extension_data_3876336.png",
                  'Import': "icons/iconfinder_import_4168538.png",
                  'Settings': "icons/iconfinder_Settings_1493289.png",
-                 'Database': "icons/iconfinder_data_115746_black.png",
+                 'Database': "icons/iconfinder_data_115746_black_edit.png",
                  'ROI Map': "icons/iconfinder_icon-map_211858.png"}
 
         description = {'Open': "Open previously queried data",
@@ -682,9 +682,10 @@ class DVHAMainFrame(wx.Frame):
                           wx.OK | wx.ICON_WARNING)
 
     def on_about(self, evt):
-        dlg = wx.MessageDialog(self, "DVH Analytics \n in wxPython", "About Sample Editor", wx.OK)
-        dlg.ShowModal()
-        dlg.Destroy()
+        # dlg = wx.MessageDialog(self, "DVH Analytics \n in wxPython", "About Sample Editor", wx.OK)
+        # dlg.ShowModal()
+        # dlg.Destroy()
+        About()
 
     def on_pref(self, *args):
         UserSettings(self.options)

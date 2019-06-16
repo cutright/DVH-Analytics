@@ -4,7 +4,7 @@
     - [X] User needs a way to create a ROI map, current GUI is largely non-functional
     - [X] Needs better visual than current tree, visual from the pure Bokeh app was useful, maybe a wx.CustomListCtrl 
     could work?
-        - Using original visiuallzation
+        - Using original visualization
     - [X] Most ROI Map interaction should be able to occur at time of import, ROI Map in tool bar to be used for 
     clean up later
         - [X] Add ability to add physician map at import dialog, add variations, etc.
@@ -13,12 +13,11 @@
         * This should include a difference calculator to auto update database
 
 2. **Import**
-    - [ ] Need to test on Windows/Linux
+    - [X] Need to test on Windows/Linux
     - [ ] Need to test import of DICOM files other than Plan, Dose, Structure
-    - [ ] Currently code connects strictly by StudyInstanceUID and assumes the latest files appropriate
-        - [ ] Should probably have a layer of verification with SOP Instance checks
+    - [ ] Currently code connects strictly by StudyInstanceUID and assumes the latest files appropriate. 
+    Should probably have a layer of verification with SOP Instance checks
     - [X] Better ROI map integration
-    - [ ] Thread the file/dicom parsing process so UI updates on the fly in Windows (works as is on Mac, and maybe linux too)
 
 3. **Regression**
     - [ ] Machine learning modules in Regression tab (after running multi-variable regression) aren't complete 
@@ -45,8 +44,8 @@
         - [X] DataTable objects from models/datatable.py have a .csv property
         - [X] Need a export method for plots
     * *Import*
-        - [ ] Would like to give user ability to export data to a csv, then add custom columns and reimport data
-        - [ ] This will allow user to import outcome or QA data to run correlations/stats
+        - [ ] Would like to give user ability to export data to a csv, then add custom columns and reimport data. 
+        This will allow user to import outcome or QA data to run correlations/stats
 
 6. **Windows/Linux Plotting**
     * Windows:
@@ -62,14 +61,13 @@
 
 7. **Icons**
     - [X] I borrowed (stole) icons from dicompyler for the DICOM file tree.  Should make my own.
-    - [ ] Be sure toolbar icons are cited properly (they're all for free use)
+    - [X] Be sure toolbar icons are cited properly (they're all for free use)
     - [X] Regression icons are Star Wars right now... just temporary
 
 8. **Plan/Rx/Beam Data**
     - [X] Pure bokeh version of DVHA allowed user to explore plan, rx, and beam data in a tabular format
     - [X] Data is already stored during application run, just needs a GUI
-    - [ ] Needs export functionality
-    - [ ] Filters
+    - [X] Needs export functionality
 
 9. **Database Editor**
     - [X] UIs are built, and their associated functions are largely already written, just need to connect them
@@ -80,6 +78,8 @@
 10. **Documentation**
     - [ ] Review code, add doc strings and comments
     - [ ] Rewrite/Update DVH Analytics manual
+    - [ ] Update LICENSE to include licenses of software dependencies
 
 11. **GUI**
     - [ ] Dynamically resize plots with parent window
+    - [ ] Move models.datatable.py to [ObjectListView](http://www.blog.pythonlibrary.org/2009/12/23/wxpython-using-objectlistview-instead-of-a-listctrl/)

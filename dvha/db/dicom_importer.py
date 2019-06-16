@@ -37,7 +37,7 @@ class DICOM_Importer:
         self.file_tree = {}
 
         self.image_list = wx.ImageList(16, 16)
-        self.images = {'rtplan': self.image_list.Add(wx.Image("icons/iconfinder_Clipboard-Plan_379537_2.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
+        self.images = {'rtplan': self.image_list.Add(wx.Image("icons/iconfinder_Clipboard-Plan_379537_zoom.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
                        'rtstruct': self.image_list.Add(wx.Image("icons/iconfinder_Education-Filled_7_3672892.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
                        'rtdose': self.image_list.Add(wx.Image("icons/iconfinder_package-supported_24220.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
                        'other': self.image_list.Add( wx.Image("icons/error.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),

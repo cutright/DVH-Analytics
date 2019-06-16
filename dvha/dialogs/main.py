@@ -6,7 +6,8 @@ from db import sql_columns
 from db.sql_connector import DVH_SQL
 import matplotlib.colors as plot_colors
 from os.path import isdir
-from paths import IMPORT_SETTINGS_PATH, parse_settings_file
+from paths import IMPORT_SETTINGS_PATH, parse_settings_file, LICENSE_PATH
+from options import Options
 
 
 class DatePicker(wx.Dialog):
@@ -792,3 +793,31 @@ class UserSettings(wx.Dialog):
         MessageDialog(self, "Restore default preferences?", action_yes_func=self.options.restore_defaults)
         self.update_size_val(None)
         self.load_options()
+
+
+class About(wx.Dialog):
+    def __init__(self):
+        wx.Dialog.__init__(self, None, title='DVH Analytics License')
+
+        scrolled_window = wx.ScrolledWindow(self, wx.ID_ANY)
+
+        with open(LICENSE_PATH, 'r') as license_file:
+            license_text = ''.join([line for line in license_file])
+
+        license_text = "DVH Analytics v%s\ndvhanalytics.com\n\n%s" % (Options().VERSION, license_text)
+
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_text = wx.BoxSizer(wx.VERTICAL)
+
+        scrolled_window.SetScrollRate(10, 10)
+
+        license_text = wx.StaticText(scrolled_window, wx.ID_ANY, license_text)
+        sizer_text.Add(license_text, 0, wx.EXPAND | wx.ALL, 5)
+        scrolled_window.SetSizer(sizer_text)
+        sizer_wrapper.Add(scrolled_window, 1, wx.EXPAND, 0)
+
+        self.SetSizer(sizer_wrapper)
+        self.SetSize((750, 900))
+        self.Center()
+
+        self.ShowModal()
