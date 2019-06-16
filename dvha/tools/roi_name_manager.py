@@ -96,7 +96,6 @@ class DatabaseROIs:
 
     def import_physician_roi_map(self, abs_file_path, physician):
 
-        # TODO: Store raw input data for diff calc later, for efficient DB remapping after edits
         with open(abs_file_path, 'r') as document:
             for line in document:
                 if not line:

@@ -153,7 +153,7 @@ class DVHAMainFrame(wx.Frame):
         export_control_chart = export_plot.Append(wx.ID_ANY, 'Control Chart')
 
         export = wx.Menu()
-        export_csv = export.Append(wx.ID_ANY, 'Data to csv')
+        export_csv = export.Append(wx.ID_ANY, 'Data to csv\tCtrl+E')
         export.AppendSubMenu(export_plot, 'Plot to html')
         file_menu.AppendSeparator()
 
@@ -736,7 +736,10 @@ class DVHAMainFrame(wx.Frame):
         self.view_table_data('Beams')
 
     def view_table_data(self, key):
-        data = [self.data[key], self.dvh][key == 'DVHs']
+        if key == 'DVHs':
+            data = self.dvh
+        else:
+            data = self.data[key]
 
         if data:
             if self.get_menu_item_status(key) == 'Show':

@@ -50,8 +50,8 @@ class RegressionFrame:
     def __set_properties(self):
         self.pane_tree.SetScrollRate(20, 20)
         self.window.SetMinimumPaneSize(20)
-        self.combo_box_x_axis.SetValue('ROI Max Dose')
-        self.combo_box_y_axis.SetValue('ROI Volume')
+        self.combo_box_x_axis.SetValue('ROI Volume')
+        self.combo_box_y_axis.SetValue('ROI Max Dose')
 
         self.image_list = wx.ImageList(16, 16)
         self.images = {'y': self.image_list.Add(wx.Image("icons/icon_custom_Y.png",
@@ -136,8 +136,8 @@ class RegressionFrame:
             self.combo_box_y_axis.SetItems(self.choices)
             self.spin_button_x_axis.SetMax(len(self.choices)-1)
             self.spin_button_y_axis.SetMax(len(self.choices)-1)
-            initial_index_x = self.choices.index('ROI Max Dose')
-            initial_index_y = self.choices.index('ROI Volume')
+            initial_index_x = self.choices.index('ROI Volume')
+            initial_index_y = self.choices.index('ROI Max Dose')
             self.spin_button_x_axis.SetValue(len(self.choices)-1-initial_index_x)
             self.spin_button_y_axis.SetValue(len(self.choices)-1-initial_index_y)
             self.combo_box_x_axis.SetValue(self.choices[initial_index_x])
