@@ -15,6 +15,7 @@ from paths import PREF_DIR, SCRIPT_DIR
 from tools.utilities import flatten_list_of_lists
 from tools.errors import ROIVariationError
 from copy import deepcopy
+import difflib
 
 
 class Physician:
@@ -445,6 +446,12 @@ class DatabaseROIs:
     # Export to file
     ########################
     def write_to_file(self):
+        self.write_institutional_file()
+        for physician, data in self.physician_roi_file_data.items():
+            self.write_physician_file(physician, data)
+        self.remove_unused_roi_files()
+
+    def write_institutional_file(self):
         file_name = 'institutional.roi'
         abs_file_path = os.path.join(PREF_DIR, file_name)
         with open(abs_file_path, 'w') as document:
@@ -454,35 +461,145 @@ class DatabaseROIs:
             for line in lines:
                 document.write(line)
 
-        physicians = self.get_physicians()
-        physicians.pop(physicians.index('DEFAULT'))  # remove 'DEFAULT' physician
+    @property
+    def physician_roi_file_data(self):
+        physicians_file_data = {}
+        for physician in self.get_physicians():
+            if physician != 'DEFAULT':
+                lines = []
+                for physician_roi in self.get_physician_rois(physician):
+                    institutional_roi = self.get_institutional_roi(physician, physician_roi)
+                    variations = ', '.join(self.get_variations(physician, physician_roi))
+                    lines.append(': '.join([institutional_roi, physician_roi, variations]))
+                lines.sort()
+                physicians_file_data[physician] = lines
 
-        for physician in physicians:
+        return physicians_file_data
+
+    @staticmethod
+    def write_physician_file(physician, lines):
+        """
+        Write the physician map to a .roi file
+        :param physician: name of physicain
+        :type physician: str
+        :param lines: the lines of data to be written to the file
+        :type lines: list of str
+        """
+        abs_file_path = os.path.join(PREF_DIR, 'physician_' + physician + '.roi')
+        if lines:
+            with open(abs_file_path, 'w') as document:
+                for line in lines:
+                    document.write(line + '\n')
+
+    def remove_unused_roi_files(self):
+        """
+        Delete any physician .roi files that are no longer in the ROI map
+        :return: the physicians that have been removed
+        :rtype: list
+        """
+        for physician in self.deleted_physicians:
             file_name = 'physician_' + physician + '.roi'
             abs_file_path = os.path.join(PREF_DIR, file_name)
-            lines = []
-            for physician_roi in self.get_physician_rois(physician):
-                institutional_roi = self.get_institutional_roi(physician, physician_roi)
-                variations = self.get_variations(physician, physician_roi)
-                variations = ', '.join(variations)
-                line = [institutional_roi,
-                        physician_roi,
-                        variations]
-                line = ': '.join(line)
-                line += '\n'
-                lines.append(line)
-            lines.sort()
-            if lines:
-                document = open(abs_file_path, 'w')
-                for line in lines:
-                    document.write(line)
-                document.close()
+            os.remove(abs_file_path)
 
-        for physician in get_physicians_from_roi_files():
-            if physician not in physicians and physician != 'DEFAULT':
-                file_name = 'physician_' + physician + '.roi'
-                abs_file_path = os.path.join(PREF_DIR, file_name)
-                os.remove(abs_file_path)
+    @property
+    def deleted_physicians(self):
+        return list(set(get_physicians_from_roi_files()) - set(self.get_physicians()) - {'DEFAULT'})
+
+    @property
+    def added_physicians(self):
+        return list(set(self.get_physicians()) - set(get_physicians_from_roi_files()) - {'DEFAULT'})
+
+    def get_roi_map_changes(self):
+        """
+        Use difflib to detect changes between current roi map and previously saved .roi file
+        format of returned dict: diff[physician][physician_roi][delta] = {'institutional': i_roi, 'variations': list}
+        where delta is either '+' or '-' based on difflib.unified_diff output
+        :return: a tiered dictionary of lines that changed in the proposed .roi file
+        :rtype: dict
+        """
+        new_data = self.physician_roi_file_data
+        diff = {}
+        for physician in self.get_physicians():
+            abs_file_path = os.path.join(PREF_DIR, 'physician_' + physician + '.roi')
+            if os.path.isfile(abs_file_path):
+                old_lines = [line.strip() for line in open(abs_file_path, 'r').readlines()]
+
+                include = False
+                diff[physician] = {}
+                for line in difflib.unified_diff(old_lines, new_data[physician]):
+                    if include:
+                        if line[0] in {'+', '-'}:
+                            i_roi, p_roi, variations = tuple(i for i in line.split(': '))
+                            if p_roi not in diff[physician]:
+                                diff[physician][p_roi] = {'-': {'institutional': '', 'variations': []},
+                                                          '+': {'institutional': '', 'variations': []}}
+                            diff[physician][p_roi][line[0]] = {'institutional': i_roi[1:],
+                                                               'variations': variations.split(', ')}
+                    else:
+                        include = line[0] == '@'  # + and - signs before the @@ line to be ignored
+
+                for p_roi, data in diff[physician].items():
+                    new_pos = list(set(data['+']['variations']) - set(data['-']['variations']))
+                    new_neg = list(set(data['-']['variations']) - set(data['+']['variations']))
+                    if new_pos:
+                        data['+']['variations'] = new_pos
+                    else:
+                        data.pop('+')
+                    if new_neg:
+                        data['-']['variations'] = new_neg
+                    else:
+                        data.pop('-')
+
+        return diff
+
+    @property
+    def physicians_to_remap(self):
+        return list(set(self.deleted_physicians + self.added_physicians))
+
+    @property
+    def variations_to_update(self):
+        """
+        :return: all variations that have changed physician or institutional rois, in a dict with physician for the key
+        :rtype: dict
+        """
+        changes = self.get_roi_map_changes()
+        variations_to_update = {}
+        for physician, physician_roi_data in changes.items():
+            variations = []
+            for p_roi_data in physician_roi_data.values():
+                for delta_data in p_roi_data.values():
+                    variations.extend(delta_data['variations'])
+            variations_to_update[physician] = list(set(variations))
+
+        for physician in list(variations_to_update):
+            if not variations_to_update[physician]:
+                variations_to_update.pop(physician)
+
+        return variations_to_update
+
+    def remap_rois(self):
+
+        with DVH_SQL() as cnx:
+            for physician, variations in self.variations_to_update.items():
+                for variation in variations:
+                    new_physician_roi = self.get_physician_roi(physician, variation)
+                    new_institutional_roi = self.get_institutional_roi(physician, new_physician_roi)
+
+                    condition = "REPLACE(REPLACE(LOWER(roi_name), '\'', '`'), '_', ' ') == '%s'" % variation
+                    sql_query = "SELECT DISTINCT study_instance_uid, roi_name FROM DVHs WHERE %s;" % condition
+                    uids_roi_names = cnx.query_generic(sql_query)
+                    uids = [row[0] for row in uids_roi_names]
+                    roi_names = [row[1] for row in uids_roi_names]
+
+                    if uids:
+                        for i, uid in enumerate(uids):
+                            roi_name = roi_names[i]
+                            condition = "roi_name = '%s' and study_instance_uid = '%s'" % (roi_name, uid)
+                            cnx.update('dvhs', 'physician_roi', new_physician_roi, condition)
+                            cnx.update('dvhs', 'institutional_roi', new_institutional_roi, condition)
+
+        self.write_to_file()
 
     ################
     # Plotting tools

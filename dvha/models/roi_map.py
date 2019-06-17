@@ -3,11 +3,14 @@ import wx.html2
 from dialogs.roi_map import AddPhysician, AddPhysicianROI, AddVariationDialog, MoveVariationDialog,\
     RenamePhysicianDialog, RenamePhysicianROIDialog, RenameInstitutionalROIDialog, LinkPhysicianROI
 from tools.errors import ROIVariationError, ROIVariationErrorDialog
-from tools.utilities import get_selected_listctrl_items, MessageDialog
+from tools.utilities import get_selected_listctrl_items, MessageDialog, get_elapsed_time
 from db.sql_connector import DVH_SQL, echo_sql_db
 from models.datatable import DataTable
 from models.plot import PlotROIMap
 from tools.roi_name_manager import clean_name
+from datetime import datetime
+from threading import Thread
+from pubsub import pub
 
 
 class ROIMapFrame(wx.Frame):
@@ -63,6 +66,9 @@ class ROIMapFrame(wx.Frame):
         self.combo_box_physician_roi_merge = {'a': wx.ComboBox(self.window_editor, wx.ID_ANY, style=wx.CB_DROPDOWN),
                                               'b': wx.ComboBox(self.window_editor, wx.ID_ANY, style=wx.CB_DROPDOWN)}
         self.button_merge = wx.Button(self.window_editor, wx.ID_ANY, "Merge")
+
+        self.button_save_and_update = wx.Button(self.window_editor, wx.ID_ANY, "Save and Update")
+        self.button_cancel = wx.Button(self.window_editor, wx.ID_ANY, "Cancel")
 
         self.uncategorized_variations = {}
 
@@ -131,6 +137,10 @@ class ROIMapFrame(wx.Frame):
         self.window_editor.Bind(wx.EVT_BUTTON, self.on_ignore_dvh, id=self.button_uncategorized_ignored_ignore.GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.on_merge, id=self.button_merge.GetId())
 
+        self.window_editor.Bind(wx.EVT_BUTTON, self.save_and_update, id=self.button_save_and_update.GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.on_close, id=self.button_cancel.GetId())
+        self.Bind(wx.EVT_CLOSE, self.on_close)
+
         self.window_editor.Bind(wx.EVT_COMBOBOX, self.update_merge_enable,
                                 id=self.combo_box_physician_roi_merge['a'].GetId())
         self.window_editor.Bind(wx.EVT_COMBOBOX, self.update_merge_enable,
@@ -170,6 +180,8 @@ class ROIMapFrame(wx.Frame):
 
         sizer_physician_row = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician_roi_row = wx.BoxSizer(wx.HORIZONTAL)
+
+        sizer_save_cancel_buttons = wx.BoxSizer(wx.HORIZONTAL)
 
         label_physician = wx.StaticText(self.window_editor, wx.ID_ANY, "Physician:")
         sizer_physician.Add(label_physician, 0, 0, 0)
@@ -249,6 +261,12 @@ class ROIMapFrame(wx.Frame):
         sizer_physician_roi_merger_merge.Add(self.button_merge, 0, wx.ALL, 5)
         sizer_physician_roi_merger.Add(sizer_physician_roi_merger_merge, 0, wx.ALL | wx.EXPAND, 0)
         sizer_editor.Add(sizer_physician_roi_merger, 0, wx.ALL | wx.EXPAND, 5)
+
+        sizer_save_cancel_buttons.Add((10, 10), 1, wx.EXPAND, 0)
+        sizer_save_cancel_buttons.Add(self.button_save_and_update, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+        sizer_save_cancel_buttons.Add(self.button_cancel, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+        sizer_editor.Add(sizer_save_cancel_buttons, 0, wx.ALIGN_RIGHT | wx.EXPAND, 0)
+
         self.window_editor.SetSizer(sizer_editor)
         self.window.SplitVertically(self.window_tree, self.window_editor)
         self.window.SetSashPosition(825)
@@ -570,3 +588,163 @@ class ROIMapFrame(wx.Frame):
         dlg = LinkPhysicianROI(self, self.physician, self.physician_roi, self.roi_map)
         if dlg.res == wx.ID_OK:
             self.update_roi_map()
+
+    def save_and_update(self, evt):
+        RemapROIStatus(self.roi_map)
+
+    def on_close(self, *args):
+        self.Destroy()
+        self.roi_map.import_from_file()
+
+
+class RemapROIWorker(Thread):
+    def __init__(self, roi_map):
+        Thread.__init__(self)
+
+        self.roi_map = roi_map
+        self.start_time = datetime.now()
+
+        self.start()  # start the thread
+
+    def run(self):
+        variations_to_update = self.roi_map.variations_to_update
+        physician_counter = 0
+        physician_count = len(list(variations_to_update) + self.roi_map.physicians_to_remap)
+        with DVH_SQL() as cnx:
+
+            # Partial physician remaps
+            for physician, variations in variations_to_update.items():
+                msg = ["Physician (%s of %s): %s" % (physician_counter+1, physician_count, physician),
+                       int(100 * physician_counter / physician_count)]
+                wx.CallAfter(pub.sendMessage, "roi_map_update_gauge_1_info", msg=msg)
+                physician_counter += 1
+                variation_count = len(variations)
+                variation_counter = 0
+
+                for variation in variations:
+                    msg = ["ROI Name (%s of %s): %s" % (variation_counter+1, variation_count, variation),
+                           int(100 * variation_counter / variation_count)]
+                    wx.CallAfter(pub.sendMessage, "roi_map_update_gauge_2_info", msg=msg)
+                    msg = "Elapsed Time: %s" % get_elapsed_time(self.start_time, datetime.now())
+                    wx.CallAfter(pub.sendMessage, "roi_map_update_elapsed_time", msg=msg)
+                    variation_counter += 1
+
+                    self.update_variation(variation, physician, cnx)
+
+            # Full Physician remaps
+            for physician in self.roi_map.physicians_to_remap:
+                condition = "physician = '%s'" % physician
+                uids = cnx.get_unique_values('Plans', 'study_instance_uid', condition)
+                if uids:
+                    condition = "study_instance_uid in ('%s')" % "','".join(uids)
+                    variations = cnx.get_unique_values('DVHs', 'roi_name', condition)
+                    msg = ["Physician (%s of %s): %s" % (physician_counter+1, physician_count, physician),
+                           int(100 * physician_counter / physician_count)]
+                    wx.CallAfter(pub.sendMessage, "roi_map_update_gauge_1_info", msg=msg)
+                    physician_counter += 1
+                    variation_count = len(variations)
+                    variation_counter = 0
+
+                    for variation in variations:
+                        msg = ["ROI (%s of %s): %s" % (variation_counter+1, variation_count, variation),
+                               int(100 * variation_counter / variation_count)]
+                        wx.CallAfter(pub.sendMessage, "roi_map_update_gauge_2_info", msg=msg)
+                        msg = "Elapsed Time: %s" % get_elapsed_time(self.start_time, datetime.now())
+                        wx.CallAfter(pub.sendMessage, "roi_map_update_elapsed_time", msg=msg)
+                        variation_counter += 1
+
+                        self.update_variation(variation, physician, cnx)
+
+        wx.CallAfter(pub.sendMessage, "roi_map_close")
+
+    def update_variation(self, variation, physician, cnx):
+
+        new_physician_roi = self.roi_map.get_physician_roi(physician, variation)
+        if new_physician_roi == 'uncategorized':
+            new_institutional_roi = 'uncategorized'
+        else:
+            new_institutional_roi = self.roi_map.get_institutional_roi(physician, new_physician_roi)
+
+        condition = "roi_name = '%s'" % variation
+        roi_uids = cnx.get_unique_values('DVHs', 'study_instance_uid', condition)
+        if roi_uids:
+            condition = "physician = '%s' and study_instance_uid in ('%s')" % \
+                        (physician, "','".join(roi_uids))
+            uids = cnx.get_unique_values('Plans', 'study_instance_uid', condition)
+
+            if uids:
+                for i, uid in enumerate(uids):
+                    condition = "roi_name = '%s' and study_instance_uid = '%s'" % (variation, uid)
+                    cnx.update('dvhs', 'physician_roi', new_physician_roi, condition)
+                    cnx.update('dvhs', 'institutional_roi', new_institutional_roi, condition)
+
+
+class RemapROIStatus(wx.Frame):
+    def __init__(self, roi_map):
+        wx.Frame.__init__(self, None, title='Updating Database with ROI Map Changes')
+
+        self.roi_map = roi_map
+
+        self.gauge_physician = wx.Gauge(self, wx.ID_ANY, 100)
+        self.gauge_roi = wx.Gauge(self, wx.ID_ANY, 100)
+
+        self.start_time = None
+
+        self.__set_properties()
+        self.__do_layout()
+        self.__do_subscribe()
+
+        self.Show()
+        RemapROIWorker(self.roi_map)
+
+    def __set_properties(self):
+        self.gauge_physician.SetMinSize((358, 17))
+        self.gauge_roi.SetMinSize((358, 17))
+
+    def __do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_progress = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
+        sizer_roi_name = wx.BoxSizer(wx.VERTICAL)
+        sizer_physician = wx.BoxSizer(wx.VERTICAL)
+
+        self.label_physician = wx.StaticText(self, wx.ID_ANY, "Physician:")
+        sizer_physician.Add(self.label_physician, 0, 0, 0)
+        sizer_physician.Add(self.gauge_physician, 0, wx.EXPAND, 0)
+
+        self.label_roi_name = wx.StaticText(self, wx.ID_ANY, "ROI Name:")
+        sizer_roi_name.Add(self.label_roi_name, 0, 0, 0)
+        sizer_roi_name.Add(self.gauge_roi, 0, wx.EXPAND, 0)
+
+        sizer_progress.Add(sizer_physician, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_progress.Add(sizer_roi_name, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_wrapper.Add(sizer_progress, 0, wx.ALL | wx.EXPAND, 5)
+
+        self.label_elapsed_time = wx.StaticText(self, wx.ID_ANY, "Elapsed Time:")
+        sizer_wrapper.Add(self.label_elapsed_time, 0, wx.BOTTOM | wx.LEFT, 10)
+
+        self.SetSizer(sizer_wrapper)
+        self.Fit()
+        self.Layout()
+        self.Center()
+
+    def __do_subscribe(self):
+        pub.subscribe(self.update_gauge_1_info, "roi_map_update_gauge_1_info")
+        pub.subscribe(self.update_gauge_2_info, "roi_map_update_gauge_2_info")
+        pub.subscribe(self.update_elapsed_time, "roi_map_update_elapsed_time")
+        pub.subscribe(self.close, "roi_map_close")
+
+    def close(self):
+        self.roi_map.write_to_file()
+        self.roi_map.import_from_file()
+        self.Destroy()
+
+    def update_gauge_1_info(self, msg):
+        wx.CallAfter(self.label_physician.SetLabelText, msg[0])
+        wx.CallAfter(self.gauge_physician.SetValue, msg[1])
+
+    def update_gauge_2_info(self, msg):
+        wx.CallAfter(self.label_roi_name.SetLabelText, msg[0])
+        wx.CallAfter(self.gauge_roi.SetValue, msg[1])
+
+    def update_elapsed_time(self, msg):
+        wx.CallAfter(self.label_elapsed_time.SetLabelText, msg)
