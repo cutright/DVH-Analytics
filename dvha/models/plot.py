@@ -336,6 +336,7 @@ class PlotTimeSeries(Plot):
         self.y_axis_label = y_axis_label
         self.clear_sources()
         self.figure.yaxis.axis_label = y_axis_label
+        self.figure.xaxis.axis_label = 'Simulation Date'
         self.histogram.xaxis.axis_label = y_axis_label
 
         self.update_plot_data(x, y, mrn, uid)
