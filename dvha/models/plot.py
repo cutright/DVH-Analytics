@@ -16,11 +16,11 @@ from paths import TEMP_DIR
 # TODO: have all plot classes load options with a function that runs on update_plot to get latest options
 class Plot:
     def __init__(self, parent, options, x_axis_label='X Axis', y_axis_label='Y Axis',
-                 plot_width=800, plot_height=500, frame_size=(900, 900), x_axis_type='linear'):
+                 plot_width=800, plot_height=500, x_axis_type='linear'):
 
         self.options = options
 
-        self.layout = wx.html2.WebView.New(parent, size=frame_size)
+        self.layout = wx.html2.WebView.New(parent)
         self.bokeh_layout = None
         self.html_str = ''
 
@@ -88,10 +88,12 @@ class Plot:
 
 class PlotStatDVH(Plot):
     def __init__(self, parent, dvh, options):
-        Plot.__init__(self, parent, options, x_axis_label='Dose (cGy)', y_axis_label='Relative Volume',
-                      plot_width=800, plot_height=400)
+        Plot.__init__(self, parent, options, x_axis_label='Dose (cGy)', y_axis_label='Relative Volume')
 
         self.type = 'dvh'
+        self.parent = parent
+        self.init_size = {'plot': (800, 400),
+                          'table': (800, 275)}
 
         self.options = options
         self.dvh = dvh
@@ -174,9 +176,21 @@ class PlotStatDVH(Plot):
                                formatter=NumberFormatter(format="0.00")),
                    TableColumn(field="max_dose", title="Max Dose", width=80,
                                formatter=NumberFormatter(format="0.00")), ]
-        self.table = DataTable(source=self.source['dvh'], columns=columns, height=275, width=800)
+        self.table = DataTable(source=self.source['dvh'], columns=columns,
+                               width=self.init_size['table'][0], height=self.init_size['table'][1])
+
+    def set_figure_dimensions(self):
+        panel_width, panel_height = self.parent.GetSize()
+
+        self.figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 904.)
+        self.figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 766.)
+        self.table.width = int(self.init_size['table'][0] * float(panel_width) / 904.)
+        self.table.height = int(self.init_size['table'][1] * float(panel_height) / 766.)
 
     def update_plot(self, dvh):
+
+        self.set_figure_dimensions()
+
         self.clear_sources()
         self.dvh = dvh
         self.x = list(range(dvh.bin_count))
@@ -230,13 +244,19 @@ class PlotStatDVH(Plot):
 
         return '\n'.join(summary + dvh_data)
 
+    def redraw_plot(self):
+        self.set_figure_dimensions()
+        self.update_bokeh_layout_in_wx_python()
+
 
 class PlotTimeSeries(Plot):
-    def __init__(self, parent, options, plot_width=800):
-        Plot.__init__(self, parent, options, x_axis_label='Simulation Date',
-                      plot_width=plot_width, plot_height=325, x_axis_type='datetime')
+    def __init__(self, parent, options):
+        Plot.__init__(self, parent, options, x_axis_label='Simulation Date', x_axis_type='datetime')
 
         self.type = 'time_series'
+        self.parent = parent
+        self.init_size = {'plot': (800, 325),
+                          'hist': (800, 275)}
 
         self.options = options
         self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[])),
@@ -245,7 +265,6 @@ class PlotTimeSeries(Plot):
                        'bound': ColumnDataSource(data=dict(x=[], mrn=[], upper=[], avg=[], lower=[])),
                        'patch': ColumnDataSource(data=dict(x=[], y=[]))}
         self.y_axis_label = ''
-        self.plot_width = plot_width
 
         self.__add_plot_data()
         self.__add_histogram_data()
@@ -268,7 +287,8 @@ class PlotTimeSeries(Plot):
 
     def __add_histogram_data(self):
         tools = "pan,wheel_zoom,box_zoom,reset,crosshair,save"
-        self.histogram = figure(plot_width=self.plot_width, plot_height=275, tools=tools, active_drag="box_zoom")
+        self.histogram = figure(tools=tools, active_drag="box_zoom",
+                                width=self.init_size['hist'][0], height=self.init_size['hist'][1])
         self.histogram.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
         self.histogram.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
         self.histogram.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
@@ -306,10 +326,13 @@ class PlotTimeSeries(Plot):
 
     def __do_layout(self):
         self.bokeh_layout = column(self.figure,
-                                   Div(text='<hr>', width=self.plot_width),
+                                   Div(text='<hr>', width=self.init_size['plot'][0]),
                                    self.histogram)
 
     def update_plot(self, x, y, mrn, uid, y_axis_label='Y Axis', avg_len=1, percentile=90., bin_size=10):
+
+        self.set_figure_dimensions()
+
         self.y_axis_label = y_axis_label
         self.clear_sources()
         self.figure.yaxis.axis_label = y_axis_label
@@ -368,12 +391,28 @@ class PlotTimeSeries(Plot):
             csv_data.append(','.join(str(data[key][i]).replace(',', '^') for key in ['mrn', 'uid', 'x', 'y']))
         return '\n'.join(csv_data)
 
+    def redraw_plot(self):
+        self.set_figure_dimensions()
+        self.update_bokeh_layout_in_wx_python()
+
+    def set_figure_dimensions(self):
+        panel_width, panel_height = self.parent.GetSize()
+        self.figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 904.)
+        self.figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 766.)
+        self.histogram.plot_width = int(self.init_size['hist'][0] * float(panel_width) / 904.)
+        self.histogram.plot_height = int(self.init_size['hist'][1] * float(panel_height) / 766.)
+
 
 class PlotRegression(Plot):
     def __init__(self, parent, options):
-        Plot.__init__(self, parent, options, plot_width=550, plot_height=300)
+        Plot.__init__(self, parent, options)
 
         self.type = 'regression'
+        self.parent = parent
+        self.init_size = {'plot': (550, 300),
+                          'table': (550, 100),
+                          'resid': (275, 200),
+                          'prob': (275, 200)}
 
         self.x_axis_title, self.y_axis_title = '', ''
         self.reg = None
@@ -394,10 +433,12 @@ class PlotRegression(Plot):
         self.__do_layout()
 
     def __create_additional_figures(self):
-        self.figure_residual_fits = figure(plot_width=275, plot_height=200)
+        self.figure_residual_fits = figure(plot_width=self.init_size['resid'][0],
+                                           plot_height=self.init_size['resid'][1])
         self.figure_residual_fits.xaxis.axis_label = 'Fitted Values'
         self.figure_residual_fits.yaxis.axis_label = 'Residuals'
-        self.figure_prob_plot = figure(plot_width=275, plot_height=200)
+        self.figure_prob_plot = figure(plot_width=self.init_size['prob'][0],
+                                       plot_height=self.init_size['prob'][1])
         self.figure_prob_plot.xaxis.axis_label = 'Quantiles'
         self.figure_prob_plot.yaxis.axis_label = 'Ordered Values'
 
@@ -409,8 +450,8 @@ class PlotRegression(Plot):
                    TableColumn(field="p_value", title="p-value", formatter=NumberFormatter(format="0.000"), width=50),
                    TableColumn(field="spacer", title="", width=2),
                    TableColumn(field="fit_param", title="", width=75)]
-        self.regression_table = DataTable(source=self.source['table'], columns=columns, width=500, height=100,
-                                          index_position=None)
+        self.regression_table = DataTable(source=self.source['table'], columns=columns, index_position=None,
+                                          width=self.init_size['table'][0], height=self.init_size['table'][1])
 
     def __add_plot_data(self):
         self.plot_data = self.figure.circle('x', 'y', source=self.source['plot'], size=self.options.REGRESSION_CIRCLE_SIZE,
@@ -449,12 +490,28 @@ class PlotRegression(Plot):
                                    row(self.figure_residual_fits, self.figure_prob_plot))
 
     def update_plot(self, plot_data, x_var, x_axis_title, y_axis_title):
+        self.set_figure_dimensions()
         self.x_axis_title, self.y_axis_title = x_axis_title, y_axis_title
         self.clear_sources()
         self.source['plot'].data = plot_data
         self.update_trend(x_var)
         self.figure.xaxis.axis_label = x_axis_title
         self.figure.yaxis.axis_label = y_axis_title
+        self.update_bokeh_layout_in_wx_python()
+
+    def set_figure_dimensions(self):
+        panel_width, panel_height = self.parent.GetSize()
+        self.figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 593.)
+        self.figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 712.)
+        self.figure_residual_fits.plot_width = int(self.init_size['resid'][0] * float(panel_width) / 593.)
+        self.figure_residual_fits.plot_height = int(self.init_size['resid'][1] * float(panel_height) / 712.)
+        self.figure_prob_plot.plot_width = int(self.init_size['prob'][0] * float(panel_width) / 593.)
+        self.figure_prob_plot.plot_height = int(self.init_size['prob'][1] * float(panel_height) / 712.)
+        self.regression_table.width = int(self.init_size['table'][0] * float(panel_width) / 593.)
+        self.regression_table.height = int(self.init_size['table'][1] * float(panel_height) / 712.)
+
+    def redraw_plot(self):
+        self.set_figure_dimensions()
         self.update_bokeh_layout_in_wx_python()
 
     def update_trend(self, x_var):
@@ -545,6 +602,7 @@ class PlotMultiVarRegression(Plot):
         Plot.__init__(self, parent, options, plot_width=400, plot_height=400, frame_size=(900, 600))
 
         self.type = 'multi-variable_regression'
+        self.parent = parent
 
         self.options = options
         self.X, self.y = None, None
@@ -699,10 +757,12 @@ class PlotMultiVarRegression(Plot):
 
 
 class PlotControlChart(Plot):
-    def __init__(self, parent, options, plot_width=800):
-        Plot.__init__(self, parent, options, x_axis_label='Study', plot_width=plot_width, plot_height=325)
+    def __init__(self, parent, options):
+        Plot.__init__(self, parent, options, x_axis_label='Study')
 
         self.type = 'control_chart'
+        self.parent = parent
+        self.init_size = {'plot': (850, 325)}
 
         self.y_axis_label = ''
         self.options = options
@@ -776,7 +836,13 @@ class PlotControlChart(Plot):
         self.bokeh_layout = column(self.figure,
                                    row(self.div_center_line, self.div_ucl, self.div_lcl))
 
+    def set_figure_dimensions(self):
+        panel_width, panel_height = self.parent.GetSize()
+        self.figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 904.)
+        self.figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 766.)
+
     def update_plot(self, x, y, mrn, uid, dates, y_axis_label='Y Axis'):
+        self.set_figure_dimensions()
         self.clear_sources()
         self.y_axis_label = y_axis_label
         self.figure.yaxis.axis_label = self.y_axis_label
@@ -827,6 +893,10 @@ class PlotControlChart(Plot):
         for i in range(len(data['mrn'])):
             csv_data.append(','.join(str(data[key][i]).replace(',', '^') for key in ['mrn', 'uid', 'x', 'dates', 'y']))
         return '\n'.join(csv_data)
+
+    def redraw_plot(self):
+        self.set_figure_dimensions()
+        self.update_bokeh_layout_in_wx_python()
 
 
 class PlotRandomForest(Plot):

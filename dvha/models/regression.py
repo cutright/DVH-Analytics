@@ -110,7 +110,7 @@ class RegressionFrame:
 
         sizer_input.Add(self.checkbox, 0, wx.ALL, 20)
         sizer_plot_pane.Add(sizer_input, 0, wx.EXPAND, 0)
-        sizer_plot.Add(self.plot.layout)
+        sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
         sizer_plot_view.Add(sizer_plot, 1, wx.EXPAND, 10)
         sizer_plot_pane.Add(sizer_plot_view, 1, wx.EXPAND, 0)
         self.pane_plot.SetSizer(sizer_plot_pane)

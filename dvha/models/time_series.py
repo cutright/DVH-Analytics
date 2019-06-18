@@ -77,7 +77,7 @@ class TimeSeriesFrame:
         sizer_widgets.Add(self.button_export_csv, 0, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_widgets, 0, wx.BOTTOM | wx.EXPAND, 5)
         self.plot = PlotTimeSeries(self.parent, self.options)
-        sizer_plot.Add(self.plot.layout)
+        sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_plot, 1, wx.EXPAND, 0)
         self.layout = sizer_wrapper
 

@@ -53,7 +53,7 @@ class ControlChartFrame:
         sizer_widgets.Add(self.button_export, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(self.button_save_plot, 0, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_widgets, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_plot.Add(self.plot.layout, 0, wx.EXPAND, 5)
+        sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_plot, 1, wx.EXPAND, 0)
 
         self.layout = sizer_wrapper

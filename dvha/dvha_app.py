@@ -45,6 +45,10 @@ class DVHAMainFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
+        self.layout_set = False
+
+        self.sizer_dvhs = wx.BoxSizer(wx.VERTICAL)
+
         set_msw_background_color(self)  # If windows, change the background color
 
         self.options = Options()
@@ -235,6 +239,8 @@ class DVHAMainFrame(wx.Frame):
 
         self.Bind(wx.EVT_BUTTON, self.exec_query_button, id=self.button_query_execute.GetId())
 
+        self.Bind(wx.EVT_SIZE, self.on_resize)
+
     def __set_properties(self):
         self.SetTitle("DVH Analytics")
 
@@ -320,9 +326,8 @@ class DVHAMainFrame(wx.Frame):
         sizer_welcome.Add(text_welcome, 0, wx.ALIGN_CENTER | wx.ALL, 25)
         self.notebook_tab['Welcome'].SetSizer(sizer_welcome)
 
-        sizer_dvhs = wx.BoxSizer(wx.VERTICAL)
-        sizer_dvhs.Add(self.plot.layout, 0, wx.ALIGN_CENTER | wx.ALL, 25)
-        self.notebook_tab['DVHs'].SetSizer(sizer_dvhs)
+        self.sizer_dvhs.Add(self.plot.layout, 1, wx.EXPAND | wx.ALIGN_CENTER | wx.ALL, 25)
+        self.notebook_tab['DVHs'].SetSizer(self.sizer_dvhs)
 
         sizer_endpoint = wx.BoxSizer(wx.VERTICAL)
         sizer_endpoint.Add(self.endpoint.layout, 0, wx.ALIGN_CENTER | wx.ALL, 25)
@@ -333,15 +338,15 @@ class DVHAMainFrame(wx.Frame):
         self.notebook_tab['Rad Bio'].SetSizer(sizer_rad_bio)
 
         sizer_time_series = wx.BoxSizer(wx.VERTICAL)
-        sizer_time_series.Add(self.time_series.layout, 0, wx.ALIGN_CENTER | wx.ALL, 25)
+        sizer_time_series.Add(self.time_series.layout, 1, wx.EXPAND | wx.ALIGN_CENTER | wx.ALL, 25)
         self.notebook_tab['Time Series'].SetSizer(sizer_time_series)
 
         sizer_regression = wx.BoxSizer(wx.VERTICAL)
-        sizer_regression.Add(self.regression.layout, 0, wx.ALIGN_CENTER | wx.ALL, 25)
+        sizer_regression.Add(self.regression.layout, 1, wx.EXPAND | wx.ALIGN_CENTER | wx.ALL, 25)
         self.notebook_tab['Regression'].SetSizer(sizer_regression)
 
         sizer_control_chart = wx.BoxSizer(wx.VERTICAL)
-        sizer_control_chart.Add(self.control_chart.layout, 0, wx.ALIGN_CENTER | wx.ALL, 25)
+        sizer_control_chart.Add(self.control_chart.layout, 1, wx.EXPAND | wx.ALIGN_CENTER | wx.ALL, 25)
         self.notebook_tab['Control Chart'].SetSizer(sizer_control_chart)
 
         for key in self.tab_keys:
@@ -755,3 +760,13 @@ class DVHAMainFrame(wx.Frame):
     def get_menu_item_status(self, key):
         show_hide = ['Hide', 'Show']['Show' in self.data_menu.GetLabel(self.data_menu_items[key].GetId())]
         return show_hide
+
+    def on_resize(self, *evt):
+        self.Refresh()
+        self.Layout()
+
+        if self.dvh:
+            self.plot.redraw_plot()
+            self.time_series.plot.redraw_plot()
+            self.regression.plot.redraw_plot()
+            self.control_chart.plot.redraw_plot()

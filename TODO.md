@@ -73,7 +73,7 @@
     - [X] UIs are built, and their associated functions are largely already written, just need to connect them
     - [X] Build new message dialog on sql exceptions so the entire error is shown
     - [X] Create custom Exception class to more robustly catch DVH_SQL() update and query errors
-    - [ ] Allow user to reperform "post-import" calculations
+    - [ ] Allow user to re-perform "post-import" calculations
 
 10. **Documentation**
     - [ ] Review code, add doc strings and comments
@@ -81,5 +81,5 @@
     - [ ] Update LICENSE to include licenses of software dependencies
 
 11. **GUI**
-    - [ ] Dynamically resize plots with parent window
+    - [X] Dynamically resize plots with parent window
     - [ ] Move models.datatable.py to [ObjectListView](http://www.blog.pythonlibrary.org/2009/12/23/wxpython-using-objectlistview-instead-of-a-listctrl/)
