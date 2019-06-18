@@ -10,14 +10,16 @@ from db.sql_connector import DVH_SQL, SQLError
 from models.datatable import DataTable
 from dialogs.export import save_string_to_file
 from tools.utilities import set_msw_background_color
+from models.roi_map import RemapROIFrame
 
 
 class DatabaseEditorDialog(wx.Frame):
-    def __init__(self, *args, **kwds):
+    def __init__(self, roi_map):
         wx.Frame.__init__(self, None, title='Database Administrator')
 
         set_msw_background_color(self)  # If windows, change the background color
 
+        self.roi_map = roi_map
         self.db_tree = self.get_db_tree()
 
         self.SetSize((1330, 820))
@@ -43,7 +45,8 @@ class DatabaseEditorDialog(wx.Frame):
                        'change_mrn_uid': wx.Button(self, wx.ID_ANY, "Change MRN/UID"),
                        'query': wx.Button(self.window_pane_query, wx.ID_ANY, "Query"),
                        'clear': wx.Button(self.window_pane_query, wx.ID_ANY, "Clear"),
-                       'export_csv': wx.Button(self.window_pane_query, wx.ID_ANY, "Export")}
+                       'export_csv': wx.Button(self.window_pane_query, wx.ID_ANY, "Export"),
+                       'remap_roi_names': wx.Button(self, wx.ID_ANY, "Remap ROI Names")}
 
         self.__set_properties()
         self.__do_layout()
@@ -90,6 +93,7 @@ class DatabaseEditorDialog(wx.Frame):
         sizer_dialog_buttons.Add(self.button['change_mrn_uid'], 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button['rebuild_db'], 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button['delete_all_data'], 0, wx.ALL, 5)
+        sizer_dialog_buttons.Add(self.button['remap_roi_names'], 0, wx.ALL, 5)
         sizer_wrapper.Add(sizer_dialog_buttons, 0, wx.ALL, 5)
         sizer_db_tree.Add(self.tree_ctrl_db, 1, wx.EXPAND, 0)
         self.window_pane_db_tree.SetSizer(sizer_db_tree)
@@ -214,3 +218,6 @@ class DatabaseEditorDialog(wx.Frame):
 
     def on_export_csv(self, evt):
         save_string_to_file(self, "Export Data Table to CSV", self.data_query_results.get_csv())
+
+    def on_remap_roi_names(self, evt):
+        RemapROIFrame(self.roi_map, remap_all=True)

@@ -67,8 +67,8 @@ class ROIMapFrame(wx.Frame):
                                               'b': wx.ComboBox(self.window_editor, wx.ID_ANY, style=wx.CB_DROPDOWN)}
         self.button_merge = wx.Button(self.window_editor, wx.ID_ANY, "Merge")
 
-        self.button_save_and_update = wx.Button(self.window_editor, wx.ID_ANY, "Save and Update")
-        self.button_cancel = wx.Button(self.window_editor, wx.ID_ANY, "Cancel")
+        self.button_save_and_update = wx.Button(self.window_editor, wx.ID_ANY, "Save and Update Database")
+        self.button_cancel = wx.Button(self.window_editor, wx.ID_ANY, "Cancel Changes and Reload")
 
         self.uncategorized_variations = {}
 
@@ -138,7 +138,7 @@ class ROIMapFrame(wx.Frame):
         self.window_editor.Bind(wx.EVT_BUTTON, self.on_merge, id=self.button_merge.GetId())
 
         self.window_editor.Bind(wx.EVT_BUTTON, self.save_and_update, id=self.button_save_and_update.GetId())
-        self.window_editor.Bind(wx.EVT_BUTTON, self.on_close, id=self.button_cancel.GetId())
+        self.window_editor.Bind(wx.EVT_BUTTON, self.on_cancel, id=self.button_cancel.GetId())
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
         self.window_editor.Bind(wx.EVT_COMBOBOX, self.update_merge_enable,
@@ -154,8 +154,7 @@ class ROIMapFrame(wx.Frame):
 
         sizer_wrapper = wx.BoxSizer(wx.HORIZONTAL)
         sizer_editor = wx.BoxSizer(wx.VERTICAL)
-        sizer_physician_roi_merger = wx.StaticBoxSizer(
-            wx.StaticBox(self.window_editor, wx.ID_ANY, "Physician ROI Merger"), wx.HORIZONTAL)
+        sizer_physician_roi_merger = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician_roi_merger_merge = wx.BoxSizer(wx.VERTICAL)
         sizer_physician_roi_b = wx.BoxSizer(wx.VERTICAL)
         sizer_physician_roi_a = wx.BoxSizer(wx.VERTICAL)
@@ -165,23 +164,21 @@ class ROIMapFrame(wx.Frame):
         sizer_uncategorized_ignored_delete = wx.BoxSizer(wx.VERTICAL)
         sizer_uncategorized_ignored_roi = wx.BoxSizer(wx.VERTICAL)
         sizer_uncategorized_ignored_type = wx.BoxSizer(wx.VERTICAL)
-
         sizer_tree = wx.BoxSizer(wx.VERTICAL)
         sizer_tree_input = wx.BoxSizer(wx.HORIZONTAL)
         sizer_tree_plot_data = wx.BoxSizer(wx.VERTICAL)
-
         sizer_roi_manager = wx.BoxSizer(wx.VERTICAL)
         sizer_variation_buttons = wx.BoxSizer(wx.VERTICAL)
         sizer_variation_table = wx.BoxSizer(wx.VERTICAL)
-        sizer_select = wx.StaticBoxSizer(wx.StaticBox(self.window_editor, wx.ID_ANY, "ROI Manager"), wx.VERTICAL)
+        sizer_map_editor = wx.StaticBoxSizer(wx.StaticBox(self.window_editor, wx.ID_ANY, "ROI Map Editor"), wx.VERTICAL)
         sizer_variations = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician_roi = wx.BoxSizer(wx.VERTICAL)
         sizer_physician = wx.BoxSizer(wx.VERTICAL)
-
         sizer_physician_row = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician_roi_row = wx.BoxSizer(wx.HORIZONTAL)
-
         sizer_save_cancel_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_remap_functions = wx.StaticBoxSizer(
+            wx.StaticBox(self.window_editor, wx.ID_ANY, "Remap Database"), wx.HORIZONTAL)
 
         label_physician = wx.StaticText(self.window_editor, wx.ID_ANY, "Physician:")
         sizer_physician.Add(label_physician, 0, 0, 0)
@@ -200,13 +197,13 @@ class ROIMapFrame(wx.Frame):
         sizer_physician_roi_row.Add(self.button_physician_roi['edit'], 0, wx.RIGHT, 10)
         sizer_physician_roi.Add(sizer_physician_roi_row, 0, wx.EXPAND, 0)
 
-        sizer_select.Add(sizer_physician, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_select.Add(sizer_physician_roi, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_map_editor.Add(sizer_physician, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_map_editor.Add(sizer_physician_roi, 0, wx.ALL | wx.EXPAND, 5)
 
         label_variations = wx.StaticText(self.window_editor, wx.ID_ANY, "Variations:")
         label_variations_buttons = wx.StaticText(self.window_editor, wx.ID_ANY, " ")
         sizer_variation_table.Add(label_variations, 0, 0, 0)
-        sizer_variation_table.Add(self.list_ctrl_variations, 1, wx.ALL | wx.EXPAND, 0)
+        sizer_variation_table.Add(self.list_ctrl_variations, 1, wx.BOTTOM | wx.EXPAND, 15)
         sizer_variations.Add(sizer_variation_table, 1, wx.EXPAND | wx.ALL, 5)
         sizer_variation_buttons.Add(label_variations_buttons, 0, 0, 0)
         sizer_variation_buttons.Add(self.button_variation_add, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
@@ -215,8 +212,32 @@ class ROIMapFrame(wx.Frame):
         sizer_variation_buttons.Add(self.button_variation_select_all, 0, wx.EXPAND | wx.ALL, 5)
         sizer_variation_buttons.Add(self.button_variation_deselect_all, 0, wx.EXPAND | wx.ALL, 5)
         sizer_variations.Add(sizer_variation_buttons, 0, wx.EXPAND | wx.ALL, 5)
-        sizer_select.Add(sizer_variations, 0, wx.EXPAND, 0)
-        sizer_roi_manager.Add(sizer_select, 1, wx.EXPAND, 0)
+
+        sizer_map_editor.Add(sizer_variations, 0, wx.EXPAND, 0)
+
+        label_physician_roi_a = wx.StaticText(self.window_editor, wx.ID_ANY, "Merge Physician ROI A:")
+        # label_physician_roi_a.SetMinSize((200, 16))
+        sizer_physician_roi_a.Add(label_physician_roi_a, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        sizer_physician_roi_a.Add(self.combo_box_physician_roi_merge['a'], 1,
+                                  wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
+        sizer_physician_roi_merger.Add(sizer_physician_roi_a, 1, wx.EXPAND, 0)
+        label_physician_roi_b = wx.StaticText(self.window_editor, wx.ID_ANY, "Into Physician ROI B:")
+        # label_physician_roi_b.SetMinSize((200, 16))
+        sizer_physician_roi_b.Add(label_physician_roi_b, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        sizer_physician_roi_b.Add(self.combo_box_physician_roi_merge['b'], 1,
+                                  wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
+        sizer_physician_roi_merger.Add(sizer_physician_roi_b, 1, wx.EXPAND, 0)
+        sizer_physician_roi_merger_merge.Add((20, 16), 0, 0, 0)
+        sizer_physician_roi_merger_merge.Add(self.button_merge, 0, wx.ALL, 5)
+        sizer_physician_roi_merger.Add(sizer_physician_roi_merger_merge, 0, wx.ALL | wx.EXPAND, 0)
+        sizer_map_editor.Add(sizer_physician_roi_merger, 0, wx.EXPAND, 0)
+
+        sizer_save_cancel_buttons.Add(self.button_save_and_update, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 40)
+        sizer_save_cancel_buttons.Add(self.button_cancel, 1, wx.EXPAND | wx.LEFT| wx.RIGHT, 40)
+        sizer_map_editor.Add((10, 10), 0, 0, 0)
+        sizer_map_editor.Add(sizer_save_cancel_buttons, 0, wx.EXPAND | wx.ALL, 10)
+
+        sizer_roi_manager.Add(sizer_map_editor, 1, wx.EXPAND, 0)
         sizer_editor.Add(sizer_roi_manager, 0, wx.EXPAND | wx.ALL, 5)
 
         label_tree_plot_data = wx.StaticText(self.window_tree, wx.ID_ANY, 'Institutional Data to Display:')
@@ -231,12 +252,12 @@ class ROIMapFrame(wx.Frame):
 
         label_uncategorized_ignored = wx.StaticText(self.window_editor, wx.ID_ANY, "Type:")
         label_uncategorized_ignored.SetMinSize((38, 16))
-        sizer_uncategorized_ignored_type.Add(label_uncategorized_ignored, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        sizer_uncategorized_ignored_type.Add(label_uncategorized_ignored, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         sizer_uncategorized_ignored_type.Add(self.combo_box_uncategorized_ignored, 1, wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
         sizer_uncategorized_ignored.Add(sizer_uncategorized_ignored_type, 1, wx.EXPAND, 0)
         label_uncategorized_ignored_roi = wx.StaticText(self.window_editor, wx.ID_ANY, "ROI:")
         label_uncategorized_ignored_roi.SetMinSize((30, 16))
-        sizer_uncategorized_ignored_roi.Add(label_uncategorized_ignored_roi, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        sizer_uncategorized_ignored_roi.Add(label_uncategorized_ignored_roi, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         sizer_uncategorized_ignored_roi.Add(self.combo_box_uncategorized_ignored_roi, 1, wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
         sizer_uncategorized_ignored.Add(sizer_uncategorized_ignored_roi, 1, wx.EXPAND, 0)
         sizer_uncategorized_ignored_delete.Add((20, 16), 0, 0, 0)
@@ -247,25 +268,7 @@ class ROIMapFrame(wx.Frame):
         sizer_uncategorized_ignored.Add(sizer_uncategorized_ignored_ignore, 0, wx.EXPAND, 0)
         sizer_editor.Add(sizer_uncategorized_ignored, 0, wx.ALL | wx.EXPAND, 5)
 
-        label_physician_roi_a = wx.StaticText(self.window_editor, wx.ID_ANY, "Merge Physician ROI A:")
-        # label_physician_roi_a.SetMinSize((200, 16))
-        sizer_physician_roi_a.Add(label_physician_roi_a, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
-        sizer_physician_roi_a.Add(self.combo_box_physician_roi_merge['a'], 1, wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
-        sizer_physician_roi_merger.Add(sizer_physician_roi_a, 1, wx.EXPAND, 0)
-        label_physician_roi_b = wx.StaticText(self.window_editor, wx.ID_ANY, "Into Physician ROI B:")
-        # label_physician_roi_b.SetMinSize((200, 16))
-        sizer_physician_roi_b.Add(label_physician_roi_b, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
-        sizer_physician_roi_b.Add(self.combo_box_physician_roi_merge['b'], 1, wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
-        sizer_physician_roi_merger.Add(sizer_physician_roi_b, 1, wx.EXPAND, 0)
-        sizer_physician_roi_merger_merge.Add((20, 16), 0, 0, 0)
-        sizer_physician_roi_merger_merge.Add(self.button_merge, 0, wx.ALL, 5)
-        sizer_physician_roi_merger.Add(sizer_physician_roi_merger_merge, 0, wx.ALL | wx.EXPAND, 0)
-        sizer_editor.Add(sizer_physician_roi_merger, 0, wx.ALL | wx.EXPAND, 5)
 
-        sizer_save_cancel_buttons.Add((10, 10), 1, wx.EXPAND, 0)
-        sizer_save_cancel_buttons.Add(self.button_save_and_update, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
-        sizer_save_cancel_buttons.Add(self.button_cancel, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
-        sizer_editor.Add(sizer_save_cancel_buttons, 0, wx.ALIGN_RIGHT | wx.EXPAND, 0)
 
         self.window_editor.SetSizer(sizer_editor)
         self.window.SplitVertically(self.window_tree, self.window_editor)
@@ -590,7 +593,11 @@ class ROIMapFrame(wx.Frame):
             self.update_roi_map()
 
     def save_and_update(self, evt):
-        RemapROIStatus(self.roi_map)
+        RemapROIFrame(self.roi_map)
+        self.Destroy()
+
+    def on_cancel(self, *args):
+        self.roi_map.import_from_file()
 
     def on_close(self, *args):
         self.Destroy()
@@ -598,19 +605,28 @@ class ROIMapFrame(wx.Frame):
 
 
 class RemapROIWorker(Thread):
-    def __init__(self, roi_map):
+    def __init__(self, roi_map, remap_all=False):
         Thread.__init__(self)
 
         self.roi_map = roi_map
+        self.remap_all = remap_all
         self.start_time = datetime.now()
 
         self.start()  # start the thread
 
     def run(self):
-        variations_to_update = self.roi_map.variations_to_update
-        physician_counter = 0
-        physician_count = len(list(variations_to_update) + self.roi_map.physicians_to_remap)
+
+        if self.remap_all:
+            physician_to_map = list(set(self.roi_map.get_physicians()) - {'DEFAULT'})
+            variations_to_update = {}
+        else:
+            physician_to_map = self.roi_map.physicians_to_remap
+            variations_to_update = self.roi_map.variations_to_update
+
         with DVH_SQL() as cnx:
+
+            physician_counter = 0
+            physician_count = len(list(variations_to_update) + physician_to_map)
 
             # Partial physician remaps
             for physician, variations in variations_to_update.items():
@@ -632,7 +648,8 @@ class RemapROIWorker(Thread):
                     self.update_variation(variation, physician, cnx)
 
             # Full Physician remaps
-            for physician in self.roi_map.physicians_to_remap:
+            for physician in physician_to_map:
+                print(physician)
                 condition = "physician = '%s'" % physician
                 uids = cnx.get_unique_values('Plans', 'study_instance_uid', condition)
                 if uids:
@@ -641,19 +658,24 @@ class RemapROIWorker(Thread):
                     msg = ["Physician (%s of %s): %s" % (physician_counter+1, physician_count, physician),
                            int(100 * physician_counter / physician_count)]
                     wx.CallAfter(pub.sendMessage, "roi_map_update_gauge_1_info", msg=msg)
-                    physician_counter += 1
                     variation_count = len(variations)
                     variation_counter = 0
 
                     for variation in variations:
+                        variation_frac = variation_counter / variation_count
+                        msg = ["Physician (%s of %s): %s" % (physician_counter + 1, physician_count, physician),
+                               int(100 * (physician_counter / physician_count + variation_frac / physician_count))]
+                        wx.CallAfter(pub.sendMessage, "roi_map_update_gauge_1_info", msg=msg)
                         msg = ["ROI (%s of %s): %s" % (variation_counter+1, variation_count, variation),
-                               int(100 * variation_counter / variation_count)]
+                               int(100 * variation_frac)]
                         wx.CallAfter(pub.sendMessage, "roi_map_update_gauge_2_info", msg=msg)
                         msg = "Elapsed Time: %s" % get_elapsed_time(self.start_time, datetime.now())
                         wx.CallAfter(pub.sendMessage, "roi_map_update_elapsed_time", msg=msg)
                         variation_counter += 1
 
                         self.update_variation(variation, physician, cnx)
+
+                    physician_counter += 1
 
         wx.CallAfter(pub.sendMessage, "roi_map_close")
 
@@ -679,8 +701,8 @@ class RemapROIWorker(Thread):
                     cnx.update('dvhs', 'institutional_roi', new_institutional_roi, condition)
 
 
-class RemapROIStatus(wx.Frame):
-    def __init__(self, roi_map):
+class RemapROIFrame(wx.Frame):
+    def __init__(self, roi_map, remap_all=False):
         wx.Frame.__init__(self, None, title='Updating Database with ROI Map Changes')
 
         self.roi_map = roi_map
@@ -695,7 +717,7 @@ class RemapROIStatus(wx.Frame):
         self.__do_subscribe()
 
         self.Show()
-        RemapROIWorker(self.roi_map)
+        RemapROIWorker(self.roi_map, remap_all=remap_all)
 
     def __set_properties(self):
         self.gauge_physician.SetMinSize((358, 17))

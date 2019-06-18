@@ -877,11 +877,11 @@ class ImportStatusDialog(wx.Dialog):
         self.gauge_calculation = wx.Gauge(self, wx.ID_ANY, 100)
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
-        self.error_details_pane = wx.CollapsiblePane(self, label='Details')
-        self.error_details_window = wx.ScrolledWindow(self.error_details_pane.GetPane())
-        self.error_details_text = wx.StaticText(self.error_details_window, wx.ID_ANY,
-                                                "Error details go here.\n"
-                                                "Will add things soon.")
+        # self.error_details_pane = wx.CollapsiblePane(self, label='Details')
+        # self.error_details_window = wx.ScrolledWindow(self.error_details_pane.GetPane())
+        # self.error_details_text = wx.StaticText(self.error_details_window, wx.ID_ANY,
+        #                                         "Error details go here.\n"
+        #                                         "Will add things soon.")
 
         self.terminate = terminate
 
@@ -909,9 +909,9 @@ class ImportStatusDialog(wx.Dialog):
         sizer_calculation = wx.BoxSizer(wx.VERTICAL)
         sizer_study = wx.BoxSizer(wx.VERTICAL)
         sizer_time_cancel = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_error_pane = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_error_window = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_error_text = wx.BoxSizer(wx.HORIZONTAL)
+        # sizer_error_pane = wx.BoxSizer(wx.HORIZONTAL)
+        # sizer_error_window = wx.BoxSizer(wx.HORIZONTAL)
+        # sizer_error_text = wx.BoxSizer(wx.HORIZONTAL)
 
         self.label_study_counter = wx.StaticText(self, wx.ID_ANY, "Study 1 of 1")
         sizer_study.Add(self.label_study_counter, 0, wx.ALIGN_CENTER, 0)
@@ -943,7 +943,7 @@ class ImportStatusDialog(wx.Dialog):
         # self.error_details_pane.SetSizer(sizer_error_pane)
         # sizer_wrapper.Add(self.error_details_pane, 0, 0, 0)
 
-        # self.SetSizer(sizer_wrapper)
+        self.SetSizer(sizer_wrapper)
         self.Layout()
         self.Center()
 

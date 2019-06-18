@@ -480,7 +480,7 @@ class DVHAMainFrame(wx.Frame):
             self.on_sql()
 
         if echo_sql_db():
-            frame = DatabaseEditorDialog()
+            frame = DatabaseEditorDialog(self.roi_map)
             frame.Show()
         else:
             wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
