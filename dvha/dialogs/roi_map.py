@@ -405,16 +405,19 @@ class MoveVariationDialog(wx.Dialog):
 
 
 class AddPhysicianROI(wx.Dialog):
-    def __init__(self, parent, physician, roi_map):
+    def __init__(self, parent, physician, roi_map, institutional_mode=False):
         wx.Dialog.__init__(self, parent)
         self.SetSize((500, 135))
 
+        self.institutional_mode = institutional_mode
+
         self.physician = physician
         self.roi_map = roi_map
-        self.institutional_rois = self.roi_map.get_institutional_rois()
+        self.institutional_rois = self.roi_map.get_unused_institutional_rois(physician)
         self.text_ctrl_physician_roi = wx.TextCtrl(self, wx.ID_ANY, "")
-        self.combo_box_institutional_roi = wx.ComboBox(self, wx.ID_ANY, choices=self.institutional_rois,
-                                                       style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        if not self.institutional_mode:
+            self.combo_box_institutional_roi = wx.ComboBox(self, wx.ID_ANY, choices=self.institutional_rois,
+                                                           style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.button_ok = wx.Button(self, wx.ID_OK, "Add")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
@@ -430,32 +433,42 @@ class AddPhysicianROI(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self.update_enable, id=self.text_ctrl_physician_roi.GetId())
 
     def __set_properties(self):
-        self.SetTitle("Add Physician ROI for %s" % self.physician)
-        self.text_ctrl_physician_roi.SetToolTip("New entry must be unique from all other institutional, physician, "
-                                                "or variation ROIs for this physician.")
-        self.combo_box_institutional_roi.SetToolTip("If the institutional ROI you’re looking for isn’t here, it may "
-                                                    "already be assigned.")
-        if 'uncategorized' in self.institutional_rois:
-            self.combo_box_institutional_roi.SetValue('uncategorized')
+        if not self.institutional_mode:
+            self.SetTitle("Add Physician ROI for %s" % self.physician)
+            self.text_ctrl_physician_roi.SetToolTip("New entry must be unique from all other institutional, physician, "
+                                                    "or variation ROIs for this physician.")
+            self.combo_box_institutional_roi.SetToolTip("If the institutional ROI you’re looking for isn’t here, it may"
+                                                        " already be assigned.")
+            if 'uncategorized' in self.institutional_rois:
+                self.combo_box_institutional_roi.SetValue('uncategorized')
 
-        self.button_ok.SetToolTip("If Add is disabled, new entry is already used in institutional ROIs, "
-                                  "physician ROIs, or ROI variations for %s." % self.physician)
+            self.button_ok.SetToolTip("If Add is disabled, new entry is already used in institutional ROIs, "
+                                      "physician ROIs, or ROI variations for %s." % self.physician)
+        else:
+            self.SetTitle("Add Institutional ROI")
+            self.text_ctrl_physician_roi.SetToolTip("New entry must be unique from all other institutional ROIs.")
+            self.button_ok.SetToolTip("If Add is disabled, new entry is already used in institutional ROIs")
+
+        self.SetMinSize((300, 100))
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_main = wx.BoxSizer(wx.VERTICAL)
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_input = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.HORIZONTAL)
-        sizer_institutional_roi = wx.BoxSizer(wx.VERTICAL)
+        if not self.institutional_mode:
+            sizer_institutional_roi = wx.BoxSizer(wx.VERTICAL)
         sizer_physician_roi = wx.BoxSizer(wx.VERTICAL)
-        label_physician_roi = wx.StaticText(self, wx.ID_ANY, "New Physician ROI:")
+        label_physician_roi = wx.StaticText(self, wx.ID_ANY, "New %s ROI:" %
+                                            ['Physician', 'Institutional'][self.institutional_mode])
         sizer_physician_roi.Add(label_physician_roi, 0, 0, 0)
         sizer_physician_roi.Add(self.text_ctrl_physician_roi, 0, wx.EXPAND, 0)
         sizer_input.Add(sizer_physician_roi, 1, wx.ALL | wx.EXPAND, 5)
-        label_institutional_roi = wx.StaticText(self, wx.ID_ANY, "Linked Institutional ROI:")
-        sizer_institutional_roi.Add(label_institutional_roi, 0, 0, 0)
-        sizer_institutional_roi.Add(self.combo_box_institutional_roi, 0, wx.EXPAND, 0)
-        sizer_input.Add(sizer_institutional_roi, 1, wx.ALL | wx.EXPAND, 5)
+        if not self.institutional_mode:
+            label_institutional_roi = wx.StaticText(self, wx.ID_ANY, "Linked Institutional ROI:")
+            sizer_institutional_roi.Add(label_institutional_roi, 0, 0, 0)
+            sizer_institutional_roi.Add(self.combo_box_institutional_roi, 0, wx.EXPAND, 0)
+            sizer_input.Add(sizer_institutional_roi, 1, wx.ALL | wx.EXPAND, 5)
         sizer_main.Add(sizer_input, 0, wx.EXPAND, 0)
         sizer_buttons.Add(self.button_ok, 1, wx.ALL, 5)
         sizer_buttons.Add(self.button_cancel, 1, wx.ALL, 5)
@@ -473,17 +486,22 @@ class AddPhysicianROI(wx.Dialog):
         self.Destroy()
 
     def action(self):
-        self.roi_map.add_physician_roi(self.physician,
-                                       self.combo_box_institutional_roi.GetValue(),
-                                       self.text_ctrl_physician_roi.GetValue())
+        if not self.institutional_mode:
+            self.roi_map.add_physician_roi(self.physician,
+                                           self.combo_box_institutional_roi.GetValue(),
+                                           self.text_ctrl_physician_roi.GetValue())
+        else:
+            self.roi_map.add_institutional_roi(self.text_ctrl_physician_roi.GetValue())
 
     def update_enable(self, evt):
-        invalid_choices = set(self.roi_map.get_institutional_rois() +
-                              self.roi_map.get_physician_rois(self.physician) +
-                              self.roi_map.get_all_variations_of_physician(self.physician))
+        if not self.institutional_mode:
+            invalid_choices = set(self.roi_map.get_physician_rois(self.physician) +
+                                  self.roi_map.get_all_variations_of_physician(self.physician))
+        else:
+            invalid_choices = self.roi_map.get_institutional_rois()
 
         new = clean_name(self.text_ctrl_physician_roi.GetValue())
-        self.button_ok.Enable(new in invalid_choices)
+        self.button_ok.Enable(new not in invalid_choices)
 
 
 class AddROIType(wx.Dialog):

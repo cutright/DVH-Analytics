@@ -415,7 +415,7 @@ class ROIMapFrame(wx.Frame):
 
     def add_physician_roi(self, evt):
         old_physician_rois = self.roi_map.get_physician_rois(self.physician)
-        dlg = AddPhysicianROI(self, self.physician, self.roi_map)
+        dlg = AddPhysicianROI(self, self.physician, self.roi_map, institutional_mode=self.physician == 'DEFAULT')
         if dlg.res == wx.ID_OK:
             self.update_all(old_physician_rois=old_physician_rois)
 
@@ -598,6 +598,7 @@ class ROIMapFrame(wx.Frame):
 
     def on_cancel(self, *args):
         self.roi_map.import_from_file()
+        self.update_roi_map()
 
     def on_close(self, *args):
         self.Destroy()
@@ -649,7 +650,6 @@ class RemapROIWorker(Thread):
 
             # Full Physician remaps
             for physician in physician_to_map:
-                print(physician)
                 condition = "physician = '%s'" % physician
                 uids = cnx.get_unique_values('Plans', 'study_instance_uid', condition)
                 if uids:
@@ -717,6 +717,7 @@ class RemapROIFrame(wx.Frame):
         self.__do_subscribe()
 
         self.Show()
+
         RemapROIWorker(self.roi_map, remap_all=remap_all)
 
     def __set_properties(self):

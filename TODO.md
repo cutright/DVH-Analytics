@@ -9,7 +9,7 @@
     clean up later
         - [X] Add ability to add physician map at import dialog, add variations, etc.
     - [X] Complete functionality
-    - [ ] Just needs to save changes
+    - [X] Just needs to save changes
         * This should include a difference calculator to auto update database
 
 2. **Import**
@@ -73,7 +73,7 @@
     - [X] UIs are built, and their associated functions are largely already written, just need to connect them
     - [X] Build new message dialog on sql exceptions so the entire error is shown
     - [X] Create custom Exception class to more robustly catch DVH_SQL() update and query errors
-    - [ ] Calculations button is non-functional. Will require threading. All other buttons functional.
+    - [ ] Allow user to reperform "post-import" calculations
 
 10. **Documentation**
     - [ ] Review code, add doc strings and comments
