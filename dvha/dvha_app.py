@@ -326,27 +326,27 @@ class DVHAMainFrame(wx.Frame):
         sizer_welcome.Add(text_welcome, 0, wx.ALIGN_CENTER | wx.ALL, 25)
         self.notebook_tab['Welcome'].SetSizer(sizer_welcome)
 
-        self.sizer_dvhs.Add(self.plot.layout, 1, wx.EXPAND | wx.ALIGN_CENTER | wx.ALL, 25)
+        self.sizer_dvhs.Add(self.plot.layout, 1, wx.EXPAND | wx.ALL, 25)
         self.notebook_tab['DVHs'].SetSizer(self.sizer_dvhs)
 
         sizer_endpoint = wx.BoxSizer(wx.VERTICAL)
-        sizer_endpoint.Add(self.endpoint.layout, 0, wx.ALIGN_CENTER | wx.ALL, 25)
+        sizer_endpoint.Add(self.endpoint.layout, 0, wx.ALL, 25)
         self.notebook_tab['Endpoints'].SetSizer(sizer_endpoint)
 
         sizer_rad_bio = wx.BoxSizer(wx.VERTICAL)
-        sizer_rad_bio.Add(self.radbio.layout, 0, wx.ALIGN_CENTER | wx.ALL, 25)
+        sizer_rad_bio.Add(self.radbio.layout, 0, wx.ALL, 25)
         self.notebook_tab['Rad Bio'].SetSizer(sizer_rad_bio)
 
         sizer_time_series = wx.BoxSizer(wx.VERTICAL)
-        sizer_time_series.Add(self.time_series.layout, 1, wx.EXPAND | wx.ALIGN_CENTER | wx.ALL, 25)
+        sizer_time_series.Add(self.time_series.layout, 1, wx.EXPAND | wx.ALL, 25)
         self.notebook_tab['Time Series'].SetSizer(sizer_time_series)
 
         sizer_regression = wx.BoxSizer(wx.VERTICAL)
-        sizer_regression.Add(self.regression.layout, 1, wx.EXPAND | wx.ALIGN_CENTER | wx.ALL, 25)
+        sizer_regression.Add(self.regression.layout, 1, wx.EXPAND | wx.ALL, 25)
         self.notebook_tab['Regression'].SetSizer(sizer_regression)
 
         sizer_control_chart = wx.BoxSizer(wx.VERTICAL)
-        sizer_control_chart.Add(self.control_chart.layout, 1, wx.EXPAND | wx.ALIGN_CENTER | wx.ALL, 25)
+        sizer_control_chart.Add(self.control_chart.layout, 1, wx.EXPAND | wx.ALL, 25)
         self.notebook_tab['Control Chart'].SetSizer(sizer_control_chart)
 
         for key in self.tab_keys:
@@ -761,15 +761,17 @@ class DVHAMainFrame(wx.Frame):
         show_hide = ['Hide', 'Show']['Show' in self.data_menu.GetLabel(self.data_menu_items[key].GetId())]
         return show_hide
 
+    def redraw_plots(self):
+        if self.dvh:
+            self.plot.redraw_plot()
+            self.time_series.plot.redraw_plot()
+            self.regression.plot.redraw_plot()
+            self.control_chart.plot.redraw_plot()
+
     def on_resize(self, *evt):
         try:
             self.Refresh()
             self.Layout()
-
-            if self.dvh:
-                self.plot.redraw_plot()
-                self.time_series.plot.redraw_plot()
-                self.regression.plot.redraw_plot()
-                self.control_chart.plot.redraw_plot()
+            wx.CallAfter(self.redraw_plots)
         except RuntimeError:
             pass
