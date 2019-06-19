@@ -762,11 +762,14 @@ class DVHAMainFrame(wx.Frame):
         return show_hide
 
     def on_resize(self, *evt):
-        self.Refresh()
-        self.Layout()
+        try:
+            self.Refresh()
+            self.Layout()
 
-        if self.dvh:
-            self.plot.redraw_plot()
-            self.time_series.plot.redraw_plot()
-            self.regression.plot.redraw_plot()
-            self.control_chart.plot.redraw_plot()
+            if self.dvh:
+                self.plot.redraw_plot()
+                self.time_series.plot.redraw_plot()
+                self.regression.plot.redraw_plot()
+                self.control_chart.plot.redraw_plot()
+        except RuntimeError:
+            pass

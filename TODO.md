@@ -16,7 +16,7 @@
     - [X] Need to test on Windows/Linux
     - [ ] Need to test import of DICOM files other than Plan, Dose, Structure
     - [ ] Currently code connects strictly by StudyInstanceUID and assumes the latest files appropriate. 
-    Should probably have a layer of verification with SOP Instance checks
+    Should further organize with SOP Instance checks
     - [X] Better ROI map integration
 
 3. **Regression**

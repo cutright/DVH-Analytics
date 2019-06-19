@@ -328,7 +328,11 @@ class MultiVarResultsFrame(wx.Frame):
 
         self.__do_bind()
         self.__do_subscribe()
+        self.__set_properties()
         self.__do_layout()
+
+    def __set_properties(self):
+        self.SetMinSize((825, 725))
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_random_forest, id=self.button['Random Forest'].GetId())
@@ -341,7 +345,7 @@ class MultiVarResultsFrame(wx.Frame):
     def __do_layout(self):
 
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
-        sizer_wrapper.Add(self.plot.layout, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_wrapper.Add(self.plot.layout, 1, wx.EXPAND | wx.ALL, 5)
 
         sizer_algo_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_algo_select = wx.BoxSizer(wx.HORIZONTAL)
@@ -358,7 +362,7 @@ class MultiVarResultsFrame(wx.Frame):
         sizer_wrapper.Add(sizer_algo_wrapper, 0, wx.EXPAND | wx.ALL, 10)
 
         self.SetSizer(sizer_wrapper)
-        sizer_wrapper.Fit(self)
+        self.Fit()
         self.Layout()
         self.Center()
 

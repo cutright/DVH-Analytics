@@ -63,11 +63,14 @@ class ImportDICOM_Dialog(wx.Frame):
                       'physician': wx.ComboBox(self, wx.ID_ANY, choices=self.roi_map.get_physicians(),
                                                style=wx.CB_DROPDOWN | wx.CB_READONLY),
                       'tx_site': wx.ComboBox(self, wx.ID_ANY, choices=tx_sites, style=wx.CB_DROPDOWN),
-                      'rx_dose': wx.TextCtrl(self, wx.ID_ANY, "")}
-        self.button_edit_sim_study_date = wx.Button(self, wx.ID_ANY, "Edit")
-        self.button_edit_birth_date = wx.Button(self, wx.ID_ANY, "Edit")
+                      'rx_dose': wx.TextCtrl(self, wx.ID_ANY, ""),
+                      'fx_grp': wx.ComboBox(self, wx.ID_ANY, choices=['1'], style=wx.CB_DROPDOWN | wx.CB_READONLY)}
         self.input['physician'].SetValue('')
         self.input['tx_site'].SetValue('')
+        self.input['fx_grp'].SetValue('1')
+        self.button_edit_sim_study_date = wx.Button(self, wx.ID_ANY, "Edit")
+        self.button_edit_birth_date = wx.Button(self, wx.ID_ANY, "Edit")
+
         self.button_apply_plan_data = wx.Button(self, wx.ID_ANY, "Apply")
         self.button_delete_study = wx.Button(self, wx.ID_ANY, "Delete Study in Database with this UID")
         self.button_delete_study.Disable()
@@ -160,6 +163,7 @@ class ImportDICOM_Dialog(wx.Frame):
         # self.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self.on_roi_tree_double_click, id=self.tree_ctrl_roi.GetId())
 
     def __set_properties(self):
+
         self.checkbox_subfolders.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
                                                  wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         self.checkbox_subfolders.SetValue(1)
@@ -196,6 +200,9 @@ class ImportDICOM_Dialog(wx.Frame):
         sizer_plan_data_wrapper = wx.BoxSizer(wx.HORIZONTAL)
         sizer_plan_data = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Plan Data for Selected Study"), wx.VERTICAL)
         sizer_rx = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
+        sizer_rx_fx_grp_input = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_rx_input = wx.BoxSizer(wx.VERTICAL)
+        sizer_fx_grp_input = wx.BoxSizer(wx.VERTICAL)
         sizer_checkbox_rx = wx.BoxSizer(wx.HORIZONTAL)
         sizer_tx_site = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
         sizer_tx_site_checkbox = wx.BoxSizer(wx.HORIZONTAL)
@@ -293,8 +300,14 @@ class ImportDICOM_Dialog(wx.Frame):
         sizer_plan_data.Add(sizer_tx_site, 1, wx.ALL | wx.EXPAND, 5)
 
         self.label['rx_dose'] = wx.StaticText(self, wx.ID_ANY, "Rx Dose (Gy):")
-        sizer_rx.Add(self.label['rx_dose'], 0, 0, 0)
-        sizer_rx.Add(self.input['rx_dose'], 0, 0, 0)
+        self.label['fx_grp'] = wx.StaticText(self, wx.ID_ANY, "Fx Group:")
+        sizer_rx_input.Add(self.label['rx_dose'], 0, 0, 0)
+        sizer_rx_input.Add(self.input['rx_dose'], 0, 0, 0)
+        sizer_fx_grp_input.Add(self.label['fx_grp'], 0, wx.LEFT, 20)
+        sizer_fx_grp_input.Add(self.input['fx_grp'], 0, wx.LEFT, 20)
+        sizer_rx_fx_grp_input.Add(sizer_rx_input, 0, 0, 0)
+        sizer_rx_fx_grp_input.Add(sizer_fx_grp_input, 0, 0 , 0)
+        sizer_rx.Add(sizer_rx_fx_grp_input, 0, 0, 0)
         sizer_checkbox_rx.Add(self.checkbox['rx_dose_1'], 0, wx.RIGHT, 20)
         sizer_checkbox_rx.Add(self.checkbox['rx_dose_2'], 0, 0, 0)
         sizer_rx.Add(sizer_checkbox_rx, 1, wx.EXPAND, 0)
@@ -528,6 +541,7 @@ class ImportDICOM_Dialog(wx.Frame):
     def on_text_change(self, evt):
         for key, input_obj in self.input.items():
             if input_obj.GetId() == evt.GetId():
+                print(key)
                 self.update_label_text_color(key)
                 return
 

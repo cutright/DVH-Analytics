@@ -46,7 +46,7 @@ class RandomForestFrame(wx.Frame):
         sizer_features.Add(self.spin_ctrl_features, 0, wx.ALL, 5)
         sizer_hyper_parameters.Add(sizer_features, 1, wx.EXPAND, 0)
         sizer_input_and_plot.Add(sizer_hyper_parameters, 0, wx.EXPAND, 0)
-        sizer_input_and_plot.Add(self.plot.layout)
+        sizer_input_and_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_input_and_plot, 1, wx.ALL | wx.EXPAND, 5)
         self.SetSizer(sizer_wrapper)
         self.Layout()
