@@ -14,6 +14,8 @@ FILE_TYPES = {'rtplan', 'rtstruct', 'rtdose'}
 SCRIPT_DIR = os.path.dirname(__file__)
 
 
+# TODO: use DicomDirectoryParser from DVH-Check to match with SOP Instance UIDs
+#  (https://github.com/cutright/DVH-Check/blob/master/dvh_check/utilities.py)
 class DICOM_Importer:
     def __init__(self, start_path, tree_ctrl_files, tree_ctrl_rois, tree_ctrl_roi_root, tree_ctrl_rois_images,
                  roi_map, search_subfolders=True):
