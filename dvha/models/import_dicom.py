@@ -5,7 +5,7 @@ from datetime import date as datetime_obj, datetime
 from dateutil.parser import parse as parse_date
 from db import update as db_update
 from db.sql_connector import DVH_SQL
-from db.dicom_importer import DICOM_Importer
+from db.dicom_importer import DICOM_Importer, DicomDirectoryParserFrame
 from db.dicom_parser import DICOM_Parser
 from dialogs.main import DatePicker
 from dialogs.roi_map import AddPhysician, AddPhysicianROI, AddROIType, RoiManager, ChangePlanROIName
@@ -407,6 +407,8 @@ class ImportDICOM_Dialog(wx.Frame):
 
         dlg = wx.DirDialog(self, "Select inbox directory", starting_dir, wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:
+            # DicomDirectoryParserFrame(dlg.GetPath(), search_subfolders=self.checkbox_subfolders.GetValue())
+
             self.text_ctrl_directory.SetValue(dlg.GetPath())
             self.dicom_dir = DICOM_Importer(self.text_ctrl_directory.GetValue(), self.tree_ctrl_import,
                                             self.tree_ctrl_roi, self.tree_ctrl_roi_root, self.tree_ctrl_images,
@@ -541,7 +543,6 @@ class ImportDICOM_Dialog(wx.Frame):
     def on_text_change(self, evt):
         for key, input_obj in self.input.items():
             if input_obj.GetId() == evt.GetId():
-                print(key)
                 self.update_label_text_color(key)
                 return
 

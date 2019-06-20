@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import wx
 import os
 import pydicom as dicom
 from dicompylercore import dicomparser
 from pydicom.errors import InvalidDicomError
-from db.sql_connector import DVH_SQL
-import wx
 from tools.utilities import get_file_paths
+from threading import Thread
+from pubsub import pub
 
 
 FILE_TYPES = {'rtplan', 'rtstruct', 'rtdose'}
@@ -256,41 +257,195 @@ class DICOM_Importer:
         return []
 
 
-def rank_ptvs_by_D95(dvhs):
-    ptv_number_list = [0] * dvhs.count
-    ptv_index = [i for i in range(dvhs.count) if dvhs.roi_type[i] == 'PTV']
+class DicomDirectoryParserFrame(wx.Frame):
+    def __init__(self, start_path, search_subfolders=True):
+        wx.Frame.__init__(self, None)
 
-    ptv_count = len(ptv_index)
+        self.start_path = start_path
+        self.search_subfolders = search_subfolders
+        self.file_tree = {}
 
-    # Calculate D95 for each PTV
-    doses_to_rank = get_dose_to_volume(dvhs, ptv_index, 0.95)
-    order_index = sorted(range(ptv_count), key=lambda k: doses_to_rank[k])
-    final_order = sorted(range(ptv_count), key=lambda k: order_index[k])
+        self.gauge = wx.Gauge(self, wx.ID_ANY, 100)
 
-    for i in range(ptv_count):
-        ptv_number_list[ptv_index[i]] = final_order[i] + 1
+        self.__set_properties()
+        self.__do_subscribe()
+        self.__do_layout()
 
-    return ptv_number_list
+        self.run()
+
+    def __set_properties(self):
+        self.SetTitle("Reading DICOM Headers")
+        self.SetMinSize((700, 100))
+
+    def __do_subscribe(self):
+        pub.subscribe(self.update, "dicom_directory_parser_update")
+        pub.subscribe(self.set_file_tree, "dicom_directory_parser_set_file_tree")
+        pub.subscribe(self.close, "dicom_directory_parser_close")
+
+    def __do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_objects = wx.BoxSizer(wx.VERTICAL)
+        self.label = wx.StaticText(self, wx.ID_ANY, "Progress Label:")
+        sizer_objects.Add(self.label, 0, 0, 0)
+        sizer_objects.Add(self.gauge, 0, wx.EXPAND, 0)
+        sizer_wrapper.Add(sizer_objects, 0, wx.ALL | wx.EXPAND, 10)
+        self.SetSizer(sizer_wrapper)
+        self.Fit()
+        self.Layout()
+        self.Center()
+
+    def update(self, msg):
+        wx.CallAfter(self.label.SetLabelText, msg['label'])
+        wx.CallAfter(self.gauge.SetValue, int(100 * msg['gauge']))
+
+    def set_file_tree(self, tree):
+        self.file_tree = tree
+
+    def run(self):
+        self.Show()
+        DicomDirectoryParser(self.start_path, self.search_subfolders)
+
+    def close(self):
+        self.Destroy()
 
 
-def get_dose_to_volume(dvhs, indices, roi_fraction):
-    # Not precise (i.e., no interpolation) but good enough for sorting PTVs
-    doses = []
-    for x in indices:
-        abs_volume = dvhs.volume[x] * roi_fraction
-        dvh = dvhs.dvhs[x]
-        dose = next(x[0] for x in enumerate(dvh) if x[1] < abs_volume)
-        doses.append(dose)
+class DicomDirectoryParser(Thread):
+    """
+    With a given start path, scan for RT DICOM files (plan, struct, dose) connected by SOPInstanceUID
+    Previous versions strictly used StudyInstanceUID which was sufficient for Philips Pinnacle because
+    it can export multiple prescriptions in a single RT Plan file, other TPS's export one file per plan
+    """
+    def __init__(self, start_path, search_subfolders):
+        Thread.__init__(self)
+        self.start_path = start_path
+        self.search_subfolders = search_subfolders
+        self.file_types = ['rtplan', 'rtstruct', 'rtdose']
 
-    return doses
+        self.dicom_tag_values = {}
+        self.dicom_files = {key: [] for key in self.file_types}
+        self.plan_file_sets = {}
+        self.uid_to_mrn = {}
 
+        self.start()
 
-def update_dicom_catalogue(mrn, uid, dir_path, plan_file, struct_file, dose_file):
-    if not plan_file:
-        plan_file = "(NULL)"
-    if not plan_file:
-        struct_file = "(NULL)"
-    if not plan_file:
-        dose_file = "(NULL)"
-    with DVH_SQL() as cnx:
-        cnx.insert_dicom_file_row(mrn, uid, dir_path, plan_file, struct_file, dose_file)
+    def run(self):
+
+        file_paths = get_file_paths(self.start_path, search_subfolders=self.search_subfolders)
+        file_count = len(file_paths)
+        plan_file_set = {}
+
+        for file_index, file_path in enumerate(file_paths):
+            msg = {'label': "File Name: %s" % os.path.basename(file_path),
+                   'gauge': file_index / file_count}
+            wx.CallAfter(pub.sendMessage, "dicom_directory_parser_update", msg=msg)
+            ds = self.read_dicom_file(file_path)
+            if ds is not None:
+                modality = ds.Modality.lower()
+                timestamp = os.path.getmtime(file_path)
+
+                self.dicom_files[modality].append(file_path)
+
+                self.dicom_tag_values[file_path] = {'timestamp': timestamp,
+                                                    'study_instance_uid': ds.StudyInstanceUID,
+                                                    'sop_instance_uid': ds.SOPInstanceUID,
+                                                    'patient_name': ds.PatientName,
+                                                    'mrn': ds.PatientID}
+
+                if modality == 'rtplan':
+                    uid = ds.ReferencedStructureSetSequence[0].ReferencedSOPInstanceUID
+                    mrn = ds.PatientID
+                    self.uid_to_mrn[uid] = ds.PatientID
+                    self.dicom_tag_values[file_path]['ref_sop_instance'] = {'type': 'struct',
+                                                                            'uid': uid}
+                    study_uid = ds.StudyInstanceUID
+                    plan_uid = ds.SOPInstanceUID
+                    if mrn not in list(self.plan_file_sets):
+                        self.plan_file_sets[mrn] = {}
+
+                    if study_uid not in list(self.plan_file_sets[mrn]):
+                        self.plan_file_sets[mrn][study_uid] = {}
+
+                    self.plan_file_sets[mrn][study_uid][plan_uid] = {'rtplan': {'file_path': file_path,
+                                                                                'sop_instance_uid': plan_uid}}
+                elif modality == 'rtdose':
+                    uid = ds.ReferencedRTPlanSequence[0].ReferencedSOPInstanceUID
+                    self.dicom_tag_values[file_path]['ref_sop_instance'] = {'type': 'plan',
+                                                                            'uid': uid}
+                else:
+                    self.dicom_tag_values[file_path]['ref_sop_instance'] = {'type': None,
+                                                                            'uid': None}
+
+        # associate appropriate rtdose files to plans
+        dose_file_count = len(self.dicom_files['rtdose'])
+        for file_index, dose_file in enumerate(self.dicom_files['rtdose']):
+            dose_tag_values = self.dicom_tag_values[dose_file]
+            ref_plan_uid = dose_tag_values['ref_sop_instance']['uid']
+            study_uid = dose_tag_values['study_instance_uid']
+            mrn = dose_tag_values['mrn']
+            for plan_file_set in self.plan_file_sets[mrn][study_uid].values():
+                plan_uid = plan_file_set['rtplan']['sop_instance_uid']
+                if plan_uid == ref_plan_uid:
+                    plan_file_set['rtdose'] = {'file_path': dose_file,
+                                               'sop_instance_uid': dose_tag_values['sop_instance_uid']}
+        # associate appropriate rtstruct files to plans
+        mrn_count = len(list(self.plan_file_sets))
+        for mrn_index, mrn in enumerate(list(self.plan_file_sets)):
+            for study_uid in list(self.plan_file_sets[mrn]):
+                for plan_file_set in self.plan_file_sets[mrn][study_uid].values():
+                    plan_file = plan_file_set['rtplan']['file_path']
+                    ref_struct_uid = self.dicom_tag_values[plan_file]['ref_sop_instance']['uid']
+                    for struct_file in self.dicom_files['rtstruct']:
+                        struct_uid = self.dicom_tag_values[struct_file]['sop_instance_uid']
+                        if struct_uid == ref_struct_uid:
+                            plan_file_set['rtstruct'] = {'file_path': struct_file,
+                                                         'sop_instance_uid': struct_uid}
+
+        pub.sendMessage('dicom_directory_parser_set_file_tree', tree=plan_file_set)
+        pub.sendMessage('dicom_directory_parser_close')
+
+    @staticmethod
+    def read_dicom_file(file_path):
+        try:
+            return dicom.read_file(file_path, stop_before_pixels=True)
+        except InvalidDicomError:
+            return None
+    #
+    # def get_file_type(self, dicom_file):
+    #     file_type = dicom_file.Modality.lower()
+    #     if file_type not in self.file_types:
+    #         return 'other'
+    #     return file_type
+    #
+    # def get_plan_files(self, mrn, study_instance_uid, rt_plan_sop_uid):
+    #     file_types = self.file_types + ['other']
+    #     file_set = self.plan_file_sets[mrn][study_instance_uid][rt_plan_sop_uid]
+    #     return {file_type: file_set[file_type]['file_path'] for file_type in file_types}
+
+    # @property
+    # def mrns(self):
+    #     return list(self.plan_file_sets)
+    #
+    # @property
+    # def study_instance_uids(self):
+    #     study_uids = []
+    #     for mrn in list(self.plan_file_sets):
+    #         study_uids.extend(list(self.plan_file_sets[mrn]))
+    #     return study_uids
+    #
+    # def get_mrn_from_study_instance_uid(self, study_instance_uid):
+    #     for mrn in list(self.plan_file_sets):
+    #         if study_instance_uid in list(self.plan_file_sets[mrn]):
+    #             return mrn
+    #
+    # def get_dicom_file_path(self, study_instance_uid, plan_uid, file_type):
+    #     mrn = self.get_mrn_from_study_instance_uid(study_instance_uid)
+    #     if mrn:
+    #         if study_instance_uid in list(self.plan_file_sets[mrn]):
+    #             return self.plan_file_sets[mrn][study_instance_uid][plan_uid][file_type]['file_path']
+    #
+    # def get_study_dicom_file_paths(self, study_instance_uid):
+    #     file_paths = {}
+    #     mrn = self.get_mrn_from_study_instance_uid(study_instance_uid)
+    #     for plan_uid, file_set in self.plan_file_sets[mrn][study_instance_uid].items():
+    #         file_paths[plan_uid] = {file_type: file_obj['file_path'] for file_type, file_obj in file_set.items()}
+    #     return file_paths
