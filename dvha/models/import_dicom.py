@@ -5,7 +5,7 @@ from datetime import date as datetime_obj, datetime
 from dateutil.parser import parse as parse_date
 from db import update as db_update
 from db.sql_connector import DVH_SQL
-from db.dicom_importer import DICOM_Importer, DicomDirectoryParserFrame
+from db.dicom_importer import DICOM_Importer
 from db.dicom_parser import DICOM_Parser
 from dialogs.main import DatePicker
 from dialogs.roi_map import AddPhysician, AddPhysicianROI, AddROIType, RoiManager, ChangePlanROIName
@@ -111,6 +111,7 @@ class ImportDICOM_Dialog(wx.Frame):
         self.__do_bind()
         self.__set_properties()
         self.__do_layout()
+        self.__do_subscribe()
 
         self.is_all_data_parsed = False
         self.dicom_dir = None
@@ -120,6 +121,9 @@ class ImportDICOM_Dialog(wx.Frame):
         self.terminate = {'status': False}  # used to terminate thread on cancel in Import Dialog
 
         self.run()
+
+    def __do_subscribe(self):
+        pub.subscribe(self.parse_dicom_data, "parse_dicom_data")
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_browse, id=self.button_browse.GetId())
@@ -363,42 +367,18 @@ class ImportDICOM_Dialog(wx.Frame):
         if self.initial_inbox is None or not isdir(self.initial_inbox):
             self.initial_inbox = ''
         self.text_ctrl_directory.SetValue(self.initial_inbox)
-        self.dicom_dir = DICOM_Importer(self.initial_inbox, self.tree_ctrl_import, self.tree_ctrl_roi,
-                                        self.tree_ctrl_roi_root, self.tree_ctrl_images, self.roi_map)
-        self.parse_directory()
 
     def on_cancel(self, evt):
         self.roi_map.import_from_file()  # reload from file, ignore changes
         self.Destroy()
-
-    def parse_directory(self):
-        # TODO: Thread this function (parse_directory)
-        wait = wx.BusyCursor()
-        self.gauge.Show()
-        file_count = self.dicom_dir.file_count
-        self.dicom_dir.initialize_file_tree_root()
-        self.tree_ctrl_import.Expand(self.dicom_dir.root_files)
-        while self.dicom_dir.current_index < file_count:
-            self.dicom_dir.append_next_file_to_tree()
-            self.gauge.SetValue(int(100 * self.dicom_dir.current_index / file_count))
-            self.update_progress_message()
-            self.tree_ctrl_import.ExpandAll()
-            wx.Yield()
-        self.update_progress_message(complete=True)
-        self.gauge.Hide()
-        del wait
-
-        self.parse_dicom_data()
-        self.validate()
-        self.tree_ctrl_import.CheckItem(self.dicom_dir.root_files, True)
-        # self.text_ctrl_directory
 
     def on_browse(self, evt):
         self.parsed_dicom_data = {}
         for key in list(self.global_plan_over_rides):
             self.global_plan_over_rides[key] = {'value': None, 'only_if_missing': False}
         self.clear_plan_data()
-        self.tree_ctrl_roi.DeleteChildren(self.dicom_dir.root_rois)
+        if self.dicom_dir:
+            self.tree_ctrl_roi.DeleteChildren(self.dicom_dir.root_rois)
         starting_dir = self.text_ctrl_directory.GetValue()
         if starting_dir == '':
             starting_dir = self.start_path
@@ -407,25 +387,10 @@ class ImportDICOM_Dialog(wx.Frame):
 
         dlg = wx.DirDialog(self, "Select inbox directory", starting_dir, wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:
-            # DicomDirectoryParserFrame(dlg.GetPath(), search_subfolders=self.checkbox_subfolders.GetValue())
-
             self.text_ctrl_directory.SetValue(dlg.GetPath())
             self.dicom_dir = DICOM_Importer(self.text_ctrl_directory.GetValue(), self.tree_ctrl_import,
                                             self.tree_ctrl_roi, self.tree_ctrl_roi_root, self.tree_ctrl_images,
                                             self.roi_map, search_subfolders=self.checkbox_subfolders.GetValue())
-            try:
-                self.parse_directory()
-                dlg.Destroy()
-            except MemoryError:
-                print('Memory Error: try importing fewer studies at once.')
-                # TODO: ErrorMessage doesn't want to display?
-                # dlg2 = wx.MessageDialog(self, "Try importing fewer studies at a time.", "Memory Error!",
-                #                         wx.ICON_ERROR | wx.OK | wx.OK_DEFAULT)
-                # dlg2.Center()
-                # dlg2.Show()
-                # dlg2.Destroy()
-                dlg.Destroy()
-                self.on_cancel(None)
 
     def update_progress_message(self, complete=False):
         self.label_progress.SetLabelText("%s%s Patients - %s Studies - %s Files" %
@@ -435,7 +400,7 @@ class ImportDICOM_Dialog(wx.Frame):
                                           self.dicom_dir.count['file']))
 
     def on_file_tree_select(self, evt):
-        uid = self.get_file_tree_item_uid(evt.GetItem())
+        uid = self.get_file_tree_item_plan_uid(evt.GetItem())
         self.tree_ctrl_roi.SelectItem(self.tree_ctrl_roi_root, True)
         if uid in list(self.parsed_dicom_data) and self.parsed_dicom_data[uid].validation['complete_file_set']:
             if uid != self.selected_uid:
@@ -518,21 +483,45 @@ class ImportDICOM_Dialog(wx.Frame):
 
         self.reset_label_colors()
 
-    def get_file_tree_item_uid(self, item):
+    def get_file_tree_item_plan_uid(self, item):
+        plan_node = None
+        node_id, node_type = self.dicom_dir.get_id_of_node(item)
 
-        selected_mrn, selected_uid = None, None
-        for mrn, node in self.dicom_dir.patient_nodes.items():
-            if item == node:
-                selected_uid = list(self.dicom_dir.file_tree[mrn])[0]
-                break
+        # if item is a plan node
+        if node_type == 'plan':
+            plan_node = item
 
-        if selected_uid is None:
-            for uid, node in self.dicom_dir.study_nodes.items():
-                if item == node:
-                    selected_uid = uid
-                    break
+        # if item is a study node
+        elif node_type == 'study':
+            plan_node, valid = self.tree_ctrl_import.GetFirstChild(item)
 
-        return selected_uid
+        # if item is a patient node
+        elif node_type == 'patient':
+            study_node, valid = self.tree_ctrl_import.GetFirstChild(item)
+            plan_node, valid = self.tree_ctrl_import.GetFirstChild(study_node)
+
+        if plan_node is not None:
+            uid, node_type = self.dicom_dir.get_id_of_node(plan_node)
+            return uid
+
+    def get_file_tree_item_study_uid(self, item):
+        study_node = None
+        node_id, node_type = self.dicom_dir.get_id_of_node(item)
+
+        # if selected item is a study node
+        if node_type == 'study':
+            study_node = item
+
+        # if selected item is plan node
+        elif node_type == 'plan':
+            study_node, valid = self.tree_ctrl_import.GetItemParent(item)
+
+        # if selected item is a patient node
+        elif node_type == 'patient':
+            study_node, valid = self.tree_ctrl_import.GetFirstChild(item)
+
+        if study_node:
+            return self.dicom_dir.node_to_study_uid[study_node]
 
     def get_roi_tree_item_name(self, item):
         for name, node in self.dicom_dir.roi_nodes.items():
@@ -716,31 +705,29 @@ class ImportDICOM_Dialog(wx.Frame):
         # TODO: Thread this function (parse_dicom_data)
         wait = wx.BusyCursor()
         parsed_uids = list(self.parsed_dicom_data)
-        study_total = len(list(self.dicom_dir.study_nodes))
+        plan_total = len(list(self.dicom_dir.plan_nodes))
         self.gauge.SetValue(0)
         self.gauge.Show()
-        for study_counter, uid in enumerate(list(self.dicom_dir.study_nodes)):
-            self.label_progress.SetLabelText("Parsing %s of %s studies" % (study_counter+1, study_total))
+        for plan_counter, uid in enumerate(list(self.dicom_dir.plan_nodes)):
+            self.label_progress.SetLabelText("Parsing %s of %s studies" % (plan_counter+1, plan_total))
             if uid not in parsed_uids:
                 file_paths = self.dicom_dir.dicom_file_paths[uid]
                 wx.Yield()
-                if file_paths['rtplan']['file_path'] and file_paths['rtstruct']['file_path'] and \
-                        file_paths['rtdose']['file_path']:
-                    self.parsed_dicom_data[uid] = DICOM_Parser(plan=file_paths['rtplan']['file_path'],
-                                                               structure=file_paths['rtstruct']['file_path'],
-                                                               dose=file_paths['rtdose']['file_path'],
+                if file_paths['rtplan'] and file_paths['rtstruct'] and file_paths['rtdose']:
+                    self.parsed_dicom_data[uid] = DICOM_Parser(plan=file_paths['rtplan'][0],
+                                                               structure=file_paths['rtstruct'][0],
+                                                               dose=file_paths['rtdose'][0],
                                                                global_plan_over_rides=self.global_plan_over_rides,
                                                                roi_map=self.roi_map)
 
-            self.gauge.SetValue(int(100 * (study_counter+1) / study_total))
-            wx.Yield()
-
+            wx.CallAfter(self.gauge.SetValue, int(100 * (plan_counter+1) / plan_total))
         self.gauge.Hide()
-        self.label_progress.SetLabelText("All %s studies parsed" % study_total)
+        self.label_progress.SetLabelText("All %s plans parsed" % plan_total)
 
         del wait
 
         self.is_all_data_parsed = True
+        self.validate()
 
     def validate(self, uid=None):
         if self.is_all_data_parsed:
@@ -762,7 +749,7 @@ class ImportDICOM_Dialog(wx.Frame):
                         color = wx.Colour(255, 165, 0)  # orange
                     else:
                         color = wx.Colour(255, 255, 0)  # yellow
-                elif uid in self.dicom_dir.incomplete_studies:
+                elif uid in self.dicom_dir.incomplete_plans:
                     color = wx.Colour(255, 0, 0)  # red
                 else:
                     color = None
