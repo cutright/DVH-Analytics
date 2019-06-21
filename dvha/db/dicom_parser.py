@@ -919,8 +919,7 @@ class BeamParser:
 
     @property
     def is_arc(self):
-        # TODO: all beams being detected as arcs
-        return bool(len(set(self.gantry_angles)))  # if multiple gantry angles, beam is an arc
+        return bool(self.get_angle_values('gantry')['rot_dir'])
 
     @property
     def tx_modality(self):
