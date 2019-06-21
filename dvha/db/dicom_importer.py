@@ -129,7 +129,8 @@ class DICOM_Importer:
             if file_type not in self.file_types:
                 file_type = 'other'
             file_name = os.path.basename(file_path)
-            self.file_nodes[file_path] = self.tree_ctrl_files.AppendItem(self.plan_nodes[plan_uid], file_name, ct_type=0)
+            self.file_nodes[file_path] = self.tree_ctrl_files.AppendItem(self.plan_nodes[plan_uid],
+                                                                         "%s - %s" % (file_type, file_name), ct_type=0)
             # self.study_nodes[uid].Set3State(True)
             self.tree_ctrl_files.SetPyData(self.file_nodes[file_path], None)
             self.tree_ctrl_files.SetItemImage(self.file_nodes[file_path], self.images[file_type],
@@ -179,7 +180,8 @@ class DICOM_Importer:
                 for plan_uid, plan in study.items():
                     self.add_plan_node(study_uid, plan_uid)
                     for file_type, file_obj in plan.items():
-                        self.add_rt_file_node(plan_uid, file_type, file_obj['file_path'])
+                        if file_obj['file_path']:
+                            self.add_rt_file_node(plan_uid, file_type, file_obj['file_path'])
 
         self.tree_ctrl_files.Expand(self.root_files)
         self.tree_ctrl_files.ExpandAllChildren(self.root_files)
@@ -202,12 +204,17 @@ class DICOM_Importer:
             self.tree_ctrl_rois.SetItemBackgroundColour(self.root_rois, wx.Colour(255, 0, 0))
 
     @property
-    def checked_studies(self):
-        studies = {}
-        for uid, study_node in self.study_nodes.items():
-            if self.tree_ctrl_files.IsItemChecked(study_node):
-                studies[uid] = {file_type: file_path for file_type, file_path in self.rt_file_nodes[uid].items()}
-        return studies
+    def checked_plans(self):
+        plans = {}
+        for plan_node_uid, plan_node in self.plan_nodes.items():
+            if self.tree_ctrl_files.IsItemChecked(plan_node):
+                for mrn, study in self.file_tree.items():
+                    for study_uid, plan in study.items():
+                        for plan_uid, dicom_files in plan.items():
+                            if plan_uid == plan_node_uid:
+                                plans[plan_uid] = {file_type: file_obj['file_path']
+                                                   for file_type, file_obj in dicom_files.items()}
+        return plans
 
     def check_mapped_rois(self, physician, specific_roi=None):
         physician_is_valid = self.roi_map.is_physician(physician)
@@ -229,10 +236,15 @@ class DICOM_Importer:
             return list(set([self.roi_map.get_physician_roi(physician, roi) for roi in self.roi_name_map.keys()]))
         return []
 
+    def get_plan_files(self, mrn, study_instance_uid, rt_plan_sop_uid):
+        file_types = self.file_types + ['other']
+        file_set = self.plan_file_sets[mrn][study_instance_uid][rt_plan_sop_uid]
+        return {file_type: file_set[file_type]['file_path'] for file_type in file_types}
 
-class DicomDirectoryParserFrame(wx.Frame):
+
+class DicomDirectoryParserFrame(wx.Dialog):
     def __init__(self, start_path, search_subfolders=True):
-        wx.Frame.__init__(self, None)
+        wx.Dialog.__init__(self, None)
 
         self.start_path = start_path
         self.search_subfolders = search_subfolders
@@ -336,7 +348,11 @@ class DicomDirectoryParser(Thread):
                         self.plan_file_sets[mrn][study_uid] = {}
 
                     self.plan_file_sets[mrn][study_uid][plan_uid] = {'rtplan': {'file_path': file_path,
-                                                                                'sop_instance_uid': plan_uid}}
+                                                                                'sop_instance_uid': plan_uid},
+                                                                     'rtstruct': {'file_path': None,
+                                                                                  'sop_instance_uid': None},
+                                                                     'rtdose': {'file_path': None,
+                                                                                'sop_instance_uid': None}}
                     if plan_uid not in self.dicom_file_paths.keys():
                         self.dicom_file_paths[plan_uid] = {key: [] for key in self.file_types + ['other']}
                     self.dicom_file_paths[plan_uid]['rtplan'] = [file_path]
@@ -389,8 +405,3 @@ class DicomDirectoryParser(Thread):
             return dicom.read_file(file_path, stop_before_pixels=True)
         except InvalidDicomError:
             return None
-
-    def get_plan_files(self, mrn, study_instance_uid, rt_plan_sop_uid):
-        file_types = self.file_types + ['other']
-        file_set = self.plan_file_sets[mrn][study_instance_uid][rt_plan_sop_uid]
-        return {file_type: file_set[file_type]['file_path'] for file_type in file_types}

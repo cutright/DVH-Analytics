@@ -15,8 +15,13 @@
 2. **Import**
     - [X] Need to test on Windows/Linux
     - [ ] Need to test import of DICOM files other than Plan, Dose, Structure
-    - [ ] Currently code connects strictly by StudyInstanceUID and assumes the latest files appropriate. 
+        - [X] Non-DICOM files are properly ignored
+        - [ ] Test DICOM files other than plan, dose, structure 
+    - [X] Currently code connects strictly by StudyInstanceUID and assumes the latest files appropriate. 
     Should further organize with SOP Instance checks
+        - [X] Update file tree to Patient -> Study -> Plan -> Files
+        - [ ] Auto combine multiple plans within one study_instance_uid
+        - [ ] Implement dicom_dose_sum.py borrowed from dicompyler plugin
     - [X] Better ROI map integration
 
 3. **Regression**
