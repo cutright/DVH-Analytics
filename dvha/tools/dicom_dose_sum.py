@@ -1,8 +1,24 @@
 import numpy as np
 
 
+def sum_dose_grids(dose_grids):
+    """
+    Sum all dose grids provided
+    :param dose_grids: dicompyler-core dose objects
+    :type dose_grids: list
+    :return: a summed dose grid
+    """
+    dose_sum = None
+    for i in range(len(dose_grids)-1):
+        if dose_sum is None:
+            dose_sum = sum_two_dose_grids(dose_grids[i], dose_grids[i+1])
+        else:
+            dose_sum = sum_two_dose_grids(dose_grids[i+1], dose_sum)
+    return dose_sum
+
+
 # Slightly modifed from https://github.com/dicompyler/dicompyler-plugins/blob/master/plugins/plansum/plansum.py
-def SumPlan(old, new):
+def sum_two_dose_grids(old, new):
     """ Given two Dicom RTDose objects, returns a summed RTDose object"""
     """The summed RTDose object will consist of pixels inside the region of 
     overlap between the two pixel_arrays.  The pixel spacing will be the 
@@ -14,6 +30,7 @@ def SumPlan(old, new):
         the dose objects could be directly summed.  Used for unit testing."""
 
     # Recycle the new Dicom object to store the summed dose values
+    # TODO: Test does this actually just edit new?
     sum_dcm = new
 
     # Test if dose grids are coincident.  If so, we can directly sum the
@@ -22,9 +39,8 @@ def SumPlan(old, new):
             old.pixel_array.shape == new.pixel_array.shape and
             old.PixelSpacing == new.PixelSpacing and
             old.GridFrameOffsetVector == new.GridFrameOffsetVector):
-
-        dose_sum = old.pixel_array * old.DoseGridScaling + \
-                   new.pixel_array * new.DoseGridScaling
+        print("PlanSum: Using direct summation")
+        dose_sum = old.pixel_array * old.DoseGridScaling + new.pixel_array * new.DoseGridScaling
 
     else:
         # Compute mapping from xyz (physical) space to ijk (index) space

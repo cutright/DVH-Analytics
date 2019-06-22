@@ -14,6 +14,7 @@ from os.path import isdir, join, dirname
 from os import listdir, rmdir
 from paths import IMPORT_SETTINGS_PATH, parse_settings_file, IMPORTED_DIR
 from pubsub import pub
+from tools.dicom_dose_sum import sum_dose_grids
 from tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
     set_msw_background_color, is_windows
 from tools.roi_name_manager import clean_name
@@ -1002,24 +1003,35 @@ class ImportWorker(Thread):
 
     def run(self):
         try:
+            study_uids = self.get_study_uids()
             plan_total = len(self.checked_uids)
-            for plan_counter, uid in enumerate(self.checked_uids):
-                if uid in list(self.data):
-                    msg = {'patient_name': self.data[uid].patient_name,
-                           'uid': self.data[uid].study_instance_uid_to_be_imported,
-                           'progress': int(100 * plan_counter / plan_total),
-                           'study_number': plan_counter + 1,
-                           'study_total': plan_total}
-                    wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
-                    wx.CallAfter(pub.sendMessage, "update_elapsed_time")
-                    self.import_study(uid)
-                    if self.terminate['status']:
-                        self.delete_partially_updated_plan()
-                        return
-                else:
-                    print('WARNING: This study could not be parsed. Skipping import. '
-                          'Did you supply RT Structure, Dose, and Plan?')
-                    print('\tStudy Instance UID: %s' % uid)
+            plan_counter = 0
+            for plan_uid_set in study_uids.values():
+                if len(plan_uid_set) > 1:
+                    dose_files = [self.data[plan_uid].dose_file for plan_uid in plan_uid_set]
+                    dose_sum = sum_dose_grids(dose_files)
+                    for plan_uid in plan_uid_set:
+                        self.data[plan_uid].import_dose_sum(dose_sum)
+
+                for plan_uid in plan_uid_set:
+                    if plan_uid in list(self.data):
+                        msg = {'patient_name': self.data[plan_uid].patient_name,
+                               'uid': self.data[plan_uid].study_instance_uid_to_be_imported,
+                               'progress': int(100 * plan_counter / plan_total),
+                               'study_number': plan_counter + 1,
+                               'study_total': plan_total}
+                        wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
+                        wx.CallAfter(pub.sendMessage, "update_elapsed_time")
+                        self.import_study(plan_uid)
+                        if self.terminate['status']:
+                            self.delete_partially_updated_plan()
+                            return
+                    else:
+                        print('WARNING: This study could not be parsed. Skipping import. '
+                              'Did you supply RT Structure, Dose, and Plan?')
+                        print('\tPlan UID: %s' % plan_uid)
+
+                    plan_counter += 1
 
         except MemoryError as mem_err:
             print(mem_err)
@@ -1034,6 +1046,15 @@ class ImportWorker(Thread):
             return
 
         wx.CallAfter(pub.sendMessage, "close")
+
+    def get_study_uids(self):
+        study_uids = {}
+        for plan_uid in self.checked_uids:
+            study_uid = self.data[plan_uid].study_instance_uid_to_be_imported
+            if study_uid not in list(study_uids):
+                study_uids[study_uid] = []
+            study_uids[study_uid].append(plan_uid)
+        return study_uids
 
     def import_study(self, plan_uid):
         dicom_rt_struct = dicomparser.DicomParser(self.data[plan_uid].structure_file)
