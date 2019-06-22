@@ -388,7 +388,7 @@ class DICOM_Parser:
 
     @property
     def study_instance_uid_to_be_imported(self):
-        if self.plan_over_rides['study_instance_uid']:
+        if hasattr(self, 'plan_over_rides') and self.plan_over_rides['study_instance_uid']:
             return self.plan_over_rides['study_instance_uid']
         elif self.poi_uid is not None:
             return self.poi_uid

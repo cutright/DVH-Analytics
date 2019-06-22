@@ -20,8 +20,8 @@
     - [X] Currently code connects strictly by StudyInstanceUID and assumes the latest files appropriate. 
     Should further organize with SOP Instance checks
         - [X] Update file tree to Patient -> Study -> Plan -> Files
-        - [ ] Auto combine multiple plans within one study_instance_uid
-        - [ ] Implement dicom_dose_sum.py borrowed from dicompyler plugin
+        - [X] Auto combine multiple plans within one study_instance_uid
+        - [X] Implement dicom_dose_sum.py borrowed from dicompyler plugin
     - [X] Better ROI map integration
 
 3. **Regression**

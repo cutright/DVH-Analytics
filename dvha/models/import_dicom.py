@@ -704,8 +704,7 @@ class ImportDICOM_Dialog(wx.Frame):
         self.Close()
 
     def parse_dicom_data(self):
-        # TODO: Thread this function (parse_dicom_data)
-        wait = wx.BusyCursor()
+        wait = wx.BusyInfo("Parsing DICOM data\nPlease wait...")
         parsed_uids = list(self.parsed_dicom_data)
         plan_total = len(list(self.dicom_dir.plan_nodes))
         self.gauge.SetValue(0)
@@ -1006,10 +1005,13 @@ class ImportWorker(Thread):
             study_uids = self.get_study_uids()
             plan_total = len(self.checked_uids)
             plan_counter = 0
-            for plan_uid_set in study_uids.values():
+            for study_uid, plan_uid_set in study_uids.items():
                 if len(plan_uid_set) > 1:
                     dose_files = [self.data[plan_uid].dose_file for plan_uid in plan_uid_set]
+
+                    wait = wx.BusyInfo('Summing grids for\n%s' % study_uid)
                     dose_sum = sum_dose_grids(dose_files)
+                    del wait
                     for plan_uid in plan_uid_set:
                         self.data[plan_uid].import_dose_sum(dose_sum)
 
@@ -1022,12 +1024,12 @@ class ImportWorker(Thread):
                                'study_total': plan_total}
                         wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
                         wx.CallAfter(pub.sendMessage, "update_elapsed_time")
-                        self.import_study(plan_uid)
+                        self.import_study(plan_uid, do_post_import_calcs=plan_uid == plan_uid_set[-1])
                         if self.terminate['status']:
                             self.delete_partially_updated_plan()
                             return
                     else:
-                        print('WARNING: This study could not be parsed. Skipping import. '
+                        print('WARNING: This plan could not be parsed. Skipping import. '
                               'Did you supply RT Structure, Dose, and Plan?')
                         print('\tPlan UID: %s' % plan_uid)
 
@@ -1056,7 +1058,7 @@ class ImportWorker(Thread):
             study_uids[study_uid].append(plan_uid)
         return study_uids
 
-    def import_study(self, plan_uid):
+    def import_study(self, plan_uid, do_post_import_calcs=True):
         dicom_rt_struct = dicomparser.DicomParser(self.data[plan_uid].structure_file)
         study_uid = self.data[plan_uid].study_instance_uid_to_be_imported
         structures = dicom_rt_struct.GetStructures()
@@ -1119,38 +1121,39 @@ class ImportWorker(Thread):
 
         self.push(data_to_import)  # Must push data before processing post import calculations
 
-        if ptvs['dvh']:
-            tv = db_update.get_treatment_volume(study_uid)
-            self.post_import_calc('PTV Overlap Volume', study_uid, post_import_rois,
-                                  db_update.treatment_volume_overlap, tv)
-            if self.terminate['status']:
-                return
+        if do_post_import_calcs:
+            if ptvs['dvh']:
+                tv = db_update.get_treatment_volume(study_uid)
+                self.post_import_calc('PTV Overlap Volume', study_uid, post_import_rois,
+                                      db_update.treatment_volume_overlap, tv)
+                if self.terminate['status']:
+                    return
 
-            tv_centroid = db_update.get_treatment_volume_centroid(tv)
-            self.post_import_calc('Centroid Distance to PTV', study_uid, post_import_rois,
-                                  db_update.dist_to_ptv_centroids, tv_centroid)
-            if self.terminate['status']:
-                return
+                tv_centroid = db_update.get_treatment_volume_centroid(tv)
+                self.post_import_calc('Centroid Distance to PTV', study_uid, post_import_rois,
+                                      db_update.dist_to_ptv_centroids, tv_centroid)
+                if self.terminate['status']:
+                    return
 
-            tv_coord = db_update.get_treatment_volume_coord(tv)
-            self.post_import_calc('Distances to PTV', study_uid, post_import_rois,
-                                  db_update.min_distances, tv_coord)
-            if self.terminate['status']:
-                return
+                tv_coord = db_update.get_treatment_volume_coord(tv)
+                self.post_import_calc('Distances to PTV', study_uid, post_import_rois,
+                                      db_update.min_distances, tv_coord)
+                if self.terminate['status']:
+                    return
 
-            msg = {'calculation': 'Total Treatment Volume Statistics',
-                   'roi_num': 0,
-                   'roi_total': 1,
-                   'roi_name': 'PTV',
-                   'progress': 0}
-            wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
-            db_update.update_ptv_data(tv, study_uid)
-            msg['roi_num'], msg['progress'] = 1, 100
-            wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+                msg = {'calculation': 'Total Treatment Volume Statistics',
+                       'roi_num': 0,
+                       'roi_total': 1,
+                       'roi_name': 'PTV',
+                       'progress': 0}
+                wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+                db_update.update_ptv_data(tv, study_uid)
+                msg['roi_num'], msg['progress'] = 1, 100
+                wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
 
-        else:
-            print("WARNING: No PTV found for %s" % plan_uid)
-            print("\tSkipping PTV related calculations.")
+            else:
+                print("WARNING: No PTV found for %s" % plan_uid)
+                print("\tSkipping PTV related calculations.")
 
         self.move_files(plan_uid)
 
