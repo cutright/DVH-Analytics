@@ -319,6 +319,9 @@ class DVH_SQL:
                 return True
         return False
 
+    def is_roi_imported(self, roi_name, study_instance_uid):
+        return bool(self.get_unique_values('DVHs', roi_name, "study_instance_uid = '%s'" % study_instance_uid))
+
 
 def write_import_errors(obj):
     detail_col = [c for c in ['beam_name', 'roi_name', 'plan_name'] if hasattr(obj, c)]

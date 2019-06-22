@@ -66,7 +66,7 @@ class DICOM_Parser:
         self.ref_beam_data = []
         for fx_grp_index, fx_grp_seq in enumerate(self.rt_data['plan'].FractionGroupSequence):
             self.rx_data.append(RxParser(self.rt_data['plan'], self.dicompyler_rt_plan, self.rt_data['structure'],
-                                         fx_grp_index, self.poi_rx_data))
+                                         fx_grp_index, self.poi_rx_data, self.study_instance_uid_to_be_imported))
             self.beam_data[fx_grp_index] = []
             for fx_grp_beam in range(int(fx_grp_seq.NumberOfBeams)):
 
@@ -999,12 +999,13 @@ class BeamParser:
 
 
 class RxParser:
-    def __init__(self, rt_plan, dicompyler_plan, rt_structure, fx_grp_index, pinnacle_rx_data):
+    def __init__(self, rt_plan, dicompyler_plan, rt_structure, fx_grp_index, pinnacle_rx_data, study_instance_uid):
         self.rt_plan = rt_plan
         self.dicompyler_plan = dicompyler_plan
         self.rt_structure = rt_structure
         self.fx_grp_data = rt_plan.FractionGroupSequence[fx_grp_index]
         self.dose_ref_index = self.get_dose_ref_seq_index()
+        self.study_instance_uid = study_instance_uid
 
         self.pinnacle_rx_data = None
         if pinnacle_rx_data and fx_grp_index+1 in list(pinnacle_rx_data):
@@ -1018,7 +1019,12 @@ class RxParser:
 
     @property
     def fx_grp_number(self):
-        return self.fx_grp_data.FractionGroupNumber
+        with DVH_SQL() as cnx:
+            fraction_group_start = cnx.get_max_value('Rxs', 'fx_grp_number',
+                                                     "study_instance_uid = '%s'" % self.study_instance_uid)
+        if not fraction_group_start:
+            fraction_group_start = 0
+        return self.fx_grp_data.FractionGroupNumber + fraction_group_start
 
     @property
     def fx_grp_name(self):
