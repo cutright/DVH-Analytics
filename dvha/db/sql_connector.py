@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Tools used to interact with SQL database
@@ -254,7 +254,7 @@ class DVH_SQL:
         """
 
         tables = set(self.tables)
-        if not ignore_tables:
+        if ignore_tables:
             tables = tables - set(ignore_tables)
 
         for table in tables:
