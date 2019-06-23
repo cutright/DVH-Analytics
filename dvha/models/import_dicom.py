@@ -772,13 +772,13 @@ class ImportDicomDialog(wx.Frame):
                 failed_keys = {key for key, value in validation.items() if not value['status']}
                 if failed_keys:
                     if 'complete_file_set' in failed_keys:
-                        msg = "WARNING: %s" % validation['complete_file_set']['message']
+                        msg = "ERROR: %s" % validation['complete_file_set']['message']
                         if self.selected_uid not in self.incomplete_studies:
                             self.incomplete_studies.append(self.selected_uid)
                     else:
                         msg = "WARNING: %s" % ' '.join([validation[key]['message'] for key in failed_keys])
             else:
-                msg = "WARNING: Incomplete Fileset. RT Plan, Dose, and Structure required."
+                msg = "ERROR: Incomplete Fileset. RT Plan, Dose, and Structure required."
         self.label_warning.SetLabelText(msg)
 
     def on_delete_study(self, evt):
@@ -923,18 +923,18 @@ class ImportStatusDialog(wx.Dialog):
         # sizer_error_window = wx.BoxSizer(wx.HORIZONTAL)
         # sizer_error_text = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.label_study_counter = wx.StaticText(self, wx.ID_ANY, "Study 1 of 1")
+        self.label_study_counter = wx.StaticText(self, wx.ID_ANY, "Plan 1 of 1")
         sizer_study.Add(self.label_study_counter, 0, wx.ALIGN_CENTER, 0)
         self.label_patient = wx.StaticText(self, wx.ID_ANY, "Patient:")
         sizer_study.Add(self.label_patient, 0, 0, 0)
-        self.label_study = wx.StaticText(self, wx.ID_ANY, "Study Instance UID:")
+        self.label_study = wx.StaticText(self, wx.ID_ANY, "Plan SOP Instance UID:")
         sizer_study.Add(self.label_study, 0, 0, 0)
         sizer_study.Add(self.gauge_study, 0, wx.EXPAND, 0)
 
         sizer_progress.Add(sizer_study, 0, wx.ALL | wx.EXPAND, 5)
         self.label_calculation = wx.StaticText(self, wx.ID_ANY, "Calculation: DVH")
         sizer_calculation.Add(self.label_calculation, 0, 0, 0)
-        self.label_structure = wx.StaticText(self, wx.ID_ANY, "Structure: Name (1 of 50)")
+        self.label_structure = wx.StaticText(self, wx.ID_ANY, "")
         sizer_calculation.Add(self.label_structure, 0, 0, 0)
         sizer_calculation.Add(self.gauge_calculation, 0, wx.EXPAND, 0)
         sizer_progress.Add(sizer_calculation, 0, wx.ALL | wx.EXPAND, 5)
@@ -961,10 +961,10 @@ class ImportStatusDialog(wx.Dialog):
         self.Destroy()
 
     def update_patient(self, msg):
-        wx.CallAfter(self.label_study_counter.SetLabelText, "Study %s of %s" %
+        wx.CallAfter(self.label_study_counter.SetLabelText, "Plan %s of %s" %
                      (msg['study_number'], msg['study_total']))
         wx.CallAfter(self.label_patient.SetLabelText, "Patient: %s" % msg['patient_name'])
-        wx.CallAfter(self.label_study.SetLabelText, "Study Instance UID: %s" % msg['uid'])
+        wx.CallAfter(self.label_study.SetLabelText, "Plan SOP Instance UID: %s" % msg['uid'])
         wx.CallAfter(self.gauge_study.SetValue, msg['progress'])
 
     def update_calculation(self, msg):

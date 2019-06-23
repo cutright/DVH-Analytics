@@ -224,16 +224,18 @@ def datetime_str_to_obj(datetime_str):
     :rtype: datetime
     """
 
-    year = int(datetime_str[0:4])
-    month = int(datetime_str[4:6])
-    day = int(datetime_str[6:8])
-    hour = int(datetime_str[8:10])
-    minute = int(datetime_str[10:12])
-    second = int(datetime_str[12:14])
+    try:
+        year = int(datetime_str[0:4])
+        month = int(datetime_str[4:6])
+        day = int(datetime_str[6:8])
+        hour = int(datetime_str[8:10])
+        minute = int(datetime_str[10:12])
+        second = int(datetime_str[12:14])
 
-    datetime_obj = datetime(year, month, day, hour, minute, second)
+        return datetime(year, month, day, hour, minute, second)
 
-    return datetime_obj
+    except:
+        return None
 
 
 def date_str_to_obj(date_str):
