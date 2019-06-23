@@ -18,6 +18,7 @@ OPTIONS_CHECKSUM_PATH = join(PREF_DIR, '.options_checksum')
 IMPORT_SETTINGS_PATH = join(PREF_DIR, 'import_settings.txt')
 SQL_CNF_PATH = join(PREF_DIR, 'sql_connection.cnf')
 LICENSE_PATH = join(SCRIPT_DIR, 'LICENSE')
+CREATE_SQL_TABLES = join(SCRIPT_DIR, 'db', 'create_tables.sql')
 
 
 def parse_settings_file(abs_file_path):
