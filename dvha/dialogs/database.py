@@ -5,7 +5,7 @@ import wx
 from datetime import datetime
 from db.sql_connector import DVH_SQL, echo_sql_db
 from db.sql_settings import write_sql_connection_settings, validate_sql_connection
-from models.import_dicom import ImportDICOM_Dialog
+from models.import_dicom import ImportDicomDialog
 from paths import SQL_CNF_PATH, parse_settings_file, IMPORTED_DIR, INBOX_DIR
 from os import mkdir, rename
 from os.path import join
@@ -497,7 +497,7 @@ class ReimportDialog(wx.Dialog):
             if self.delete_from_db:
                 cnx.delete_rows("study_instance_uid = '%s'" % self.uid)
         move_imported_dicom_files(dicom_files, INBOX_DIR)
-        ImportDICOM_Dialog(inbox=INBOX_DIR)
+        ImportDicomDialog(inbox=INBOX_DIR)
 
 
 class SQLSettingsDialog(wx.Dialog):
@@ -672,4 +672,4 @@ class RebuildDB(MessageDialog):
         with DVH_SQL() as cnx:
             cnx.reinitialize_database()
 
-        ImportDICOM_Dialog(inbox=IMPORTED_DIR)
+        ImportDicomDialog(inbox=IMPORTED_DIR)

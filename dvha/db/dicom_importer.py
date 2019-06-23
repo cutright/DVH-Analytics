@@ -11,32 +11,51 @@ from threading import Thread
 from pubsub import pub
 
 
-FILE_TYPES = {'rtplan', 'rtstruct', 'rtdose'}
 SCRIPT_DIR = os.path.dirname(__file__)
 
 
-class DICOM_Importer:
+class DicomImporter:
     def __init__(self, start_path, tree_ctrl_files, tree_ctrl_rois, tree_ctrl_roi_root, tree_ctrl_rois_images,
                  roi_map, search_subfolders=True):
+        """
+        This class processes data for various UI objects from models.import_dicom.ImportDicomDialog
+        :param start_path: directory to be scanned
+        :type start_path: str
+        :param tree_ctrl_files: tree in GUI used to visualize DICOM files
+        :type tree_ctrl_files: CustomTreeCtrl
+        :param tree_ctrl_rois: tree in GUI that lists rois of currently selected plan
+        :type tree_ctrl_rois: CustomTreeCtrl
+        :param tree_ctrl_roi_root: pointer to  the root node
+        :param tree_ctrl_rois_images: a dictionary of image list pointers
+        :type tree_ctrl_rois_images: dict
+        :param roi_map: the object manager ROI mapping
+        :type roi_map: tools.roi_name_manager.DatabaseROIs
+        :param search_subfolders: indicates if files within sub-directories should be included
+        :type search_subfolders: bool
+        """
+
+        # Store passed parameters
         self.start_path = start_path
         self.tree_ctrl_files = tree_ctrl_files
-        self.tree_ctrl_files.DeleteAllItems()
         self.tree_ctrl_rois = tree_ctrl_rois
-        self.tree_ctrl_rois_images = tree_ctrl_rois_images
-        self.root_files = None
         self.root_rois = tree_ctrl_roi_root
+        self.tree_ctrl_rois_images = tree_ctrl_rois_images
         self.roi_map = roi_map
-        self.patient_nodes = {}
-        self.study_nodes = {}
-        self.plan_nodes = {}
-        self.file_nodes = {}
-
         self.search_subfolders = search_subfolders
+
+        self.root_files = None
+        self.tree_ctrl_files.DeleteAllItems()
+
+        # These dictionaries will be used for easy lookup of tree_ctrl_files nodes
+        self.patient_nodes = {}  # key: mrn
+        self.study_nodes = {}  # key: study_instance_uid
+        self.plan_nodes = {}  # key: sop_instance_uid
+        self.file_nodes = {}  # key: absolute file path
+
         self.dicom_file_paths = {}
         self.current_index = 0
         self.file_types = ['rtplan', 'rtstruct', 'rtdose']
         self.file_tree = {}
-
         self.roi_name_map = {}
         self.roi_nodes = {}
 
@@ -76,102 +95,38 @@ class DICOM_Importer:
         self.tree_ctrl_files.SetItemImage(self.root_files, self.images['studies'], wx.TreeItemIcon_Normal)
 
     def parse_directory(self):
+        """
+        Initiate directory parsing.  Creates a wx.Dialog, reads dicom headers and sorts files into dictionaries
+        """
         DicomDirectoryParserFrame(self.start_path, search_subfolders=self.search_subfolders)
 
     def set_file_tree(self, tree, file_paths):
+        """
+        DicomDirectoryParserThread subscribes to this function to initiate the tree_ctrl_files build
+        :param tree: the plan_file_sets object from DicomDirectoryParserThread
+        :type tree: dict
+        :param file_paths: the dicom_file_paths objet from DicomDirectoryParserThread
+        :type file_paths: dict
+        """
         self.file_tree = tree
         self.dicom_file_paths = file_paths
         wx.CallAfter(self.build_tree_ctrl_files)
 
-    @staticmethod
-    def get_base_file_dict():
-        return {key: [] for key in ['file_path', 'timestamp', 'latest_file_index']}
-
-    def get_base_study_file_set(self):
-        base_study_file_set = {key: self.get_base_file_dict() for key in ['rtplan', 'rtstruct', 'rtdose', 'other']}
-
-        return base_study_file_set
-
-    @staticmethod
-    def get_file_type(dicom_file):
-        file_type = dicom_file.Modality.lower()
-        if file_type not in FILE_TYPES:
-            return 'other'
-        return file_type
-
-    def add_patient_node(self, mrn):
-        if mrn not in list(self.patient_nodes):
-            # TODO: get patient name for tree item title
-            self.patient_nodes[mrn] = self.tree_ctrl_files.AppendItem(self.root_files, mrn, ct_type=1)
-            # self.patient_nodes[mrn].Set3State(True)
-            self.tree_ctrl_files.SetPyData(self.patient_nodes[mrn], None)
-            self.tree_ctrl_files.SetItemImage(self.patient_nodes[mrn], self.images['patient'],
-                                              wx.TreeItemIcon_Normal)
-
-    def add_study_node(self, mrn, uid):
-        if uid not in list(self.study_nodes):
-            self.study_nodes[uid] = self.tree_ctrl_files.AppendItem(self.patient_nodes[mrn], uid, ct_type=1)
-            # self.study_nodes[uid].Set3State(True)
-            self.tree_ctrl_files.SetPyData(self.study_nodes[uid], None)
-            self.tree_ctrl_files.SetItemImage(self.study_nodes[uid], self.images['study'],
-                                              wx.TreeItemIcon_Normal)
-
-    def add_plan_node(self, study_uid, plan_uid):
-        if plan_uid not in list(self.plan_nodes):
-            self.plan_nodes[plan_uid] = self.tree_ctrl_files.AppendItem(self.study_nodes[study_uid], plan_uid, ct_type=1)
-            # self.study_nodes[uid].Set3State(True)
-            self.tree_ctrl_files.SetPyData(self.plan_nodes[plan_uid], None)
-            self.tree_ctrl_files.SetItemImage(self.plan_nodes[plan_uid], self.images['plan'],
-                                              wx.TreeItemIcon_Normal)
-
-    def add_rt_file_node(self, plan_uid, file_type, file_path):
-        if file_path not in list(self.file_nodes):
-            if file_type not in self.file_types:
-                file_type = 'other'
-            file_name = os.path.basename(file_path)
-            self.file_nodes[file_path] = self.tree_ctrl_files.AppendItem(self.plan_nodes[plan_uid],
-                                                                         "%s - %s" % (file_type, file_name), ct_type=0)
-            # self.study_nodes[uid].Set3State(True)
-            self.tree_ctrl_files.SetPyData(self.file_nodes[file_path], None)
-            self.tree_ctrl_files.SetItemImage(self.file_nodes[file_path], self.images[file_type],
-                                              wx.TreeItemIcon_Normal)
-
-    def get_id_of_node(self, node, node_type=None):
-
-        if node_type in {None, 'patient'}:
-            for mrn, patient_node in self.patient_nodes.items():
-                if node == patient_node:
-                    return mrn, 'patient'
-
-        if node_type in {None, 'study'}:
-            for study_uid, study_node in self.study_nodes.items():
-                if node == study_node:
-                    return study_uid, 'study'
-
-        if node_type in {None, 'plan'}:
-            for plan_uid, plan_node in self.plan_nodes.items():
-                if node == plan_node:
-                    return plan_uid, 'plan'
-
-        if node_type in {None, 'file'}:
-            for file_path, file_node in self.file_nodes.items():
-                if node == file_node:
-                    return file_path, 'file'
-
-        return None, None
-
-    @property
-    def incomplete_plans(self):
-        incomplete_plan_uids = []
-        for patient in self.file_tree.values():
-            for study in patient.values():
-                for plan_uid, plan in study.items():
-                    files = [plan[file_type]['file_path'] for file_type in self.file_types]
-                    if not all(files):
-                        incomplete_plan_uids.append(plan_uid)
-        return incomplete_plan_uids
+    def get_file_type(self, dicom_dataset):
+        """
+        Get the file type of a DICOM dataset read by pydicom
+        :param dicom_dataset: pydicom dataset
+        :return: file_type among self.file_types or 'other'
+        :rtype: str
+        """
+        file_type = dicom_dataset.Modality.lower()
+        return [file_type, 'other'][file_type not in self.file_types]
 
     def build_tree_ctrl_files(self):
+        """
+        Build the tree for tree_ctrl_files and store their nodes using node adders.
+        Then tell models.import_dicom.ImportDicomDialog to parse the data.
+        """
         self.tree_ctrl_files.DeleteChildren(self.root_files)
         for key, patient in self.file_tree.items():
             self.add_patient_node(key)
@@ -185,13 +140,18 @@ class DICOM_Importer:
 
         self.tree_ctrl_files.Expand(self.root_files)
         self.tree_ctrl_files.ExpandAllChildren(self.root_files)
+
         wx.CallAfter(pub.sendMessage, 'dicom_directory_parser_close')
 
-    def rebuild_tree_ctrl_rois(self, uid):
+    def rebuild_tree_ctrl_rois(self, plan_uid):
+        """
+        Delete all nodes of current tree_ctrl_rois and build for the specified plan
+        :param plan_uid: pydicom ds.SOPInstanceUID for the RT Plan of interest
+        """
         self.tree_ctrl_rois.DeleteChildren(self.root_rois)
-        if self.dicom_file_paths[uid]['rtstruct'][0]:
+        if self.dicom_file_paths[plan_uid]['rtstruct'][0]:
             self.tree_ctrl_rois.SetItemBackgroundColour(self.root_rois, None)
-            dicom_rt_struct = dicomparser.DicomParser(self.dicom_file_paths[uid]['rtstruct'][0])
+            dicom_rt_struct = dicomparser.DicomParser(self.dicom_file_paths[plan_uid]['rtstruct'][0])
             structures = dicom_rt_struct.GetStructures()
             self.roi_name_map = {structures[key]['name']: {'key': key, 'type': structures[key]['type']}
                                  for key in list(structures) if structures[key]['type'] != 'MARKER'}
@@ -203,8 +163,140 @@ class DICOM_Importer:
         else:
             self.tree_ctrl_rois.SetItemBackgroundColour(self.root_rois, wx.Colour(255, 0, 0))
 
+    def add_patient_node(self, mrn):
+        """
+        Add a patient node to tree_ctrl_files
+        :param mrn: pydicom's ds.PatientID
+        :type mrn: str
+        """
+        if mrn not in list(self.patient_nodes):
+            # TODO: get patient name for tree item title
+            self.patient_nodes[mrn] = self.tree_ctrl_files.AppendItem(self.root_files, mrn, ct_type=1)
+            # self.patient_nodes[mrn].Set3State(True)
+            self.tree_ctrl_files.SetPyData(self.patient_nodes[mrn], None)
+            self.tree_ctrl_files.SetItemImage(self.patient_nodes[mrn], self.images['patient'],
+                                              wx.TreeItemIcon_Normal)
+
+    def add_study_node(self, mrn, study_instance_uid):
+        """
+        Add a study node to tree_ctrl_files
+        :param mrn: pydicom ds.PatientID
+        :type mrn: str
+        :param study_instance_uid: pydicom ds.StudyInstanceUID
+        :type study_instance_uid: str
+        """
+        if study_instance_uid not in list(self.study_nodes):
+            self.study_nodes[study_instance_uid] = self.tree_ctrl_files.AppendItem(self.patient_nodes[mrn],
+                                                                                   study_instance_uid, ct_type=1)
+            # self.study_nodes[uid].Set3State(True)
+            self.tree_ctrl_files.SetPyData(self.study_nodes[study_instance_uid], None)
+            self.tree_ctrl_files.SetItemImage(self.study_nodes[study_instance_uid], self.images['study'],
+                                              wx.TreeItemIcon_Normal)
+
+    def add_plan_node(self, study_instance_uid, plan_uid):
+        """
+        Add a plan node to tree_ctrl_files
+        :param study_instance_uid: pydicom ds.StudyInstanceUID
+        :type study_instance_uid: str
+        :param plan_uid: pydicom ds.SOPInstanceUID of a RT Plan file
+        :type plan_uid: str
+        """
+        if plan_uid not in list(self.plan_nodes):
+            self.plan_nodes[plan_uid] = self.tree_ctrl_files.AppendItem(self.study_nodes[study_instance_uid], plan_uid, ct_type=1)
+            # self.study_nodes[uid].Set3State(True)
+            self.tree_ctrl_files.SetPyData(self.plan_nodes[plan_uid], None)
+            self.tree_ctrl_files.SetItemImage(self.plan_nodes[plan_uid], self.images['plan'],
+                                              wx.TreeItemIcon_Normal)
+
+    def add_rt_file_node(self, plan_uid, file_type, file_path):
+        """
+        Add a file node to tree_ctrl_files
+        :param plan_uid: pydicom ds.SOPInstanceUID of a RT Plan file
+        :type plan_uid: str
+        :param file_type: a type as specifed in self.file_types
+        :type file_type: str
+        :param file_path: the absolute file path of the DICOM file
+        :type file_path: str
+        """
+        if file_path not in list(self.file_nodes):
+            if file_type not in self.file_types:
+                file_type = 'other'
+            file_name = os.path.basename(file_path)
+            self.file_nodes[file_path] = self.tree_ctrl_files.AppendItem(self.plan_nodes[plan_uid],
+                                                                         "%s - %s" % (file_type, file_name), ct_type=0)
+            # self.study_nodes[uid].Set3State(True)
+            self.tree_ctrl_files.SetPyData(self.file_nodes[file_path], None)
+            self.tree_ctrl_files.SetItemImage(self.file_nodes[file_path], self.images[file_type],
+                                              wx.TreeItemIcon_Normal)
+
+    def get_id_of_tree_ctrl_node(self, node):
+        """
+        :param node: item from of a wx.EVT_TREE_SEL_CHANGED on tree_ctrl_files
+        :return: the node id and type if node found in the stored node dictionaries
+        """
+        for node_type in ['patient', 'study', 'plan', 'file']:
+            for node_id, stored_node in getattr(self, "%s_nodes" % node_type).items():
+                if node == stored_node:
+                    return node_id, node_type
+        return None, None
+
+    def update_mapped_roi_status(self, physician, specific_roi=None):
+        """
+        Update the image next to the roi of the tree_ctrl_roi to indicate if the roi_name is found in the roi_map
+        :param physician: name as stored in roi_map
+        :type physician: str
+        :param specific_roi: if specified, only this roi will be updated
+        :type specific_roi: str
+        """
+        physician_is_valid = self.roi_map.is_physician(physician)
+        if specific_roi is None:
+            rois = self.roi_name_map.keys()
+        else:
+            rois = [specific_roi]  # wrap specific roi into a list
+        for roi in rois:
+            node = self.roi_nodes[roi]
+            if physician_is_valid and self.roi_map.get_physician_roi(physician, roi) not in {'uncategorized'}:
+                # self.tree_ctrl_rois.CheckItem(node, True)
+                self.tree_ctrl_rois.SetItemImage(node, self.tree_ctrl_rois_images['yes'], wx.TreeItemIcon_Normal)
+            else:
+                # self.tree_ctrl_rois.CheckItem(node, False)
+                self.tree_ctrl_rois.SetItemImage(node, self.tree_ctrl_rois_images['no'], wx.TreeItemIcon_Normal)
+
+    def get_used_physician_rois(self, physician):
+        """
+        Get the physician rois that are used in the plan parsed by this object
+        :param physician: name as stored in roi_map
+        :type physician: str
+        :return: used physician rois for this plan
+        :rtype: list
+        """
+        if self.roi_map.is_physician(physician):
+            return list(set([self.roi_map.get_physician_roi(physician, roi) for roi in self.roi_name_map.keys()]))
+        return []
+
+    @property
+    def incomplete_plans(self):
+        """
+        Identify plans that do not include RT Structure and RT Dose files
+        :return: the RT Plan SOP Instance UIDs of incomplete plans
+        :rtype: list
+        """
+        incomplete_plan_uids = []
+        for patient in self.file_tree.values():
+            for study in patient.values():
+                for plan_uid, plan in study.items():
+                    files = [plan[file_type]['file_path'] for file_type in self.file_types]
+                    if not all(files):
+                        incomplete_plan_uids.append(plan_uid)
+        return incomplete_plan_uids
+
     @property
     def checked_plans(self):
+        """
+        Identify the plans that are checked and return the abs_file_paths of their associated DICOM files
+        :return: A dictionary with RT Plan SOP Instance UIDs for keys and dictionary of file_paths for values
+        :rtype: dict
+        """
         plans = {}
         for plan_node_uid, plan_node in self.plan_nodes.items():
             if self.tree_ctrl_files.IsItemChecked(plan_node):
@@ -216,34 +308,17 @@ class DICOM_Importer:
                                                    for file_type, file_obj in dicom_files.items()}
         return plans
 
-    def check_mapped_rois(self, physician, specific_roi=None):
-        physician_is_valid = self.roi_map.is_physician(physician)
-        if specific_roi is None:
-            rois = self.roi_name_map.keys()
-        else:
-            rois = [specific_roi]
-        for roi in rois:
-            node = self.roi_nodes[roi]
-            if physician_is_valid and self.roi_map.get_physician_roi(physician, roi) not in {'uncategorized'}:
-                # self.tree_ctrl_rois.CheckItem(node, True)
-                self.tree_ctrl_rois.SetItemImage(node, self.tree_ctrl_rois_images['yes'], wx.TreeItemIcon_Normal)
-            else:
-                # self.tree_ctrl_rois.CheckItem(node, False)
-                self.tree_ctrl_rois.SetItemImage(node, self.tree_ctrl_rois_images['no'], wx.TreeItemIcon_Normal)
-
-    def get_used_physician_rois(self, physician):
-        if self.roi_map.is_physician(physician):
-            return list(set([self.roi_map.get_physician_roi(physician, roi) for roi in self.roi_name_map.keys()]))
-        return []
-
-    def get_plan_files(self, mrn, study_instance_uid, rt_plan_sop_uid):
-        file_types = self.file_types + ['other']
-        file_set = self.plan_file_sets[mrn][study_instance_uid][rt_plan_sop_uid]
-        return {file_type: file_set[file_type]['file_path'] for file_type in file_types}
-
 
 class DicomDirectoryParserFrame(wx.Dialog):
     def __init__(self, start_path, search_subfolders=True):
+        """
+        Create a window to display parsing progress and begin DicomDirectoryParserThread. After thread completes,
+        send message to begin DICOM parsing
+        :param start_path: absolute path to begin parsing
+        :type start_path: str
+        :param search_subfolders: set to False to ignore sub-directories
+        :type search_subfolders: bool
+        """
         wx.Dialog.__init__(self, None)
 
         self.start_path = start_path
@@ -279,19 +354,30 @@ class DicomDirectoryParserFrame(wx.Dialog):
         self.Center()
 
     def update(self, msg):
+        """
+        Update the progress message and gauge
+        :param msg: a dictionary with keys of 'label' and 'gauge' text and progress fraction, respectively
+        :type msg: dict
+        """
         wx.CallAfter(self.label.SetLabelText, msg['label'])
         wx.CallAfter(self.gauge.SetValue, int(100 * msg['gauge']))
 
     def run(self):
+        """
+        Initiate layout in GUI and begin dicom directory parser thread
+        """
         self.Show()
-        DicomDirectoryParser(self.start_path, self.search_subfolders)
+        DicomDirectoryParserThread(self.start_path, self.search_subfolders)
 
     def close(self):
+        """
+        Destroy layout in GUI and send message to being dicom parsing
+        """
         self.Destroy()
         wx.CallAfter(pub.sendMessage, 'parse_dicom_data')
 
 
-class DicomDirectoryParser(Thread):
+class DicomDirectoryParserThread(Thread):
     """
     With a given start path, scan for RT DICOM files (plan, struct, dose) connected by SOPInstanceUID
     Previous versions strictly used StudyInstanceUID which was sufficient for Philips Pinnacle because
@@ -309,9 +395,12 @@ class DicomDirectoryParser(Thread):
         self.uid_to_mrn = {}
         self.dicom_file_paths = {}
 
-        self.start()
+        self.start()  # begin thread
 
     def run(self):
+        """
+        Begin the thread to parse directory. Returns plan_file_sets and dicom_file_paths through pubsub
+        """
 
         file_paths = get_file_paths(self.start_path, search_subfolders=self.search_subfolders)
         file_count = len(file_paths)
@@ -320,7 +409,12 @@ class DicomDirectoryParser(Thread):
             msg = {'label': "File Name: %s" % os.path.basename(file_path),
                    'gauge': file_index / file_count}
             wx.CallAfter(pub.sendMessage, "dicom_directory_parser_update", msg=msg)
-            ds = self.read_dicom_file(file_path)
+
+            try:
+                ds = dicom.read_file(file_path, stop_before_pixels=True)
+            except InvalidDicomError:
+                ds = None
+
             if ds is not None:
                 modality = ds.Modality.lower()
                 timestamp = os.path.getmtime(file_path)
@@ -333,6 +427,7 @@ class DicomDirectoryParser(Thread):
                                                     'patient_name': ds.PatientName,
                                                     'mrn': ds.PatientID}
 
+                # All RT Plan files need to be found first
                 if modality == 'rtplan':
                     uid = ds.ReferencedStructureSetSequence[0].ReferencedSOPInstanceUID
                     mrn = self.dicom_tag_values[file_path]['mrn']
@@ -380,6 +475,7 @@ class DicomDirectoryParser(Thread):
                         self.dicom_file_paths[plan_uid]['rtdose'].append(dose_file)
                     else:
                         self.dicom_file_paths[plan_uid]['rtdose'] = [dose_file]
+
         # associate appropriate rtstruct files to plans
         for mrn_index, mrn in enumerate(list(self.plan_file_sets)):
             for study_uid in list(self.plan_file_sets[mrn]):
@@ -398,10 +494,3 @@ class DicomDirectoryParser(Thread):
 
         wx.CallAfter(pub.sendMessage, 'dicom_directory_parser_set_file_tree',
                      tree=self.plan_file_sets, file_paths=self.dicom_file_paths)
-
-    @staticmethod
-    def read_dicom_file(file_path):
-        try:
-            return dicom.read_file(file_path, stop_before_pixels=True)
-        except InvalidDicomError:
-            return None

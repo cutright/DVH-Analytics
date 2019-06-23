@@ -9,7 +9,7 @@ from db.sql_connector import echo_sql_db
 from dialogs.main import query_dlg, UserSettings, About
 from dialogs.database import SQLSettingsDialog
 from dialogs.export import ExportCSVDialog, save_string_to_file
-from models.import_dicom import ImportDICOM_Dialog
+from models.import_dicom import ImportDicomDialog
 from models.database_editor import DatabaseEditorDialog
 from models.datatable import DataTable
 from models.plot import PlotStatDVH
@@ -700,7 +700,7 @@ class DVHAMainFrame(wx.Frame):
             self.on_sql()
 
         if echo_sql_db():
-            ImportDICOM_Dialog(self.roi_map, self.options)
+            ImportDicomDialog(self.roi_map, self.options)
         else:
             wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
                           wx.OK | wx.ICON_WARNING)
