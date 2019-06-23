@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import os
@@ -11,11 +11,7 @@ def is_sql_connection_defined():
     Checks if sql_connection.cnf exists
     :rtype: bool
     """
-
-    if os.path.isfile(SQL_CNF_PATH):
-        return True
-    else:
-        return False
+    return os.path.isfile(SQL_CNF_PATH)
 
 
 def write_sql_connection_settings(config):
@@ -31,9 +27,14 @@ def write_sql_connection_settings(config):
 
 
 def load_sql_settings():
+    """
+    Load SQL database login credentials
+    :return: login credentials
+    :rtype: dict
+    """
     if is_sql_connection_defined():
         config = parse_settings_file(SQL_CNF_PATH)
-        config = validate_config(config)
+        validate_config(config)
 
     else:
         config = {'host': 'localhost',
@@ -46,21 +47,24 @@ def load_sql_settings():
 
 
 def validate_config(config):
-    if 'user' not in list(config):
-        config['user'] = ''
-        config['password'] = ''
-
-    if 'password' not in list(config):
-        config['password'] = ''
-
-    return config
+    """
+    Validate a login configuration, sets empty values for user and password if needed
+    :param config: database login credentials
+    :type config; dict
+    """
+    for key in ['password', 'user']:
+        if key not in config.keys():
+            config[key] = ''
 
 
 def validate_sql_connection(config=None, verbose=False):
     """
-    :param config: a dict with keys 'host', 'dbname', 'port' and optionally 'user' and 'password'
-    :param verbose: boolean indicating if cmd line printing should be performed
-    :return:
+    :param config: login credentials defining 'host', 'dbname', 'port' and optionally 'user' and 'password'
+    :type config: dict
+    :param verbose: indicates if cmd line printing should be performed
+    :type verbose: bool
+    :return: True if configuration is valid
+    :rtype: bool
     """
 
     valid = True
