@@ -1,13 +1,10 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Fri Mar 24 13:43:28 2017
-
-@author: nightowl
 """
 
 import os
-# from fuzzywuzzy import fuzz
 from shutil import copyfile
 from db.sql_to_python import QuerySQL
 from db.sql_connector import DVH_SQL
@@ -391,57 +388,6 @@ class DatabaseROIs:
                         return True
         return False
 
-    # def get_best_roi_match(self, roi, length=None):
-    #     roi = clean_name(roi)
-    #
-    #     scores = []
-    #     rois = []
-    #     physicians = []
-    #
-    #     for physician in self.get_physicians():
-    #         for physician_roi in self.get_physician_rois(physician):
-    #             scores.append(get_combined_fuzz_score(physician_roi, roi))
-    #             rois.append(physician_roi)
-    #             physicians.append(physician)
-    #             for variation in self.get_variations(physician, physician_roi):
-    #                 scores.append(get_combined_fuzz_score(variation, roi))
-    #                 rois.append(variation)
-    #                 physicians.append(physician)
-    #
-    #     for institutional_roi in self.institutional_rois:
-    #         scores.append(get_combined_fuzz_score(institutional_roi, roi))
-    #         rois.append(institutional_roi)
-    #         physicians.append('DEFAULT')
-    #
-    #     best = []
-    #
-    #     if length:
-    #         if length > len(scores):
-    #             length = len(scores)
-    #     else:
-    #         length = 1
-    #
-    #     for i in range(length):
-    #         max_score = max(scores)
-    #         index = scores.index(max_score)
-    #         scores.pop(index)
-    #         best_match = rois.pop(index)
-    #         best_physician = physicians.pop(index)
-    #         if self.is_institutional_roi(best_match):
-    #             best_institutional_roi = best_match
-    #         else:
-    #             best_institutional_roi = 'uncategorized'
-    #
-    #         best_physician_roi = self.get_physician_roi(best_physician, best_match)
-    #
-    #         best.append({'variation': best_match,
-    #                      'physician_roi': best_physician_roi,
-    #                      'physician': best_physician,
-    #                      'institutional_roi': best_institutional_roi,
-    #                      'score': max_score})
-    #
-    #     return best
-
     ########################
     # Export to file
     ########################
@@ -727,8 +673,10 @@ class DatabaseROIs:
         inst_rois = [roi for roi in all_inst_rois if roi not in unused_inst_rois]
         linked_phys_rois = [self.get_physician_roi_from_institutional_roi(physician, roi) for roi in inst_rois]
         unlinked_phys_rois = [roi for roi in phys_rois if roi not in linked_phys_rois]
-        linked_phys_roi_tree = {roi: self.get_variations(physician, roi) for roi in linked_phys_rois if roi != 'uncategorized'}
-        unlinked_phys_roi_tree = {roi: self.get_variations(physician, roi) for roi in unlinked_phys_rois if roi != 'uncategorized'}
+        linked_phys_roi_tree = {roi: self.get_variations(physician, roi) for roi in linked_phys_rois
+                                if roi != 'uncategorized'}
+        unlinked_phys_roi_tree = {roi: self.get_variations(physician, roi) for roi in unlinked_phys_rois
+                                  if roi != 'uncategorized'}
         return {'Linked to Institutional ROI': linked_phys_roi_tree,
                 'Unlinked to Institutional ROI': unlinked_phys_roi_tree}
 
@@ -809,26 +757,6 @@ def print_uncategorized_rois():
         physician_roi = dvh_data.physician_roi[i]
         institutional_roi = dvh_data.institutional_roi[i]
         print(physician, institutional_roi, physician_roi, roi_name, sep=' ')
-
-
-# def get_combined_fuzz_score(a, b, simple=None, partial=None):
-#     a = clean_name(a)
-#     b = clean_name(b)
-#
-#     if simple:
-#         w_simple = float(simple)
-#     else:
-#         w_simple = 1.
-#
-#     if partial:
-#         w_partial = float(partial)
-#     else:
-#         w_partial = 1.
-#
-#     simple = fuzz.ratio(a, b) * w_simple
-#     partial = fuzz.partial_ratio(a, b) * w_partial
-#     combined = float(simple) * float(partial) / 10000.
-#     return combined
 
 
 def initialize_roi_preference_file(rel_file_name):
