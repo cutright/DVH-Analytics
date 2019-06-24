@@ -9,30 +9,24 @@ from sklearn.ensemble import RandomForestRegressor
 
 class StatsData:
     def __init__(self, dvhs, table_data):
+        """
+        Class used to to collect data for Regression and Control Chart
+        This process is different than for Time Series since regressions require all variables to be the same length
+        :param dvhs: data from DVH query
+        :type dvhs: DVH
+        :param table_data: table data other than from DVHs
+        :type table_data: dict
+        """
         self.dvhs = dvhs
         self.table_data = table_data
-        self.data = {}
 
         self.column_info = sql_columns.numerical
         self.correlation_variables = list(self.column_info)
         self.correlation_variables.sort()
 
-        self.map_data()
-        # self.add_ptv_data()
+        self.__map_data()
 
-    @property
-    def uids(self):
-        return self.dvhs.study_instance_uid
-
-    @property
-    def mrns(self):
-        return self.dvhs.mrn
-
-    @property
-    def sim_study_dates(self):
-        return self.data['Simulation Date']['values']
-
-    def map_data(self):
+    def __map_data(self):
         self.data = {}
         stat_types = ['min', 'mean', 'median', 'max']
         for var in self.correlation_variables:
@@ -89,38 +83,24 @@ class StatsData:
                                                    'values': temp[stat]}
         self.validate_data()
 
-    def get_plan_index(self, uid):
-        return self.table_data['Plans'].study_instance_uid.index(uid)
-
-    def get_beam_indices(self, uid):
-        return [i for i, x in enumerate(self.table_data['Beams'].study_instance_uid) if x == uid]
-
-    @staticmethod
-    def get_src_values(src, var_name, uid):
-        uid_indices = [i for i, x in enumerate(src.study_instance_uid) if x == uid]
-        return [getattr(src, var_name)[i] for i in uid_indices]
-
-    @property
-    def variables(self):
-        return [var for var in list(self.data) if var != 'Simulation Date']
-
-    @property
-    def control_chart_variables(self):
-        return list(self.data)
-
-    def get_bokeh_data(self, x, y):
-        return {'uid': self.uids,
-                'mrn': self.mrns,
-                'date': self.sim_study_dates,
-                'x': self.data[x]['values'],
-                'y': self.data[y]['values']}
-
-    def get_axis_title(self, variable):
-        if self.data[variable]['units']:
-            return "%s (%s)" % (variable, self.data[variable]['units'])
-        return variable
+    def validate_data(self):
+        """
+        Remove any variables that are constant to avoid crash on regression
+        """
+        bad_vars = []
+        for var_name, var_obj in self.data.items():
+            if var_name != 'Simulation Date':
+                values = [float(val) for val in var_obj['values'] if val != 'None' and val is not None]
+                if not any(np.diff(values).tolist()):
+                    bad_vars.append(var_name)
+        for var in bad_vars:
+            self.data.pop(var)
 
     def update_endpoints_and_radbio(self):
+        """
+        Update endpoint and radbio data in self.data. This function is needed since all of these values are calcualted
+        after a query and user may change these values.
+        """
         if self.dvhs:
             if self.dvhs.endpoints['defs']:
                 for var in self.dvhs.endpoints['defs']['label']:
@@ -141,27 +121,69 @@ class StatsData:
                                             'values': self.dvhs.ntcp_or_tcp}
             self.validate_data()
 
-    def add_ptv_data(self):
-        if self.dvhs:
-            attr = ['cross_section_max', 'cross_section_median', 'max_dose', 'min_dose', 'spread_x', 'spread_y',
-                    'spread_z', 'surface_area', 'volume']
-            units = ['cm²', 'cm²', 'Gy', 'Gy', 'cm', 'cm', 'cm', 'cm²', 'cm³']
+    @staticmethod
+    def get_src_values(src, var_name, uid):
+        uid_indices = [i for i, x in enumerate(src.study_instance_uid) if x == uid]
+        return [getattr(src, var_name)[i] for i in uid_indices]
 
-            for i, key in enumerate(attr):
-                clean_key = ('PTV %s' % key.replace('_', ' ').title())
-                self.data[clean_key] = {'values': getattr(self.dvhs, 'ptv_%s' % key), 'units': units[i]}
+    def get_plan_index(self, uid):
+        return self.table_data['Plans'].study_instance_uid.index(uid)
 
-    def validate_data(self):
-        bad_vars = []
-        for var_name, var_obj in self.data.items():
-            if var_name != 'Simulation Date':
-                values = [float(val) for val in var_obj['values'] if val != 'None' and val is not None]
-                if not any(np.diff(values).tolist()):
-                    bad_vars.append(var_name)
-        for var in bad_vars:
-            self.data.pop(var)
+    def get_beam_indices(self, uid):
+        return [i for i, x in enumerate(self.table_data['Beams'].study_instance_uid) if x == uid]
+
+    def get_bokeh_data(self, x, y):
+        """
+        Get data in a format compatible with bokeh's ColumnDataSource.data
+        :param x: x-variable name
+        :type x: str
+        :param y: y-variable name
+        :type y: str
+        :return: x and y data
+        :rtype: dict
+        """
+        return {'uid': self.uids,
+                'mrn': self.mrns,
+                'date': self.sim_study_dates,
+                'x': self.data[x]['values'],
+                'y': self.data[y]['values']}
+
+    @property
+    def uids(self):
+        return self.dvhs.study_instance_uid
+
+    @property
+    def mrns(self):
+        return self.dvhs.mrn
+
+    @property
+    def sim_study_dates(self):
+        return self.data['Simulation Date']['values']
+
+    @property
+    def variables(self):
+        return [var for var in list(self.data) if var != 'Simulation Date']
+
+    @property
+    def control_chart_variables(self):
+        return list(self.data)
+
+    def get_axis_title(self, variable):
+        if self.data[variable]['units']:
+            return "%s (%s)" % (variable, self.data[variable]['units'])
+        return variable
 
     def get_X_and_y(self, y_variable, x_variables, include_patient_info=False):
+        """
+        Collect data for input into multi-variable regression
+        :param y_variable: dependent variable
+        :type y_variable: str
+        :param x_variables: independent variables
+        :type x_variables: list
+        :param include_patient_info: If True, return mrn, uid, dates with X and y
+        :type include_patient_info: bool
+        :return: X, y or X, y, mrn, uid, dates
+        """
         data, mrn, uid, dates = [], [], [], []
         y_var_data = []
         for i, value in enumerate(self.data[y_variable]['values']):
@@ -188,6 +210,9 @@ class StatsData:
 
 
 def str_starts_with_any_in_list(string_a, string_list):
+    """
+    Check if string_a starts with any string the provided list of strings
+    """
     for string_b in string_list:
         if string_a.startswith(string_b):
             return True
@@ -195,7 +220,19 @@ def str_starts_with_any_in_list(string_a, string_list):
 
 
 def get_p_values(X, y, predictions, params):
-    # https://stackoverflow.com/questions/27928275/find-p-value-significance-in-scikit-learn-linearregression
+    """
+    Get p-values using sklearn
+    based on https://stackoverflow.com/questions/27928275/find-p-value-significance-in-scikit-learn-linearregression
+    :param X: independent data
+    :type X: np.array
+    :param y: dependent data
+    :type y: np.array
+    :param predictions: output from linear_model.LinearRegression.predict
+    :param params: np.array([y_incercept, slope])
+    :return: p-values
+    :rtype: list
+    """
+
     newX = np.append(np.ones((len(X), 1)), X, axis=1)
     MSE = (sum((y - predictions) ** 2)) / (len(newX) - len(newX[0]))
 
@@ -206,53 +243,48 @@ def get_p_values(X, y, predictions, params):
     return [2 * (1 - stats.t.cdf(np.abs(i), (len(newX) - 1))) for i in ts_b], sd_b, ts_b
 
 
-def multi_variable_regression(X, y):
-    output = {}
+class MultiVariableRegression:
+    def __init__(self, X, y):
 
-    reg = linear_model.LinearRegression()
-    ols = reg.fit(X, y)
+        reg = linear_model.LinearRegression()
+        ols = reg.fit(X, y)
 
-    output['y_intercept'] = reg.intercept_
-    output['slope'] = reg.coef_
-    params = np.append(output['y_intercept'],
-                       output['slope'])
-    output['predictions'] = reg.predict(X)
+        self.y_intercept = reg.intercept_
+        self.slope = reg.coef_
+        params = np.append(self.y_intercept, self.slope)
+        self.predictions = reg.predict(X)
 
-    output['r_sq'] = r2_score(y,  output['predictions'])
-    output['mse'] = mean_squared_error(y,  output['predictions'])
+        self.r_sq = r2_score(y,  self.predictions)
+        self.mse = mean_squared_error(y,  self.predictions)
 
-    output['p_values'], output['sd_b'], output['ts_b'] = get_p_values(X, y,  output['predictions'], params)
+        self.p_values, self.sd_b, self.ts_b = get_p_values(X, y,  self.predictions, params)
 
-    output['residuals'] = np.subtract(y, output['predictions'])
+        self.residuals = np.subtract(y, self.predictions)
 
-    output['norm_prob_plot'] = stats.probplot(output['residuals'], dist='norm', fit=False, plot=None, rvalue=False)
+        self.norm_prob_plot = stats.probplot(self.residuals, dist='norm', fit=False, plot=None, rvalue=False)
 
-    reg_prob = linear_model.LinearRegression()
-    reg_prob.fit([[val] for val in output['norm_prob_plot'][0]], output['norm_prob_plot'][1])
-    output['y_intercept_prob'] = reg_prob.intercept_
-    output['slope_prob'] = reg_prob.coef_
-    output['x_trend_prob'] = [min(output['norm_prob_plot'][0]), max(output['norm_prob_plot'][0])]
-    output['y_trend_prob'] = np.add(np.multiply(output['x_trend_prob'],  output['slope_prob']),
-                                    output['y_intercept_prob'])
+        reg_prob = linear_model.LinearRegression()
+        reg_prob.fit([[val] for val in self.norm_prob_plot[0]], self.norm_prob_plot[1])
 
-    output['f_stat'] = regressors_stats.f_stat(ols, X, y)
-    output['df_error'] = len(X[:, 0]) - len(X[0, :]) - 1
-    output['df_model'] = len(X[0, :])
+        self.y_intercept_prob = reg_prob.intercept_
+        self.slope_prob = reg_prob.coef_
+        self.x_trend_prob = [min(self.norm_prob_plot[0]), max(self.norm_prob_plot[0])]
+        self.y_trend_prob = np.add(np.multiply(self.x_trend_prob, self.slope_prob), self.y_intercept_prob)
 
-    output['f_p_value'] = stats.f.cdf(output['f_stat'], output['df_model'], output['df_error'])
+        self.f_stat = regressors_stats.f_stat(ols, X, y)
+        self.df_error = len(X[:, 0]) - len(X[0, :]) - 1
+        self.df_model = len(X[0, :])
 
-    answer = Obj()
-    for key in list(output):
-        setattr(answer, key, output[key])
-
-    return answer
-
-
-class Obj:
-    pass
+        self.f_p_value = stats.f.cdf(self.f_stat, self.df_model, self.df_error)
 
 
 def get_control_limits(y):
+    """
+    Calculate control limits for Control Chart
+    :param y: data
+    :type y: list
+    :return: center line, upper control limit, and lower control limit
+    """
     y = np.array(y)
 
     center_line = np.mean(y)
@@ -267,6 +299,14 @@ def get_control_limits(y):
 
 
 def get_random_forest(X, y, n_estimators=100, max_features=None):
+    """
+    Get random forest predictions and the mean square error with sklearn
+    :param X: independent data
+    :param y: dependent data
+    :param n_estimators:
+    :param max_features:
+    :return: predicted values, mean square error
+    """
     if max_features is None:
         max_features = len(X[0, :])
     regressor = RandomForestRegressor(n_estimators=n_estimators, max_features=max_features)
@@ -276,23 +316,3 @@ def get_random_forest(X, y, n_estimators=100, max_features=None):
     mse = np.mean(np.square(np.subtract(y_pred, y)))
 
     return y_pred, mse
-
-
-def get_X_and_y(y_variable, x_variables, stats_data):
-    data = []
-    y_var_data = []
-    for value in stats_data.data[y_variable]['values']:
-        y_var_data.append([value, np.nan][value == 'None'])
-    data.append(y_var_data)
-    for var in x_variables:
-        x_var_data = []
-        for value in stats_data.data[var]['values']:
-            x_var_data.append([value, np.nan][value == 'None'])
-        data.append(x_var_data)
-
-    data = np.array(data)
-    clean_data = data[:, ~np.any(np.isnan(data), axis=0)]
-    X = np.transpose(clean_data[1:])
-    y = clean_data[0]
-
-    return X, y

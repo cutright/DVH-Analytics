@@ -8,7 +8,7 @@ from bokeh.palettes import Colorblind8 as palette
 import itertools
 import numpy as np
 from tools.utilities import collapse_into_single_dates, moving_avg, is_windows
-from tools.stats import multi_variable_regression, get_control_limits
+from tools.stats import MultiVariableRegression, get_control_limits
 from os.path import join
 from paths import TEMP_DIR
 
@@ -519,7 +519,7 @@ class PlotRegression(Plot):
         X = np.transpose(clean_data[1:])
         y = clean_data[0]
 
-        self.reg = multi_variable_regression(X, y)
+        self.reg = MultiVariableRegression(X, y)
 
         x_trend = [min(x), max(x)]
         y_trend = np.add(np.multiply(x_trend, self.reg.slope), self.reg.y_intercept)
@@ -683,7 +683,7 @@ class PlotMultiVarRegression(Plot):
         x_len = len(x_variables)
         self.X, self.y, self.mrn, self.uid, self.dates = stats_data.get_X_and_y(y_variable, x_variables,
                                                                                 include_patient_info=True)
-        self.reg = multi_variable_regression(self.X, self.y)
+        self.reg = MultiVariableRegression(self.X, self.y)
 
         self.source['residuals'].data = {'x': self.reg.predictions,
                                          'y': self.reg.residuals}
