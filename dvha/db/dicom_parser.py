@@ -1213,9 +1213,9 @@ class RxParser:
         self.rt_plan = rt_plan
         self.dicompyler_plan = dicompyler_plan
         self.rt_structure = rt_structure
+        self.study_instance_uid = study_instance_uid
         self.fx_grp_data = rt_plan.FractionGroupSequence[fx_grp_index]
         self.dose_ref_index = self.get_dose_ref_seq_index()
-        self.study_instance_uid = study_instance_uid
 
         self.pinnacle_rx_data = None
         if pinnacle_rx_data and fx_grp_index+1 in list(pinnacle_rx_data):
