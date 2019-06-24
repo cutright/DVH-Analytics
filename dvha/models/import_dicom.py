@@ -429,7 +429,8 @@ class ImportDicomDialog(wx.Frame):
                     self.input['sim_study_date'].SetValue('')
                 else:
                     self.input['sim_study_date'].SetValue(datetime_to_date_string(data.sim_study_date))
-                self.input['physician'].SetValue(data.physician)
+                physician = ['DEFAULT', data.physician][data.physician in self.roi_map.get_physicians()]
+                self.input['physician'].SetValue(physician)
                 self.input['tx_site'].SetValue(data.tx_site)
                 self.input['rx_dose'].SetValue(str(data.rx_dose))
                 self.dicom_importer.update_mapped_roi_status(data.physician)
@@ -1007,7 +1008,7 @@ class ImportWorker(Thread):
             plan_counter = 0
             for study_uid, plan_uid_set in study_uids.items():
                 if len(plan_uid_set) > 1:
-                    dose_files = [self.data[plan_uid].dose_file for plan_uid in plan_uid_set]
+                    dose_files = [self.data[plan_uid].dicompyler_data['dose'] for plan_uid in plan_uid_set]
 
                     wait = wx.BusyInfo('Summing grids for\n%s' % study_uid)
                     dose_sum = sum_dose_grids(dose_files)

@@ -134,9 +134,12 @@ class DicomImporter:
                 self.add_study_node(key, study_uid)
                 for plan_uid, plan in study.items():
                     self.add_plan_node(study_uid, plan_uid)
-                    for file_type, file_obj in plan.items():
-                        if file_obj['file_path']:
-                            self.add_rt_file_node(plan_uid, file_type, file_obj['file_path'])
+                    for file_type, file_list in self.dicom_file_paths[plan_uid].items():
+                        if file_list:
+                            for file_path in file_list:
+                                if file_path not in self.file_nodes.keys():
+                                    self.add_rt_file_node(plan_uid, file_type, file_path)
+                                    break
 
         self.tree_ctrl_files.Expand(self.root_files)
         self.tree_ctrl_files.ExpandAllChildren(self.root_files)
