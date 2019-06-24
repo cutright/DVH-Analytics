@@ -18,9 +18,7 @@ import pydicom as dicom
 
 def centroid(study_instance_uid, roi_name):
     """
-    This function will recalculate the centroid of an roi based on data in the SQL DB.
-    :param study_instance_uid: uid as specified in SQL DB
-    :param roi_name: roi_name as specified in SQL DB
+    Recalculate the centroid of an roi based on data in the SQL DB.
     """
 
     coordinates_string = query('dvhs', 'roi_coord_string',
@@ -36,9 +34,7 @@ def centroid(study_instance_uid, roi_name):
 
 def cross_section(study_instance_uid, roi_name):
     """
-    This function will recalculate the centoid of an roi based on data in the SQL DB.
-    :param study_instance_uid: uid as specified in SQL DB
-    :param roi_name: roi_name as specified in SQL DB
+    Recalculate the centroid of an roi based on data in the SQL DB.
     """
 
     coordinates_string = query('dvhs', 'roi_coord_string',
@@ -53,9 +49,7 @@ def cross_section(study_instance_uid, roi_name):
 
 def spread(study_instance_uid, roi_name):
     """
-    This function will recalculate the spread of an roi based on data in the SQL DB.
-    :param study_instance_uid: uid as specified in SQL DB
-    :param roi_name: roi_name as specified in SQL DB
+    Recalculate the spread of an roi based on data in the SQL DB.
     """
 
     coordinates_string = query('dvhs', 'roi_coord_string',
@@ -72,10 +66,8 @@ def spread(study_instance_uid, roi_name):
 
 def dist_to_ptv_centroids(study_instance_uid, roi_name, pre_calc=None):
     """
-    This function will recalculate the OARtoPTV centroid distance based on data in the SQL DB.
-    :param study_instance_uid: uid as specified in SQL DB
-    :param roi_name: roi_name as specified in SQL DB
-    :param pre_calc: centroid of combined PTV, return from get_ptv_centroid
+    Recalculate the OAR-to-PTV centroid distance based on data in the SQL DB.
+    Optionally provide pre-calculated centroid of combined PTV
     """
 
     oar_centroid_string = query('dvhs', 'centroid',
@@ -98,10 +90,8 @@ def get_treatment_volume_centroid(tv):
 
 def min_distances(study_instance_uid, roi_name, pre_calc=None):
     """
-    This function will recalculate the min, mean, median, and max PTV distances an roi based on data in the SQL DB.
-    :param study_instance_uid: uid as specified in SQL DB
-    :param roi_name: roi_name as specified in SQL DB
-    :param pre_calc: coordinates of combined PTV, return from get_treatment_volume_coord
+    Recalculate the min, mean, median, and max PTV distances an roi based on data in the SQL DB.
+    Optionally provide coordinates of combined PTV, return from get_treatment_volume_coord
     """
 
     oar_coordinates_string = query('dvhs', 'roi_coord_string',
@@ -148,10 +138,8 @@ def get_treatment_volume_coord(tv):
 
 def treatment_volume_overlap(study_instance_uid, roi_name, pre_calc=None):
     """
-    This function will recalculate the PTV overlap of an roi based on data in the SQL DB.
-    :param study_instance_uid: uid as specified in SQL DB
-    :param roi_name: roi_name as specified in SQL DB
-    :param pre_calc: union of PTVs, return from get_treatment_volume
+    Recalculate the PTV overlap of an roi based on data in the SQL DB.
+    Optional provide union of PTVs, return from get_treatment_volume
     """
 
     oar_coordinates_string = query('dvhs', 'roi_coord_string',
@@ -167,6 +155,9 @@ def treatment_volume_overlap(study_instance_uid, roi_name, pre_calc=None):
 
 
 def get_treatment_volume(study_instance_uid):
+    """
+    Calculate combined PTV for the provided study_instance_uid
+    """
     ptv_coordinates_strings = query('dvhs', 'roi_coord_string',
                                     "study_instance_uid = '%s' and roi_type like 'PTV%%'" % study_instance_uid)
 
@@ -177,9 +168,7 @@ def get_treatment_volume(study_instance_uid):
 
 def volumes(study_instance_uid, roi_name):
     """
-    This function will recalculate the volume of an roi based on data in the SQL DB.
-    :param study_instance_uid: uid as specified in SQL DB
-    :param roi_name: roi_name as specified in SQL DB
+    Recalculate the volume of an roi based on data in the SQL DB.
     """
 
     coordinates_string = query('dvhs', 'roi_coord_string',
@@ -194,9 +183,7 @@ def volumes(study_instance_uid, roi_name):
 
 def surface_area(study_instance_uid, roi_name):
     """
-    This function will recalculate the surface area of an roi based on data in the SQL DB.
-    :param study_instance_uid: uid as specified in SQL DB
-    :param roi_name: roi_name as specified in SQL DB
+    Recalculate the surface area of an roi based on data in the SQL DB.
     """
 
     coordinates_string = query('dvhs', 'roi_coord_string',
@@ -295,29 +282,32 @@ def beam_complexities(*condition):
 
 
 def update_ptv_data(tv, study_instance_uid):
-        ptv_cross_section = roi_geom.cross_section(tv)
-        ptv_spread = roi_geom.spread(tv)
+    ptv_cross_section = roi_geom.cross_section(tv)
+    ptv_spread = roi_geom.spread(tv)
 
-        condition = "study_instance_uid = '%s' and roi_type like 'PTV%%'" % study_instance_uid
-        with DVH_SQL() as cnx:
-            max_dose = cnx.get_max_value('dvhs', 'max_dose', condition=condition)
-            min_dose = cnx.get_min_value('dvhs', 'min_dose', condition=condition)
+    condition = "study_instance_uid = '%s' and roi_type like 'PTV%%'" % study_instance_uid
+    with DVH_SQL() as cnx:
+        max_dose = cnx.get_max_value('dvhs', 'max_dose', condition=condition)
+        min_dose = cnx.get_min_value('dvhs', 'min_dose', condition=condition)
 
-            ptv_data = {'ptv_cross_section_max': ptv_cross_section['max'],
-                        'ptv_cross_section_median': ptv_cross_section['median'],
-                        'ptv_max_dose': max_dose,
-                        'ptv_min_dose': min_dose,
-                        'ptv_spread_x': ptv_spread[0],
-                        'ptv_spread_y': ptv_spread[1],
-                        'ptv_spread_z': ptv_spread[2],
-                        'ptv_surface_area': roi_geom.surface_area(tv, coord_type='sets_of_points'),
-                        'ptv_volume': roi_geom.volume(tv)}
+        ptv_data = {'ptv_cross_section_max': ptv_cross_section['max'],
+                    'ptv_cross_section_median': ptv_cross_section['median'],
+                    'ptv_max_dose': max_dose,
+                    'ptv_min_dose': min_dose,
+                    'ptv_spread_x': ptv_spread[0],
+                    'ptv_spread_y': ptv_spread[1],
+                    'ptv_spread_z': ptv_spread[2],
+                    'ptv_surface_area': roi_geom.surface_area(tv, coord_type='sets_of_points'),
+                    'ptv_volume': roi_geom.volume(tv)}
 
-            for key, value in ptv_data.items():
-                cnx.update('Plans', key, value, "study_instance_uid = '%s'" % study_instance_uid)
+        for key, value in ptv_data.items():
+            cnx.update('Plans', key, value, "study_instance_uid = '%s'" % study_instance_uid)
 
 
 def query(table, column, condition):
+    """
+    Automatically creates connection and for query
+    """
     with DVH_SQL() as cnx:
         ans = cnx.query(table, column, condition)
     return ans
