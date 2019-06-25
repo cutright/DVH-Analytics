@@ -697,12 +697,18 @@ class ImportDicomDialog(wx.Frame):
                 return
 
     def on_import(self, evt):
-        ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
-                     self.checkbox_include_uncategorized.GetValue(), self.terminate)
-        dlg = ImportStatusDialog(self.terminate)
-        # calling self.Close() below caused issues in Windows if Show() used instead of ShowModal()
-        [dlg.Show, dlg.ShowModal][is_windows()]()
-        self.Close()
+        if self.parsed_dicom_data and self.dicom_importer.checked_plans:
+            ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
+                         self.checkbox_include_uncategorized.GetValue(), self.terminate)
+            dlg = ImportStatusDialog(self.terminate)
+            # calling self.Close() below caused issues in Windows if Show() used instead of ShowModal()
+            [dlg.Show, dlg.ShowModal][is_windows()]()
+            self.Close()
+        else:
+            dlg = wx.MessageDialog(self, "No plans have been selected.", caption='Import Failure',
+                                   style=wx.OK | wx.OK_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
 
     def parse_dicom_data(self):
         wait = wx.BusyInfo("Parsing DICOM data\nPlease wait...")
@@ -1156,7 +1162,7 @@ class ImportWorker(Thread):
                 print("WARNING: No PTV found for %s" % plan_uid)
                 print("\tSkipping PTV related calculations.")
 
-        self.move_files(plan_uid)
+        # self.move_files(plan_uid)
 
         with DVH_SQL() as cnx:
             self.last_import_time = cnx.now
