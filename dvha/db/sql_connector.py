@@ -368,7 +368,7 @@ class DVH_SQL:
 
     def get_unique_values(self, table, column, *condition, **kwargs):
         """
-        Uses SELECT DISTINCT to get disctinct values in database
+        Uses SELECT DISTINCT to get distinct values in database
         :param table: SQL table
         :type table: str
         :param column: SQL column
