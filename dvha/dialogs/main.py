@@ -1,3 +1,15 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# dialogs.main.py
+"""
+Dialogs used in the main view of DVHA (e.g., query design, importing, etc.)
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
+
 import wx
 import wx.adv
 from dateutil.parser import parse as parse_date
@@ -11,7 +23,17 @@ from options import Options
 
 
 class DatePicker(wx.Dialog):
-    def __init__(self, title='', initial_date=None):
+    """
+    Pop-up window to select a date to ensure proper formatting (over typing in a date into a text_ctrl directly)
+    """
+    def __init__(self, title='', initial_date=None, action=None):
+        """
+        :param title: optional title for the wx.Dialog
+        :type title: str
+        :param initial_date: optional initial date
+        :type initial_date: str
+        :param action: pointer to function to be executed on wx.ID_OK or
+        """
         wx.Dialog.__init__(self, None, title=title)
 
         self.calendar_ctrl = wx.adv.CalendarCtrl(self, wx.ID_ANY,
@@ -23,10 +45,14 @@ class DatePicker(wx.Dialog):
                        'delete': wx.Button(self, wx.ID_ANY, "Delete"),
                        'cancel': wx.Button(self, wx.ID_CANCEL, "Cancel")}
 
-        self.none = False
+        self.none = False  # If True after close of this dialog, user deleted the value
+
+        self.action = action
 
         self.__do_layout()
         self.__do_bind()
+
+        self.run()
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -54,7 +80,14 @@ class DatePicker(wx.Dialog):
 
     def on_delete(self, evt):
         self.none = True
-        self.Close()
+        self.Close()  # resolve dialog with wx.ID_CANCEL
+
+    def run(self):
+        res = self.ShowModal()
+        if res == wx.ID_OK or (res == wx.ID_CANCEL and self.none):
+            if self.action is not None:
+                self.action(self.date)
+        self.Destroy()
 
 
 class AddEndpointDialog(wx.Dialog):

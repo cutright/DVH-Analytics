@@ -815,12 +815,9 @@ class ImportDicomDialog(wx.Frame):
         self.on_edit_date('sim_study_date')
 
     def on_edit_date(self, key):
-        dlg = DatePicker(initial_date=self.input[key].GetValue(),
-                         title=key.replace('_', ' ').title())
-        res = dlg.ShowModal()
-        if res == wx.ID_OK or (res == wx.ID_CANCEL and dlg.none):
-            self.input[key].SetValue(dlg.date)
-        dlg.Destroy()
+        DatePicker(initial_date=self.input[key].GetValue(),
+                   title=key.replace('_', ' ').title(),
+                   action=self.input[key].SetValue)
 
         self.validate(self.selected_uid)
         self.update_warning_label()
