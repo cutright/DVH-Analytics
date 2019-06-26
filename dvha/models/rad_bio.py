@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 import wx
-from models.datatable import DataTable
+from models.data_table import DataTable
 from models.dvh import calc_eud, calc_tcp
 # import wx.lib.mixins.listctrl as listmix
 from copy import deepcopy

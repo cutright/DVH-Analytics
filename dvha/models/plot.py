@@ -1016,6 +1016,5 @@ class PlotROIMap(Plot):
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.GetSize()
-        print(panel_width, panel_height)
         self.figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 823.)
         self.figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 774.)

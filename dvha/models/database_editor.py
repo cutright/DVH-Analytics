@@ -1,5 +1,14 @@
 #!/usr/bin/env python
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
+
+# models.database_editor.py
+"""
+Class for the Database Editor accessible from the main view
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
 
 
 import wx
@@ -7,14 +16,21 @@ from dialogs.database import ChangePatientIdentifierDialog, DeletePatientDialog,
     CalculationsDialog, DeleteAllData, RebuildDB, SQLErrorDialog
 from db.sql_to_python import get_database_tree
 from db.sql_connector import DVH_SQL, SQLError
-from models.datatable import DataTable
+from models.data_table import DataTable
 from dialogs.export import save_string_to_file
 from tools.utilities import set_msw_background_color
 from models.roi_map import RemapROIFrame
 
 
-class DatabaseEditorDialog(wx.Frame):
+class DatabaseEditorFrame(wx.Frame):
+    """
+    Various viewing and editing tools for the SQL database. This object is called on Database toolbar click.
+    """
     def __init__(self, roi_map):
+        """
+        :param roi_map: roi_map object
+        :type roi_map: DatabaseROIs
+        """
         wx.Frame.__init__(self, None, title='Database Administrator')
 
         set_msw_background_color(self)  # If windows, change the background color
@@ -60,6 +76,8 @@ class DatabaseEditorDialog(wx.Frame):
 
         self.allow_tree_select_change = True
 
+        self.Show()
+
     def __set_properties(self):
         self.SetTitle("Database Administrator")
         self.window_pane_db_tree.SetScrollRate(10, 10)
@@ -86,6 +104,7 @@ class DatabaseEditorDialog(wx.Frame):
         sizer_combo_box = wx.BoxSizer(wx.VERTICAL)
         sizer_db_tree = wx.BoxSizer(wx.HORIZONTAL)
         sizer_dialog_buttons = wx.BoxSizer(wx.HORIZONTAL)
+
         # sizer_dialog_buttons.Add(self.button['calculations'], 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button['edit_db'], 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button['reimport'], 0, wx.ALL, 5)
@@ -95,31 +114,40 @@ class DatabaseEditorDialog(wx.Frame):
         sizer_dialog_buttons.Add(self.button['delete_all_data'], 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button['remap_roi_names'], 0, wx.ALL, 5)
         sizer_wrapper.Add(sizer_dialog_buttons, 0, wx.ALL, 5)
+
         sizer_db_tree.Add(self.tree_ctrl_db, 1, wx.EXPAND, 0)
         self.window_pane_db_tree.SetSizer(sizer_db_tree)
+
         label_table = wx.StaticText(self.window_pane_query, wx.ID_ANY, "Table:")
         sizer_combo_box.Add(label_table, 0, wx.BOTTOM | wx.TOP, 5)
         sizer_combo_box.Add(self.combo_box_query_table, 0, 0, 0)
         sizer_condition_buttons.Add(sizer_combo_box, 0, wx.ALL | wx.EXPAND, 5)
+
         label_condition = wx.StaticText(self.window_pane_query, wx.ID_ANY, "Condition:")
         sizer_condition.Add(label_condition, 0, wx.BOTTOM | wx.TOP, 5)
         sizer_condition.Add(self.text_ctrl_condition, 0, wx.ALL | wx.EXPAND, 0)
         sizer_condition_buttons.Add(sizer_condition, 1, wx.ALL | wx.EXPAND, 5)
+
         label_spacer_1 = wx.StaticText(self.window_pane_query, wx.ID_ANY, "")
         sizer_query_button.Add(label_spacer_1, 0, wx.BOTTOM, 5)
         sizer_query_button.Add(self.button['query'], 0, wx.ALL, 5)
         sizer_condition_buttons.Add(sizer_query_button, 0, wx.ALL, 5)
+
         label_spacer_2 = wx.StaticText(self.window_pane_query, wx.ID_ANY, "")
         sizer_download_button.Add(label_spacer_2, 0, wx.BOTTOM, 5)
         sizer_download_button.Add(self.button['export_csv'], 0, wx.TOP | wx.BOTTOM, 5)
         sizer_condition_buttons.Add(sizer_download_button, 0, wx.ALL, 5)
+
         label_spacer_3 = wx.StaticText(self.window_pane_query, wx.ID_ANY, "")
         sizer_clear_button.Add(label_spacer_3, 0, wx.BOTTOM, 5)
         sizer_clear_button.Add(self.button['clear'], 0, wx.ALL, 5)
         sizer_condition_buttons.Add(sizer_clear_button, 0, wx.ALL, 5)
+
         sizer_query.Add(sizer_condition_buttons, 0, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+
         sizer_query_table.Add(self.list_ctrl_query_results, 1, wx.EXPAND, 0)
         sizer_query.Add(sizer_query_table, 1, wx.ALL | wx.EXPAND, 5)
+
         self.window_pane_query.SetSizer(sizer_query)
         self.window_db_editor.SplitVertically(self.window_pane_db_tree, self.window_pane_query)
         sizer_wrapper.Add(self.window_db_editor, 1, wx.EXPAND, 0)
@@ -129,6 +157,9 @@ class DatabaseEditorDialog(wx.Frame):
 
     def __do_bind(self):
         # self.Bind(wx.EVT_TREE_SEL_CHANGED, self.OnTreeAdd, self.tree_ctrl_db, id=self.tree_ctrl_db.GetId())
+
+        # All buttons are bound to a function based on their key prepended with 'on_'
+        # For example, query button calls on_query when clicked
         for key, button in self.button.items():
             self.Bind(wx.EVT_BUTTON, getattr(self, 'on_' + key), id=button.GetId())
 
@@ -145,7 +176,8 @@ class DatabaseEditorDialog(wx.Frame):
     def on_query(self, evt):
         self.update_selected_tree_items()
         table = self.combo_box_query_table.GetValue()
-        columns = [c for c, sel in self.selected_columns[table].items() if sel and c not in {'mrn', 'study_instance_uid'}]
+        columns = [c for c, sel in self.selected_columns[table].items()
+                   if sel and c not in {'mrn', 'study_instance_uid'}]
         columns.sort()
 
         if not columns:
@@ -156,7 +188,7 @@ class DatabaseEditorDialog(wx.Frame):
 
         condition = self.text_ctrl_condition.GetValue()
 
-        wait = wx.BusyCursor()
+        wait = wx.BusyInfo("Querying data\nPlease wait...")
         with DVH_SQL() as cnx:
             try:
                 data = cnx.query(table, ','.join(columns), condition, bokeh_cds=True)

@@ -5,7 +5,7 @@ from dialogs.roi_map import AddPhysician, AddPhysicianROI, AddVariationDialog, M
 from tools.errors import ROIVariationError, ROIVariationErrorDialog
 from tools.utilities import get_selected_listctrl_items, MessageDialog, get_elapsed_time
 from db.sql_connector import DVH_SQL, echo_sql_db
-from models.datatable import DataTable
+from models.data_table import DataTable
 from models.plot import PlotROIMap
 from tools.roi_name_manager import clean_name
 from datetime import datetime

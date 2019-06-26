@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 import wx
-from models.datatable import DataTable
+from models.data_table import DataTable
 from db.sql_columns import all_columns as sql_column_info
 from dialogs.export import save_string_to_file
 

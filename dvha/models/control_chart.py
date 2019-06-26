@@ -1,11 +1,37 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# models.control_chart.py
+"""
+Class for the Control Chart frame in the main view
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
+
 import wx
 from models.plot import PlotControlChart
 from db import sql_columns
 from dialogs.export import save_string_to_file
 
 
+# TODO: ControlChartFrame in development
 class ControlChartFrame:
+    """
+    Object to be passed into notebook panel for the Control Chart tab
+    """
     def __init__(self, parent, dvh, stats_data, options):
+        """
+        :param parent:  notebook panel in main view
+        :type parent: Panel
+        :param dvh: dvh data object from query
+        :type dvh: DVH
+        :param stats_data: object containing queried data applicable/parsed for statistical analysis
+        :type stats_data: StatsData
+        :param options: user options containing visual preferences
+        :type options: Options
+        """
         self.parent = parent
         self.dvhs = dvh
         self.stats_data = stats_data
@@ -15,7 +41,7 @@ class ControlChartFrame:
 
         self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
         self.combo_box_model = wx.ComboBox(self.parent, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
-        # self.button_update_plot = wx.Button(self.parent, wx.ID_ANY, "Update Plot")
+
         self.button_export = wx.Button(self.parent, wx.ID_ANY, "Export")
         self.button_save_plot = wx.Button(self.parent, wx.ID_ANY, "Save Plot")
         self.plot = PlotControlChart(self.parent, options)
@@ -23,11 +49,9 @@ class ControlChartFrame:
         self.__set_properties()
         self.__do_bind()
         self.__do_layout()
-        # end wxGlade
 
     def __do_bind(self):
         self.parent.Bind(wx.EVT_COMBOBOX, self.on_combo_box_y, id=self.combo_box_y_axis.GetId())
-        # self.parent.Bind(wx.EVT_BUTTON, self.update_plot_ticker, id=self.button_update_plot.GetId())
         self.parent.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
         self.parent.Bind(wx.EVT_BUTTON, self.export_csv, id=self.button_export.GetId())
 
@@ -35,21 +59,22 @@ class ControlChartFrame:
         pass
 
     def __do_layout(self):
-
-        # begin wxGlade: MyFrame.__do_layout
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_plot = wx.BoxSizer(wx.HORIZONTAL)
         sizer_widgets = wx.StaticBoxSizer(wx.StaticBox(self.parent, wx.ID_ANY, ""), wx.HORIZONTAL)
         sizer_lookback_units = wx.BoxSizer(wx.VERTICAL)
         sizer_y_axis = wx.BoxSizer(wx.VERTICAL)
+
         label_y_axis = wx.StaticText(self.parent, wx.ID_ANY, "Charting Variable:")
         sizer_y_axis.Add(label_y_axis, 0, wx.LEFT, 5)
         sizer_y_axis.Add(self.combo_box_y_axis, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(sizer_y_axis, 1, wx.EXPAND, 0)
+
         label_lookback_units = wx.StaticText(self.parent, wx.ID_ANY, "Adjustment Model:")
         sizer_lookback_units.Add(label_lookback_units, 0, wx.LEFT, 5)
         sizer_lookback_units.Add(self.combo_box_model, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(sizer_lookback_units, 1, wx.EXPAND, 0)
+
         sizer_widgets.Add(self.button_export, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(self.button_save_plot, 0, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_widgets, 0, wx.ALL | wx.EXPAND, 5)
@@ -112,7 +137,7 @@ class ControlChartFrame:
                 for var in self.dvhs.endpoints['defs']['label']:
                     if var not in self.variables:
                         self.stats_data[var] = {'units': '',
-                                          'values': self.dvhs.endpoints['data'][var]}
+                                                'values': self.dvhs.endpoints['data'][var]}
 
                 for var in self.variables:
                     if var[0:2] in {'D_', 'V_'}:
@@ -121,10 +146,10 @@ class ControlChartFrame:
 
             if self.dvhs.eud:
                 self.stats_data['EUD'] = {'units': 'Gy',
-                                    'values': self.dvhs.eud}
+                                          'values': self.dvhs.eud}
             if self.dvhs.ntcp_or_tcp:
                 self.stats_data['NTCP or TCP'] = {'units': '',
-                                            'values': self.dvhs.ntcp_or_tcp}
+                                                  'values': self.dvhs.ntcp_or_tcp}
 
     def initialize_y_axis_options(self):
         for i in range(len(self.choices))[::-1]:

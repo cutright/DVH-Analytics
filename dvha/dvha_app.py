@@ -10,8 +10,8 @@ from dialogs.main import query_dlg, UserSettings, About
 from dialogs.database import SQLSettingsDialog
 from dialogs.export import ExportCSVDialog, save_string_to_file
 from models.import_dicom import ImportDicomDialog
-from models.database_editor import DatabaseEditorDialog
-from models.datatable import DataTable
+from models.database_editor import DatabaseEditorFrame
+from models.data_table import DataTable
 from models.plot import PlotStatDVH
 from models.dvh import DVH
 from models.endpoint import EndpointFrame
@@ -485,8 +485,7 @@ class DVHAMainFrame(wx.Frame):
             self.on_sql()
 
         if echo_sql_db():
-            frame = DatabaseEditorDialog(self.roi_map)
-            frame.Show()
+            DatabaseEditorFrame(self.roi_map)
         else:
             wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)

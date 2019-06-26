@@ -12,7 +12,7 @@ GUI tools to export text data to a file
 
 import wx
 import wx.adv
-from models.datatable import DataTable
+from models.data_table import DataTable
 from paths import DATA_DIR
 from tools.utilities import get_selected_listctrl_items
 

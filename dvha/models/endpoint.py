@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 import wx
-from models.datatable import DataTable
+from models.data_table import DataTable
 from dialogs.main import AddEndpointDialog, DelEndpointDialog
 from dialogs.export import save_string_to_file
 from copy import deepcopy

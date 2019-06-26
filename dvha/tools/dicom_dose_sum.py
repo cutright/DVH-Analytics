@@ -35,10 +35,12 @@ def sum_two_dose_grids(old, new):
 
     # Test if dose grids are coincident.  If so, we can directly sum the
     # pixel arrays.
+    print('Old ImagePositionPatient', old.ImagePositionPatient)
+    print('New ImagePositionPatient', new.ImagePositionPatient)
     if (old.ImagePositionPatient == new.ImagePositionPatient and
             old.pixel_array.shape == new.pixel_array.shape and
             old.PixelSpacing == new.PixelSpacing and
-            old.GridFrameOffsetVector == new.GridFrameOffsetVector):
+            old.GridFrameOffsetVector == new.GridFrameOffsetVector) or True:
         print("PlanSum: Using direct summation")
         dose_sum = old.pixel_array * old.DoseGridScaling + new.pixel_array * new.DoseGridScaling
 
@@ -59,18 +61,12 @@ def sum_two_dose_grids(old, new):
                          new.ImagePositionPatient[1]])
         zmin = np.array([old.ImagePositionPatient[2],
                          new.ImagePositionPatient[2]])
-        xmax = np.array([old.ImagePositionPatient[0] +
-                         old.PixelSpacing[0] * old.Columns,
-                         new.ImagePositionPatient[0] +
-                         new.PixelSpacing[0] * new.Columns])
-        ymax = np.array([old.ImagePositionPatient[1] +
-                         old.PixelSpacing[1] * old.Rows,
-                         new.ImagePositionPatient[1] +
-                         new.PixelSpacing[1] * new.Rows])
-        zmax = np.array([old.ImagePositionPatient[2] +
-                         scale_old[2] * len(old.GridFrameOffsetVector),
-                         new.ImagePositionPatient[2] +
-                         scale_new[2] * len(new.GridFrameOffsetVector)])
+        xmax = np.array([old.ImagePositionPatient[0] + old.PixelSpacing[0] * old.Columns,
+                         new.ImagePositionPatient[0] + new.PixelSpacing[0] * new.Columns])
+        ymax = np.array([old.ImagePositionPatient[1] + old.PixelSpacing[1] * old.Rows,
+                         new.ImagePositionPatient[1] + new.PixelSpacing[1] * new.Rows])
+        zmax = np.array([old.ImagePositionPatient[2] + scale_old[2] * len(old.GridFrameOffsetVector),
+                         new.ImagePositionPatient[2] + scale_new[2] * len(new.GridFrameOffsetVector)])
         x0 = xmin[np.argmin(abs(xmin))]
         x1 = xmax[np.argmin(abs(xmax))]
         y0 = ymin[np.argmin(abs(ymin))]
@@ -82,8 +78,8 @@ def sum_two_dose_grids(old, new):
 
         # Create index grid for the sum array
         i, j, k = np.mgrid[0:int((x1 - x0) / scale_sum[0]),
-                  0:int((y1 - y0) / scale_sum[1]),
-                  0:int((z1 - z0) / scale_sum[2])]
+                           0:int((y1 - y0) / scale_sum[1]),
+                           0:int((z1 - z0) / scale_sum[2])]
 
         x_vals = np.arange(x0, x1, scale_sum[0])
         y_vals = np.arange(y0, y1, scale_sum[1])
@@ -97,10 +93,8 @@ def sum_two_dose_grids(old, new):
         # Dicom pixel_array objects seem to have the z axis in the first index
         # (zyx).  The x and z axes are swapped before interpolation to coincide
         # with the xyz ordering of ImagePositionPatient
-        dose_sum = interpolate_image(np.swapaxes(old.pixel_array, 0, 2), scale_old,
-                                     old.ImagePositionPatient, sum_xyz_coords) * old.DoseGridScaling + \
-                   interpolate_image(np.swapaxes(new.pixel_array, 0, 2), scale_new,
-                                     new.ImagePositionPatient, sum_xyz_coords) * new.DoseGridScaling
+        dose_sum = interpolate_image(np.swapaxes(old.pixel_array, 0, 2), scale_old, old.ImagePositionPatient, sum_xyz_coords) * old.DoseGridScaling + \
+                   interpolate_image(np.swapaxes(new.pixel_array, 0, 2), scale_new, new.ImagePositionPatient, sum_xyz_coords) * new.DoseGridScaling
 
         # Swap the x and z axes back
         dose_sum = np.swapaxes(dose_sum, 0, 2)
