@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# dicom_importer.py
+# db.dicom_importer.py
 """Class and functions related to parsing a directory containing DICOM files and updating the GUI."""
 # Copyright (c) 2016-2019 Dan Cutright
 # This file is part of DVH Analytics, released under a BSD license.

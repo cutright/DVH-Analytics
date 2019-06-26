@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# database.py
+# dialogs.database.py
 """
 Classes based on wx.Dialog for models.database_editor.py
 In general, this classes will manifest themselves in the GUI on initialization.  They should contain a function names

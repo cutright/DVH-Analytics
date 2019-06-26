@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# dicom_parser.py
+# db.dicom_parser.py
 """Parse DICOM RT Dose, Structure, and Plan files for the DVH Analytics SQL Database"""
 # Copyright (c) 2016-2019 Dan Cutright
 # This file is part of DVH Analytics, released under a BSD license.

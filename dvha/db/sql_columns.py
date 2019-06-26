@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# sql_columns.py
+# db.sql_columns.py
 """
 These objects are largely used for designing queries in the GUI to easily connect UI friendly variable names with their
 associated SQL tables column names

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# sql_to_python.py
+# db.sql_to_python.py
 """
 A generic class to query a DVHA SQL table and parse the return into a python object
 """

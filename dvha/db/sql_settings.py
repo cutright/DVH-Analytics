@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# sql_settings.py
+# db.sql_settings.py
 """
 Functions related to reading, loading, and validating SQL connection credentials
 """

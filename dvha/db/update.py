@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# update.py
+# db.update.py
 """
 Functions to call appropriate calculations and update various columns in the SQL database
 """

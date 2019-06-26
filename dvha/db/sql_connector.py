@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# sql_connector.py
+# db.sql_connector.py
 """
 Tools used to communicate with the SQL database
 """
