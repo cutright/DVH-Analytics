@@ -1,5 +1,12 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+# dicom_importer.py
+"""Class and functions related to parsing a directory containing DICOM files and updating the GUI."""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
 
 import wx
 import os
@@ -15,10 +22,12 @@ SCRIPT_DIR = os.path.dirname(__file__)
 
 
 class DicomImporter:
+    """
+    This class processes data for various UI objects from models.import_dicom.ImportDicomDialog
+    """
     def __init__(self, start_path, tree_ctrl_files, tree_ctrl_rois, tree_ctrl_roi_root, tree_ctrl_rois_images,
                  roi_map, search_subfolders=True):
         """
-        This class processes data for various UI objects from models.import_dicom.ImportDicomDialog
         :param start_path: directory to be scanned
         :type start_path: str
         :param tree_ctrl_files: tree in GUI used to visualize DICOM files
@@ -313,10 +322,12 @@ class DicomImporter:
 
 
 class DicomDirectoryParserFrame(wx.Dialog):
+    """
+    Create a window to display parsing progress and begin DicomDirectoryParserThread. After thread completes,
+    send message to begin DICOM parsing
+    """
     def __init__(self, start_path, search_subfolders=True):
         """
-        Create a window to display parsing progress and begin DicomDirectoryParserThread. After thread completes,
-        send message to begin DICOM parsing
         :param start_path: absolute path to begin parsing
         :type start_path: str
         :param search_subfolders: set to False to ignore sub-directories
@@ -387,6 +398,10 @@ class DicomDirectoryParserThread(Thread):
     it can export multiple prescriptions in a single RT Plan file, other TPS's export one file per plan
     """
     def __init__(self, start_path, search_subfolders):
+        """
+        :param start_path: initial directory path to scan for DICOM files
+        :param search_subfolders: If true, files within all sub-directories will be included
+        """
         Thread.__init__(self)
         self.start_path = start_path
         self.search_subfolders = search_subfolders

@@ -1,10 +1,14 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+# sql_connector.py
 """
-Tools used to interact with SQL database
-Created on Sat Mar  4 11:33:10 2017
-@author: Dan Cutright, PhD
+Tools used to communicate with the SQL database
 """
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
 
 import psycopg2
 from psycopg2 import OperationalError
@@ -14,9 +18,11 @@ from tools.errors import SQLError
 
 
 class DVH_SQL:
+    """
+    This class is used to communicate to the SQL database to limit the need for syntax in other files
+    """
     def __init__(self, *config):
         """
-        This class is used to communicate to the SQL database to limit the need to know SQL syntax
         :param config: optional SQL login credentials, stored values used if nothing provided
         """
         if config:

@@ -7,8 +7,12 @@
     - [ ] Imports based on sop instance uid rather than study instance uid
         - [X] Update file tree to Patient -> Study -> Plan -> Files
         - [X] Auto combine multiple plans within one study_instance_uid
-        - [X] Implement dicom_dose_sum.py borrowed from dicompyler plugin
-        - [ ] Needs testing
+        - [ ] Implement dicom_dose_sum.py borrowed from dicompyler plugin (testing failed)
+            - [ ] Still need to properly assign files (only one file per study, not a list)
+            - [ ] Rx dose of 2nd plan not importing?
+            - [ ] Allow a single structure file for two plans pointing to same file
+            - [ ] Dose sums that require dose summation failing. Issue posted [here](https://groups.google.com/forum/?utm_medium=email&utm_source=footer#!msg/dicompyler/qkU2CtYzgLg/EbaV5foXAgAJ)
+            - [ ] move_files should be called after study completely imported, not plan
 
 2. **Open/Save and Import**
     * *Open/Save*

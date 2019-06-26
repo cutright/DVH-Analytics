@@ -1,3 +1,16 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# sql_columns.py
+"""
+These objects are largely used for designing queries in the GUI to easily connect UI friendly variable names with their
+associated SQL tables column names
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
+
 # This is a maps categorical data type selections to SQL columns and SQL tables
 categorical = {'ROI Institutional Category': {'var_name': 'institutional_roi', 'table': 'DVHs'},
                'ROI Physician Category': {'var_name': 'physician_roi', 'table': 'DVHs'},
@@ -93,6 +106,7 @@ numerical = {'Age': {'var_name': 'age', 'table': 'Plans', 'units': ''},
              'PTV Max Dose': {'var_name': 'ptv_max_dose', 'table': 'Plans', 'units': 'Gy'},
              'PTV Min Dose': {'var_name': 'ptv_min_dose', 'table': 'Plans', 'units': 'Gy'}}
 
+# Removed these variables from UI as they may be overkill?
 numerical_detailed = {'Collimator Start Angle': {'var_name': 'collimator_start', 'table': 'Beams', 'units': 'deg'},
                       'Collimator End Angle': {'var_name': 'collimator_end', 'table': 'Beams', 'units': 'deg'},
                       'Collimator Min Angle': {'var_name': 'collimator_min', 'table': 'Beams', 'units': 'deg'},

@@ -1,5 +1,14 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+# sql_settings.py
+"""
+Functions related to reading, loading, and validating SQL connection credentials
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
 
 import os
 from paths import SQL_CNF_PATH, parse_settings_file

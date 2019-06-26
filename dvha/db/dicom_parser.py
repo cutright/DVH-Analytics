@@ -1,13 +1,12 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-Parse DICOM RT Dose, Structure, and Plan files for DVH Analytics SQL Database for DVHA > 0.6
-This version of dicom_parser is longer, but hopefully easier to understand
-Note that this version depends is designed for DVH_SQL().insert_row as opposed to
-insert_plan, insert_beams, insert_rxs, insert_dvhs
-Created on Sun Mar 17
-@author: Dan Cutright, PhD
-"""
+
+# dicom_parser.py
+"""Parse DICOM RT Dose, Structure, and Plan files for the DVH Analytics SQL Database"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
 
 from dicompylercore import dicomparser, dvhcalc
 from dateutil.relativedelta import relativedelta  # python-dateutil
@@ -24,17 +23,19 @@ from paths import IMPORT_SETTINGS_PATH, parse_settings_file
 
 
 class DICOM_Parser:
+    """
+    Parse a set of DICOM files for database
+    """
     def __init__(self, plan=None, structure=None, dose=None, dose_sum=None,
                  global_plan_over_rides=None, roi_map=DatabaseROIs()):
         """
-        Parse a set of DICOM files for database
         :param plan: absolute path of DICOM RT Plan file
         :type plan: str
         :param structure: absolute path of DICOM RT Struct file
         :type structure: str
         :param dose: absolute path of DICOM RT Dose file
         :type dose: str
-        :param dose_sum: return from SumPlan of tools.dicomdose_sum (dicompyler-core plugin)
+        :param dose_sum: return from sum_dose_grids of tools.dicomdose_sum (dicompyler-core plugin)
         :param global_plan_over_rides: Values from import GUI to override DICOM file data
         :type global_plan_over_rides: dict
         :param roi_map: roi name map
@@ -948,9 +949,11 @@ class DICOM_Parser:
 
 
 class BeamParser:
+    """
+    This class is used to parse beam data needed for importing a plan into the database
+    """
     def __init__(self, beam_data, ref_beam_data, cp_seq):
         """
-        This class is used to parse beam data needed for importing a plan into the database
         :param beam_data:
         :param ref_beam_data:
         :param cp_seq:
@@ -1197,9 +1200,11 @@ class BeamParser:
 
 
 class RxParser:
+    """
+    This class is used to parse rx data needed for importing a plan into the database
+    """
     def __init__(self, rt_plan, dicompyler_plan, rt_structure, fx_grp_index, pinnacle_rx_data, study_instance_uid):
         """
-        This class is used to parse rx data needed for importing a plan into the database
         :param rt_plan: the pydicom dataset object from reading the RT Plan DICOM file
         :param dicompyler_plan: the dicompyler-core object from readying the RT Plan DICOM file
         :param rt_structure: the pydicom dataset object from reading the RT Structure DICOM file
