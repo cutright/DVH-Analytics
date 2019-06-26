@@ -3,7 +3,7 @@
 
 # models.dvh.py
 """
-Class for the Database Editor accessible from the main view
+Class to retrieve DVH data from SQL, calculate parameters dependent on DVHs, and extract plotting data
 """
 # Copyright (c) 2016-2019 Dan Cutright
 # This file is part of DVH Analytics, released under a BSD license.
