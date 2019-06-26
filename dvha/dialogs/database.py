@@ -1,5 +1,16 @@
 #!/usr/bin/env python
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
+
+# database.py
+"""
+Classes based on wx.Dialog for models.database_editor.py
+In general, this classes will manifest themselves in the GUI on initialization.  They should contain a function names
+action which will be executed on a dialog resolution of wx.ID_OK
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
 
 import wx
 from datetime import datetime
@@ -10,12 +21,15 @@ from paths import SQL_CNF_PATH, parse_settings_file, IMPORTED_DIR, INBOX_DIR
 from os import mkdir, rename
 from os.path import join
 from tools.errors import SQLError, SQLErrorDialog
-from tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file, delete_imported_dicom_files,\
-    move_imported_dicom_files, MessageDialog
+from tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file,\
+    delete_imported_dicom_files, move_imported_dicom_files, MessageDialog
 
 
 class CalculationsDialog(wx.Dialog):
     # TODO: Add functionality to OK button
+    """
+    Dialog to perform various calculations for values not stored in DICOM files.
+    """
     def __init__(self):
         wx.Dialog.__init__(self, None, title="Calculations")
 
@@ -45,21 +59,26 @@ class CalculationsDialog(wx.Dialog):
         sizer_condition = wx.BoxSizer(wx.VERTICAL)
         sizer_calc_and_check = wx.BoxSizer(wx.HORIZONTAL)
         sizer_calculate = wx.BoxSizer(wx.VERTICAL)
+
         label_calculate = wx.StaticText(self, wx.ID_ANY, "Calculate:")
         sizer_calculate.Add(label_calculate, 0, wx.BOTTOM, 5)
         sizer_calculate.Add(self.combo_box_calculate, 0, 0, 0)
         sizer_calc_and_check.Add(sizer_calculate, 0, wx.EXPAND, 0)
         sizer_calc_and_check.Add(self.checkbox, 0, wx.LEFT | wx.TOP, 20)
         sizer_input.Add(sizer_calc_and_check, 0, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+
         label_condition = wx.StaticText(self, wx.ID_ANY, "Condition:")
         sizer_condition.Add(label_condition, 0, wx.BOTTOM, 5)
         sizer_condition.Add(self.text_ctrl_condition, 0, wx.EXPAND, 0)
         sizer_input.Add(sizer_condition, 0, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper_inner.Add(sizer_input, 0, wx.ALL | wx.EXPAND, 5)
+
         sizer_ok_cancel.Add(self.button_ok, 0, wx.ALL, 5)
         sizer_ok_cancel.Add(self.button_cancel, 0, wx.ALL, 5)
         sizer_wrapper_inner.Add(sizer_ok_cancel, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+
         sizer_wrapper.Add(sizer_wrapper_inner, 0, wx.EXPAND, 0)
+
         self.SetSizer(sizer_wrapper)
         sizer_wrapper.Fit(self)
         self.Layout()
@@ -73,8 +92,25 @@ class CalculationsDialog(wx.Dialog):
 
 
 class ChangeOrDeleteBaseClass(wx.Dialog):
+    """
+    A class generalized for changing a patient identifier or deleting a study for a patient
+    """
     def __init__(self, text_input_1_label, text_input_2_label, ok_button_label, title,
-                 mrn=None, study_instance_uid=None, *args, **kw):
+                 mrn=None, study_instance_uid=None):
+        """
+        :param text_input_1_label: label of first text input in GUI
+        :type text_input_1_label: str
+        :param text_input_2_label: label of second text input in GUI
+        :type text_input_2_label: str
+        :param ok_button_label: label of OK button in GUI
+        :type ok_button_label: str
+        :param title: title of the wx.Dialog object
+        :type title: str
+        :param mrn: optional initial value for mrn
+        :type mrn: str
+        :param study_instance_uid: options initial value for study instance uid
+        :type study_instance_uid: str
+        """
         wx.Dialog.__init__(self, None, title=title)
 
         self.initial_mrn = mrn
@@ -148,6 +184,9 @@ class ChangeOrDeleteBaseClass(wx.Dialog):
         self.Destroy()
 
     def action(self):
+        """
+        Should be over-written in classes that inherit this class, but needs to be defined here since run refers to it
+        """
         pass
 
     def on_identifier_change(self, evt):
@@ -174,7 +213,16 @@ class ChangeOrDeleteBaseClass(wx.Dialog):
 
 
 class ChangePatientIdentifierDialog(ChangeOrDeleteBaseClass):
+    """
+    Change MRN or Study Instance UID in all SQL tables
+    """
     def __init__(self, mrn=None, study_instance_uid=None):
+        """
+        :param mrn: optional initial value for mrn
+        :type mrn: str
+        :param study_instance_uid: options initial value for study instance uid
+        :type study_instance_uid: str
+        """
         ChangeOrDeleteBaseClass.__init__(self, 'Value:', 'New Value:', 'Change', "Change Patient Identifier",
                                          mrn=mrn, study_instance_uid=study_instance_uid)
 
@@ -200,7 +248,16 @@ class ChangePatientIdentifierDialog(ChangeOrDeleteBaseClass):
 
 
 class DeletePatientDialog(ChangeOrDeleteBaseClass):
+    """
+    Delete all data in SQL database for a given MRN or study instance uid
+    """
     def __init__(self, mrn=None, study_instance_uid=None):
+        """
+        :param mrn: optional initial value for mrn
+        :type mrn: str
+        :param study_instance_uid: options initial value for study instance uid
+        :type study_instance_uid: str
+        """
         ChangeOrDeleteBaseClass.__init__(self, 'Delete:', 'Type "delete" to authorize:', 'Delete', "Delete Patient",
                                          mrn=mrn, study_instance_uid=study_instance_uid)
 
@@ -219,7 +276,14 @@ class DeletePatientDialog(ChangeOrDeleteBaseClass):
 
 
 class EditDatabaseDialog(wx.Dialog):
+    """
+    Generic UI object to edit values in SQL database with table, column, and condition
+    """
     def __init__(self, inital_values=None):
+        """
+        :param inital_values: optional variable to provide initial values to table, column, value, or condition
+        :type inital_values: dict
+        """
         wx.Dialog.__init__(self, None, title="Edit Database Values")
 
         self.initial_values = inital_values
@@ -357,7 +421,16 @@ class EditDatabaseDialog(wx.Dialog):
 
 
 class ReimportDialog(wx.Dialog):
+    """
+    Reimport data from catalogued DICOM files for a given MRN or study instance uid
+    """
     def __init__(self, mrn=None, study_instance_uid=None):
+        """
+        :param mrn: optional initial value for mrn
+        :type mrn: str
+        :param study_instance_uid: options initial value for study instance uid
+        :type study_instance_uid: str
+        """
         wx.Dialog.__init__(self, None, title="Reimport from DICOM")
         self.initial_mrn = mrn
         self.initial_uid = study_instance_uid
@@ -501,6 +574,9 @@ class ReimportDialog(wx.Dialog):
 
 
 class SQLSettingsDialog(wx.Dialog):
+    """
+    Edit and validate SQL connection settings
+    """
     def __init__(self):
         wx.Dialog.__init__(self, None, title="Database Connection Settings")
 
