@@ -22,7 +22,7 @@ from models.regression import RegressionFrame
 from models.control_chart import ControlChartFrame
 from models.roi_map import ROIMapFrame
 from options import Options
-from paths import LOGO_PATH
+from paths import LOGO_PATH, DATA_DIR
 from tools.roi_name_manager import DatabaseROIs
 from tools.stats import StatsData
 from tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux,\
@@ -417,7 +417,8 @@ class DVHAMainFrame(wx.Frame):
     def on_save(self, evt):
         if self.save_data:
             dlg = wx.FileDialog(self, "Save your downloaded data to file", "", wildcard='*.dvha',
-                                style=wx.FD_FILE_MUST_EXIST | wx.FD_SAVE)
+                                style=wx.FD_SAVE)
+            dlg.SetDirectory(DATA_DIR)
             if dlg.ShowModal() == wx.ID_OK:
                 self.save_data_obj()
                 save_object_to_file(self.save_data, dlg.GetPath())

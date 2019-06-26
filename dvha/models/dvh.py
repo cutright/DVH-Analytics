@@ -1,15 +1,18 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+# models.dvh.py
 """
-Created on Thu Mar  9 18:48:19 2017
-@author: nightowl
+Class for the Database Editor accessible from the main view
 """
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
 
 import numpy as np
 from db.sql_connector import DVH_SQL
 from db.sql_to_python import QuerySQL
-from tools import roi_geometry as roi_geom
-from tools import roi_formatter as roi_form
 from tools.utilities import convert_value_to_str
 
 
@@ -29,15 +32,9 @@ class DVH:
         if uid:
             constraints_str = "study_instance_uid in ('%s')" % "', '".join(uid)
             if dvh_condition:
-                constraints_str = " and " + constraints_str
+                constraints_str = "(%s) and %s" % (dvh_condition, constraints_str)
         else:
             constraints_str = ''
-
-        if dvh_condition:
-            constraints_str = "(%s)%s" % (dvh_condition, constraints_str)
-            self.query = dvh_condition
-        else:
-            self.query = ''
 
         # Get DVH data from SQL and set as attributes
         dvh_data = QuerySQL('DVHs', constraints_str)
@@ -49,6 +46,7 @@ class DVH:
                 if '_string' not in key:
                     self.keys.append(key)
 
+        # Move mrn to beginning of self.keys
         if 'mrn' in self.keys:
             self.keys.pop(self.keys.index('mrn'))
             self.keys.insert(0, 'mrn')
@@ -63,8 +61,6 @@ class DVH:
                           'defs': None}
         self.eud = None
         self.ntcp_or_tcp = None
-
-        # self.__set_ptv_data()
 
         self.bin_count = max([value.count(',') + 1 for value in self.dvh_string])
 
@@ -98,6 +94,13 @@ class DVH:
         self.ptv_overlap = [convert_value_to_str(v, round=2) for v in self.ptv_overlap]
 
     def get_plan_values(self, plan_column):
+        """
+        Get values from the Plans table and store in order matching mrn / study_instance_uid
+        :param plan_column: name of the SQL column to be queried
+        :type plan_column: str
+        :return: values from the Plans table for the DVHs stored in this class
+        :rtype: list
+        """
         with DVH_SQL() as cnx:
             condition = "study_instance_uid in ('%s')" % "','".join(self.study_instance_uid)
             data = cnx.query('Plans', 'study_instance_uid, %s' % plan_column, condition)
@@ -107,6 +110,13 @@ class DVH:
         return [values[uids.index(uid)] for uid in self.study_instance_uid]
 
     def get_rx_values(self, rx_column):
+        """
+        Get values from the Rxs table and store in order matching mrn / study_instance_uid
+        :param rx_column: name of the SQL column to be queried
+        :type rx_column: str
+        :return: values from the Rxs table for the DVHs stored in this class
+        :rtype: list
+        """
         with DVH_SQL() as cnx:
             condition = "study_instance_uid in ('%s')" % "','".join(self.study_instance_uid)
             data = cnx.query('Rxs', 'study_instance_uid, %s' % rx_column, condition)
@@ -123,13 +133,29 @@ class DVH:
 
     @property
     def x_data(self):
+        """
+        Get x-values of the DVHs.  All DVHs stored in SQL database are 1cGy binned csv strings
+        :return: x data for plotting
+        :rtype: list
+        """
         return [list(range(self.bin_count))] * self.count
 
     @property
     def y_data(self):
+        """
+        Get y-values of the DVHs
+        :return: all DVHs in order (i.e., same as mrn, study_instance_uid)
+        :rtype: list
+        """
         return [self.dvh[:, i].tolist() for i in range(self.count)]
 
     def get_cds_data(self, keys=None):
+        """
+        Get data from this class in a format compatible with bokeh's ColumnDataSource.data
+        :param keys: optionally specify which properties to in include
+        :return: data from this class
+        :rtype: dict
+        """
         if not keys:
             keys = self.keys
 
@@ -319,60 +345,8 @@ class DVH:
                                                             max(self.mean_dose)),
                    "Max dose (Gy): %0.2f, %0.2f, %0.2f" % (min(self.max_dose),
                                                            sum(self.max_dose) / self.count,
-                                                               max(self.max_dose))]
+                                                           max(self.max_dose))]
         return '\n'.join(summary)
-
-    def __set_ptv_data(self):
-        self.ptv_cross_section_max = []
-        self.ptv_cross_section_median = []
-        self.ptv_max_dose = []
-        self.ptv_min_dose = []
-        self.ptv_spread_x = []
-        self.ptv_spread_y = []
-        self.ptv_spread_z = []
-        self.ptv_surface_area = []
-        self.ptv_volume = []
-
-        for uid in self.uid:
-            with DVH_SQL() as cnx:
-                ptv_coordinates_strings = cnx.query('dvhs',
-                                                    'roi_coord_string',
-                                                    "study_instance_uid = '%s' and roi_type like 'PTV%%'"
-                                                    % uid)
-
-                if ptv_coordinates_strings:
-                    ptvs = [roi_form.get_planes_from_string(ptv[0]) for ptv in ptv_coordinates_strings]
-                    tv = roi_geom.union(ptvs)
-
-                    cross_section = roi_geom.cross_section(tv)
-                    spread = roi_geom.spread(tv)
-                    surface_area = roi_geom.surface_area(tv, coord_type='sets_of_points')
-                    volume = roi_geom.volume(tv)
-
-                    max_dose = cnx.get_max_value('dvhs', 'max_dose',
-                                                 condition="study_instance_uid = '%s' and roi_type like 'PTV%%'" % uid)
-                    min_dose = cnx.get_min_value('dvhs', 'min_dose',
-                                                 condition="study_instance_uid = '%s' and roi_type like 'PTV%%'" % uid)
-
-                    self.ptv_cross_section_max.append(cross_section['max'])
-                    self.ptv_cross_section_median.append(cross_section['median'])
-                    self.ptv_max_dose.append(max_dose)
-                    self.ptv_min_dose.append(min_dose)
-                    self.ptv_spread_x.append(spread[0])
-                    self.ptv_spread_y.append(spread[1])
-                    self.ptv_spread_z.append(spread[2])
-                    self.ptv_surface_area.append(surface_area)
-                    self.ptv_volume.append(volume)
-                else:
-                    self.ptv_cross_section_max.append(None)
-                    self.ptv_cross_section_median.append(None)
-                    self.ptv_max_dose.append(None)
-                    self.ptv_min_dose.append(None)
-                    self.ptv_spread_x.append(None)
-                    self.ptv_spread_y.append(None)
-                    self.ptv_spread_z.append(None)
-                    self.ptv_surface_area.append(None)
-                    self.ptv_volume.append(None)
 
     @property
     def has_data(self):

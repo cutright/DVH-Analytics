@@ -88,8 +88,9 @@ class DataTable:
         """
         if formats:
             self.formats = formats
-        elif len(columns) != len(self.formats):
+        elif columns and len(columns) != len(self.formats):
             self.formats = [wx.LIST_FORMAT_LEFT] * len(columns)
+
         delete_rows = bool(self.row_count)
         self.data = deepcopy(data)
         self.columns = deepcopy(columns)
