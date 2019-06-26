@@ -1,24 +1,34 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+# sql_to_python.py
+"""
+A generic class to query a DVHA SQL table and parse the return into a python object
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
 
 from db.sql_connector import DVH_SQL
 
 
 class QuerySQL:
-    def __init__(self, table_name, condition_str, unique=False):
+    """
+    Object to generically query a specified table. Each column is stored as a property of the object
+
+    For example, if you query 'dvhs' with condition string of "mrn = 'some_mrn'"
+    you can access any column name 'some_column' with QuerySQL.some_column which will return a list of values
+    for 'some_column'.  All properties contain lists with the order of their values synced, unless unique=True
+    """
+    def __init__(self, table_name, condition_str, unique=False, columns=None):
         """
-        Object to generically query a specified table
-        Each column is stored as a property of the object
         :param table_name: 'Beams', 'DVHs', 'Plans', or 'Rxs'
         :type table_name: str
         :param condition_str: condition in SQL syntax
         :type condition_str: str
         :param unique: If set to True, only unique values stored
         :type unique: bool
-
-        For example, if you query 'dvhs' with condition string of "mrn = 'some_mrn'"
-        you can access any column name 'some_column' with QuerySQL.some_column which will return a list of values
-        for 'some_column'.  All properties contain lists with their values ordered synced, unless unique=True
         """
 
         table_name = table_name.lower()
@@ -28,7 +38,13 @@ class QuerySQL:
             self.condition_str = condition_str
             with DVH_SQL() as cnx:
 
-                for column in cnx.get_column_names(table_name):
+                all_columns = cnx.get_column_names(table_name)
+                if columns is not None:
+                    columns = set(all_columns).intersection(columns)  # ensure provided columns exist in SQL table
+                else:
+                    columns = all_columns
+
+                for column in columns:
                     if column not in {'roi_coord_string', 'distances_to_ptv'}:  # ignored for memory since not used here
                         self.cursor = cnx.query(self.table_name,
                                                 column,
