@@ -23,7 +23,7 @@ SCRIPT_DIR = os.path.dirname(__file__)
 
 class DicomImporter:
     """
-    This class processes data for various UI objects from models.import_dicom.ImportDicomDialog
+    This class processes data for various UI objects from models.import_dicom.ImportDicomFrame
     """
     def __init__(self, start_path, tree_ctrl_files, tree_ctrl_rois, tree_ctrl_roi_root, tree_ctrl_rois_images,
                  roi_map, search_subfolders=True):
@@ -134,7 +134,7 @@ class DicomImporter:
     def build_tree_ctrl_files(self):
         """
         Build the tree for tree_ctrl_files and store their nodes using node adders.
-        Then tell models.import_dicom.ImportDicomDialog to parse the data.
+        Then tell models.import_dicom.ImportDicomFrame to parse the data.
         """
         self.tree_ctrl_files.DeleteChildren(self.root_files)
         for key, patient in self.file_tree.items():

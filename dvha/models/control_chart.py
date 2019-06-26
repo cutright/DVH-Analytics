@@ -39,8 +39,8 @@ class ControlChartFrame:
 
         self.y_axis_options = sql_columns.numerical
 
-        self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
-        self.combo_box_model = wx.ComboBox(self.parent, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
+        self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, style=wx.CB_DROPDOWN)
+        self.combo_box_model = wx.ComboBox(self.parent, wx.ID_ANY, style=wx.CB_DROPDOWN)
 
         self.button_export = wx.Button(self.parent, wx.ID_ANY, "Export")
         self.button_save_plot = wx.Button(self.parent, wx.ID_ANY, "Save Plot")

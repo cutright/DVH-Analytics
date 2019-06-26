@@ -1,5 +1,14 @@
-#!/usr/bin/env python3
-# -*- coding: UTF-8 -*-
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# models.endpoint.py
+"""
+Class for the Endpoint frame in the main view
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
 
 import wx
 from models.data_table import DataTable
@@ -8,11 +17,23 @@ from dialogs.export import save_string_to_file
 from copy import deepcopy
 
 
-ENDPOINT_DEF_COLUMNS = ['label', 'output_type', 'input_type', 'input_value', 'units_in', 'units_out']
-
-
 class EndpointFrame:
+    """
+    Object to be passed into notebook panel for the Endpoint tab
+    """
     def __init__(self, parent, dvh, times_series, regression, control_chart):
+        """
+        :param parent:  notebook panel in main view
+        :type parent: Panel
+        :param dvh: dvh data object
+        :type dvh: DVH
+        :param times_series: Time Series object in notebook
+        :type times_series: TimeSeriesFrame
+        :param regression: Regression frame object in notebook
+        :type regression: RegressionFrame
+        :param control_chart: Control Chart frame object in notebook
+        :type control_chart: ControlChartFrame
+        """
 
         self.parent = parent
         self.dvh = dvh
@@ -31,7 +52,8 @@ class EndpointFrame:
         self.table.SetMinSize((1046, 800))
         self.data_table = DataTable(self.table)
 
-        self.endpoint_defs = DataTable(None, columns=ENDPOINT_DEF_COLUMNS)
+        self.endpoint_defs = DataTable(None, columns=['label', 'output_type', 'input_type',
+                                                      'input_value', 'units_in', 'units_out'])
 
         if dvh:
             self.dvh.endpoints['data'] = self.data_table.data
@@ -62,10 +84,6 @@ class EndpointFrame:
         vbox.Add(self.table, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(vbox, 1, wx.ALL | wx.EXPAND, 20)
         self.layout = sizer_wrapper
-
-    @property
-    def ep_count(self):
-        return len(self.endpoint_defs['label'])
 
     def calculate_endpoints(self):
 
@@ -101,7 +119,6 @@ class EndpointFrame:
                         if 'V' in ep_name:
                             ep[ep_name] = self.dvh.get_volume_of_dose(x, volume_scale=endpoint_output,
                                                                       dose_scale=endpoint_input)
-
                         else:
                             ep[ep_name] = self.dvh.get_dose_to_volume(x, dose_scale=endpoint_output,
                                                                       volume_scale=endpoint_input)
