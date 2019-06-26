@@ -1,17 +1,22 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+# update.py
 """
-functions to update various columns in the SQL database
-Created on Fri Dec 28 2018
-@author: Dan Cutright, PhD
+Functions to call appropriate calculations and update various columns in the SQL database
 """
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
+
 
 import numpy as np
 from db.sql_connector import DVH_SQL
 from tools import roi_geometry as roi_geom
 from tools import roi_formatter as roi_form
 from os.path import join as join_path
-from tools.mlc_analyzer import Beam as mlca
+from tools.mlc_analyzer import Beam as BeamAnalyzer
 from tools.utilities import calc_stats
 import pydicom as dicom
 
@@ -76,16 +81,12 @@ def dist_to_ptv_centroids(study_instance_uid, roi_name, pre_calc=None):
 
     ptv_centroid = pre_calc
     if ptv_centroid is None:
-        tv = get_treatment_volume(study_instance_uid)
+        tv = get_total_treatment_volume_of_study(study_instance_uid)
         ptv_centroid = get_treatment_volume_centroid(tv)
 
     data = float(np.linalg.norm(ptv_centroid - oar_centroid)) / 10.
 
     update_dvhs_table(study_instance_uid, roi_name, 'dist_to_ptv_centroids', round(float(data), 3))
-
-
-def get_treatment_volume_centroid(tv):
-    return np.array(roi_geom.centroid(tv))
 
 
 def min_distances(study_instance_uid, roi_name, pre_calc=None):
@@ -99,7 +100,13 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
 
     treatment_volume_coord = pre_calc
     if treatment_volume_coord is None:
-        treatment_volume_coord = get_treatment_volume_coord(study_instance_uid)
+        with DVH_SQL() as cnx:
+            ptv_coordinates_strings = cnx.query('dvhs', 'roi_coord_string',
+                                                "study_instance_uid = '%s' and roi_type like 'PTV%%'"
+                                                % study_instance_uid)
+
+        ptvs = [roi_form.get_planes_from_string(ptv[0]) for ptv in ptv_coordinates_strings]
+        treatment_volume_coord = roi_form.get_roi_coordinates_from_planes(roi_geom.union(ptvs))
 
     oar_coordinates = roi_form.get_roi_coordinates_from_string(oar_coordinates_string[0][0])
 
@@ -132,14 +139,10 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
             update_dvhs_table(study_instance_uid, roi_name, key, value)
 
 
-def get_treatment_volume_coord(tv):
-    return roi_form.get_roi_coordinates_from_planes(tv)
-
-
 def treatment_volume_overlap(study_instance_uid, roi_name, pre_calc=None):
     """
     Recalculate the PTV overlap of an roi based on data in the SQL DB.
-    Optional provide union of PTVs, return from get_treatment_volume
+    Optional provide union of PTVs, return from get_total_treatment_volume_of_study
     """
 
     oar_coordinates_string = query('dvhs', 'roi_coord_string',
@@ -148,22 +151,10 @@ def treatment_volume_overlap(study_instance_uid, roi_name, pre_calc=None):
 
     treatment_volume = pre_calc
     if treatment_volume is None:
-        treatment_volume = get_treatment_volume(study_instance_uid)
+        treatment_volume = get_total_treatment_volume_of_study(study_instance_uid)
 
     overlap = roi_geom.overlap_volume(oar, treatment_volume)
     update_dvhs_table(study_instance_uid, roi_name, 'ptv_overlap', round(float(overlap), 2))
-
-
-def get_treatment_volume(study_instance_uid):
-    """
-    Calculate combined PTV for the provided study_instance_uid
-    """
-    ptv_coordinates_strings = query('dvhs', 'roi_coord_string',
-                                    "study_instance_uid = '%s' and roi_type like 'PTV%%'" % study_instance_uid)
-
-    ptvs = [roi_form.get_planes_from_string(ptv[0]) for ptv in ptv_coordinates_strings]
-
-    return roi_geom.union(ptvs)
 
 
 def volumes(study_instance_uid, roi_name):
@@ -197,28 +188,42 @@ def surface_area(study_instance_uid, roi_name):
 
 
 def update_dvhs_table(study_instance_uid, roi_name, column, value):
+    """
+    Generic function to update a value in the DVHs table
+    :param study_instance_uid: study instance uid in the SQL table
+    :type study_instance_uid: str
+    :param roi_name: the roi name associated with the value to be updated
+    :type roi_name: str
+    :param column: the SQL column of the value to be updated
+    :type column: str
+    :param value: the value to be set, it's type should match the type as specified in the SQL table
+    """
     with DVH_SQL() as cnx:
         cnx.update('dvhs', column, value,
                    "study_instance_uid = '%s' and roi_name = '%s'" % (study_instance_uid, roi_name))
 
 
 def update_plan_toxicity_grades(cnx, study_instance_uid):
+    """
+    Query the toxicities in the DVHs table and update the values in the associated plan row(s)
+    :param cnx: connection to DVHA SQL database
+    :type cnx: DVH_SQL
+    :param study_instance_uid: study_instance_uid in SQL database
+    :type study_instance_uid: str
+    """
     toxicities = cnx.get_unique_values('DVHs', 'toxicity_grade', "study_instance_uid = '%s'" % study_instance_uid)
     toxicities = [t for t in toxicities if t.isdigit()]
     toxicities_str = ','.join(toxicities)
     cnx.update('Plans', 'toxicity_grades', toxicities_str, "study_instance_uid = '%s'" % study_instance_uid)
 
 
-def update_all_plan_toxicity_grades(*condition):
-    if condition:
-        condition = condition[0]
-    with DVH_SQL() as cnx:
-        uids = cnx.get_unique_values('Plans', 'study_instance_uid', condition, return_empty=True)
-        for uid in uids:
-            update_plan_toxicity_grades(cnx, uid)
-
-
 def plan_complexity(cnx, study_instance_uid):
+    """
+    :param cnx: connection to DVHA SQL database
+    :type cnx: DVH_SQL
+    :param study_instance_uid: study_instance_uid in SQL database
+    :type study_instance_uid: str
+    """
     condition = "study_instance_uid = '%s'" % study_instance_uid
     beam_data = query('Beams', 'complexity, beam_mu', condition)
     scores = [row[0] for row in beam_data]
@@ -233,16 +238,13 @@ def plan_complexity(cnx, study_instance_uid):
         print('Zero plan MU detected for uid %s' % study_instance_uid)
 
 
-def plan_complexities(*condition):
-    if condition:
-        condition = condition[0]
-    with DVH_SQL() as cnx:
-        uids = cnx.get_unique_values('Plans', 'study_instance_uid', condition, return_empty=True)
-        for uid in uids:
-            plan_complexity(cnx, uid)
-
-
 def beam_complexity(cnx, study_instance_uid):
+    """
+    :param cnx: connection to DVHA SQL database
+    :type cnx: DVH_SQL
+    :param study_instance_uid: study_instance_uid in SQL database
+    :type study_instance_uid: str
+    """
 
     rt_plan_query = cnx.query('DICOM_Files', 'folder_path, plan_file',
                               "study_instance_uid = '%s'" % study_instance_uid)[0]
@@ -254,7 +256,7 @@ def beam_complexity(cnx, study_instance_uid):
         try:
             condition = "study_instance_uid = '%s' and beam_number = '%s'" % (study_instance_uid, (beam_num + 1))
             meterset = float(cnx.query('Beams', 'beam_mu', condition)[0][0])
-            mlca_data = mlca(beam, meterset, ignore_zero_mu_cp=True)
+            mlca_data = BeamAnalyzer(beam, meterset, ignore_zero_mu_cp=True)
             mlc_keys = ['area', 'x_perim', 'y_perim', 'cmp_score', 'cp_mu']
             summary_stats = {key: calc_stats(mlca_data.summary[key]) for key in mlc_keys}
 
@@ -272,16 +274,44 @@ def beam_complexity(cnx, study_instance_uid):
             print('MLC Analyzer fail for beam number %s and uid %s' % ((beam_num+1), study_instance_uid))
 
 
-def beam_complexities(*condition):
+def update_all_generic(table, func, condition):
+    """
+    Generic function to call a function that accepts a DVH_SQL object and study_instance_uid.
+    Intended for beam_complexities, plan_complexities, update_all_plan_toxicity_grades, etc.
+    :param table: SQL table name
+    :type table: str
+    :param func: the function to be called with parameters of DVH_SQL and study_instance_uid
+    :param condition: optional SQL condition to apply to the study_instance_uid list retrieval
+    :type condition: str
+    :return:
+    """
     if condition:
         condition = condition[0]
     with DVH_SQL() as cnx:
-        uids = cnx.get_unique_values('Beams', 'study_instance_uid', condition, return_empty=True)
+        uids = cnx.get_unique_values(table, 'study_instance_uid', condition, return_empty=True)
         for uid in uids:
-            beam_complexity(cnx, uid)
+            func(cnx, uid)
+
+
+def update_all_plan_toxicity_grades(condition=None):
+    update_all_generic('Plans', update_plan_toxicity_grades, condition)
+
+
+def plan_complexities(condition=None):
+    update_all_generic('Plans', plan_complexity, condition)
+
+
+def beam_complexities(condition=None):
+    update_all_generic('Beams', beam_complexity, condition)
 
 
 def update_ptv_data(tv, study_instance_uid):
+    """
+    :param tv: treatment volume formatted as a "sets of points" object specified in tools.roi_geometry
+    :type tv: dict
+    :param study_instance_uid: study_instance_uid in SQL database
+    :type study_instance_uid: str
+    """
     ptv_cross_section = roi_geom.cross_section(tv)
     ptv_spread = roi_geom.spread(tv)
 
@@ -302,6 +332,26 @@ def update_ptv_data(tv, study_instance_uid):
 
         for key, value in ptv_data.items():
             cnx.update('Plans', key, value, "study_instance_uid = '%s'" % study_instance_uid)
+
+
+def get_total_treatment_volume_of_study(study_instance_uid):
+    """
+    Calculate combined PTV for the provided study_instance_uid
+    """
+    ptv_coordinates_strings = query('dvhs', 'roi_coord_string',
+                                    "study_instance_uid = '%s' and roi_type like 'PTV%%'" % study_instance_uid)
+
+    ptvs = [roi_form.get_planes_from_string(ptv[0]) for ptv in ptv_coordinates_strings]
+
+    return roi_geom.union(ptvs)
+
+
+def get_treatment_volume_centroid(tv):
+    return np.array(roi_geom.centroid(tv))
+
+
+def get_treatment_volume_coord(tv):
+    return roi_form.get_roi_coordinates_from_planes(tv)
 
 
 def query(table, column, condition):

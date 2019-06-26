@@ -1130,7 +1130,7 @@ class ImportWorker(Thread):
 
         if do_post_import_calcs:
             if ptvs['dvh']:
-                tv = db_update.get_treatment_volume(study_uid)
+                tv = db_update.get_total_treatment_volume_of_study(study_uid)
                 self.post_import_calc('PTV Overlap Volume', study_uid, post_import_rois,
                                       db_update.treatment_volume_overlap, tv)
                 if self.terminate['status']:
