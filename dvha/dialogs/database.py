@@ -655,9 +655,13 @@ class SQLSettingsDialog(wx.Dialog):
         self.Destroy()
 
 
-# --------------------------------------------------
-# Yes/No Dialogs
-# --------------------------------------------------
+# ------------------------------------------------------
+# Yes/No Dialogs based on tools.utilities.MessageDialog
+#
+# MessageDialog handles the layout and display, simply
+# provide the wx parent, a message, and define over-ride
+# action_yes and/or action_no for Yes/No button clicks
+# ------------------------------------------------------
 class DeleteAllData(MessageDialog):
     def __init__(self, parent):
         MessageDialog.__init__(self, parent, "Delete All Data in Database")
