@@ -219,7 +219,7 @@ class RadBioFrame:
         return self.data_table_rad_bio.get_csv()
 
     def on_export_csv(self, evt):
-        save_string_to_file(self.parent, "Export RadBio table to CSV", self.get_csv)
+        save_string_to_file(self.parent, "Export RadBio table to CSV", self.get_csv())
 
     def get_save_data(self):
         return self.data_table_rad_bio.get_save_data()

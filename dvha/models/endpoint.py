@@ -180,7 +180,7 @@ class EndpointFrame:
         return self.data_table.get_csv(extra_column_data=uid)
 
     def on_export_csv(self, evt):
-        save_string_to_file(self.parent, "Export Endpoints to CSV", self.get_csv)
+        save_string_to_file(self.parent, "Export Endpoints to CSV", self.get_csv())
 
     def get_save_data(self):
         return deepcopy({'data_table': self.data_table.get_save_data(),
