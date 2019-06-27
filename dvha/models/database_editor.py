@@ -218,6 +218,7 @@ class DatabaseEditorFrame(wx.Frame):
         self.change_or_delete_dlg(ChangePatientIdentifierDialog)
 
     def on_delete_study(self, evt):
+        # TODO: Needs an Are you sure? dialog
         self.change_or_delete_dlg(DeletePatientDialog)
 
     def change_or_delete_dlg(self, class_type):
