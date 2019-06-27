@@ -231,6 +231,16 @@ class DVH_SQL:
         cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (table, ','.join(columns), ",".join(values))
         self.execute_str(cmd)
 
+    def insert_data_set(self, data_set):
+        """
+        Insert an entire data set for a plan
+        :param data_set: a dication of data with table names for keys, and a list of row data for values
+        :type data_set: dict
+        """
+        for key in list(data_set):
+            for row in data_set[key]:
+                self.insert_row(key, row)
+
     def get_dicom_file_paths(self, mrn=None, uid=None):
         """
         Lookup the dicom file paths of imported data
