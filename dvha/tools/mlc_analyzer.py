@@ -9,9 +9,9 @@ Created on Wed, Feb 28 2018
 from dicompylercore import dicomparser
 import numpy as np
 from shapely.geometry import Polygon
-from tools.utilities import flatten_list_of_lists as flatten
 from shapely import speedups
-from options import Options
+from dvha.tools.utilities import flatten_list_of_lists as flatten
+from dvha.options import Options
 
 
 options = Options()

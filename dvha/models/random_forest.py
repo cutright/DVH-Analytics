@@ -1,9 +1,9 @@
 import wx
 from threading import Thread
 from pubsub import pub
-from tools.stats import get_random_forest
-from models.plot import PlotRandomForest
-from tools.utilities import set_msw_background_color
+from dvha.tools.stats import get_random_forest
+from dvha.models.plot import PlotRandomForest
+from dvha.tools.utilities import set_msw_background_color
 
 
 class RandomForestFrame(wx.Frame):

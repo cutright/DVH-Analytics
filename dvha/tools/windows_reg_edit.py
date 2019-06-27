@@ -33,14 +33,3 @@ def set_ie_emulation_level(value=11001):
     # https://docs.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/general-info/ee330730(v=vs.85)#browser_emulation
     reg_path = r"Software\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_BROWSER_EMULATION"
     set_reg(basename(sys.executable), reg_path, value)
-
-
-# Example MouseSensitivity
-# Read value
-# print(get_reg('MouseSensitivity'))
-
-# Set Value 1/20 (will just write the value to reg, the changed mouse val requires a win re-log to apply*)
-# set_reg('MouseSensitivity', str(10))
-
-# *For instant apply of SystemParameters like the mouse speed on-write, you can use win32gui/SPI
-# http://docs.activestate.com/activepython/3.4/pywin32/win32gui__SystemParametersInfo_meth.html

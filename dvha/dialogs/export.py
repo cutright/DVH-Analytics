@@ -12,9 +12,9 @@ GUI tools to export text data to a file
 
 import wx
 import wx.adv
-from models.data_table import DataTable
-from paths import DATA_DIR
-from tools.utilities import get_selected_listctrl_items
+from dvha.models.data_table import DataTable
+from dvha.paths import DATA_DIR
+from dvha.tools.utilities import get_selected_listctrl_items
 
 
 def save_string_to_file(frame, title, data, wildcard="CSV files (*.csv)|*.csv"):

@@ -11,9 +11,9 @@ Class for the Control Chart frame in the main view
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx
-from models.plot import PlotControlChart
-from db import sql_columns
-from dialogs.export import save_string_to_file
+from dvha.models.plot import PlotControlChart
+from dvha.db import sql_columns
+from dvha.dialogs.export import save_string_to_file
 
 
 # TODO: ControlChartFrame in development

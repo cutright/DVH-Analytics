@@ -1,5 +1,4 @@
 import wx
-from db.sql_connector import DVH_SQL
 from datetime import datetime
 from dateutil.parser import parse as parse_date
 import numpy as np
@@ -7,10 +6,11 @@ from os import walk, listdir, unlink
 from os.path import join, isfile, isdir
 import os
 import shutil
-from paths import IMPORT_SETTINGS_PATH, SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
-    APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR
 import pydicom as dicom
 import pickle
+from dvha.db.sql_connector import DVH_SQL
+from dvha.paths import IMPORT_SETTINGS_PATH, SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
+    APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR
 
 
 def is_windows():

@@ -11,10 +11,10 @@ GUI tools to edit the ROI Name map
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx
-from models.data_table import DataTable
-from tools.errors import ROIVariationErrorDialog
-from tools.utilities import get_selected_listctrl_items
-from tools.roi_name_manager import ROIVariationError, clean_name
+from dvha.models.data_table import DataTable
+from dvha.tools.errors import ROIVariationErrorDialog
+from dvha.tools.utilities import get_selected_listctrl_items
+from dvha.tools.roi_name_manager import ROIVariationError, clean_name
 
 
 class AddPhysician(wx.Dialog):

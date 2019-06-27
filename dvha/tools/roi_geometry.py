@@ -1,7 +1,7 @@
 from scipy.spatial.distance import cdist
 import numpy as np
 from math import ceil
-from tools.roi_formatter import points_to_shapely_polygon, dicompyler_roi_to_sets_of_points,\
+from dvha.tools.roi_formatter import points_to_shapely_polygon, dicompyler_roi_to_sets_of_points,\
     get_shapely_from_sets_of_points
 
 

@@ -12,13 +12,13 @@ Functions to call appropriate calculations and update various columns in the SQL
 
 
 import numpy as np
-from db.sql_connector import DVH_SQL
-from tools import roi_geometry as roi_geom
-from tools import roi_formatter as roi_form
 from os.path import join as join_path
-from tools.mlc_analyzer import Beam as BeamAnalyzer
-from tools.utilities import calc_stats
 import pydicom as dicom
+from dvha.db.sql_connector import DVH_SQL
+from dvha.tools import roi_geometry as roi_geom
+from dvha.tools import roi_formatter as roi_form
+from dvha.tools.mlc_analyzer import Beam as BeamAnalyzer
+from dvha.tools.utilities import calc_stats
 
 
 def centroid(study_instance_uid, roi_name):

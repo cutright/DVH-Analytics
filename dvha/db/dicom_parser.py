@@ -12,14 +12,14 @@ from dicompylercore import dicomparser, dvhcalc
 from dateutil.relativedelta import relativedelta  # python-dateutil
 import numpy as np
 import pydicom as dicom
-from tools.roi_name_manager import clean_name, DatabaseROIs
-from tools.utilities import datetime_str_to_obj, change_angle_origin, calc_stats, is_date
-from tools.roi_formatter import dicompyler_roi_coord_to_db_string, get_planes_from_string
-from tools import roi_geometry as roi_calc
-from tools.mlc_analyzer import Beam as mlca
-from db.sql_connector import DVH_SQL
 from os.path import basename, join
-from paths import IMPORT_SETTINGS_PATH, parse_settings_file
+from dvha.tools.roi_name_manager import clean_name, DatabaseROIs
+from dvha.tools.utilities import datetime_str_to_obj, change_angle_origin, calc_stats, is_date
+from dvha.tools.roi_formatter import dicompyler_roi_coord_to_db_string, get_planes_from_string
+from dvha.tools import roi_geometry as roi_calc
+from dvha.tools.mlc_analyzer import Beam as mlca
+from dvha.db.sql_connector import DVH_SQL
+from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file
 
 
 class DICOM_Parser:

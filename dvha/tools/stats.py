@@ -1,10 +1,10 @@
-from db import sql_columns
 import numpy as np
 from scipy import stats
 from sklearn import linear_model
 from sklearn.metrics import mean_squared_error, r2_score
 from regressors import stats as regressors_stats
 from sklearn.ensemble import RandomForestRegressor
+from dvha.db import sql_columns
 
 
 class StatsData:

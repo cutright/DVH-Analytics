@@ -15,22 +15,22 @@ import wx.adv
 from wx.lib.agw.customtreectrl import CustomTreeCtrl, TR_AUTO_CHECK_CHILD, TR_AUTO_CHECK_PARENT, TR_DEFAULT_STYLE
 from datetime import date as datetime_obj, datetime
 from dateutil.parser import parse as parse_date
-from db import update as db_update
-from db.sql_connector import DVH_SQL
-from db.dicom_importer import DicomImporter
-from db.dicom_parser import DICOM_Parser
-from dialogs.main import DatePicker
-from dialogs.roi_map import AddPhysician, AddPhysicianROI, AddROIType, RoiManager, ChangePlanROIName
 from dicompylercore import dicomparser
 from os.path import isdir, join, dirname
 from os import listdir, rmdir
-from paths import IMPORT_SETTINGS_PATH, parse_settings_file, IMPORTED_DIR
 from pubsub import pub
-from tools.dicom_dose_sum import sum_dose_grids
-from tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
-    set_msw_background_color, is_windows
-from tools.roi_name_manager import clean_name
 from threading import Thread
+from dvha.db import update as db_update
+from dvha.db.sql_connector import DVH_SQL
+from dvha.db.dicom_importer import DicomImporter
+from dvha.db.dicom_parser import DICOM_Parser
+from dvha.dialogs.main import DatePicker
+from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddROIType, RoiManager, ChangePlanROIName
+from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, IMPORTED_DIR, ICONS
+from dvha.tools.dicom_dose_sum import sum_dose_grids
+from dvha.tools.roi_name_manager import clean_name
+from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
+    set_msw_background_color, is_windows
 
 
 # TODO: Provide methods to write over-rides to DICOM file
@@ -195,8 +195,8 @@ class ImportDicomFrame(wx.Frame):
             checkbox.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
 
         self.image_list = wx.ImageList(16, 16)
-        yes_image = wx.Image("icons/iconfinder_ok-green_53916.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()
-        no_image = wx.Image("icons/iconfinder_ko-red_53948.png", wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()
+        yes_image = wx.Image(ICONS['ok_green'], wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()
+        no_image = wx.Image(ICONS['ko-red'], wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()
         self.tree_ctrl_images = {'yes': self.image_list.Add(yes_image),
                                  'no': self.image_list.Add(no_image)}
         self.tree_ctrl_roi.AssignImageList(self.image_list)

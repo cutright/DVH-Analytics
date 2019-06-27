@@ -11,9 +11,9 @@ Class to retrieve DVH data from SQL, calculate parameters dependent on DVHs, and
 #    available at https://github.com/cutright/DVH-Analytics
 
 import numpy as np
-from db.sql_connector import DVH_SQL
-from db.sql_to_python import QuerySQL
-from tools.utilities import convert_value_to_str
+from dvha.db.sql_connector import DVH_SQL
+from dvha.db.sql_to_python import QuerySQL
+from dvha.tools.utilities import convert_value_to_str
 
 
 # This class retrieves DVH data from the SQL database and calculates statistical DVHs (min, max, quartiles)

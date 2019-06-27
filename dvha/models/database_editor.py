@@ -12,14 +12,14 @@ Class for the Database Editor accessible from the main view
 
 
 import wx
-from dialogs.database import ChangePatientIdentifierDialog, DeletePatientDialog, ReimportDialog, EditDatabaseDialog,\
+from dvha.dialogs.database import ChangePatientIdentifierDialog, DeletePatientDialog, ReimportDialog, EditDatabaseDialog,\
     CalculationsDialog, DeleteAllData, RebuildDB, SQLErrorDialog
-from db.sql_to_python import get_database_tree
-from db.sql_connector import DVH_SQL, SQLError
-from models.data_table import DataTable
-from dialogs.export import save_string_to_file
-from tools.utilities import set_msw_background_color
-from models.roi_map import RemapROIFrame
+from dvha.db.sql_to_python import get_database_tree
+from dvha.db.sql_connector import DVH_SQL, SQLError
+from dvha.models.data_table import DataTable
+from dvha.dialogs.export import save_string_to_file
+from dvha.tools.utilities import set_msw_background_color
+from dvha.models.roi_map import RemapROIFrame
 
 
 class DatabaseEditorFrame(wx.Frame):

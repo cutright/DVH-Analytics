@@ -19,10 +19,10 @@ from bokeh.layouts import column, row
 from bokeh.palettes import Colorblind8 as palette
 import itertools
 import numpy as np
-from tools.utilities import collapse_into_single_dates, moving_avg, is_windows
-from tools.stats import MultiVariableRegression, get_control_limits
 from os.path import join
-from paths import TEMP_DIR
+from dvha.tools.utilities import collapse_into_single_dates, moving_avg, is_windows
+from dvha.tools.stats import MultiVariableRegression, get_control_limits
+from dvha.paths import TEMP_DIR
 
 
 # TODO: have all plot classes load options with a function that runs on update_plot to get latest options
@@ -88,7 +88,7 @@ class Plot:
 
     def update_bokeh_layout_in_wx_python(self):
         self.html_str = get_layout_html(self.bokeh_layout)
-        if is_windows():  # Windows requires LoadURL() in addition to changing the IE emulation level done in main.py
+        if is_windows():  # Windows requires LoadURL() in addition to changing the IE emulation level done in dvha_app.py
             web_file = join(TEMP_DIR, "%s.html" % self.type)
             with open(web_file, 'wb') as f:
                 f.write(self.html_str.encode("utf-8"))

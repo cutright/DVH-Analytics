@@ -13,8 +13,8 @@ Tools used to communicate with the SQL database
 import psycopg2
 from psycopg2 import OperationalError
 from datetime import datetime
-from paths import SQL_CNF_PATH, CREATE_SQL_TABLES, parse_settings_file
-from tools.errors import SQLError
+from dvha.paths import SQL_CNF_PATH, CREATE_SQL_TABLES, parse_settings_file
+from dvha.tools.errors import SQLError
 
 
 class DVH_SQL:

@@ -11,10 +11,10 @@ Class for the Endpoint frame in the main view
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx
-from models.data_table import DataTable
-from dialogs.main import AddEndpointDialog, DelEndpointDialog
-from dialogs.export import save_string_to_file
 from copy import deepcopy
+from dvha.models.data_table import DataTable
+from dvha.dialogs.main import AddEndpointDialog, DelEndpointDialog
+from dvha.dialogs.export import save_string_to_file
 
 
 class EndpointFrame:

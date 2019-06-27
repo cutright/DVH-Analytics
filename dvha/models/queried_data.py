@@ -2,9 +2,9 @@
 # -*- coding: UTF-8 -*-
 
 import wx
-from models.data_table import DataTable
-from db.sql_columns import all_columns as sql_column_info
-from dialogs.export import save_string_to_file
+from dvha.models.data_table import DataTable
+from dvha.db.sql_columns import all_columns as sql_column_info
+from dvha.dialogs.export import save_string_to_file
 
 
 class QueriedDataFrame(wx.Frame):

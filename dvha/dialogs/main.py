@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# dialogs.main.py
+# dialogs.dvha_app.py
 """
 Dialogs used in the main view of DVHA (e.g., query design, importing, etc.)
 """
@@ -13,13 +13,13 @@ Dialogs used in the main view of DVHA (e.g., query design, importing, etc.)
 import wx
 import wx.adv
 from dateutil.parser import parse as parse_date
-from tools.utilities import get_selected_listctrl_items, MessageDialog
-from db import sql_columns
-from db.sql_connector import DVH_SQL
 import matplotlib.colors as plot_colors
 from os.path import isdir
-from paths import IMPORT_SETTINGS_PATH, parse_settings_file, LICENSE_PATH
-from options import Options
+from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog
+from dvha.db import sql_columns
+from dvha.db.sql_connector import DVH_SQL
+from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, LICENSE_PATH
+from dvha.options import Options
 
 
 class DatePicker(wx.Dialog):

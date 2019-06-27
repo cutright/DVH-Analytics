@@ -11,8 +11,8 @@ Functions related to reading, loading, and validating SQL connection credentials
 #    available at https://github.com/cutright/DVH-Analytics
 
 import os
-from paths import SQL_CNF_PATH, parse_settings_file
-from db.sql_connector import DVH_SQL
+from dvha.paths import SQL_CNF_PATH, parse_settings_file
+from dvha.db.sql_connector import DVH_SQL
 
 
 def is_sql_connection_defined():

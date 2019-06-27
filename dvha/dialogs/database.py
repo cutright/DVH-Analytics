@@ -14,14 +14,14 @@ action which will be executed on a dialog resolution of wx.ID_OK
 
 import wx
 from datetime import datetime
-from db.sql_connector import DVH_SQL, echo_sql_db
-from db.sql_settings import write_sql_connection_settings, validate_sql_connection
-from models.import_dicom import ImportDicomFrame
-from paths import SQL_CNF_PATH, parse_settings_file, IMPORTED_DIR, INBOX_DIR
 from os import mkdir, rename
 from os.path import join
-from tools.errors import SQLError, SQLErrorDialog
-from tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file,\
+from dvha.db.sql_connector import DVH_SQL, echo_sql_db
+from dvha.db.sql_settings import write_sql_connection_settings, validate_sql_connection
+from dvha.models.import_dicom import ImportDicomFrame
+from dvha.paths import SQL_CNF_PATH, parse_settings_file, IMPORTED_DIR, INBOX_DIR
+from dvha.tools.errors import SQLError, SQLErrorDialog
+from dvha.tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file,\
     delete_imported_dicom_files, move_imported_dicom_files, MessageDialog
 
 

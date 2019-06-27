@@ -6,13 +6,13 @@ Created on Fri Mar 24 13:43:28 2017
 
 import os
 from shutil import copyfile
-from db.sql_to_python import QuerySQL
-from db.sql_connector import DVH_SQL
-from paths import PREF_DIR, SCRIPT_DIR
-from tools.utilities import flatten_list_of_lists
-from tools.errors import ROIVariationError
 from copy import deepcopy
 import difflib
+from dvha.db.sql_to_python import QuerySQL
+from dvha.db.sql_connector import DVH_SQL
+from dvha.paths import PREF_DIR, SCRIPT_DIR
+from dvha.tools.utilities import flatten_list_of_lists, initialize_directories_and_settings
+from dvha.tools.errors import ROIVariationError
 
 
 class Physician:
@@ -51,6 +51,7 @@ class DatabaseROIs:
 
         # Copy default ROI files to user folder if they do not exist
         if not os.path.isfile(os.path.join(PREF_DIR, 'institutional.roi')):
+            initialize_directories_and_settings()
             initialize_roi_preference_file('institutional.roi')
             initialize_roi_preference_file('physician_BBM.roi')
 

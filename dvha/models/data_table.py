@@ -12,7 +12,7 @@ A class to sync a data object and list_ctrl
 
 from copy import deepcopy
 import wx
-from tools.utilities import get_selected_listctrl_items
+from dvha.tools.utilities import get_selected_listctrl_items
 
 
 class DataTable:

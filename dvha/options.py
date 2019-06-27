@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import pickle
-from paths import OPTIONS_PATH, OPTIONS_CHECKSUM_PATH
 from os.path import isfile
 from os import unlink
 import hashlib
+from dvha.paths import OPTIONS_PATH, OPTIONS_CHECKSUM_PATH
 
 
 class DefaultOptions:

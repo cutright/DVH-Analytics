@@ -13,9 +13,10 @@ import os
 import pydicom as dicom
 from dicompylercore import dicomparser
 from pydicom.errors import InvalidDicomError
-from tools.utilities import get_file_paths
 from threading import Thread
 from pubsub import pub
+from dvha.paths import ICONS
+from dvha.tools.utilities import get_file_paths
 
 
 SCRIPT_DIR = os.path.dirname(__file__)
@@ -79,22 +80,10 @@ class DicomImporter:
 
     def __set_images(self):
         self.image_list = wx.ImageList(16, 16)
-        self.images = {'rtplan': self.image_list.Add(wx.Image("icons/iconfinder_Clipboard-Plan_379537_zoom.png",
-                                                              wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
-                       'rtstruct': self.image_list.Add(wx.Image("icons/iconfinder_Education-Filled_7_3672892.png",
-                                                                wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
-                       'rtdose': self.image_list.Add(wx.Image("icons/iconfinder_package-supported_24220.png",
-                                                              wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
-                       'other': self.image_list.Add(wx.Image("icons/error.png",
-                                                             wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
-                       'studies': self.image_list.Add(wx.Image("icons/iconfinder_User_Customers_1218712.png",
-                                                               wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
-                       'study': self.image_list.Add(wx.Image("icons/iconfinder_Travel-Filled-07_3671983.png",
-                                                             wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
-                       'plan': self.image_list.Add(wx.Image("icons/iconfinder_Clipboard-Plan_379537_zoom.png",
-                                                            wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
-                       'patient': self.image_list.Add(wx.Image("icons/iconfinder_User_Yuppie_3_1218716.png",
-                                                               wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())}
+        keys = ['rtplan', 'rtstruct', 'rtdose', 'other', 'studies', 'study', 'plan', 'patient']
+        self.images = {key: self.image_list.Add(wx.Image(ICONS[key], wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())
+                       for key in keys}
+
         self.tree_ctrl_files.AssignImageList(self.image_list)
 
     def __initialize_file_tree_root(self):

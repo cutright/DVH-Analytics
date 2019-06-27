@@ -1,17 +1,16 @@
 import wx
 import wx.html2
-from dialogs.roi_map import AddPhysician, AddPhysicianROI, AddVariationDialog, MoveVariationDialog,\
-    RenamePhysicianDialog, RenamePhysicianROIDialog, RenameInstitutionalROIDialog, LinkPhysicianROI
-from tools.errors import ROIVariationError, ROIVariationErrorDialog
-from tools.utilities import get_selected_listctrl_items, MessageDialog, get_elapsed_time
-from db.sql_connector import DVH_SQL, echo_sql_db
-from models.data_table import DataTable
-from models.plot import PlotROIMap
-from tools.roi_name_manager import clean_name
 from datetime import datetime
 from threading import Thread
 from pubsub import pub
-
+from dvha.db.sql_connector import DVH_SQL, echo_sql_db
+from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddVariationDialog, MoveVariationDialog,\
+    RenamePhysicianDialog, RenamePhysicianROIDialog, RenameInstitutionalROIDialog, LinkPhysicianROI
+from dvha.models.data_table import DataTable
+from dvha.models.plot import PlotROIMap
+from dvha.tools.errors import ROIVariationError, ROIVariationErrorDialog
+from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_elapsed_time
+from dvha.tools.roi_name_manager import clean_name
 
 class ROIMapFrame(wx.Frame):
     def __init__(self, roi_map):

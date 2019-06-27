@@ -10,7 +10,7 @@ A generic class to query a DVHA SQL table and parse the return into a python obj
 #    See the file LICENSE included with this distribution, also
 #    available at https://github.com/cutright/DVH-Analytics
 
-from db.sql_connector import DVH_SQL
+from dvha.db.sql_connector import DVH_SQL
 
 
 class QuerySQL:
