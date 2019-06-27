@@ -143,7 +143,7 @@ class EndpointFrame:
         self.control_chart.update_combo_box_choices()
 
     def del_ep_button_click(self, evt):
-        dlg = DelEndpointDialog(self.data_table.columns, title='Delete Endpoint')
+        dlg = DelEndpointDialog(self.data_table.columns)
         res = dlg.ShowModal()
         if res == wx.ID_OK:
             for value in dlg.selected_values:
