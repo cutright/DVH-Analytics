@@ -514,11 +514,11 @@ class DVHAMainFrame(wx.Frame):
 
     def edit_row_categorical(self, *args):
         if self.selected_index_categorical is not None:
-            query_dlg(self, 'categorical', title='Edit Categorical Filter', set_values=True)
+            query_dlg(self, 'categorical', set_values=True)
 
     def edit_row_numerical(self, *args):
         if self.selected_index_numerical is not None:
-            query_dlg(self, 'numerical', title='Edit Numerical Filter', set_values=True)
+            query_dlg(self, 'numerical', set_values=True)
 
     def doubleclick_categorical(self, evt):
         self.selected_index_categorical = self.table_categorical.GetFirstSelected()

@@ -129,7 +129,7 @@ class EndpointFrame:
         self.data_table.set_column_width(2, 200)
 
     def add_ep_button_click(self, evt):
-        dlg = AddEndpointDialog(title='Add Endpoint')
+        dlg = AddEndpointDialog()
         res = dlg.ShowModal()
         if res == wx.ID_OK and dlg.is_endpoint_valid:
             self.endpoint_defs.append_row(dlg.endpoint_row)

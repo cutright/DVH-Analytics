@@ -91,8 +91,11 @@ class DatePicker(wx.Dialog):
 
 
 class AddEndpointDialog(wx.Dialog):
-    def __init__(self, *args, **kwds):
-        wx.Dialog.__init__(self, None, title=kwds['title'])
+    """
+    Add a new column to the endpoint table of the Endpoint tab
+    """
+    def __init__(self):
+        wx.Dialog.__init__(self, None, title='Add Endpoint')
 
         self.combo_box_output = wx.ComboBox(self, wx.ID_ANY,
                                             choices=["Dose (Gy)", "Dose(%)", "Volume (cc)", "Volume (%)"],
@@ -103,16 +106,18 @@ class AddEndpointDialog(wx.Dialog):
         self.button_ok = wx.Button(self, wx.ID_OK, "OK")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
-        self.Bind(wx.EVT_COMBOBOX, self.combo_box_ticker, id=self.combo_box_output.GetId())
-        self.Bind(wx.EVT_TEXT, self.text_input_ticker, id=self.text_input.GetId())
-        self.Bind(wx.EVT_RADIOBOX, self.radio_box_ticker, id=self.radio_box_units.GetId())
-
+        self.__do_bind()
         self.__set_properties()
         self.__do_layout()
 
     def __set_properties(self):
         self.radio_box_units.SetSelection(0)
         self.combo_box_output.SetValue('Dose (Gy)')
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_COMBOBOX, self.combo_box_ticker, id=self.combo_box_output.GetId())
+        self.Bind(wx.EVT_TEXT, self.text_input_ticker, id=self.text_input.GetId())
+        self.Bind(wx.EVT_RADIOBOX, self.radio_box_ticker, id=self.radio_box_units.GetId())
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -122,25 +127,31 @@ class AddEndpointDialog(wx.Dialog):
         sizer_input_units = wx.BoxSizer(wx.VERTICAL)
         sizer_input_value = wx.BoxSizer(wx.VERTICAL)
         sizer_output = wx.BoxSizer(wx.VERTICAL)
+
         label_ouput = wx.StaticText(self, wx.ID_ANY, "Output:")
         sizer_output.Add(label_ouput, 0, wx.BOTTOM | wx.EXPAND, 8)
         sizer_output.Add(self.combo_box_output, 0, wx.EXPAND, 0)
         sizer_input.Add(sizer_output, 1, wx.ALL | wx.EXPAND, 5)
+
         self.label_input_value = wx.StaticText(self, wx.ID_ANY, "Input Volume (cc):")
         sizer_input_value.Add(self.label_input_value, 0, wx.BOTTOM | wx.EXPAND, 8)
         sizer_input_value.Add(self.text_input, 0, wx.EXPAND | wx.LEFT, 5)
         sizer_input.Add(sizer_input_value, 1, wx.ALL | wx.EXPAND, 5)
+
         label_input_units = wx.StaticText(self, wx.ID_ANY, "Input Units:")
         sizer_input_units.Add(label_input_units, 0, wx.BOTTOM | wx.EXPAND, 3)
         sizer_input_units.Add(self.radio_box_units, 0, wx.EXPAND, 0)
         sizer_input.Add(sizer_input_units, 1, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_input, 0, wx.ALL | wx.EXPAND, 10)
+
+        # TODO: Short-hand not updating? At least not on MSW?
         self.text_short_hand = wx.StaticText(self, wx.ID_ANY, "\tShort-hand: ")
         sizer_wrapper.Add(self.text_short_hand, 0, wx.ALL, 5)
         sizer_buttons.Add(self.button_ok, 0, wx.ALL, 5)
         sizer_buttons.Add(self.button_cancel, 0, wx.ALL | wx.EXPAND, 5)
         sizer_buttons_wrapper.Add(sizer_buttons, 0, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_buttons_wrapper, 0, wx.ALIGN_CENTER | wx.ALL, 5)
+
         self.SetSizer(sizer_wrapper)
         sizer_wrapper.Fit(self)
         self.Layout()
@@ -221,7 +232,10 @@ class AddEndpointDialog(wx.Dialog):
 
 
 class DelEndpointDialog(wx.Dialog):
-    def __init__(self, endpoints, *args, **kwds):
+    """
+    Delete an endpoint from the table in Endpoints tab
+    """
+    def __init__(self, endpoints):
         wx.Dialog.__init__(self, None, title='Delete Endpoint')
 
         self.endpoints = endpoints
@@ -250,14 +264,17 @@ class DelEndpointDialog(wx.Dialog):
         sizer_ok_cancel = wx.BoxSizer(wx.HORIZONTAL)
         sizer_select = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
         sizer_select_buttons = wx.BoxSizer(wx.HORIZONTAL)
+
         sizer_select.Add(self.list_ctrl_endpoints, 0, wx.ALL | wx.EXPAND, 5)
         sizer_select_buttons.Add(self.button_select_all, 0, wx.ALL, 5)
         sizer_select_buttons.Add(self.button_deselect_all, 0, wx.ALL, 5)
         sizer_select.Add(sizer_select_buttons, 0, wx.ALIGN_CENTER | wx.ALL, 0)
         sizer_wrapper.Add(sizer_select, 0, wx.ALL | wx.EXPAND, 5)
+
         sizer_ok_cancel.Add(self.button_ok, 0, wx.ALL, 5)
         sizer_ok_cancel.Add(self.button_cancel, 0, wx.ALL, 5)
         sizer_wrapper.Add(sizer_ok_cancel, 0, wx.ALIGN_CENTER | wx.ALL, 5)
+
         self.SetSizer(sizer_wrapper)
         sizer_wrapper.Fit(self)
         self.Layout()
@@ -285,9 +302,18 @@ class DelEndpointDialog(wx.Dialog):
             self.list_ctrl_endpoints.Select(i, on=on)
 
 
-def query_dlg(parent, query_type, title=None, set_values=False):
+def query_dlg(parent, query_type, set_values=False):
+    """
+    Function to create either QueryCategoryDialog or QueryNumericalDialog
+    :param parent: pointer to app object
+    :type parent: DVHAMainFrame
+    :param query_type: either 'categorical' or 'numerical'
+    :type query_type: str
+    :param set_values: If True, pre-populate dialog values with the currently selected row (i.e., edit a row)
+    :type set_values: bool
+    """
     dlg = {'categorical': QueryCategoryDialog,
-           'numerical': QueryNumericalDialog}[query_type](title=title)
+           'numerical': QueryNumericalDialog}[query_type]()
     data_table = {'categorical': parent.data_table_categorical,
                   'numerical': parent.data_table_numerical}[query_type]
     selected_index = {'categorical': parent.selected_index_categorical,
@@ -307,14 +333,11 @@ def query_dlg(parent, query_type, title=None, set_values=False):
 
 
 class QueryCategoryDialog(wx.Dialog):
-
-    def __init__(self, *args, **kw):
-        wx.Dialog.__init__(self, None)
-
-        if 'title' in kw and kw['title']:
-            self.SetTitle(kw['title'])
-        else:
-            self.SetTitle('Query by Categorical Data')
+    """
+    Add/Edit query parameters for categorical data
+    """
+    def __init__(self):
+        wx.Dialog.__init__(self, None, title='Query by Categorical Data')
 
         self.selector_categories = sql_columns.categorical
 
@@ -392,14 +415,11 @@ class QueryCategoryDialog(wx.Dialog):
 
 
 class QueryNumericalDialog(wx.Dialog):
-
-    def __init__(self, *args, **kw):
-        wx.Dialog.__init__(self, None)
-
-        if 'title' in kw and kw['title']:
-            self.SetTitle(kw['title'])
-        else:
-            self.SetTitle('Query by Numerical Data')
+    """
+    Add/Edit query parameters for numerical data
+    """
+    def __init__(self):
+        wx.Dialog.__init__(self, None, title='Query by Numerical Data')
 
         self.numerical_categories = sql_columns.numerical
 
@@ -513,7 +533,14 @@ class QueryNumericalDialog(wx.Dialog):
 
 
 class UserSettings(wx.Dialog):
+    """
+    Customize directories and visual settings for DVHA
+    """
     def __init__(self, options):
+        """
+        :param options: user settings object
+        :type options: Options
+        """
         wx.Dialog.__init__(self, None, title="User Settings")
 
         self.options = options
@@ -562,8 +589,6 @@ class UserSettings(wx.Dialog):
         self.load_options()
         self.load_paths()
 
-        self.Center()
-
         self.run()
 
     def __set_properties(self):
@@ -594,7 +619,6 @@ class UserSettings(wx.Dialog):
         self.combo_box_sizes_category.SetSelection(3)  # Plot Axis Label Font Size
 
     def __do_layout(self):
-        # begin wxGlade: MyFrame.__do_layout
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_ok_cancel = wx.BoxSizer(wx.HORIZONTAL)
         sizer_plot_options = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Plot Options"), wx.VERTICAL)
@@ -615,6 +639,7 @@ class UserSettings(wx.Dialog):
         sizer_inbox_wrapper = wx.BoxSizer(wx.HORIZONTAL)
         sizer_inbox = wx.BoxSizer(wx.VERTICAL)
         sizer_inbox_input = wx.BoxSizer(wx.HORIZONTAL)
+
         label_inbox = wx.StaticText(self, wx.ID_ANY, "Inbox:")
         label_inbox.SetToolTip("Default directory for batch processing of incoming DICOM files")
         sizer_inbox.Add(label_inbox, 0, 0, 5)
@@ -623,6 +648,7 @@ class UserSettings(wx.Dialog):
         sizer_inbox.Add(sizer_inbox_input, 1, wx.EXPAND, 0)
         sizer_inbox_wrapper.Add(sizer_inbox, 1, wx.EXPAND, 0)
         sizer_dicom_directories.Add(sizer_inbox_wrapper, 1, wx.EXPAND, 0)
+
         label_imported = wx.StaticText(self, wx.ID_ANY, "Imported:")
         label_imported.SetToolTip("Directory for post-processed DICOM files")
         sizer_imported.Add(label_imported, 0, 0, 5)
@@ -632,6 +658,7 @@ class UserSettings(wx.Dialog):
         sizer_imported_wrapper.Add(sizer_imported, 1, wx.EXPAND, 0)
         sizer_dicom_directories.Add(sizer_imported_wrapper, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_dicom_directories, 0, wx.ALL | wx.EXPAND, 10)
+
         label_colors = wx.StaticText(self, wx.ID_ANY, "Colors:")
         sizer_colors.Add(label_colors, 0, 0, 0)
         sizer_colors_input.Add(self.combo_box_colors_category, 0, 0, 0)
@@ -639,6 +666,7 @@ class UserSettings(wx.Dialog):
         sizer_colors_input.Add(self.combo_box_colors_selection, 0, 0, 0)
         sizer_colors.Add(sizer_colors_input, 1, wx.EXPAND, 0)
         sizer_plot_options.Add(sizer_colors, 1, wx.EXPAND, 0)
+
         label_sizes = wx.StaticText(self, wx.ID_ANY, "Sizes:")
         sizer_sizes.Add(label_sizes, 0, 0, 0)
         sizer_sizes_input.Add(self.combo_box_sizes_category, 0, 0, 0)
@@ -646,6 +674,7 @@ class UserSettings(wx.Dialog):
         sizer_sizes_input.Add(self.spin_ctrl_sizes_input, 0, 0, 0)
         sizer_sizes.Add(sizer_sizes_input, 1, wx.EXPAND, 0)
         sizer_plot_options.Add(sizer_sizes, 1, wx.EXPAND, 0)
+
         label_line_widths = wx.StaticText(self, wx.ID_ANY, "Line Widths:")
         sizer_line_widths.Add(label_line_widths, 0, 0, 0)
         sizer_line_widths_input.Add(self.combo_box_line_widths_category, 0, 0, 0)
@@ -653,6 +682,7 @@ class UserSettings(wx.Dialog):
         sizer_line_widths_input.Add(self.spin_ctrl_line_widths_input, 0, 0, 0)
         sizer_line_widths.Add(sizer_line_widths_input, 1, wx.EXPAND, 0)
         sizer_plot_options.Add(sizer_line_widths, 1, wx.EXPAND, 0)
+
         label_line_styles = wx.StaticText(self, wx.ID_ANY, "Line Styles:")
         sizer_line_styles.Add(label_line_styles, 0, 0, 0)
         sizer_line_styles_input.Add(self.combo_box_line_styles_category, 0, 0, 0)
@@ -660,6 +690,7 @@ class UserSettings(wx.Dialog):
         sizer_line_styles_input.Add(self.combo_box_line_styles_selection, 0, 0, 0)
         sizer_line_styles.Add(sizer_line_styles_input, 1, wx.EXPAND, 0)
         sizer_plot_options.Add(sizer_line_styles, 1, wx.EXPAND, 0)
+
         label_alpha = wx.StaticText(self, wx.ID_ANY, "Alpha:")
         sizer_alpha.Add(label_alpha, 0, 0, 0)
         sizer_alpha_input.Add(self.combo_box_alpha_category, 0, 0, 0)
@@ -668,12 +699,15 @@ class UserSettings(wx.Dialog):
         sizer_alpha.Add(sizer_alpha_input, 1, wx.EXPAND, 0)
         sizer_plot_options.Add(sizer_alpha, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_plot_options, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10)
+
         sizer_ok_cancel.Add(self.button_restore_defaults, 0, wx.RIGHT, 20)
         sizer_ok_cancel.Add(self.button_ok, 0, wx.LEFT | wx.RIGHT, 5)
         sizer_ok_cancel.Add(self.button_cancel, 0, wx.LEFT | wx.RIGHT, 5)
         sizer_wrapper.Add(sizer_ok_cancel, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
+
         self.SetSizer(sizer_wrapper)
         self.Layout()
+        self.Center()
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.inbox_dir_dlg, id=self.button_inbox.GetId())
@@ -700,49 +734,73 @@ class UserSettings(wx.Dialog):
         self.Destroy()
 
     def inbox_dir_dlg(self, evt):
-        starting_dir = self.text_ctrl_inbox.GetValue()
-        if not isdir(starting_dir):
-            starting_dir = ""
-        dlg = wx.DirDialog(self, "Select inbox directory", starting_dir, wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
-        if dlg.ShowModal() == wx.ID_OK:
-            self.text_ctrl_inbox.SetValue(dlg.GetPath())
-        dlg.Destroy()
+        self.dir_dlg('inbox', self.text_ctrl_imported)
 
     def imported_dir_dlg(self, evt):
-        starting_dir = self.text_ctrl_imported.GetValue()
+        self.dir_dlg('imported', self.text_ctrl_imported)
+
+    def dir_dlg(self, dir_type, text_ctrl):
+        """
+        Create a DirDialog and edit the associated TextCtrl
+        :param dir_type: the directory type to be displayed in DirDialog title
+        :type dir_type: str
+        :param text_ctrl: the associated TextCtrl from the user settings dialog
+        :type text_ctrl: TextCtrl
+        """
+        starting_dir = text_ctrl.GetValue()
         if not isdir(starting_dir):
             starting_dir = ""
-        dlg = wx.DirDialog(self, "Select imported directory", starting_dir, wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
+        dlg = wx.DirDialog(self, "Select %s directory" % dir_type, starting_dir,
+                           wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:
-            self.text_ctrl_imported.SetValue(dlg.GetPath())
+            text_ctrl.SetValue(dlg.GetPath())
         dlg.Destroy()
 
     def get_option_choices(self, category):
+        """
+        Lookup properties in Options.option_attr that fit the specified category
+        :param category: COLOR, SIZE, ALPHA, LINE_WIDTH, LINE_DASH
+        :type category: str
+        :return: all options with the category in their name
+        :rtype: list
+        """
         choices = [self.clean_option_variable(c) for c in self.options.option_attr if c.find(category) > -1]
         choices.sort()
         return choices
 
     @staticmethod
     def clean_option_variable(option_variable, inverse=False):
+        """
+        Convert option variable between UI and python format
+        :param option_variable: option available for edit user settings UI
+        :type option_variable: str
+        :param inverse: True to return python format, False to return UI format
+        :type inverse: bool
+        :return: formatted option variable
+        :rtype: str
+        """
         if inverse:
             return option_variable.upper().replace(' ', '_')
         else:
             return option_variable.replace('_', ' ').title().replace('Dvh', 'DVH').replace('Iqr', 'IQR')
 
     def save_options(self):
+        """
+        Write the Options object to file
+        """
         self.options.save()
 
-    def update_input_colors_var(self, evt):
+    def update_input_colors_var(self, *args):
         var = self.clean_option_variable(self.combo_box_colors_category.GetValue(), inverse=True)
         val = getattr(self.options, var)
         self.combo_box_colors_selection.SetValue(val)
 
-    def update_input_colors_val(self, evt):
+    def update_input_colors_val(self, *args):
         var = self.clean_option_variable(self.combo_box_colors_category.GetValue(), inverse=True)
         val = self.combo_box_colors_selection.GetValue()
         self.options.set_option(var, val)
 
-    def update_size_var(self, evt):
+    def update_size_var(self, *args):
         var = self.clean_option_variable(self.combo_box_sizes_category.GetValue(), inverse=True)
         try:
             val = getattr(self.options, var).replace('pt', '')
@@ -754,7 +812,7 @@ class UserSettings(wx.Dialog):
             pass
         self.spin_ctrl_sizes_input.SetValue(val)
 
-    def update_size_val(self, evt):
+    def update_size_val(self, *args):
         new = self.spin_ctrl_sizes_input.GetValue()
         if 'Font' in self.combo_box_sizes_category.GetValue():
             try:
@@ -770,7 +828,7 @@ class UserSettings(wx.Dialog):
         var = self.clean_option_variable(self.combo_box_sizes_category.GetValue(), inverse=True)
         self.options.set_option(var, val)
 
-    def update_line_width_var(self, evt):
+    def update_line_width_var(self, *args):
         var = self.clean_option_variable(self.combo_box_line_widths_category.GetValue(), inverse=True)
         val = str(getattr(self.options, var))
         try:
@@ -779,7 +837,7 @@ class UserSettings(wx.Dialog):
             pass
         self.spin_ctrl_line_widths_input.SetValue(val)
 
-    def update_line_width_val(self, evt):
+    def update_line_width_val(self, *args):
         new = self.spin_ctrl_line_widths_input.GetValue()
         try:
             val = float(new)
@@ -788,20 +846,20 @@ class UserSettings(wx.Dialog):
         var = self.clean_option_variable(self.combo_box_line_widths_category.GetValue(), inverse=True)
         self.options.set_option(var, val)
 
-    def update_line_style_var(self, evt):
+    def update_line_style_var(self, *args):
         var = self.clean_option_variable(self.combo_box_line_styles_category.GetValue(), inverse=True)
         self.combo_box_line_styles_selection.SetValue(getattr(self.options, var))
 
-    def update_line_style_val(self, evt):
+    def update_line_style_val(self, *args):
         var = self.clean_option_variable(self.combo_box_line_styles_category.GetValue(), inverse=True)
         val = self.combo_box_line_styles_selection.GetValue()
         self.options.set_option(var, val)
 
-    def update_alpha_var(self, evt):
+    def update_alpha_var(self, *args):
         var = self.clean_option_variable(self.combo_box_alpha_category.GetValue(), inverse=True)
         self.spin_ctrl_alpha_input.SetValue(str(getattr(self.options, var)))
 
-    def update_alpha_val(self, evt):
+    def update_alpha_val(self, *args):
         new = self.spin_ctrl_alpha_input.GetValue()
         try:
             val = float(new)
@@ -811,26 +869,29 @@ class UserSettings(wx.Dialog):
         self.options.set_option(var, val)
 
     def load_options(self):
-        self.update_alpha_var(None)
-        self.update_input_colors_var(None)
-        self.update_line_style_var(None)
-        self.update_line_width_var(None)
-        self.update_size_var(None)
+        self.update_alpha_var()
+        self.update_input_colors_var()
+        self.update_line_style_var()
+        self.update_line_width_var()
+        self.update_size_var()
 
     def load_paths(self):
         paths = parse_settings_file(IMPORT_SETTINGS_PATH)
         self.text_ctrl_inbox.SetValue(paths['inbox'])
         self.text_ctrl_imported.SetValue(paths['imported'])
 
-    def restore_defaults(self, evt):
+    def restore_defaults(self, *args):
         MessageDialog(self, "Restore default preferences?", action_yes_func=self.options.restore_defaults)
-        self.update_size_val(None)
+        self.update_size_val()
         self.load_options()
 
 
 class About(wx.Dialog):
+    """
+    Simple dialog to display the LICENSE file and a brief text header in a scrollable window
+    """
     def __init__(self):
-        wx.Dialog.__init__(self, None, title='DVH Analytics License')
+        wx.Dialog.__init__(self, None, title='About DVH Analytics')
 
         scrolled_window = wx.ScrolledWindow(self, wx.ID_ANY)
 
@@ -848,6 +909,8 @@ class About(wx.Dialog):
         sizer_text.Add(license_text, 0, wx.EXPAND | wx.ALL, 5)
         scrolled_window.SetSizer(sizer_text)
         sizer_wrapper.Add(scrolled_window, 1, wx.EXPAND, 0)
+
+        self.SetBackgroundColour(wx.WHITE)
 
         self.SetSizer(sizer_wrapper)
         self.SetSize((750, 900))
