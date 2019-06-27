@@ -120,7 +120,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.on_toolbar_settings, id=self.toolbar_ids['Settings'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_roi_map, id=self.toolbar_ids['ROI Map'])
         self.Bind(wx.EVT_TOOL, self.on_close, id=self.toolbar_ids['Close'])
-        self.Bind(wx.EVT_TOOL, self.on_import, id=self.toolbar_ids['Import'])
+        self.Bind(wx.EVT_TOOL, self.on_toolbar_import, id=self.toolbar_ids['Import'])
 
     def __add_menubar(self):
 
@@ -462,19 +462,27 @@ class DVHAMainFrame(wx.Frame):
 
         self.control_chart.update_combo_box_choices()
 
-    def on_toolbar_database(self, evt):
+    def on_toolbar_settings(self, evt):
+        self.on_pref()
 
+    def on_toolbar_import(self, evt):
+        self.check_db_then_call(ImportDicomFrame, self.roi_map, self.options)
+
+    def on_toolbar_database(self, evt):
+        self.check_db_then_call(DatabaseEditorFrame, self.roi_map)
+
+    def on_toolbar_roi_map(self, evt):
+        self.check_db_then_call(ROIMapFrame, self.roi_map)
+
+    def check_db_then_call(self, func, *parameters):
         if not echo_sql_db():
             self.on_sql()
 
         if echo_sql_db():
-            DatabaseEditorFrame(self.roi_map)
+            func(tuple(parameters))
         else:
             wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
-
-    def on_toolbar_settings(self, evt):
-        self.on_pref()
 
     # --------------------------------------------------------------------------------------------------------------
     # Query event functions
@@ -677,22 +685,9 @@ class DVHAMainFrame(wx.Frame):
     def on_pref(self, *args):
         UserSettings(self.options)
 
-    def on_import(self, evt):
-        if not echo_sql_db():
-            self.on_sql()
-
-        if echo_sql_db():
-            ImportDicomFrame(self.roi_map, self.options)
-        else:
-            wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
-                          wx.OK | wx.ICON_WARNING)
-
     def on_sql(self, *args):
         SQLSettingsDialog()
         [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db()]()
-
-    def on_toolbar_roi_map(self, evt):
-        ROIMapFrame(self.roi_map)
 
     def on_save_plot_dvhs(self, evt):
         save_string_to_file(self, 'Save DVHs plot', self.plot.html_str,
