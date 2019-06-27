@@ -1,3 +1,15 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# models.plot.py
+"""
+Classes to generate bokeh plots
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
+
 import wx.html2
 from bokeh.plotting import figure
 from bokeh.io.export import get_layout_html
@@ -15,7 +27,22 @@ from paths import TEMP_DIR
 
 # TODO: have all plot classes load options with a function that runs on update_plot to get latest options
 class Plot:
+    """
+    Base class for all other plots
+    Pass the layout property into a wx sizer
+    """
     def __init__(self, parent, options, x_axis_label='X Axis', y_axis_label='Y Axis', x_axis_type='linear'):
+        """
+        :param parent: the wx UI object where the plot will be displayed
+        :param options: user options object for visual preferences
+        :type options: Options
+        :param x_axis_label: text for the x-axis title
+        :type x_axis_label: str
+        :param y_axis_label: text for the y-axis title
+        :type y_axis_label: str
+        :param x_axis_type: x axis type per bokeh (e.g., 'linear' or 'datetime')
+        :type x_axis_type: str
+        """
 
         self.options = options
 
@@ -71,6 +98,17 @@ class Plot:
 
     @staticmethod
     def clean_data(*data, mrn=None, uid=None, dates=None):
+        """
+        Data used for statistical analysis in Regression and Control Charts requires no 'None' values and the same
+        number of points for each variable.  To mitigate this, clean_data will find all studies that have any 'None'
+        values and return data without these studies
+        :param data: any number of variables, each being a list of values
+        :param mrn: mrns in same order as data
+        :param uid: study instance uids in same order data
+        :param dates: sim study dates in same order as data
+        :return: data only including studies with no 'None' values
+        :rtype: tuple
+        """
         bad_indices = []
         for var in data:
             bad_indices.extend([i for i, value in enumerate(var) if value == 'None'])
@@ -93,7 +131,17 @@ class Plot:
 
 
 class PlotStatDVH(Plot):
+    """
+    Generate plot for DVHs tab
+    """
     def __init__(self, parent, dvh, options):
+        """
+        :param parent: the wx UI object where the plot will be displayed
+        :param dvh: dvh data object
+        :type dvh: DVH
+        :param options: user preferences
+        :type options: Options
+        """
         Plot.__init__(self, parent, options, x_axis_label='Dose (cGy)', y_axis_label='Relative Volume')
 
         self.type = 'dvh'
@@ -119,6 +167,7 @@ class PlotStatDVH(Plot):
         self.bokeh_layout = column(self.figure, self.table)
 
     def __add_hover(self):
+        # TODO: custom hover not behaving?
         # Display only one tool tip (since many lines will overlap)
         # https://stackoverflow.com/questions/36434562/displaying-only-one-tooltip-when-using-the-hovertool-tool?rq=1
         custom_hover = HoverTool()
@@ -227,6 +276,15 @@ class PlotStatDVH(Plot):
         self.update_bokeh_layout_in_wx_python()
 
     def get_csv(self, include_summary=True, include_dvhs=True):
+        """
+        Get a csv string of DVH data used for data export
+        :param include_summary: table of DVH related data, without histogram data
+        :type include_summary: bool
+        :param include_dvhs: table of histogram data
+        :type include_dvhs: bool
+        :return: data as a csv
+        :rtype: str
+        """
         data = self.source['dvh'].data
         summary, dvh_data = [], []
 
@@ -252,7 +310,15 @@ class PlotStatDVH(Plot):
 
 
 class PlotTimeSeries(Plot):
+    """
+    Generate plot for Time Series tab
+    """
     def __init__(self, parent, options):
+        """
+        :param parent: the wx UI object where the plot will be displayed
+        :param options: user preferences
+        :type options: Options
+        """
         Plot.__init__(self, parent, options, x_axis_label='Simulation Date', x_axis_type='datetime')
 
         self.type = 'time_series'
@@ -403,7 +469,15 @@ class PlotTimeSeries(Plot):
 
 
 class PlotRegression(Plot):
+    """
+    Generate plot for Regression tab
+    """
     def __init__(self, parent, options):
+        """
+        :param parent: the wx UI object where the plot will be displayed
+        :param options: user preferences
+        :type options: Options
+        """
         Plot.__init__(self, parent, options)
 
         self.type = 'regression'
@@ -593,7 +667,15 @@ class PlotRegression(Plot):
 
 
 class PlotMultiVarRegression(Plot):
+    """
+    Class to generate plot for MultiVariable Frame created from Regression tab
+    """
     def __init__(self, parent, options):
+        """
+        :param parent: the wx UI object where the plot will be displayed
+        :param options: user preferences
+        :type options: Options
+        """
         Plot.__init__(self, parent, options)
 
         self.type = 'multi-variable_regression'
@@ -766,7 +848,15 @@ class PlotMultiVarRegression(Plot):
 
 
 class PlotControlChart(Plot):
+    """
+    Generate plot for Control Chart frame
+    """
     def __init__(self, parent, options):
+        """
+        :param parent: the wx UI object where the plot will be displayed
+        :param options: user preferences
+        :type options: Options
+        """
         Plot.__init__(self, parent, options, x_axis_label='Study')
 
         self.type = 'control_chart'
@@ -905,7 +995,21 @@ class PlotControlChart(Plot):
 
 
 class PlotRandomForest(Plot):
+    """
+    Generate plot for the Random Forest frame created in the MulitVariable Regression frame
+    """
     def __init__(self, parent, options, y, y_predict, mse):
+        """
+        :param parent: the wx UI object where the plot will be displayed
+        :param options: user preferences
+        :type options: Options
+        :param y: y-values from data
+        :type y: list
+        :param y_predict: predicted y-values by random forest
+        :type y_predict: list
+        :param mse: mean square error of random forrest predictions
+        :type mse: list
+        """
         Plot.__init__(self, parent, options)
 
         self.type = 'random_forest'
@@ -942,7 +1046,15 @@ class PlotRandomForest(Plot):
 
 
 class PlotROIMap(Plot):
+    """
+    Generate visual representation of the roi map
+    """
     def __init__(self, parent, roi_map):
+        """
+        :param parent: the wx UI object where the plot will be displayed
+        :param roi_map: roi map object
+        :type roi_map: DatabaseROIs
+        """
         Plot.__init__(self, parent, None)
 
         self.type = 'roi_map'
