@@ -1,6 +1,14 @@
-#!/usr/bin/env python3
-# -*- coding: UTF-8 -*-
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
+# models.time_series.py
+"""
+Class for viewing and editing the roi map, and updating the database with changes
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
 
 import wx
 from datetime import datetime
@@ -11,7 +19,20 @@ from dvha.models.plot import PlotTimeSeries
 
 
 class TimeSeriesFrame:
+    """
+    Object to be passed into notebook panel for the Time Series tab
+    """
     def __init__(self, parent, dvh, data, options):
+        """
+        :param parent:  notebook panel in main view
+        :type parent: Panel
+        :param dvh: dvh data object
+        :type dvh: DVH
+        :param data: data object containing Plans, Beams, and Rxs data
+        :type data: dict
+        :param options: user options containing visual preferences
+        :type options: Options
+        """
         self.parent = parent
         self.options = options
         self.dvh = dvh
@@ -57,17 +78,21 @@ class TimeSeriesFrame:
         sizer_lookback_distance = wx.BoxSizer(wx.VERTICAL)
         sizer_histogram_bins = wx.BoxSizer(wx.VERTICAL)
         sizer_y_axis = wx.BoxSizer(wx.VERTICAL)
+
         label_y_axis = wx.StaticText(self.parent, wx.ID_ANY, "Y Axis:")
         sizer_y_axis.Add(label_y_axis, 0, wx.LEFT, 5)
         sizer_y_axis.Add(self.combo_box_y_axis, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(sizer_y_axis, 1, wx.EXPAND, 0)
+
         label_histogram_bins = wx.StaticText(self.parent, wx.ID_ANY, "Histogram Bins:")
         sizer_histogram_bins.Add(label_histogram_bins, 0, wx.LEFT, 5)
         sizer_histogram_bins.Add(self.text_input_bin_size, 0, wx.ALL | wx.EXPAND, 5)
+
         label_lookback_distance = wx.StaticText(self.parent, wx.ID_ANY, "Lookback Distance:")
         sizer_lookback_distance.Add(label_lookback_distance, 0, wx.LEFT, 5)
         sizer_lookback_distance.Add(self.text_input_lookback_distance, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(sizer_lookback_distance, 1, wx.EXPAND, 0)
+
         label_percentile = wx.StaticText(self.parent, wx.ID_ANY, "Percentile:")
         sizer_percentile.Add(label_percentile, 0, wx.LEFT, 5)
         sizer_percentile.Add(self.text_inputs_percentile, 0, wx.ALL | wx.EXPAND, 5)
@@ -76,9 +101,11 @@ class TimeSeriesFrame:
         sizer_widgets.Add(self.button_update_plot, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(self.button_export_csv, 0, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_widgets, 0, wx.BOTTOM | wx.EXPAND, 5)
+
         self.plot = PlotTimeSeries(self.parent, self.options)
         sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_plot, 1, wx.EXPAND, 0)
+
         self.layout = sizer_wrapper
 
     def combo_box_y_axis_ticker(self, evt):
@@ -229,14 +256,25 @@ class TimeSeriesFrame:
             getattr(self, attr).SetValue(save_data[attr])
 
     def get_csv(self, selection=None):
+        """
+        :param selection: variables to be included
+        :type selection: list
+        :return: csv data
+        :rtype: str
+        """
+
+        # get_csv may be called from Time Series tab or DVHA app menu or tool bar
+        # if selection is None, get_csv was called from Time Series tab, only export data in plot
         if selection is None:
             return self.plot.get_csv()
 
-        csv = ['MRN,Study Instance UID,Date,%s' % ','.join(selection)]
+        # if selection is not None, export being called from DVHA app menu or tool bar
 
         uids = self.dvh.study_instance_uid
         mrns = self.dvh.mrn
         dates = self.dvh.sim_study_date
+
+        # Collect y-data (as in y-axis data from time series), organize into dict for printing to rows
         y_data = {}
         for y_axis in selection:
             data = self.get_plot_data(y_axis_selection=y_axis)
@@ -249,6 +287,8 @@ class TimeSeriesFrame:
                     column.append('None')
             y_data[y_axis] = column
 
+        # Collect data into a list of row data
+        csv = ['MRN,Study Instance UID,Date,%s' % ','.join(selection)]
         for i, uid in enumerate(uids):
             row = [mrns[i], uid, str(dates[i])]
             for y_axis in selection:

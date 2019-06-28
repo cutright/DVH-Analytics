@@ -1008,7 +1008,7 @@ class PlotRandomForest(Plot):
         :param y_predict: predicted y-values by random forest
         :type y_predict: list
         :param mse: mean square error of random forrest predictions
-        :type mse: list
+        :type mse: float
         """
         Plot.__init__(self, parent, options)
 

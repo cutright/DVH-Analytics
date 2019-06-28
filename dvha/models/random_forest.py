@@ -1,3 +1,15 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# models.rad_bio.py
+"""
+Class to view and calculate Random Forest
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
+
 import wx
 from threading import Thread
 from pubsub import pub
@@ -7,8 +19,21 @@ from dvha.tools.utilities import set_msw_background_color
 
 
 class RandomForestFrame(wx.Frame):
-    def __init__(self, y, y_predict, mse, options, *args, **kwds):
-        wx.Frame.__init__(self, None, *args, **kwds)
+    """
+    View random forest predictions for provided data
+    """
+    def __init__(self, y, y_predict, mse, options):
+        """
+        :param y: data to be modeled
+        :type y: list
+        :param y_predict: random forest predictions
+        :type y_predict: list
+        :param mse: mean square error of the predictions
+        :type mse: float
+        :param options: user options
+        :type options: Options
+        """
+        wx.Frame.__init__(self, None)
 
         set_msw_background_color(self)  # If windows, change the background color
 
@@ -26,7 +51,8 @@ class RandomForestFrame(wx.Frame):
 
     def __set_properties(self):
         self.SetTitle("Random Forest")
-        self.spin_ctrl_trees.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ".SF NS Text"))
+        self.spin_ctrl_trees.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
+                                             wx.FONTWEIGHT_NORMAL, 0, ".SF NS Text"))
         self.spin_ctrl_trees.SetToolTip("n_estimators")
         self.spin_ctrl_features.SetToolTip("Maximum number of features when splitting")
 
@@ -37,23 +63,37 @@ class RandomForestFrame(wx.Frame):
         sizer_hyper_parameters = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Hyper-parameters:"), wx.HORIZONTAL)
         sizer_features = wx.BoxSizer(wx.HORIZONTAL)
         sizer_trees = wx.BoxSizer(wx.HORIZONTAL)
+
         label_trees = wx.StaticText(self, wx.ID_ANY, "Number of Trees:")
         sizer_trees.Add(label_trees, 0, wx.ALL, 5)
         sizer_trees.Add(self.spin_ctrl_trees, 0, wx.ALL, 5)
         sizer_hyper_parameters.Add(sizer_trees, 1, wx.EXPAND, 0)
+
         label_features = wx.StaticText(self, wx.ID_ANY, "Max feature count:")
         sizer_features.Add(label_features, 0, wx.ALL, 5)
         sizer_features.Add(self.spin_ctrl_features, 0, wx.ALL, 5)
         sizer_hyper_parameters.Add(sizer_features, 1, wx.EXPAND, 0)
         sizer_input_and_plot.Add(sizer_hyper_parameters, 0, wx.EXPAND, 0)
+
         sizer_input_and_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_input_and_plot, 1, wx.ALL | wx.EXPAND, 5)
+
         self.SetSizer(sizer_wrapper)
         self.Layout()
 
 
 class RandomForestWorker(Thread):
+    """
+    Thread to calculate random forest apart
+    """
     def __init__(self, X, y, n_estimators=None, max_features=None):
+        """
+        :param X: independent data matrix
+        :type X: numpy.array
+        :param y: numpy.array
+        :param n_estimators:
+        :param max_features:
+        """
         Thread.__init__(self)
         self.X, self.y = X, y
 

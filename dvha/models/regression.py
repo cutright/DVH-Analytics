@@ -1,9 +1,16 @@
-#!/usr/bin/env python3
-# -*- coding: UTF-8 -*-
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# models.regression.py
+"""
+Class to view and calculate linear regressions
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
 
 import wx
-from scipy import stats
-import numpy as np
 from pubsub import pub
 from dvha.models.plot import PlotRegression, PlotMultiVarRegression
 from dvha.models.random_forest import RandomForestFrame, RandomForestWorker
@@ -13,11 +20,21 @@ from dvha.tools.utilities import set_msw_background_color
 
 
 class RegressionFrame:
-    def __init__(self, parent, data, options):
+    """
+    Object to be passed into notebook panel for the Regression tab
+    """
+    def __init__(self, parent, stats_data, options):
+        """
+        :param parent:  notebook panel in main view
+        :type parent: Panel
+        :param stats_data: object containing queried data applicable/parsed for statistical analysis
+        :type stats_data: StatsData
+        :param options: user options containing visual preferences
+        :type options: Options
+        """
         self.parent = parent
         self.options = options
-        # self.dvh = dvh
-        self.stats_data = data
+        self.stats_data = stats_data
         self.choices = []
 
         self.y_variable_nodes = {}
@@ -196,38 +213,53 @@ class RegressionFrame:
 
         self.button_multi_var_reg_model.Enable(bool(len(list(self.y_variable_nodes))))
 
-    def add_regression(self, y_value, x_value, select_item=True):
-        if y_value not in list(self.y_variable_nodes):
-            self.y_variable_nodes[y_value] = self.tree_ctrl.AppendItem(self.tree_ctrl_root, y_value)
-            self.tree_ctrl.SetItemData(self.y_variable_nodes[y_value], None)
-            self.tree_ctrl.SetItemImage(self.y_variable_nodes[y_value], self.images['y'], wx.TreeItemIcon_Normal)
-        if y_value not in list(self.x_variable_nodes):
-            self.x_variable_nodes[y_value] = {}
-        if x_value not in self.x_variable_nodes[y_value]:
-            self.x_variable_nodes[y_value][x_value] = self.tree_ctrl.AppendItem(self.y_variable_nodes[y_value], x_value)
-            self.tree_ctrl.SetItemData(self.x_variable_nodes[y_value][x_value], None)
-            self.tree_ctrl.SetItemImage(self.x_variable_nodes[y_value][x_value], self.images['x'],
+    def add_regression(self, y_var, x_var, select_item=True):
+        """
+        Add the currently plotted variables to the TreeCtrl to be available for multi-variable regression
+        :param y_var: dependent variable
+        :type y_var: str
+        :param x_var: independent variable
+        :type x_var: str
+        :param select_item: If True, select the item in the TreeCtrl
+        """
+        if y_var not in list(self.y_variable_nodes):
+            self.y_variable_nodes[y_var] = self.tree_ctrl.AppendItem(self.tree_ctrl_root, y_var)
+            self.tree_ctrl.SetItemData(self.y_variable_nodes[y_var], None)
+            self.tree_ctrl.SetItemImage(self.y_variable_nodes[y_var], self.images['y'], wx.TreeItemIcon_Normal)
+        if y_var not in list(self.x_variable_nodes):
+            self.x_variable_nodes[y_var] = {}
+        if x_var not in self.x_variable_nodes[y_var]:
+            self.x_variable_nodes[y_var][x_var] = self.tree_ctrl.AppendItem(self.y_variable_nodes[y_var], x_var)
+            self.tree_ctrl.SetItemData(self.x_variable_nodes[y_var][x_var], None)
+            self.tree_ctrl.SetItemImage(self.x_variable_nodes[y_var][x_var], self.images['x'],
                                         wx.TreeItemIcon_Normal)
         self.tree_ctrl.ExpandAll()
         if select_item and self.tree_ctrl.IsSelected(self.tree_ctrl_root):
             self.tree_ctrl.SelectItem(self.x_variable_nodes[self.y_axis][self.x_axis])
 
-    def del_regression(self, y_value, x_value):
-        if y_value in list(self.y_variable_nodes):
-            if x_value in list(self.x_variable_nodes[y_value]):
-                self.tree_ctrl.Delete(self.x_variable_nodes[y_value][x_value])
-                self.x_variable_nodes[y_value].pop(x_value)
-                if not list(self.x_variable_nodes[y_value]):
-                    self.x_variable_nodes.pop(y_value)
-                    self.tree_ctrl.Delete(self.y_variable_nodes[y_value])
-                    self.y_variable_nodes.pop(y_value)
+    def del_regression(self, y_var, x_var):
+        """
+        Remove x_var from the independent variables of the y_var model, update the tree ctrl
+        :param y_var: dependent variable
+        :type y_var: str
+        :param x_var: independent variable
+        :type x_var: str
+        """
+        if y_var in list(self.y_variable_nodes):
+            if x_var in list(self.x_variable_nodes[y_var]):
+                self.tree_ctrl.Delete(self.x_variable_nodes[y_var][x_var])
+                self.x_variable_nodes[y_var].pop(x_var)
+                if not list(self.x_variable_nodes[y_var]):
+                    self.x_variable_nodes.pop(y_var)
+                    self.tree_ctrl.Delete(self.y_variable_nodes[y_var])
+                    self.y_variable_nodes.pop(y_var)
         self.tree_ctrl.Unselect()
 
     def on_regression(self, evt):
-        self.multi_variable_regression(self.combo_box_y_axis.GetValue())
-
-    def multi_variable_regression(self, y_variable):
-
+        """
+        Launch the multi-variable regression for the currently selected dependent variable
+        """
+        y_variable = self.combo_box_y_axis.GetValue()
         if y_variable in list(self.x_variable_nodes):
             x_variables = list(self.x_variable_nodes[y_variable])
 
@@ -236,18 +268,6 @@ class RegressionFrame:
         else:
             wx.MessageBox('No data has been selected for regression.', 'Regression Error',
                           wx.OK | wx.ICON_WARNING)
-
-    @staticmethod
-    def get_p_values(X, y, predictions, params):
-        # https://stackoverflow.com/questions/27928275/find-p-value-significance-in-scikit-learn-linearregression
-        newX = np.append(np.ones((len(X),1)), X, axis=1)
-        MSE = (sum((y-predictions)**2))/(len(newX)-len(newX[0]))
-
-        var_b = MSE * (np.linalg.inv(np.dot(newX.T, newX)).diagonal())
-        sd_b = np.sqrt(var_b)
-        ts_b = params / sd_b
-
-        return [2 * (1 - stats.t.cdf(np.abs(i), (len(newX) - 1))) for i in ts_b], sd_b, ts_b
 
     def on_tree_select(self, evt):
         selection = evt.GetItem()
@@ -308,7 +328,20 @@ class RegressionFrame:
 
 
 class MultiVarResultsFrame(wx.Frame):
+    """
+    Class to view multi-variable regression with data passed from RegressionFrame
+    """
     def __init__(self, y_variable, x_variables, stats_data, options):
+        """
+        :param y_variable: dependent variable
+        :type y_variable: str
+        :param x_variables: independent variables
+        :type x_variables: list
+        :param stats_data: object containing queried data applicable/parsed for statistical analysis
+        :type stats_data: StatsData
+        :param options: user options containing visual preferences
+        :type options: Options
+        """
         wx.Frame.__init__(self, None, title="Multi-Variable Model for %s" % y_variable)
 
         set_msw_background_color(self)  # If windows, change the background color

@@ -1,5 +1,14 @@
-#!/usr/bin/env python3
-# -*- coding: UTF-8 -*-
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# models.queried_data.py
+"""
+Class for viewing SQL table data of the current query
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
 
 import wx
 from dvha.models.data_table import DataTable
@@ -8,7 +17,18 @@ from dvha.dialogs.export import save_string_to_file
 
 
 class QueriedDataFrame(wx.Frame):
+    """
+    Generate a simple table to view data of the current query for a specified SQL table
+    """
     def __init__(self, data_obj, sql_table, menu, menu_item_id):
+        """
+        :param data_obj: object containing data to be viewed
+        :param sql_table: either 'DVHs', 'Plans', 'Beams', or 'Rxs'
+        :type sql_table: str
+        :param menu: a link to the main app menu, used to toggle Show/Hide status
+        :type menu: Menu
+        :param menu_item_id: the ID of the menu item associated with the specified data_obj
+        """
         wx.Frame.__init__(self, None, title='%s Data' % sql_table[0:-1])
 
         self.data = data_obj
@@ -38,7 +58,6 @@ class QueriedDataFrame(wx.Frame):
         sizer_wrapper.Add(self.button_export, 0, wx.ALL, 10)
         sizer_wrapper.Add(self.list_ctrl, 1, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 10)
         self.SetSizer(sizer_wrapper)
-        # self.Fit()
         self.Center()
 
     @property

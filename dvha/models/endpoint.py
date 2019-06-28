@@ -21,14 +21,14 @@ class EndpointFrame:
     """
     Object to be passed into notebook panel for the Endpoint tab
     """
-    def __init__(self, parent, dvh, times_series, regression, control_chart):
+    def __init__(self, parent, dvh, time_series, regression, control_chart):
         """
         :param parent:  notebook panel in main view
         :type parent: Panel
         :param dvh: dvh data object
         :type dvh: DVH
-        :param times_series: Time Series object in notebook
-        :type times_series: TimeSeriesFrame
+        :param time_series: Time Series object in notebook
+        :type time_series: TimeSeriesFrame
         :param regression: Regression frame object in notebook
         :type regression: RegressionFrame
         :param control_chart: Control Chart frame object in notebook
@@ -37,7 +37,7 @@ class EndpointFrame:
 
         self.parent = parent
         self.dvh = dvh
-        self.time_series = times_series
+        self.time_series = time_series
         self.regression = regression
         self.control_chart = control_chart
         self.initial_columns = ['MRN', 'Tx Site', 'ROI Name', 'Volume (cc)']

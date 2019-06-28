@@ -1,3 +1,15 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# models.roi_map.py
+"""
+Classes for viewing and editing the roi map, and updating the database with changes
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
+
 import wx
 import wx.html2
 from datetime import datetime
@@ -12,8 +24,16 @@ from dvha.tools.errors import ROIVariationError, ROIVariationErrorDialog
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_elapsed_time
 from dvha.tools.roi_name_manager import clean_name
 
+
 class ROIMapFrame(wx.Frame):
+    """
+    Class to view and edit roi map
+    """
     def __init__(self, roi_map):
+        """
+        :param roi_map: roi map object
+        :type roi_map: DatabaseROIs
+        """
         wx.Frame.__init__(self, None, title='ROI Map')
 
         self.roi_map = roi_map
@@ -85,14 +105,9 @@ class ROIMapFrame(wx.Frame):
     def __set_properties(self):
         self.combo_box_uncategorized_ignored.SetSelection(0)
         self.button_uncategorized_ignored_ignore.SetMinSize((110, 20))
-        # self.combo_box_uncategorized_ignored_roi.SetMinSize((240, 25))
-        # self.combo_box_uncategorized_ignored.SetMinSize((150, 25))
-        # self.combo_box_physician_roi_a.SetMinSize((250, 25))
-        # self.combo_box_physician_roi_b.SetMinSize((250, 25))
 
         self.combo_box_physician.SetValue('DEFAULT')
         self.update_physician_rois()
-        # self.combo_box_physician_roi.SetValue(self.initial_physician_roi)
         self.update_variations()
 
         self.combo_box_physician.SetValue('DEFAULT')
@@ -176,8 +191,6 @@ class ROIMapFrame(wx.Frame):
         sizer_physician_row = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician_roi_row = wx.BoxSizer(wx.HORIZONTAL)
         sizer_save_cancel_buttons = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_remap_functions = wx.StaticBoxSizer(
-            wx.StaticBox(self.window_editor, wx.ID_ANY, "Remap Database"), wx.HORIZONTAL)
 
         label_physician = wx.StaticText(self.window_editor, wx.ID_ANY, "Physician:")
         sizer_physician.Add(label_physician, 0, 0, 0)
@@ -215,13 +228,11 @@ class ROIMapFrame(wx.Frame):
         sizer_map_editor.Add(sizer_variations, 0, wx.EXPAND, 0)
 
         label_physician_roi_a = wx.StaticText(self.window_editor, wx.ID_ANY, "Merge Physician ROI A:")
-        # label_physician_roi_a.SetMinSize((200, 16))
         sizer_physician_roi_a.Add(label_physician_roi_a, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         sizer_physician_roi_a.Add(self.combo_box_physician_roi_merge['a'], 1,
                                   wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
         sizer_physician_roi_merger.Add(sizer_physician_roi_a, 1, wx.EXPAND, 0)
         label_physician_roi_b = wx.StaticText(self.window_editor, wx.ID_ANY, "Into Physician ROI B:")
-        # label_physician_roi_b.SetMinSize((200, 16))
         sizer_physician_roi_b.Add(label_physician_roi_b, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         sizer_physician_roi_b.Add(self.combo_box_physician_roi_merge['b'], 1,
                                   wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
@@ -267,8 +278,6 @@ class ROIMapFrame(wx.Frame):
         sizer_uncategorized_ignored.Add(sizer_uncategorized_ignored_ignore, 0, wx.EXPAND, 0)
         sizer_editor.Add(sizer_uncategorized_ignored, 0, wx.ALL | wx.EXPAND, 5)
 
-
-
         self.window_editor.SetSizer(sizer_editor)
         self.window.SplitVertically(self.window_tree, self.window_editor)
         self.window.SetSashPosition(825)
@@ -307,11 +316,6 @@ class ROIMapFrame(wx.Frame):
     def physician_ticker(self, evt):
         self.update_physician_roi_label()
         self.update_physician_enable()
-        # self.update_roi_map()
-        # self.update_uncategorized_ignored_choices()
-        # self.update_physician_rois()
-        # self.update_variations()
-        # self.update_merge_physician_rois()
         self.update_all(skip_physicians=True)
 
     def on_plot_data_type_change(self, evt):
@@ -605,7 +609,16 @@ class ROIMapFrame(wx.Frame):
 
 
 class RemapROIWorker(Thread):
+    """
+    Create a thread to update the SQL DB with roi map changes
+    """
     def __init__(self, roi_map, remap_all=False):
+        """
+        :param roi_map: roi map object
+        :type roi_map: DatabaseROIs
+        :param remap_all: If true, remap entire database
+        :type remap_all: bool
+        """
         Thread.__init__(self)
 
         self.roi_map = roi_map
@@ -701,7 +714,16 @@ class RemapROIWorker(Thread):
 
 
 class RemapROIFrame(wx.Frame):
+    """
+    Companion class for RemapROIWorker to to display progress, Automatically calls RemapROIWorker
+    """
     def __init__(self, roi_map, remap_all=False):
+        """
+        :param roi_map: roi map object
+        :type roi_map: DatabaseROIs
+        :param remap_all: If true, remap entire database
+        :type remap_all: bool
+        """
         wx.Frame.__init__(self, None, title='Updating Database with ROI Map Changes')
 
         self.roi_map = roi_map

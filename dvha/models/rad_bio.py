@@ -1,28 +1,40 @@
-#!/usr/bin/env python3
-# -*- coding: UTF-8 -*-
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# models.rad_bio.py
+"""
+Class for the Rad Bio frame in the main view
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
 
 import wx
 from copy import deepcopy
-# import wx.lib.mixins.listctrl as listmix
 from dvha.models.data_table import DataTable
 from dvha.models.dvh import calc_eud, calc_tcp
 from dvha.tools.utilities import convert_value_to_str, get_selected_listctrl_items, float_or_none
 from dvha.dialogs.export import save_string_to_file
 
 
-# class EditableListCtrl(wx.ListCtrl, listmix.TextEditMixin):
-#     ''' TextEditMixin allows any column to be edited. '''
-#
-#     # ----------------------------------------------------------------------
-#     def __init__(self, parent, ID=wx.ID_ANY, pos=wx.DefaultPosition,
-#                  size=wx.DefaultSize, style=0):
-#         """Constructor"""
-#         wx.ListCtrl.__init__(self, parent, ID, pos, size, style)
-#         listmix.TextEditMixin.__init__(self)
-
-
 class RadBioFrame:
+    """
+    Object to be passed into notebook panel for the Rad Bio tab
+    """
     def __init__(self, parent, dvh, time_series, regression, control_chart):
+        """
+        :param parent:  notebook panel in main view
+        :type parent: Panel
+        :param dvh: dvh data object
+        :type dvh: DVH
+        :param time_series: Time Series object in notebook
+        :type time_series: TimeSeriesFrame
+        :param regression: Regression frame object in notebook
+        :type regression: RegressionFrame
+        :param control_chart: Control Chart frame object in notebook
+        :type control_chart: ControlChartFrame
+        """
 
         self.parent = parent
         self.dvh = dvh
@@ -47,10 +59,6 @@ class RadBioFrame:
         self.data_table_rad_bio = DataTable(self.table_rad_bio, columns=self.columns,
                                             widths=self.width, formats=formats)
 
-        # Adding wx.RadioBox prior to data table_rad_bio causes display glitch
-        # self.radio_box_apply = wx.RadioBox(self.parent, wx.ID_ANY, "Apply to:", choices=["All", "Selected"],
-        #                                    majorDimension=1, style=wx.RA_SPECIFY_ROWS)
-
         self.__set_properties()
         self.__do_layout()
 
@@ -66,7 +74,6 @@ class RadBioFrame:
         self.table_published_values.AppendColumn("a", format=wx.LIST_FORMAT_LEFT, width=-1)
         self.table_published_values.AppendColumn(u"\u03b3_50", format=wx.LIST_FORMAT_LEFT, width=-1)
         self.table_published_values.AppendColumn("TD_50", format=wx.LIST_FORMAT_LEFT, width=-1)
-        # self.radio_box_apply.SetSelection(0)
 
         for i, col in enumerate(self.columns):
             self.table_rad_bio.AppendColumn(col, width=self.width[i])
@@ -101,6 +108,7 @@ class RadBioFrame:
         sizer_gamma_50 = wx.BoxSizer(wx.VERTICAL)
         sizer_eud = wx.BoxSizer(wx.VERTICAL)
         sizer_published_values = wx.BoxSizer(wx.VERTICAL)
+
         label_published_values = wx.StaticText(self.parent, wx.ID_ANY,
                                                "Published EUD Parameters from Emami et. al. for 1.8-2.0Gy "
                                                "fractions (Click to apply)")
@@ -110,29 +118,35 @@ class RadBioFrame:
         sizer_published_values.Add(self.table_published_values, 1, wx.ALL, 10)
         sizer_published_values.SetMinSize((500, 335))
         sizer_main.Add(sizer_published_values, 1, wx.ALL | wx.EXPAND, 10)
+
         label_parameters = wx.StaticText(self.parent, wx.ID_ANY, "Parameters:")
         label_parameters.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
         sizer_parameters.Add(label_parameters, 0, 0, 0)
+
         label_eud = wx.StaticText(self.parent, wx.ID_ANY, "EUD a-value:")
         sizer_eud.Add(label_eud, 0, 0, 0)
         sizer_eud.Add(self.text_input_eud_a, 0, wx.ALL | wx.EXPAND, 5)
         sizer_parameters_input.Add(sizer_eud, 1, wx.EXPAND, 0)
+
         label_gamma_50 = wx.StaticText(self.parent, wx.ID_ANY, u"\u03b3_50:")
         sizer_gamma_50.Add(label_gamma_50, 0, 0, 0)
         sizer_gamma_50.Add(self.text_input_gamma_50, 0, wx.ALL | wx.EXPAND, 5)
         sizer_parameters_input.Add(sizer_gamma_50, 1, wx.EXPAND, 0)
+
         label_td_50 = wx.StaticText(self.parent, wx.ID_ANY, "TD_50 or TCD_50:")
         sizer_td_50.Add(label_td_50, 0, 0, 0)
         sizer_td_50.Add(self.text_input_td_50, 0, wx.ALL | wx.EXPAND, 5)
         sizer_parameters_input.Add(sizer_td_50, 1, wx.EXPAND, 0)
+
         sizer_button.Add(self.button_apply_parameters, 1, wx.ALL | wx.EXPAND, 15)
         sizer_button_2.Add(self.button_export, 1, wx.ALL | wx.EXPAND, 15)
         sizer_parameters_input.Add(sizer_button, 1, wx.EXPAND, 0)
         sizer_parameters_input.Add(sizer_button_2, 1, wx.EXPAND, 0)
-        # sizer_parameters_input.Add(self.radio_box_apply, 0, wx.EXPAND, 0)
         sizer_parameters.Add(sizer_parameters_input, 1, wx.ALL | wx.EXPAND, 5)
         sizer_main.Add(sizer_parameters, 0, wx.ALL | wx.EXPAND, 10)
+
         sizer_main.Add(self.table_rad_bio, 1, wx.ALL | wx.EXPAND, 10)
+
         self.layout = sizer_main
 
     def __set_tooltips(self):
@@ -155,6 +169,11 @@ class RadBioFrame:
         self.text_input_td_50.SetValue(str(self.published_data[index][4]))
 
     def update_dvh_data(self, dvh):
+        """
+        Import dvh data, store into self.dvh and set data in data_table
+        :param dvh: dvh object from main frame
+        :type dvh: DVH
+        """
         self.dvh = dvh
         data = {'MRN': self.dvh.mrn,
                 'ROI Name': self.dvh.roi_name,
@@ -171,14 +190,21 @@ class RadBioFrame:
         self.data_table_rad_bio.set_data(data, self.columns)
 
     def apply_parameters(self, evt):
+        """
+        Calculate rad bio values based on parameters supplied by user, pass information on to other tabs in GUI
+        """
+
+        # Get the indices of the selected rows, or assume all should be updated
         selected_indices = get_selected_listctrl_items(self.table_rad_bio)
         if not selected_indices:
             selected_indices = range(self.data_table_rad_bio.row_count)
 
+        # Concert user supplied parameters from text to floats
         eud_a = float_or_none(self.text_input_eud_a.GetValue())
         gamma_50 = float_or_none(self.text_input_gamma_50.GetValue())
         td_50 = float_or_none(self.text_input_td_50.GetValue())
 
+        # set the data in the datatable for the selected indices
         for i in selected_indices:
             current_row = self.data_table_rad_bio.get_row(i)
             for j in [7, 9]:
@@ -195,19 +221,23 @@ class RadBioFrame:
                 new_row[6] = 'None'
             self.data_table_rad_bio.edit_row(new_row, i)
 
+        # Update data in in dvh object
         self.dvh.eud = []
         self.dvh.ntcp_or_tcp = []
         for i, eud in enumerate(self.data_table_rad_bio.data['EUD']):
             self.dvh.eud.append(float_or_none(eud))
             self.dvh.ntcp_or_tcp.append(float_or_none(self.data_table_rad_bio.data['NTCP or TCP'][i]))
 
+        # update data in time series
         self.time_series.update_y_axis_options()
         if self.time_series.combo_box_y_axis.GetValue() in ['EUD', 'NTCP or TCP']:
             self.time_series.update_plot()
 
+        # update data in regression
         self.regression.stats_data.update_endpoints_and_radbio()
         self.regression.update_combo_box_choices()
 
+        # update data in control chart
         self.control_chart.update_combo_box_choices()
         if self.control_chart.combo_box_y_axis.GetValue() in ['EUD', 'NTCP or TCP']:
             self.control_chart.update_plot()
