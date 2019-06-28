@@ -1,3 +1,28 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# tools.roi_formatter.py
+"""
+Formatting tools for roi data (dicompyler, Shapely, DVHA)
+
+"sets of points" objects
+    dictionaries using str(z) as keys
+        where z is the slice or z in DICOM coordinates
+        each item is a list of points representing a polygon, each point is a 3-item list [x, y, z]
+
+roi_coord_string from the SQL database
+    Each contour is delimited with a ':'
+        For example, ring ROIs will have an outer contour with a negative inner contour
+    Each contour is a csv of of x,y,z values in the following format
+        z,x1,y1,x2,y2...xn,yn
+        Each contour has the same z coordinate for all points
+
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
+
 from shapely.geometry import Polygon, Point
 from shapely import speedups
 import numpy as np
@@ -13,9 +38,10 @@ if speedups.available:
 
 def get_planes_from_string(roi_coord_string):
     """
-    :param roi_coord_string: roi string represntation of an roi as formatted in the SQL database
-    :return: a "sets of points" formatted list
-    :rtype: list
+    :param roi_coord_string: roi string representation of an roi as formatted in the SQL database
+    :type roi_coord_string: str
+    :return: a "sets of points" formatted dictionary
+    :rtype: dict
     """
     planes = {}
     contours = roi_coord_string.split(':')
@@ -41,16 +67,12 @@ def get_planes_from_string(roi_coord_string):
 
 def points_to_shapely_polygon(sets_of_points):
     """
-    :param sets_of_points: sets of points is a dictionary of lists using str(z) as keys
+    :param sets_of_points: a "sets of points" formatted dictionary
+    :type sets_of_points: dict
     :return: a composite polygon as a shapely object (either polygon or multipolygon)
     """
-    # sets of points are lists using str(z) as keys
-    # each item is an ordered list of points representing a polygon, each point is a 3-item list [x, y, z]
-    # polygon n is inside polygon n-1, then the current accumulated polygon is
-    #    polygon n subtracted from the accumulated polygon up to and including polygon n-1
-    #    Same method DICOM uses to handle rings and islands
 
-    composite_polygon = []
+    composite_polygon = None
     for set_of_points in sets_of_points:
         if len(set_of_points) > 3:
             points = [(point[0], point[1]) for point in set_of_points]
@@ -73,7 +95,8 @@ def points_to_shapely_polygon(sets_of_points):
 
 def get_roi_coordinates_from_string(roi_coord_string):
     """
-    :param roi_coord_string: the string reprentation of an roi in the SQL database
+    :param roi_coord_string: roi string representation of an roi as formatted in the SQL database
+    :type roi_coord_string: str
     :return: a list of numpy arrays, each array is the x, y, z coordinates of the given point
     :rtype: list
     """
@@ -92,16 +115,17 @@ def get_roi_coordinates_from_string(roi_coord_string):
     return roi_coordinates
 
 
-def get_roi_coordinates_from_planes(planes):
+def get_roi_coordinates_from_planes(sets_of_points):
     """
-    :param planes: a "sets of points" formatted list
+    :param sets_of_points: a "sets of points" formatted dictionary
+    :type sets_of_points: dict
     :return: a list of numpy arrays, each array is the x, y, z coordinates of the given point
     :rtype: list
     """
     roi_coordinates = []
 
-    for z in list(planes):
-        for polygon in planes[z]:
+    for z in list(sets_of_points):
+        for polygon in sets_of_points[z]:
             for point in polygon:
                 roi_coordinates.append(np.array((point[0], point[1], point[2])))
     return roi_coordinates
@@ -110,8 +134,8 @@ def get_roi_coordinates_from_planes(planes):
 def dicompyler_roi_coord_to_db_string(coord):
     """
     :param coord: dicompyler structure coordinates from GetStructureCoordinates()
-    :return: string representation of roi, <z1>: <x1 y1 x2 y2... xn yn>, <zn>: <x1 y1 x2 y2... xn yn>
-    :rtype: str
+    :return: roi string representation of an roi as formatted in the SQL database (roi_coord_string)
+    :rtype:  str
     """
     contours = []
     for z in coord:
@@ -126,13 +150,13 @@ def dicompyler_roi_coord_to_db_string(coord):
 
 def get_shapely_from_sets_of_points(sets_of_points):
     """
-    :param sets_of_points: a dictionary of slices with key being a str representation of z value, value is a list
-    of points defining a polygon in the slice.  point[0] is x and point[1] is y
-    :return: roi_slice which is a dictionary of lists of z, thickness, and a Shapely Polygon class object
+    :param sets_of_points: a "sets of points" formatted dictionary
+    :type sets_of_points: dict
+    :return: roi_slices which is a dictionary of lists of z, thickness, and a Shapely Polygon class object
     :rtype: list
     """
 
-    roi_slice = {'z': [], 'thickness': [], 'polygon': []}
+    roi_slices = {'z': [], 'thickness': [], 'polygon': []}
 
     sets_of_points_keys = list(sets_of_points)
     sets_of_points_keys.sort()
@@ -148,17 +172,17 @@ def get_shapely_from_sets_of_points(sets_of_points):
         thickness = thicknesses[all_z_values.index(round(float(z), 2))]
         shapely_roi = points_to_shapely_polygon(sets_of_points[z])
         if shapely_roi:
-            roi_slice['z'].append(round(float(z), 2))
-            roi_slice['thickness'].append(thickness)
-            roi_slice['polygon'].append(shapely_roi)
+            roi_slices['z'].append(round(float(z), 2))
+            roi_slices['thickness'].append(thickness)
+            roi_slices['polygon'].append(shapely_roi)
 
-    return roi_slice
+    return roi_slices
 
 
 def dicompyler_roi_to_sets_of_points(coord):
     """
     :param coord: dicompyler structure coordinates from GetStructureCoordinates()
-    :return: a dictionary of lists of points that define contours in each slice z
+    :return: a "sets of points" formatted dictionary
     :rtype: dict
     """
     all_points = {}

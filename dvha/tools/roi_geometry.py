@@ -1,3 +1,21 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# tools.roi_geometry.py
+"""
+Tools for geometric calculations
+
+"sets of points" objects
+    dictionaries using str(z) as keys
+        where z is the slice or z in DICOM coordinates
+        each item is a list of points representing a polygon, each point is a 3-item list [x, y, z]
+
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
+
 from scipy.spatial.distance import cdist
 import numpy as np
 from math import ceil
@@ -7,9 +25,11 @@ from dvha.tools.roi_formatter import points_to_shapely_polygon, dicompyler_roi_t
 
 def union(rois):
     """
-    :param rois: a list of "sets of points"
-    :return: a "sets of points" representing the union of the rois, each item in "sets of points" is a plane
-    :rtype: list
+    Calculate the geometric union of the provided rois
+    :param rois: rois formatted as "sets of points" dictionaries
+    :type rois: list
+    :return: a "sets of points" dictionary representing the union of the rois
+    :rtype: dict
     """
 
     new_roi = {}
@@ -25,7 +45,8 @@ def union(rois):
         if z not in list(new_roi):
             new_roi[z] = []
 
-        current_slice = []
+        # Convert to shapely objects
+        current_slice = None
         for roi in rois:
             # Make sure current roi has at least 3 points in z plane
             if z in list(roi) and len(roi[z][0]) > 2:
@@ -62,11 +83,15 @@ def union(rois):
 
 def min_distances_to_target(oar_coordinates, target_coordinates):
     """
-    :param oar_coordinates: list of numpy arrays of 3D points defining the surface of the OAR
-    :param target_coordinates: list of numpy arrays of 3D points defining the surface of the PTV
-    :return: min_distances: list of numpy arrays of 3D points defining the surface of the OAR
-    :rtype: [float]
+    Calculate all OAR-point-to-Target-point euclidean distances
+    :param oar_coordinates: numpy arrays of 3D points defining the surface of the OAR
+    :type oar_coordinates: list
+    :param target_coordinates: numpy arrays of 3D points defining the surface of the PTV
+    :type target_coordinates: list
+    :return: min_distances: all minimum distances (cm) of OAR-point-to-Target-point pairs
+    :rtype: list
     """
+    # TODO: This very computationally expensive, needs a sampling method prior to calling cdist
     min_distances = []
     all_distances = cdist(oar_coordinates, target_coordinates, 'euclidean')
     for oar_point in all_distances:
@@ -77,9 +102,11 @@ def min_distances_to_target(oar_coordinates, target_coordinates):
 
 def cross_section(roi):
     """
-    :param roi: a "sets of points" formatted list
+    Calculate the cross section of a given roi
+    :param roi: a "sets of points" formatted dictionary
+    :type roi: dict
     :return: max and median cross-sectional area of all slices in cm^2
-    :rtype: list
+    :rtype: dict
     """
     areas = []
 
@@ -104,11 +131,13 @@ def cross_section(roi):
 
 def surface_area(coord, coord_type='dicompyler'):
     """
-    :param coord: dicompyler structure coordinates from GetStructureCoordinates() or sets_of_points
+    Calculate the surface of a given roi
+    :param coord: dicompyler structure coordinates from GetStructureCoordinates() or a sets_of_points dictionary
     :param coord_type: either 'dicompyler' or 'sets_of_points'
     :return: surface_area in cm^2
     :rtype: float
     """
+    # TODO: This surface area method needs validation, but likely needs to be corrected
 
     if coord_type == "sets_of_points":
         sets_of_points = coord
@@ -140,6 +169,7 @@ def surface_area(coord, coord_type='dicompyler'):
 
 def overlap_volume(oar, tv):
     """
+    Calculate the overlap volume of two rois
     :param oar: dict representing organ-at-risk, follows format of "sets of points" in dicompyler_roi_to_sets_of_points
     :param tv: dict representing treatment volume
     :return: volume (cm^3) of overlap between ROIs
