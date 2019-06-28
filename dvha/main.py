@@ -29,7 +29,6 @@ from dvha.tools.roi_name_manager import DatabaseROIs
 from dvha.tools.stats import StatsData
 from dvha.tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux,\
     save_object_to_file, load_object_from_file, set_msw_background_color, initialize_directories_and_settings
-from dvha.tools.windows_reg_edit import set_ie_emulation_level
 
 
 class DVHAMainFrame(wx.Frame):
@@ -759,6 +758,7 @@ class MainApp(wx.App):
 
         initialize_directories_and_settings()
         if is_windows():
+            from dvha.tools.windows_reg_edit import set_ie_emulation_level
             set_ie_emulation_level()
 
         self.SetAppName('DVH Analytics')
