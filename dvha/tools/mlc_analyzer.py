@@ -1,10 +1,16 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+# tools.mlc_analyzer.py
 """
-Input an rt_plan file path into the Plan class to parse MLC data and calculate metrics
-Created on Wed, Feb 28 2018
-@author: Dan Cutright, PhD
+Tools for analyzing beam and control point information from DICOM files
+Hierarchy of classes:
+    Plan -> FxGroup -> Beam -> ControlPoint
 """
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
 
 from dicompylercore import dicomparser
 import numpy as np
@@ -22,6 +28,10 @@ if speedups.available:
 
 
 class Plan:
+    """
+    Collect plan information from an RT Plan DICOM file.
+    Automatically parses fraction data with FxGroup class
+    """
     def __init__(self, rt_plan_file):
         """
         :param rt_plan_file: absolute file path of a DICOM RT Plan file
@@ -58,7 +68,17 @@ class Plan:
 
 
 class FxGroup:
+    """
+    Collect fraction group information from fraction group and beam sequences of a pydicom RT Plan dataset
+    Automatically parses beam data with Beam class
+    """
     def __init__(self, fx_grp_seq, plan_beam_sequences):
+        """
+        :param fx_grp_seq: fraction group sequence object
+        :type fx_grp_seq: Sequence
+        :param plan_beam_sequences: beam sequence object
+        :type plan_beam_sequences: Sequence
+        """
         self.fxs = fx_grp_seq.NumberOfFractionsPlanned
 
         meter_set = {}
@@ -88,18 +108,30 @@ class FxGroup:
 
 
 class Beam:
-    def __init__(self, beam_seq, meter_set, ignore_zero_mu_cp=False):
+    """
+    Collect beam information from a beam in a beam sequence of a pydicom RT Plan dataset
+    Automatically parses control point data with ControlPoint class
+    """
+    def __init__(self, beam_dataset, meter_set, ignore_zero_mu_cp=False):
+        """
+        :param beam_dataset: a pydicom beam sequence object
+        :type beam_dataset: Dataset
+        :param meter_set: the monitor units for the beam_dataset
+        :type meter_set: float
+        :param ignore_zero_mu_cp: If True, skip over zero MU control points (e.g., as in Step-N-Shoot beams)
+        :type ignore_zero_mu_cp: bool
+        """
 
-        cp_seq = beam_seq.ControlPointSequence
+        cp_seq = beam_dataset.ControlPointSequence
         self.control_point = [ControlPoint(cp) for cp in cp_seq]
         self.control_point_count = len(self.control_point)
 
-        for bld_seq in beam_seq.BeamLimitingDeviceSequence:
+        for bld_seq in beam_dataset.BeamLimitingDeviceSequence:
             if hasattr(bld_seq, 'LeafPositionBoundaries'):
                 self.leaf_boundaries = bld_seq.LeafPositionBoundaries
 
         self.jaws = [get_jaws(cp) for cp in self.control_point]
-        self.aperture = [get_shapely_from_cp(self.leaf_boundaries, cp) for cp in self.control_point]
+        self.aperture = [get_shapely_from_cp(cp, self.leaf_boundaries) for cp in self.control_point]
         self.mlc_borders = [get_mlc_borders(cp, self.leaf_boundaries) for cp in self.control_point]
 
         self.gantry_angle = [float(cp.GantryAngle) for cp in cp_seq if hasattr(cp, 'GantryAngle')]
@@ -109,10 +141,10 @@ class Beam:
         self.meter_set = meter_set
         self.control_point_meter_set = np.append([0], np.diff(np.array([cp.cum_mu for cp in self.control_point])))
 
-        if hasattr(beam_seq, 'BeamDescription'):
-            self.name = beam_seq.BeamDescription
+        if hasattr(beam_dataset, 'BeamDescription'):
+            self.name = beam_dataset.BeamDescription
         else:
-            self.name = beam_seq.BeamName
+            self.name = beam_dataset.BeamName
 
         cum_mu = [cp.cum_mu * self.meter_set for cp in self.control_point]
         cp_mu = np.diff(np.array(cum_mu)).tolist() + [0]
@@ -160,7 +192,14 @@ class Beam:
 
 
 class ControlPoint:
+    """
+    Collect control point information from a ControlPointSequence in a beam dataset of a pydicom RT Plan dataset
+    """
     def __init__(self, cp_seq):
+        """
+        :param cp_seq: control point sequence object
+        :type cp_seq: Sequence
+        """
         cp = {'cum_mu': float(cp_seq.CumulativeMetersetWeight)}
         for device_position_seq in cp_seq.BeamLimitingDevicePositionSequence:
             leaf_jaw_type = str(device_position_seq.RTBeamLimitingDeviceType).lower()
@@ -193,9 +232,12 @@ def get_mlc_borders(control_point, leaf_boundaries):
     """
     This function returns the boundaries of each MLC leaf for purposes of displaying a beam's eye view using
     bokeh's quad() glyph
-    :param control_point: a ControlPoint class object
-    :param leaf_boundaries: the leaf boundaries as stored in the Beam class object
+    :param control_point: a ControlPoint from a pydicom ControlPoint Sequence
+    :type control_point: Dataset
+    :param leaf_boundaries: a LeafPositionBoundaries object from the BeamLimitingDeviceSequence
+    :type leaf_boundaries: MultiValue
     :return: the boundaries of each leaf within the control point
+    :rtype: dict
     """
     top = leaf_boundaries[0:-1] + leaf_boundaries[0:-1]
     top = [float(i) for i in top]
@@ -212,12 +254,15 @@ def get_mlc_borders(control_point, leaf_boundaries):
             'right': right}
 
 
-def get_shapely_from_cp(leaf_boundaries, control_point):
+def get_shapely_from_cp(control_point, leaf_boundaries):
     """
     This function will return the outline of MLCs within jaws
-    :param leaf_boundaries: an ordered list of leaf boundaries
-    :param control_point: a ControlPoint class object
+    :param control_point: a ControlPoint from a pydicom ControlPoint Sequence
+    :type control_point: Dataset
+    :param leaf_boundaries: a LeafPositionBoundaries object from the BeamLimitingDeviceSequence
+    :type leaf_boundaries: MultiValue
     :return: a shapely object of the complete MLC aperture as one shape (including MLC overlap)
+    :rtype: Polygon
     """
     lb = leaf_boundaries
     mlc = control_point.mlc
@@ -248,7 +293,9 @@ def get_shapely_from_cp(leaf_boundaries, control_point):
 
 def get_jaws(control_point):
     """
-    :param control_point: a ControlPoint class object
+    Get the jaw positions of a control point
+    :param control_point: a ControlPoint from a pydicom ControlPoint Sequence
+    :type control_point: Dataset
     :return: jaw positions (or max field size in lieu of a jaw)
     :rtype: dict
     """
@@ -279,6 +326,7 @@ def get_jaws(control_point):
 
 def get_xy_path_lengths(shapely_object):
     """
+    Get the x and y path lengths of a a Shapely object
     :param shapely_object: either 'GeometryCollection', 'MultiPolygon', or 'Polygon'
     :return: path lengths in the x and y directions
     :rtype: list
@@ -300,9 +348,10 @@ def get_xy_path_lengths(shapely_object):
 
 def update_missing_jaws(beam_list):
     """
+    In plans with static jaws throughout the beam, jaw positions may not be found in each control point
     :param beam_list: a list of Beam Class objects
     :return: a list of Beam Class objects, but any control point where jaws are set to max will be replaced by the
-    first control point jaw settings (some DICOM RT Plan files may not provide jaw settings in every control point
+    first control point jaw settings
     :rtype: list
     """
 

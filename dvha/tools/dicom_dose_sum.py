@@ -1,3 +1,16 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# tools.dicom_dose_sum.py
+"""
+Functions for summing dose grids
+"""
+# Largely borrowed from https://github.com/dicompyler/dicompyler-plugins/blob/master/plugins/plansum/plansum.py
+# Original code written by Stephen Terry
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
+
 import numpy as np
 
 
