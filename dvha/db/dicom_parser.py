@@ -9,12 +9,13 @@
 #    available at https://github.com/cutright/DVH-Analytics
 
 from dicompylercore import dicomparser, dvhcalc
+from datetime import datetime
 from dateutil.relativedelta import relativedelta  # python-dateutil
 import numpy as np
 import pydicom as dicom
 from os.path import basename, join
 from dvha.tools.roi_name_manager import clean_name, DatabaseROIs
-from dvha.tools.utilities import datetime_str_to_obj, change_angle_origin, calc_stats, is_date
+from dvha.tools.utilities import change_angle_origin, calc_stats, is_date
 from dvha.tools.roi_formatter import dicompyler_roi_coord_to_db_string, get_planes_from_string
 from dvha.tools import roi_geometry as roi_calc
 from dvha.tools.mlc_analyzer import Beam as mlca
@@ -891,19 +892,23 @@ class DICOM_Parser:
         :type: datetime
         """
 
-        attribute = {'time': {'plan': 'RTPlanDate',
+        attribute = {'date': {'plan': 'RTPlanDate',
                               'structure': 'StructureSetDate',
                               'dose': 'InstanceCreationDate'},
-                     'date': {'plan': 'RTPlanTime',
+                     'time': {'plan': 'RTPlanTime',
                               'structure': 'StructureSetTime',
                               'dose': 'InstanceCreationTime'}}
 
         datetime_str = self.get_attribute(rt_type, attribute['date'][rt_type])
         time = self.get_attribute(rt_type, attribute['time'][rt_type])
-        if time:
-            datetime_str = datetime_str + time
 
-        return datetime_str_to_obj(datetime_str)
+        try:
+            if time:
+                return datetime.strptime(datetime_str + time, '%Y%m%d%H%M%S')
+            else:
+                return datetime.strptime(datetime_str, '%Y%m%d')
+        except Exception as e:
+            print(e)
 
     def is_beam_with_rad_type_in_plan(self, rad_type):
         """

@@ -336,27 +336,6 @@ def print_run_time(start_time, end_time, calc_title):
         print("%s. This took %02dsec to complete" % (calc_title, s))
 
 
-def datetime_str_to_obj(datetime_str):
-    """
-    :param datetime_str: a string representation of a datetime as formatted in DICOM (YYYYMMDDHHMMSS)
-    :return: a datetime object
-    :rtype: datetime
-    """
-
-    try:
-        year = int(datetime_str[0:4])
-        month = int(datetime_str[4:6])
-        day = int(datetime_str[6:8])
-        hour = int(datetime_str[8:10])
-        minute = int(datetime_str[10:12])
-        second = int(datetime_str[12:14])
-
-        return datetime(year, month, day, hour, minute, second)
-
-    except:
-        return None
-
-
 def datetime_to_date_string(datetime_obj):
     if isinstance(datetime_obj, str):
         datetime_obj = parse_date(datetime_obj)
