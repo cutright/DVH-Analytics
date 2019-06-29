@@ -348,7 +348,10 @@ class DVHAMainFrame(wx.Frame):
 
     def __enable_notebook_tabs(self):
         for key in self.tab_keys:
-            self.notebook_tab[key].Enable()
+            if key in {'Regression', 'Control Chart'}:
+                self.notebook_tab[key].Enable(self.dvh.count > 1)
+            else:
+                self.notebook_tab[key].Enable()
         self.__enable_initial_buttons_in_tabs()
 
     def __disable_notebook_tabs(self):
@@ -455,11 +458,12 @@ class DVHAMainFrame(wx.Frame):
         self.time_series.load_save_data(self.save_data['time_series'])
         self.time_series.update_plot()
 
-        self.regression.stats_data.update_endpoints_and_radbio()
-        self.regression.update_combo_box_choices()
-        self.regression.load_save_data(self.save_data['regression'])
+        if self.dvh.count > 1:
+            self.regression.stats_data.update_endpoints_and_radbio()
+            self.regression.update_combo_box_choices()
+            self.regression.load_save_data(self.save_data['regression'])
 
-        self.control_chart.update_combo_box_choices()
+            self.control_chart.update_combo_box_choices()
 
     def on_toolbar_settings(self, evt):
         self.on_pref()
@@ -554,7 +558,8 @@ class DVHAMainFrame(wx.Frame):
         self.notebook_main_view.SetSelection(1)
         self.update_data(load_saved_dvh_data=load_saved_dvh_data)
         self.time_series.update_data(self.dvh, self.data)
-        self.control_chart.update_data(self.dvh, self.stats_data)
+        if self.dvh.count > 1:
+            self.control_chart.update_data(self.dvh, self.stats_data)
 
         self.radbio.update_dvh_data(self.dvh)
 

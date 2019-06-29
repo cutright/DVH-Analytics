@@ -152,12 +152,13 @@ class RegressionFrame:
             self.combo_box_y_axis.SetItems(self.choices)
             self.spin_button_x_axis.SetMax(len(self.choices)-1)
             self.spin_button_y_axis.SetMax(len(self.choices)-1)
-            initial_index_x = self.choices.index('ROI Volume')
-            initial_index_y = self.choices.index('ROI Max Dose')
-            self.spin_button_x_axis.SetValue(len(self.choices)-1-initial_index_x)
-            self.spin_button_y_axis.SetValue(len(self.choices)-1-initial_index_y)
-            self.combo_box_x_axis.SetValue(self.choices[initial_index_x])
-            self.combo_box_y_axis.SetValue(self.choices[initial_index_y])
+            if 'ROI Volume' in self.choices and 'ROI Max Dose' in self.choices:
+                initial_index_x = self.choices.index('ROI Volume')
+                initial_index_y = self.choices.index('ROI Max Dose')
+                self.spin_button_x_axis.SetValue(len(self.choices)-1-initial_index_x)
+                self.spin_button_y_axis.SetValue(len(self.choices)-1-initial_index_y)
+                self.combo_box_x_axis.SetValue(self.choices[initial_index_x])
+                self.combo_box_y_axis.SetValue(self.choices[initial_index_y])
             self.update_plot()
 
     def on_combo_box(self, evt):

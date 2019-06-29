@@ -40,8 +40,7 @@ class TimeSeriesFrame:
 
         self.y_axis_options = sql_columns.numerical
 
-        self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, choices=[],
-                                            style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.text_input_bin_size = wx.TextCtrl(self.parent, wx.ID_ANY, "10", style=wx.TE_PROCESS_ENTER)
         self.text_input_lookback_distance = wx.TextCtrl(self.parent, wx.ID_ANY, "1", style=wx.TE_PROCESS_ENTER)
         self.text_inputs_percentile = wx.TextCtrl(self.parent, wx.ID_ANY, "90", style=wx.TE_PROCESS_ENTER)
@@ -242,7 +241,7 @@ class TimeSeriesFrame:
     def initialize_y_axis_options(self):
         for i in range(len(self.choices))[::-1]:
             c = self.choices[i]
-            if c[0:2] in {'D_', 'V_'} or c in {'EUD', 'NTCP or TCP'}:
+            if c[0:2] in {'D_', 'V_'} or c in {'EUD', 'NTCP or TCP'} or 'Date' in c:
                 self.choices.pop(i)
         self.choices.sort()
         self.combo_box_y_axis.SetItems(self.choices)

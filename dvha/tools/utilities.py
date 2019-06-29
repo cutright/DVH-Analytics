@@ -117,16 +117,48 @@ def initialize_default_sql_connection_config_file():
 
 
 def scale_bitmap(bitmap, width, height):
+    """
+    Used to scale tool bar images for MSW and GTK, MAC automatically scales
+    :param bitmap: bitmap to be scaled
+    type bitmap: Bitmap
+    :param width: width of output bitmap
+    :type width: int
+    :param height: height of output bitmap
+    :type height: int
+    :return: scaled bitmap
+    :rtype: Bitmap
+    """
     image = wx.Bitmap.ConvertToImage(bitmap)
     image = image.Scale(width, height, wx.IMAGE_QUALITY_HIGH)
     return wx.Bitmap(image)
 
 
 def get_tree_ctrl_image(file_path, file_type=wx.BITMAP_TYPE_PNG, width=16, height=16):
+    """
+    Create an image top be used in the TreeCtrl from the provided file_path
+    :param file_path: absolute file_path of image
+    :type file_path: str
+    :param file_type: specify the image format (PNG by default)
+    :param width: width of output bitmap (16 default)
+    :type width: int
+    :param height: height of output bitmap (16 default)
+    :type height: int
+    :return: scaled image for TreeCtrl
+    :rtype: Image
+    """
     return wx.Image(file_path, file_type).Scale(width, height).ConvertToBitmap()
 
 
 def get_file_paths(start_path, search_subfolders=False):
+    """
+    Get a list of absolute file paths for a given directory
+    :param start_path: initial directory
+    :type start_path str
+    :param search_subfolders: optionally search all sub folders
+    :type search_subfolders: bool
+    :return: absolute file paths
+    :rtype: list
+    """
     if os.path.isdir(start_path):
         if search_subfolders:
             file_paths = []
@@ -140,6 +172,13 @@ def get_file_paths(start_path, search_subfolders=False):
 
 
 def get_study_instance_uids(**kwargs):
+    """
+    Get lists of study instance uids in the SQL database that meet provided conditions
+    The values return in the 'common' key are used for the DVH class in models.dvh.py
+    :param kwargs: keys are SQL table names and the values are conditions in SQL syntax
+    :return: study instance uids for each table, uids found in all tables, and a list of unique uids
+    :rtype: dict
+    """
     with DVH_SQL() as cnx:
         uids = {table: cnx.get_unique_values(table, 'study_instance_uid', condition)
                 for table, condition in kwargs.items()}
@@ -153,24 +192,44 @@ def get_study_instance_uids(**kwargs):
 
 
 def is_uid_in_all_keys(uid, uids):
-    key_answer = {}
+    """
+    Check if uid is found in each of the uid lists for each SQL table
+    :param uid: study instance uid
+    :type uid: str
+    :param uids: lists of study instance uids organized by SQL table
+    :type uids: dict
+    :return: True only if uid is found in each of the tables
+    :rtype: bool
+    """
+
+    table_answer = {}
     # Initialize a False value for each key
-    for key in list(uids):
-        key_answer[key] = False
+    for table in list(uids):
+        table_answer[table] = False
     # search for uid in each keyword fof uid_kwlist
-    for key, value in uids.items():
+    for table, value in uids.items():
         if uid in value:
-            key_answer[key] = True
+            table_answer[table] = True
 
     final_answer = True
     # Product of all answer[key] values (except 'unique')
-    for key, value in key_answer.items():
-        if key not in 'unique':
+    for table, value in table_answer.items():
+        if table not in 'unique':
             final_answer *= value
     return final_answer
 
 
 def flatten_list_of_lists(some_list, remove_duplicates=False, sort=False):
+    """
+    Convert a list of lists into a list of all values
+    :param some_list: a list such that each value is a list
+    :type some_list: list
+    :param remove_duplicates: if True, return a unique list, otherwise keep duplicated values
+    :type remove_duplicates: bool
+    :param sort: if True, sort the list
+    :type sort: bool
+    :return: a new object containing all values in teh provided
+    """
     data = [item for sublist in some_list for item in sublist]
     if sort:
         data.sort()
@@ -181,8 +240,10 @@ def flatten_list_of_lists(some_list, remove_duplicates=False, sort=False):
 
 def collapse_into_single_dates(x, y):
     """
+    Function used for a time plot to convert multiple values into one value, while retaining enough information
+    to perform a moving average over time
     :param x: a list of dates in ascending order
-    :param y: a list of values as a function of date
+    :param y: a list of values and can use the '+' operator as a function of date
     :return: a unique list of dates, sum of y for that date, and number of original points for that date
     :rtype: dict
     """
@@ -205,9 +266,13 @@ def collapse_into_single_dates(x, y):
 
 def moving_avg(xyw, avg_len):
     """
-    :param xyw: a dictionary of of lists x, y, w: x, y being coordinates and w being the weight
+    Calculate a moving average for a given averaging length
+    :param xyw: output from collapse_into_single_dates
+    :type xyw: dict
     :param avg_len: average of these number of points, i.e., look-back window
+    :type avg_len: int
     :return: list of x values, list of y values
+    :rtype: tuple
     """
     cumsum, moving_aves, x_final = [0], [], []
 
@@ -221,15 +286,22 @@ def moving_avg(xyw, avg_len):
     return x_final, moving_aves
 
 
-def convert_value_to_str(value, round=2):
+def convert_value_to_str(value, rounding_digits=2):
     try:
-        formatter = "%%0.%df" % round
+        formatter = "%%0.%df" % rounding_digits
         return formatter % value
     except TypeError:
         return value
 
 
 def get_selected_listctrl_items(list_control):
+    """
+    Get the indices of the currently selected items of a wx.ListCtrl object
+    :param list_control: any wx.ListCtrl object
+    :type list_control: ListCtrl
+    :return: indices of selected items
+    :rtype: list
+    """
     selection = []
 
     index_current = -1
@@ -243,6 +315,15 @@ def get_selected_listctrl_items(list_control):
 
 
 def print_run_time(start_time, end_time, calc_title):
+    """
+    :param start_time: start time of process
+    :type start_time: datetime
+    :param end_time: end time of process
+    :type end_time: datetime
+    :param calc_title: prepend the status message with this value
+    :type calc_title: str
+    :return:
+    """
     total_time = end_time - start_time
     seconds = total_time.seconds
     m, s = divmod(seconds, 60)
@@ -276,20 +357,6 @@ def datetime_str_to_obj(datetime_str):
         return None
 
 
-def date_str_to_obj(date_str):
-    """
-    :param date_str: a string representation of a date as formatted in DICOM (YYYYMMDD)
-    :return: a datetime object
-    :rtype: datetime
-    """
-
-    year = int(date_str[0:4])
-    month = int(date_str[4:6])
-    day = int(date_str[6:8])
-
-    return datetime(year, month, day)
-
-
 def datetime_to_date_string(datetime_obj):
     if isinstance(datetime_obj, str):
         datetime_obj = parse_date(datetime_obj)
@@ -298,7 +365,9 @@ def datetime_to_date_string(datetime_obj):
 
 def change_angle_origin(angles, max_positive_angle):
     """
-    :param angles: a list of angles
+    Angles in DICOM are all positive values, but there is typically no mechanical continuity in across 180 degrees
+    :param angles: angles to be converted
+    :type angles list
     :param max_positive_angle: the maximum positive angle, angles greater than this will be shifted to negative angles
     :return: list of the same angles, but none exceed the max
     :rtype: list
@@ -326,8 +395,10 @@ def change_angle_origin(angles, max_positive_angle):
 
 def calc_stats(data):
     """
+    Calculate a standard set of stats for DVHA
     :param data: a list or numpy 1D array of numbers
-    :return: a standard list of stats (max, 75%, median, mean, 25%, and min)
+    :type data: list
+    :return:  max, 75%, median, mean, 25%, and min of data
     :rtype: list
     """
     data = [x for x in data if x != 'None']
@@ -346,6 +417,13 @@ def calc_stats(data):
 
 
 def move_files_to_new_path(files, new_dir):
+    """
+    Move all files provided to the new directory
+    :param files: absolute file paths
+    :type files: list
+    :param new_dir: absolute directory path
+    :type new_dir: str
+    """
     for file_path in files:
         if isfile(file_path):
             file_name = os.path.basename(file_path)
@@ -501,7 +579,12 @@ def is_date(date):
 
 
 def rank_ptvs_by_D95(ptvs):
-
+    """
+    Determine the order of provided PTVs by their D_95% values
+    :param ptvs: dvh, volume, index of PTVs
+    :type ptvs: dict
+    :return: ptv numbers in order of D_95%
+    """
     doses_to_rank = get_dose_to_volume(ptvs['dvh'], ptvs['volume'], 0.95)
     return sorted(range(len(ptvs['dvh'])), key=lambda k: doses_to_rank[k])
 
@@ -553,14 +636,18 @@ class MessageDialog:
 
 
 def save_object_to_file(obj, abs_file_path):
+    """
+    Save a python object acceptable for pickle to the provided file path
+    """
     with open(abs_file_path, 'wb') as outfile:
         pickle.dump(obj, outfile)
 
 
 def load_object_from_file(abs_file_path):
+    """
+    Load a pickled object from the provided absolute file path
+    """
     if os.path.isfile(abs_file_path):
         with open(abs_file_path, 'rb') as infile:
             obj = pickle.load(infile)
         return obj
-    else:
-        return None

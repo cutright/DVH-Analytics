@@ -89,9 +89,9 @@ class DVH:
         with DVH_SQL() as cnx:
             self.physician_count = len(cnx.get_unique_values('Plans', 'physician',
                                                              "study_instance_uid in ('%s')" % "','".join(self.uid)))
-        self.total_fxs = [convert_value_to_str(v, round=0) for v in self.get_plan_values('fxs')]
-        self.fx_dose = [convert_value_to_str(v, round=2) for v in self.get_rx_values('fx_dose')]
-        self.ptv_overlap = [convert_value_to_str(v, round=2) for v in self.ptv_overlap]
+        self.total_fxs = [convert_value_to_str(v, rounding_digits=0) for v in self.get_plan_values('fxs')]
+        self.fx_dose = [convert_value_to_str(v, rounding_digits=2) for v in self.get_rx_values('fx_dose')]
+        self.ptv_overlap = [convert_value_to_str(v, rounding_digits=2) for v in self.ptv_overlap]
 
     def get_plan_values(self, plan_column):
         """
