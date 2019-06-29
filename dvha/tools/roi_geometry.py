@@ -170,9 +170,10 @@ def surface_area(coord, coord_type='dicompyler'):
 def overlap_volume(oar, tv):
     """
     Calculate the overlap volume of two rois
-    :param oar: dict representing organ-at-risk, follows format of "sets of points" in dicompyler_roi_to_sets_of_points
-    :param tv: dict representing treatment volume
-    :return: volume (cm^3) of overlap between ROIs
+    :param oar: organ-at-risk as a "sets of points" formatted dictionary
+    :type oar: dict
+    :param tv: treatment volume as a "sets of points" formatted dictionary
+    :type tv: dict
     :rtype: float
     """
 
@@ -199,7 +200,7 @@ def overlap_volume(oar, tv):
 
 def volume(roi):
     """
-    :param roi: a "sets of points" formatted list
+    :param roi: a "sets of points" formatted dictionary
     :return: volume in cm^3 of roi
     :rtype: float
     """
@@ -231,8 +232,8 @@ def volume(roi):
 
 def centroid(roi):
     """
-    :param roi: a "sets of points" formatted list
-    :return: centroid dicom coordinate in mm
+    :param roi: a "sets of points" formatted dictionary
+    :return: centroid or the roi in x, y, z dicom coordinates (mm)
     :rtype: list
     """
     centroids = {'x': [], 'y': [], 'z': [], 'area': []}
@@ -266,7 +267,7 @@ def centroid(roi):
 
 def spread(roi):
     """
-    :param roi: a "sets of points" formatted list
+    :param roi: a "sets of points" formatted dictionary
     :return: x, y, z dimensions of a rectangular prism encompassing roi
     :rtype: list
     """
@@ -293,8 +294,9 @@ def spread(roi):
 
 def dth(min_distances):
     """
-    :param min_distances:
+    :param min_distances: the output from min_distances_to_target
     :return: histogram of distances in 0.1mm bin widths
+    :rtype: numpy.array
     """
 
     bin_count = int(ceil(np.max(min_distances) * 10.))

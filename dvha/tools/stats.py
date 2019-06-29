@@ -1,3 +1,17 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# tools.stats.py
+"""
+Take numerical data from main app and convert to a format suitable for statistical analysis
+in Regression and Control Chart tabs
+
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
+
 import numpy as np
 from scipy import stats
 from sklearn import linear_model
@@ -244,7 +258,16 @@ def get_p_values(X, y, predictions, params):
 
 
 class MultiVariableRegression:
+    """
+    Perform a multi-variable regression using sklearn
+    """
     def __init__(self, X, y):
+        """
+        :param X: independent data
+        :type X: np.array
+        :param y: dependent data
+        :type y: list
+        """
 
         reg = linear_model.LinearRegression()
         ols = reg.fit(X, y)
@@ -302,10 +325,15 @@ def get_random_forest(X, y, n_estimators=100, max_features=None):
     """
     Get random forest predictions and the mean square error with sklearn
     :param X: independent data
+    :type X: numpy.array
     :param y: dependent data
+    :type y: list
     :param n_estimators:
+    :type n_estimators: int
     :param max_features:
+    :type max_features: int
     :return: predicted values, mean square error
+    :rtype: tuple
     """
     if max_features is None:
         max_features = len(X[0, :])
