@@ -13,7 +13,7 @@ Class for viewing SQL table data of the current query
 import wx
 from dvha.models.data_table import DataTable
 from dvha.db.sql_columns import all_columns as sql_column_info
-from dvha.dialogs.export import save_string_to_file
+from dvha.dialogs.export import save_data_to_file
 
 
 class QueriedDataFrame(wx.Frame):
@@ -90,7 +90,7 @@ class QueriedDataFrame(wx.Frame):
         self.Destroy()
 
     def on_export(self, *args):
-        save_string_to_file(self, "Export %s to CSV" % self.sql_table, self.data_table.get_csv())
+        save_data_to_file(self, "Export %s to CSV" % self.sql_table, self.data_table.get_csv())
 
     def toggle_data_menu_item(self):
         short_cut = ['DVHs', 'Plans', 'Rxs', 'Beams'].index(self.sql_table) + 1

@@ -14,8 +14,8 @@ import wx
 from pubsub import pub
 from dvha.models.plot import PlotRegression, PlotMultiVarRegression
 from dvha.models.random_forest import RandomForestFrame, RandomForestWorker
-from dvha.dialogs.export import save_string_to_file
-from dvha.paths import ICONS
+from dvha.dialogs.export import save_data_to_file
+from dvha.paths import ICONS, MODELS_DIR
 from dvha.tools.utilities import set_msw_background_color, get_tree_ctrl_image
 
 
@@ -319,11 +319,11 @@ class RegressionFrame:
         return bool(len(list(self.y_variable_nodes)))
 
     def on_save_plot(self, evt):
-        save_string_to_file(self.pane_tree, 'Save linear regression plot', self.plot.html_str,
-                            wildcard="HTML files (*.html)|*.html")
+        save_data_to_file(self.pane_tree, 'Save linear regression plot', self.plot.html_str,
+                          wildcard="HTML files (*.html)|*.html")
 
     def on_export(self, evt):
-        save_string_to_file(self.pane_tree, 'Export linear regression data', self.plot.get_csv_data())
+        save_data_to_file(self.pane_tree, 'Export linear regression data', self.plot.get_csv_data())
 
 
 class MultiVarResultsFrame(wx.Frame):
@@ -358,6 +358,7 @@ class MultiVarResultsFrame(wx.Frame):
 
         self.button_export = wx.Button(self, wx.ID_ANY, 'Export Plot Data')
         self.button_save_plot = wx.Button(self, wx.ID_ANY, 'Save Plot')
+        self.button_save_model = wx.Button(self, wx.ID_ANY, 'Save Model')
 
         self.__do_bind()
         self.__do_subscribe()
@@ -371,6 +372,7 @@ class MultiVarResultsFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_random_forest, id=self.button['Random Forest'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_save_model, id=self.button_save_model.GetId())
 
     def __do_subscribe(self):
         pub.subscribe(self.show_plot, "random_forest_complete")
@@ -385,6 +387,7 @@ class MultiVarResultsFrame(wx.Frame):
         sizer_export_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_export_buttons.Add(self.button_export, 0, wx.ALL, 5)
         sizer_export_buttons.Add(self.button_save_plot, 0, wx.ALL, 5)
+        sizer_export_buttons.Add(self.button_save_model, 0, wx.ALL, 5)
         sizer_algo_wrapper.Add(sizer_export_buttons, 0, wx.ALL, 5)
         text = wx.StaticText(self, wx.ID_ANY, "Compare with Machine Learning Module")
         sizer_algo_wrapper.Add(text, 0, wx.EXPAND | wx.ALL, 5)
@@ -407,8 +410,12 @@ class MultiVarResultsFrame(wx.Frame):
         frame.Show()
 
     def on_export(self, evt):
-        save_string_to_file(self, 'Save multi-variable regression data to csv', self.plot.get_csv_data())
+        save_data_to_file(self, 'Save multi-variable regression data to csv', self.plot.get_csv_data())
 
     def on_save_plot(self, evt):
-        save_string_to_file(self, 'Save multi-variable regression plot', self.plot.html_str,
-                            wildcard="HTML files (*.html)|*.html")
+        save_data_to_file(self, 'Save multi-variable regression plot', self.plot.html_str,
+                          wildcard="HTML files (*.html)|*.html")
+
+    def on_save_model(self, evt):
+        save_data_to_file(self, 'Save Model', self.plot.reg,
+                          wildcard="MVR files (*.mvr)|*.mvr", data_type='pickle', initial_dir=MODELS_DIR)

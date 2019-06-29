@@ -13,7 +13,7 @@ Class for the Control Chart frame in the main view
 import wx
 from dvha.models.plot import PlotControlChart
 from dvha.db import sql_columns
-from dvha.dialogs.export import save_string_to_file
+from dvha.dialogs.export import save_data_to_file
 
 
 # TODO: ControlChartFrame in development
@@ -168,11 +168,11 @@ class ControlChartFrame:
         return self.plot.get_csv()
 
     def export_csv(self, evt):
-        save_string_to_file(self.parent, "Export control chart data to CSV", self.plot.get_csv())
+        save_data_to_file(self.parent, "Export control chart data to CSV", self.plot.get_csv())
 
     def on_save_plot(self, evt):
-        save_string_to_file(self.parent, 'Save control chart', self.plot.html_str,
-                            wildcard="HTML files (*.html)|*.html")
+        save_data_to_file(self.parent, 'Save control chart', self.plot.html_str,
+                          wildcard="HTML files (*.html)|*.html")
 
     @property
     def has_data(self):

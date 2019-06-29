@@ -15,7 +15,7 @@ from copy import deepcopy
 from dvha.models.data_table import DataTable
 from dvha.models.dvh import calc_eud, calc_tcp
 from dvha.tools.utilities import convert_value_to_str, get_selected_listctrl_items, float_or_none
-from dvha.dialogs.export import save_string_to_file
+from dvha.dialogs.export import save_data_to_file
 
 
 class RadBioFrame:
@@ -249,7 +249,7 @@ class RadBioFrame:
         return self.data_table_rad_bio.get_csv()
 
     def on_export_csv(self, evt):
-        save_string_to_file(self.parent, "Export RadBio table to CSV", self.get_csv())
+        save_data_to_file(self.parent, "Export RadBio table to CSV", self.get_csv())
 
     def get_save_data(self):
         return self.data_table_rad_bio.get_save_data()

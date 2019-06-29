@@ -18,7 +18,7 @@ from dvha.db.sql_to_python import QuerySQL
 from dvha.db.sql_connector import echo_sql_db
 from dvha.dialogs.main import query_dlg, UserSettings, About
 from dvha.dialogs.database import SQLSettingsDialog
-from dvha.dialogs.export import ExportCSVDialog, save_string_to_file
+from dvha.dialogs.export import ExportCSVDialog, save_data_to_file
 from dvha.models.import_dicom import ImportDicomFrame
 from dvha.models.database_editor import DatabaseEditorFrame
 from dvha.models.data_table import DataTable
@@ -702,20 +702,20 @@ class DVHAMainFrame(wx.Frame):
         [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db()]()
 
     def on_save_plot_dvhs(self, evt):
-        save_string_to_file(self, 'Save DVHs plot', self.plot.html_str,
-                            wildcard="HTML files (*.html)|*.html")
+        save_data_to_file(self, 'Save DVHs plot', self.plot.html_str,
+                          wildcard="HTML files (*.html)|*.html")
 
     def on_save_plot_time_series(self, evt):
-        save_string_to_file(self, 'Save Time Series plot', self.time_series.plot.html_str,
-                            wildcard="HTML files (*.html)|*.html")
+        save_data_to_file(self, 'Save Time Series plot', self.time_series.plot.html_str,
+                          wildcard="HTML files (*.html)|*.html")
 
     def on_save_plot_regression(self, evt):
-        save_string_to_file(self, 'Save Regression plot', self.regression.plot.html_str,
-                            wildcard="HTML files (*.html)|*.html")
+        save_data_to_file(self, 'Save Regression plot', self.regression.plot.html_str,
+                          wildcard="HTML files (*.html)|*.html")
 
     def on_save_plot_control_chart(self, evt):
-        save_string_to_file(self, 'Save Control Chart plot', self.control_chart.plot.html_str,
-                            wildcard="HTML files (*.html)|*.html")
+        save_data_to_file(self, 'Save Control Chart plot', self.control_chart.plot.html_str,
+                          wildcard="HTML files (*.html)|*.html")
 
     def on_view_dvhs(self, evt):
         self.view_table_data('DVHs')

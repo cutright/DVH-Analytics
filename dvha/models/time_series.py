@@ -14,7 +14,7 @@ import wx
 from datetime import datetime
 from dateutil import parser
 from dvha.db import sql_columns
-from dvha.dialogs.export import save_string_to_file
+from dvha.dialogs.export import save_data_to_file
 from dvha.models.plot import PlotTimeSeries
 
 
@@ -297,7 +297,7 @@ class TimeSeriesFrame:
         return '\n'.join(csv)
 
     def export_csv(self, evt):
-        save_string_to_file(self.parent, "Export Time Series data to CSV", self.plot.get_csv())
+        save_data_to_file(self.parent, "Export Time Series data to CSV", self.plot.get_csv())
 
     @property
     def has_data(self):

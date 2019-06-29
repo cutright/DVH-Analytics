@@ -14,10 +14,10 @@ import wx
 import wx.adv
 from dvha.models.data_table import DataTable
 from dvha.paths import DATA_DIR
-from dvha.tools.utilities import get_selected_listctrl_items
+from dvha.tools.utilities import get_selected_listctrl_items, save_object_to_file
 
 
-def save_string_to_file(frame, title, data, wildcard="CSV files (*.csv)|*.csv"):
+def save_data_to_file(frame, title, data, wildcard="CSV files (*.csv)|*.csv", data_type='string', initial_dir=DATA_DIR):
     """
     from https://wxpython.org/Phoenix/docs/html/wx.FileDialog.html
     :param frame: GUI parent
@@ -27,20 +27,27 @@ def save_string_to_file(frame, title, data, wildcard="CSV files (*.csv)|*.csv"):
     :type data: str
     :param wildcard: restrict visible files and intended file extension
     :type wildcard: str
+    :param data_type: either 'string' or 'pickle'
+    :type data_type: str
     """
 
-    with wx.FileDialog(frame, title, DATA_DIR, wildcard=wildcard,
+    with wx.FileDialog(frame, title, initial_dir, wildcard=wildcard,
                        style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
 
         if fileDialog.ShowModal() == wx.ID_CANCEL:
             return
 
         pathname = fileDialog.GetPath()
-        try:
-            with open(pathname, 'w') as file:
-                file.write(data)
-        except IOError:
-            wx.LogError("Cannot save current data in file '%s'." % pathname)
+
+        if data_type == 'string':
+            try:
+                with open(pathname, 'w') as file:
+                    file.write(data)
+            except IOError:
+                wx.LogError("Cannot save current data in file '%s'." % pathname)
+
+        if data_type == 'pickle':
+            save_object_to_file(data, pathname)
 
 
 class ExportCSVDialog(wx.Dialog):
@@ -201,7 +208,7 @@ class ExportCSVDialog(wx.Dialog):
     def run(self):
         res = self.ShowModal()
         if res == wx.ID_OK:
-            save_string_to_file(self, 'Export CSV Data', self.csv)
+            save_data_to_file(self, 'Export CSV Data', self.csv)
         self.Destroy()
 
     def is_checked(self, key):

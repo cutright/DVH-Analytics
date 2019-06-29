@@ -24,6 +24,7 @@ IMPORTED_DIR = join(DATA_DIR, 'imported')
 REVIEW_DIR = join(DATA_DIR, 'review')
 BACKUP_DIR = join(DATA_DIR, 'backup')
 TEMP_DIR = join(DATA_DIR, 'temp')
+MODELS_DIR = join(DATA_DIR, 'models')
 
 OPTIONS_PATH = join(PREF_DIR, '.options')
 OPTIONS_CHECKSUM_PATH = join(PREF_DIR, '.options_checksum')
