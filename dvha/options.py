@@ -1,5 +1,14 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+# options.py
+"""
+Class used to manage user options
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
 
 import pickle
 from os.path import isfile
@@ -9,6 +18,9 @@ from dvha.paths import OPTIONS_PATH, OPTIONS_CHECKSUM_PATH
 
 
 class DefaultOptions:
+    """
+    Create default options, to be inherited by Options class
+    """
     def __init__(self):
         self.VERSION = '0.6'
 

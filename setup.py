@@ -1,5 +1,17 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# setup.py
+"""
+A setuptools setup file for DVH Analytics
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
+
 from setuptools import setup, find_packages
-from options import DefaultOptions
+from dvha.options import DefaultOptions
 
 requires = [
     'wxpython',

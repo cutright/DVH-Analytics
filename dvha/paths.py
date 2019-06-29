@@ -1,3 +1,15 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# paths.py
+"""
+A collection of directories and paths updated with the script directory and user's home folder for the OS
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
+
 from os.path import join, dirname, expanduser
 
 SCRIPT_DIR = dirname(__file__)
