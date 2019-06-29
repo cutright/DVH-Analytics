@@ -478,7 +478,7 @@ class DVHAMainFrame(wx.Frame):
             self.on_sql()
 
         if echo_sql_db():
-            func(tuple(parameters))
+            func(*parameters)
         else:
             wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
