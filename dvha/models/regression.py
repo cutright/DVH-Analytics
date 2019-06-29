@@ -16,7 +16,7 @@ from dvha.models.plot import PlotRegression, PlotMultiVarRegression
 from dvha.models.random_forest import RandomForestFrame, RandomForestWorker
 from dvha.dialogs.export import save_string_to_file
 from dvha.paths import ICONS
-from dvha.tools.utilities import set_msw_background_color
+from dvha.tools.utilities import set_msw_background_color, get_tree_ctrl_image
 
 
 class RegressionFrame:
@@ -72,10 +72,8 @@ class RegressionFrame:
         self.combo_box_y_axis.SetValue('ROI Max Dose')
 
         self.image_list = wx.ImageList(16, 16)
-        self.images = {'y': self.image_list.Add(wx.Image(ICONS['custom_Y'],
-                                                         wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()),
-                       'x': self.image_list.Add(wx.Image(ICONS['custom_X'],
-                                                         wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap())}
+        self.images = {'y': self.image_list.Add(get_tree_ctrl_image(ICONS['custom_Y'])),
+                       'x': self.image_list.Add(get_tree_ctrl_image(ICONS['custom_X']))}
         self.tree_ctrl.AssignImageList(self.image_list)
 
     def __do_bind(self):

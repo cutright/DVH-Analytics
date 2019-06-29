@@ -30,7 +30,7 @@ from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, IMPORTED_DIR, 
 from dvha.tools.dicom_dose_sum import sum_dose_grids
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
-    set_msw_background_color, is_windows
+    set_msw_background_color, is_windows, get_tree_ctrl_image
 
 
 # TODO: Provide methods to write over-rides to DICOM file
@@ -195,10 +195,8 @@ class ImportDicomFrame(wx.Frame):
             checkbox.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
 
         self.image_list = wx.ImageList(16, 16)
-        yes_image = wx.Image(ICONS['ok_green'], wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()
-        no_image = wx.Image(ICONS['ko-red'], wx.BITMAP_TYPE_PNG).Scale(16, 16).ConvertToBitmap()
-        self.tree_ctrl_images = {'yes': self.image_list.Add(yes_image),
-                                 'no': self.image_list.Add(no_image)}
+        self.tree_ctrl_images = {'yes': self.image_list.Add(get_tree_ctrl_image(ICONS['ok-green'])),
+                                 'no': self.image_list.Add(get_tree_ctrl_image(ICONS['ko-red']))}
         self.tree_ctrl_roi.AssignImageList(self.image_list)
 
         self.button_cancel.SetToolTip("Changes to ROI Map will be disregarded.")

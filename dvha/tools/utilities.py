@@ -1,3 +1,16 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# tools.utilties.py
+"""
+General utilities for DVHA
+
+"""
+# Copyright (c) 2016-2019 Dan Cutright
+# This file is part of DVH Analytics, released under a BSD license.
+#    See the file LICENSE included with this distribution, also
+#    available at https://github.com/cutright/DVH-Analytics
+
 import wx
 from datetime import datetime
 from dateutil.parser import parse as parse_date
@@ -31,19 +44,43 @@ def is_mac():
 
 
 def initialize_directories_and_settings():
+    """
+    Various methods of DVHA expect certain directories and files to be available, this will check for their existence
+    and create if needed
+    """
     initialize_directories()
     initialize_default_sql_connection_config_file()
     initialize_default_import_settings_file()
 
 
 def initialize_directories():
+    """
+    Based on paths.py, create required directories if they do not exist
+    :return:
+    """
     directories = [APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR, BACKUP_DIR, TEMP_DIR]
     for directory in directories:
         if not os.path.isdir(directory):
             os.mkdir(directory)
 
 
+def initialize_default_import_settings_file():
+    """
+    Create default import settings file
+    """
+    if not isfile(IMPORT_SETTINGS_PATH):
+        write_import_settings({'inbox': INBOX_DIR,
+                               'imported': IMPORTED_DIR,
+                               'review': REVIEW_DIR})
+
+
 def write_import_settings(directories):
+    """
+    Create a file defining the location of inbox, imported, and review directories.  This file can be edited
+    through the DVHA GUI in user settings.
+    :param directories: absolute directory paths for inbox, imported, and review
+    :type directories: dict
+    """
 
     import_text = ['inbox ' + directories['inbox'],
                    'imported ' + directories['imported'],
@@ -56,8 +93,11 @@ def write_import_settings(directories):
 
 def write_sql_connection_settings(config):
     """
-    :param config: a dict with keys 'host', 'dbname', 'port' and optionally 'user' and 'password'
+    Create a file storing the SQL login credentials
+    :param config: contains values for 'host', 'dbname', 'port' and optionally 'user' and 'password'
+    :type config: dict
     """
+    # TODO: Make this more secure
 
     text = ["%s %s" % (key, value) for key, value in config.items() if value]
     text = '\n'.join(text)
@@ -66,16 +106,10 @@ def write_sql_connection_settings(config):
         text_file.write(text)
 
 
-def initialize_default_import_settings_file():
-    # Create default import settings file
-    if not isfile(IMPORT_SETTINGS_PATH):
-        write_import_settings({'inbox': INBOX_DIR,
-                               'imported': IMPORTED_DIR,
-                               'review': REVIEW_DIR})
-
-
 def initialize_default_sql_connection_config_file():
-    # Create default sql connection config file
+    """
+    Create default postgres sql connection config file
+    """
     if not isfile(SQL_CNF_PATH):
         write_sql_connection_settings({'host': 'localhost',
                                        'dbname': 'dvh',
@@ -86,6 +120,10 @@ def scale_bitmap(bitmap, width, height):
     image = wx.Bitmap.ConvertToImage(bitmap)
     image = image.Scale(width, height, wx.IMAGE_QUALITY_HIGH)
     return wx.Bitmap(image)
+
+
+def get_tree_ctrl_image(file_path, file_type=wx.BITMAP_TYPE_PNG, width=16, height=16):
+    return wx.Image(file_path, file_type).Scale(width, height).ConvertToBitmap()
 
 
 def get_file_paths(start_path, search_subfolders=False):
