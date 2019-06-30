@@ -11,9 +11,13 @@ Class for the Control Chart frame in the main view
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx
+from os.path import basename
+from pubsub import pub
 from dvha.models.plot import PlotControlChart
 from dvha.db import sql_columns
 from dvha.dialogs.export import save_data_to_file
+from dvha.paths import MODELS_DIR
+from dvha.tools.utilities import get_file_paths, load_object_from_file
 
 
 # TODO: ControlChartFrame in development
@@ -36,6 +40,7 @@ class ControlChartFrame:
         self.dvhs = dvh
         self.stats_data = stats_data
         self.choices = []
+        self.models = {}
 
         self.y_axis_options = sql_columns.numerical
 
@@ -49,6 +54,9 @@ class ControlChartFrame:
         self.__set_properties()
         self.__do_bind()
         self.__do_layout()
+        self.__do_subscribe()
+
+        self.load_models()
 
     def __do_bind(self):
         self.parent.Bind(wx.EVT_COMBOBOX, self.on_combo_box_y, id=self.combo_box_y_axis.GetId())
@@ -56,7 +64,8 @@ class ControlChartFrame:
         self.parent.Bind(wx.EVT_BUTTON, self.export_csv, id=self.button_export.GetId())
 
     def __set_properties(self):
-        pass
+        self.combo_box_model.SetToolTip("Models populated from those saved in Multi-Variable Regressions. "
+                                        "Only models for the selected charting variable are shown.")
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -83,17 +92,47 @@ class ControlChartFrame:
 
         self.layout = sizer_wrapper
 
-    def update_combo_box_choices(self):
+    def __do_subscribe(self):
+        pub.subscribe(self.load_models, 'control_chart_update_models')
+
+    def update_combo_box_y_choices(self):
         if self.stats_data:
             self.choices = self.stats_data.control_chart_variables
             self.choices.sort()
             self.combo_box_y_axis.SetItems(self.choices)
             self.combo_box_y_axis.SetValue('ROI Volume')
+            self.update_combo_box_model_choices()
+
+    @property
+    def y_axis(self):
+        return self.combo_box_y_axis.GetValue()
+
+    def update_combo_box_model_choices(self):
+        self.combo_box_model.Clear()
+        if self.models and self.y_axis in self.models and 'file_name' in self.models[self.y_axis]:
+            choices = self.models[self.y_axis]['file_name']
+            if choices:
+                self.combo_box_model.SetItems(choices)
+                self.combo_box_model.SetValue(choices[0])
+
+    def load_models(self):
+        self.models = {}
+        file_paths = get_file_paths(MODELS_DIR, extension='.mvr')
+        for f in file_paths:
+            model = load_object_from_file(f)
+            if 'y_variable' in list(model) and 'regression' in list(model):
+                y_var = model['y_variable']
+                if y_var not in list(self.models):
+                    self.models[y_var] = {'file_name': [], 'regression': []}
+                self.models[y_var]['file_name'].append(basename(f).replace('.mvr', ''))
+                self.models[y_var]['regression'].append(model['regression'])
 
     def on_combo_box_y(self, evt):
+        self.update_combo_box_model_choices()
         self.update_plot()
 
     def update_plot_ticker(self, evt):
+        self.update_combo_box_model_choices()
         self.update_plot()
 
     def update_plot(self):

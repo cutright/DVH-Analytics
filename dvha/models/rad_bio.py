@@ -235,10 +235,10 @@ class RadBioFrame:
 
         # update data in regression
         self.regression.stats_data.update_endpoints_and_radbio()
-        self.regression.update_combo_box_choices()
+        self.regression.update_combo_box_y_choices()
 
         # update data in control chart
-        self.control_chart.update_combo_box_choices()
+        self.control_chart.update_combo_box_y_choices()
         if self.control_chart.combo_box_y_axis.GetValue() in ['EUD', 'NTCP or TCP']:
             self.control_chart.update_plot()
 

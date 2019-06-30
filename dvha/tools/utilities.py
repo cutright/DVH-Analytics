@@ -23,7 +23,7 @@ import pydicom as dicom
 import pickle
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import IMPORT_SETTINGS_PATH, SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
-    APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR
+    APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR, MODELS_DIR
 
 
 def is_windows():
@@ -58,7 +58,8 @@ def initialize_directories():
     Based on paths.py, create required directories if they do not exist
     :return:
     """
-    directories = [APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR, BACKUP_DIR, TEMP_DIR]
+    directories = [APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,
+                   BACKUP_DIR, TEMP_DIR, MODELS_DIR]
     for directory in directories:
         if not os.path.isdir(directory):
             os.mkdir(directory)
@@ -149,13 +150,15 @@ def get_tree_ctrl_image(file_path, file_type=wx.BITMAP_TYPE_PNG, width=16, heigh
     return wx.Image(file_path, file_type).Scale(width, height).ConvertToBitmap()
 
 
-def get_file_paths(start_path, search_subfolders=False):
+def get_file_paths(start_path, search_subfolders=False, extension=None):
     """
     Get a list of absolute file paths for a given directory
     :param start_path: initial directory
     :type start_path str
     :param search_subfolders: optionally search all sub folders
     :type search_subfolders: bool
+    :param extension: optionally include only files with specified extension
+    :type extension: str
     :return: absolute file paths
     :rtype: list
     """
@@ -164,10 +167,16 @@ def get_file_paths(start_path, search_subfolders=False):
             file_paths = []
             for root, dirs, files in walk(start_path, topdown=False):
                 for name in files:
-                    file_paths.append(join(root, name))
+                    if extension is None or name.endswith(extension):
+                        file_paths.append(join(root, name))
             return file_paths
 
-        return [join(start_path, f) for f in listdir(start_path) if isfile(join(start_path, f))]
+        file_paths = []
+        for f in listdir(start_path):
+            if isfile(join(start_path, f)):
+                if extension is None or f.endswith(extension):
+                    file_paths.append(join(start_path, f))
+        return file_paths
     return []
 
 

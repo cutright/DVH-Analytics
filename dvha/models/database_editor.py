@@ -17,7 +17,7 @@ from dvha.dialogs.database import ChangePatientIdentifierDialog, DeletePatientDi
 from dvha.db.sql_to_python import get_database_tree
 from dvha.db.sql_connector import DVH_SQL, SQLError
 from dvha.models.data_table import DataTable
-from dvha.dialogs.export import save_string_to_file
+from dvha.dialogs.export import save_data_to_file
 from dvha.tools.utilities import set_msw_background_color
 from dvha.models.roi_map import RemapROIFrame
 
@@ -250,7 +250,7 @@ class DatabaseEditorFrame(wx.Frame):
         DeleteAllData(self)
 
     def on_export_csv(self, evt):
-        save_string_to_file(self, "Export Data Table to CSV", self.data_query_results.get_csv())
+        save_data_to_file(self, "Export Data Table to CSV", self.data_query_results.get_csv())
 
     def on_remap_roi_names(self, evt):
         RemapROIFrame(self.roi_map, remap_all=True)

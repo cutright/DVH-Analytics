@@ -471,7 +471,7 @@ class DVHAMainFrame(wx.Frame):
             self.regression.update_combo_box_choices()
             self.regression.load_save_data(self.save_data['regression'])
 
-            self.control_chart.update_combo_box_choices()
+            self.control_chart.update_combo_box_y_choices()
 
     def on_toolbar_settings(self, evt):
         self.on_pref()
@@ -643,7 +643,7 @@ class DVHAMainFrame(wx.Frame):
             except ValueError:
                 # TODO: Print error in GUI
                 pass
-            self.control_chart.update_combo_box_choices()
+            self.control_chart.update_combo_box_y_choices()
             del wait
 
     # --------------------------------------------------------------------------------------------------------------

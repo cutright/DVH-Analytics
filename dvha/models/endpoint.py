@@ -140,7 +140,7 @@ class EndpointFrame:
         dlg.Destroy()
         self.regression.stats_data.update_endpoints_and_radbio()
         self.regression.update_combo_box_choices()
-        self.control_chart.update_combo_box_choices()
+        self.control_chart.update_combo_box_y_choices()
 
     def del_ep_button_click(self, evt):
         dlg = DelEndpointDialog(self.data_table.columns)
@@ -156,7 +156,7 @@ class EndpointFrame:
 
         self.regression.stats_data.update_endpoints_and_radbio()
         self.regression.update_combo_box_choices()
-        self.control_chart.update_combo_box_choices()
+        self.control_chart.update_combo_box_y_choices()
 
         if self.data_table.column_count == 3:
             self.button['del'].Disable()
