@@ -861,7 +861,7 @@ class PlotControlChart(Plot):
 
         self.type = 'control_chart'
         self.parent = parent
-        self.init_size = {'plot': (850, 290)}
+        self.init_size = {'plot': (850, 275)}
 
         self.y_axis_label = ''
         self.options = options
@@ -984,10 +984,15 @@ class PlotControlChart(Plot):
         self.div_ucl = Div(text='', width=175)
         self.div_lcl = Div(text='', width=175)
 
+        self.div_adj_center_line = Div(text='', width=175)
+        self.div_adj_ucl = Div(text='', width=175)
+        self.div_adj_lcl = Div(text='', width=175)
+
     def __do_layout(self):
         self.bokeh_layout = column(self.figure,
                                    row(self.div_center_line, self.div_ucl, self.div_lcl),
-                                   self.adj_figure)
+                                   self.adj_figure,
+                                   row(self.div_adj_center_line, self.div_adj_ucl, self.div_adj_lcl))
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.GetSize()
@@ -1057,6 +1062,10 @@ class PlotControlChart(Plot):
         self.source['adj_ucl_line'].data = {'x': [min(x), max(x)],
                                             'y': [ucl] * 2,
                                             'mrn': ['center line'] * 2}
+
+        self.div_adj_center_line.text = "<b>Center line</b>: %0.3f" % center_line
+        self.div_adj_ucl.text = "<b>UCL</b>: %0.3f" % ucl
+        self.div_adj_lcl.text = "<b>LCL</b>: %0.3f" % lcl
 
         self.update_bokeh_layout_in_wx_python()
 
