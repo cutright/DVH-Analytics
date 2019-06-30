@@ -60,6 +60,7 @@ class ControlChartFrame:
 
     def __do_bind(self):
         self.parent.Bind(wx.EVT_COMBOBOX, self.on_combo_box_y, id=self.combo_box_y_axis.GetId())
+        self.parent.Bind(wx.EVT_COMBOBOX, self.on_combo_box_model, id=self.combo_box_model.GetId())
         self.parent.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
         self.parent.Bind(wx.EVT_BUTTON, self.export_csv, id=self.button_export.GetId())
 
@@ -107,6 +108,10 @@ class ControlChartFrame:
     def y_axis(self):
         return self.combo_box_y_axis.GetValue()
 
+    @property
+    def selected_model(self):
+        return self.combo_box_model.GetValue()
+
     def update_combo_box_model_choices(self):
         self.combo_box_model.Clear()
         if self.models and self.y_axis in self.models and 'file_name' in self.models[self.y_axis]:
@@ -123,13 +128,21 @@ class ControlChartFrame:
             if 'y_variable' in list(model) and 'regression' in list(model):
                 y_var = model['y_variable']
                 if y_var not in list(self.models):
-                    self.models[y_var] = {'file_name': [], 'regression': []}
+                    self.models[y_var] = {'file_name': [], 'data': []}
                 self.models[y_var]['file_name'].append(basename(f).replace('.mvr', ''))
-                self.models[y_var]['regression'].append(model['regression'])
+                self.models[y_var]['data'].append(model)
 
     def on_combo_box_y(self, evt):
         self.update_combo_box_model_choices()
         self.update_plot()
+
+    def on_combo_box_model(self, evt):
+        if self.y_axis in self.models:
+            index = self.models[self.y_axis]['file_name'].index(self.selected_model)
+            data = self.models[self.y_axis]['data'][index]
+            data = self.stats_data.get_adjusted_control_chart(**data)
+            print('data', data)
+            self.plot.update_adjusted_control_chart(*data)
 
     def update_plot_ticker(self, evt):
         self.update_combo_box_model_choices()
@@ -137,10 +150,8 @@ class ControlChartFrame:
 
     def update_plot(self):
 
-        y_axis_selection = self.combo_box_y_axis.GetValue()
-
         dates = self.stats_data.sim_study_dates
-        y_data = self.stats_data.data[y_axis_selection]['values']
+        y_data = self.stats_data.data[self.y_axis]['values']
         mrn_data = self.stats_data.mrns
         uid_data = self.stats_data.uids
 
@@ -155,7 +166,13 @@ class ControlChartFrame:
 
         x = list(range(1, len(dates)+1))
 
-        self.plot.update_plot(x, y_values_sorted, mrn_sorted, uid_sorted, dates_sorted, y_axis_label=y_axis_selection)
+        self.plot.update_plot(x, y_values_sorted, mrn_sorted, uid_sorted, dates_sorted, y_axis_label=self.y_axis)
+
+        if self.models and self.models[self.y_axis]:
+            index = self.models[self.y_axis]['file_name'].index(self.selected_model)
+            data = self.models[self.y_axis]['data'][index]
+            data = self.stats_data.get_adjusted_control_chart(**data)
+            self.plot.update_adjusted_control_chart(**data)
 
     def update_data(self, dvh, stats_data):
         self.dvhs = dvh

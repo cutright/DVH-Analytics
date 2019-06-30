@@ -222,6 +222,16 @@ class StatsData:
             return X, y
         return X, y, mrn, uid, dates
 
+    def get_adjusted_control_chart(self, y_variable, x_variables, regression):
+
+        X, y, mrn, uid, dates = self.get_X_and_y(y_variable, x_variables, include_patient_info=True)
+        predictions = regression.reg.predict(X)
+        residuals = np.subtract(y, predictions)
+        x = [i+1 for i in range(len(y))]
+
+        return {'x': x, 'residuals': residuals,
+                'mrn': mrn, 'uid': uid, 'dates': dates}
+
 
 def str_starts_with_any_in_list(string_a, string_list):
     """
@@ -269,13 +279,13 @@ class MultiVariableRegression:
         :type y: list
         """
 
-        reg = linear_model.LinearRegression()
-        ols = reg.fit(X, y)
+        self.reg = linear_model.LinearRegression()
+        ols = self.reg.fit(X, y)
 
-        self.y_intercept = reg.intercept_
-        self.slope = reg.coef_
+        self.y_intercept = self.reg.intercept_
+        self.slope = self.reg.coef_
         params = np.append(self.y_intercept, self.slope)
-        self.predictions = reg.predict(X)
+        self.predictions = self.reg.predict(X)
 
         self.r_sq = r2_score(y,  self.predictions)
         self.mse = mean_squared_error(y,  self.predictions)

@@ -418,7 +418,8 @@ class MultiVarResultsFrame(wx.Frame):
 
     def on_save_model(self, evt):
         data = {'y_variable': self.plot.y_variable,
-                'regression': self.plot.reg}
+                'regression': self.plot.reg,
+                'x_variables': self.plot.x_variables}
         save_data_to_file(self, 'Save Model', data,
                           wildcard="MVR files (*.mvr)|*.mvr", data_type='pickle', initial_dir=MODELS_DIR)
         pub.sendMessage('control_chart_update_models')

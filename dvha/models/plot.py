@@ -861,7 +861,7 @@ class PlotControlChart(Plot):
 
         self.type = 'control_chart'
         self.parent = parent
-        self.init_size = {'plot': (850, 325)}
+        self.init_size = {'plot': (850, 290)}
 
         self.y_axis_label = ''
         self.options = options
@@ -870,13 +870,31 @@ class PlotControlChart(Plot):
                        'ucl_line': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'lcl_line': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'bound': ColumnDataSource(data=dict(x=[], mrn=[], upper=[], avg=[], lower=[])),
-                       'patch': ColumnDataSource(data=dict(x=[], y=[]))}
+                       'patch': ColumnDataSource(data=dict(x=[], y=[])),
+                       'adj_plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], color=[], alpha=[], dates=[])),
+                       'adj_center_line': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'adj_ucl_line': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'adj_lcl_line': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'adj_bound': ColumnDataSource(data=dict(x=[], mrn=[], upper=[], avg=[], lower=[])),
+                       'adj_patch': ColumnDataSource(data=dict(x=[], y=[]))}
 
+        self.__add_adj_figure()
         self.__add_plot_data()
         self.__add_hover()
         self.__create_divs()
         self.__add_legend()
         self.__do_layout()
+
+    def __add_adj_figure(self):
+        self.adj_figure = figure()
+        self.adj_figure.xaxis.axis_label = 'Study'
+        self.adj_figure.yaxis.axis_label = 'Residual'
+        self.adj_figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.adj_figure.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.adj_figure.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.adj_figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.adj_figure.min_border = self.options.MIN_BORDER
+        self.adj_figure.yaxis.axis_label_text_baseline = "bottom"
 
     def __add_plot_data(self):
         self.plot_data = self.figure.circle('x', 'y', source=self.source['plot'],
@@ -905,6 +923,32 @@ class PlotControlChart(Plot):
                                               color=self.options.CONTROL_CHART_UCL_LINE_COLOR,
                                               line_dash=self.options.CONTROL_CHART_UCL_LINE_DASH)
 
+        self.adj_plot_data = self.adj_figure.circle('x', 'y', source=self.source['adj_plot'],
+                                                    size=self.options.CONTROL_CHART_CIRCLE_SIZE,
+                                                    alpha='alpha',
+                                                    color='color')
+        self.adj_plot_data_line = self.adj_figure.line('x', 'y', source=self.source['adj_plot'],
+                                                       line_width=self.options.CONTROL_CHART_LINE_WIDTH,
+                                                       color=self.options.CONTROL_CHART_LINE_COLOR,
+                                                       line_dash=self.options.CONTROL_CHART_LINE_DASH)
+        self.adj_plot_patch = self.adj_figure.patch('x', 'y', color=self.options.PLOT_COLOR, source=self.source['adj_patch'],
+                                                    alpha=self.options.CONTROL_CHART_PATCH_ALPHA)
+        self.adj_plot_center_line = self.adj_figure.line('x', 'y', source=self.source['adj_center_line'],
+                                                         line_width=self.options.CONTROL_CHART_CENTER_LINE_WIDTH,
+                                                         alpha=self.options.CONTROL_CHART_CENTER_LINE_ALPHA,
+                                                         color=self.options.CONTROL_CHART_CENTER_LINE_COLOR,
+                                                         line_dash=self.options.CONTROL_CHART_CENTER_LINE_DASH)
+        self.adj_plot_lcl_line = self.adj_figure.line('x', 'y', source=self.source['adj_lcl_line'],
+                                                      line_width=self.options.CONTROL_CHART_LCL_LINE_WIDTH,
+                                                      alpha=self.options.CONTROL_CHART_LCL_LINE_ALPHA,
+                                                      color=self.options.CONTROL_CHART_LCL_LINE_COLOR,
+                                                      line_dash=self.options.CONTROL_CHART_LCL_LINE_DASH)
+        self.adj_plot_ucl_line = self.adj_figure.line('x', 'y', source=self.source['adj_ucl_line'],
+                                                      line_width=self.options.CONTROL_CHART_UCL_LINE_WIDTH,
+                                                      alpha=self.options.CONTROL_CHART_UCL_LINE_ALPHA,
+                                                      color=self.options.CONTROL_CHART_UCL_LINE_COLOR,
+                                                      line_dash=self.options.CONTROL_CHART_UCL_LINE_DASH)
+
     def __add_hover(self):
         self.figure.add_tools(HoverTool(show_arrow=True,
                                         tooltips=[('ID', '@mrn'),
@@ -922,9 +966,18 @@ class PlotControlChart(Plot):
                                     ('LCL  ', [self.plot_lcl_line])],
                              orientation='horizontal')
 
+        adj_legend_plot = Legend(items=[("Residuals   ", [self.adj_plot_data]),
+                                        ("Residuals Line  ", [self.adj_plot_data_line]),
+                                        ('Center Line   ', [self.adj_plot_center_line]),
+                                        ('UCL  ', [self.adj_plot_ucl_line]),
+                                        ('LCL  ', [self.adj_plot_lcl_line])],
+                                 orientation='horizontal')
+
         # Add the layout outside the plot, clicking legend item hides the line
         self.figure.add_layout(legend_plot, 'above')
         self.figure.legend.click_policy = "hide"
+        self.adj_figure.add_layout(adj_legend_plot, 'above')
+        self.adj_figure.legend.click_policy = "hide"
 
     def __create_divs(self):
         self.div_center_line = Div(text='', width=175)
@@ -933,12 +986,15 @@ class PlotControlChart(Plot):
 
     def __do_layout(self):
         self.bokeh_layout = column(self.figure,
-                                   row(self.div_center_line, self.div_ucl, self.div_lcl))
+                                   row(self.div_center_line, self.div_ucl, self.div_lcl),
+                                   self.adj_figure)
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.GetSize()
         self.figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 904.)
         self.figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 766.)
+        self.adj_figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 904.)
+        self.adj_figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 766.)
 
     def update_plot(self, x, y, mrn, uid, dates, y_axis_label='Y Axis'):
         self.set_figure_dimensions()
@@ -974,6 +1030,33 @@ class PlotControlChart(Plot):
         self.div_center_line.text = "<b>Center line</b>: %0.3f" % center_line
         self.div_ucl.text = "<b>UCL</b>: %0.3f" % ucl
         self.div_lcl.text = "<b>LCL</b>: %0.3f" % lcl
+
+        self.update_bokeh_layout_in_wx_python()
+
+    def update_adjusted_control_chart(self, x, residuals, mrn, uid, dates):
+
+        center_line, ucl, lcl = get_control_limits(residuals)
+
+        colors = [self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR, self.options.PLOT_COLOR]
+        alphas = [self.options.CONTROL_CHART_OUT_OF_CONTROL_ALPHA, self.options.CONTROL_CHART_CIRCLE_ALPHA]
+        color = [colors[ucl > value > lcl] for value in residuals]
+        alpha = [alphas[ucl > value > lcl] for value in residuals]
+
+        self.source['adj_plot'].data = {'x': x, 'y': residuals, 'mrn': mrn, 'uid': uid,
+                                        'color': color, 'alpha': alpha, 'dates': dates}
+
+        self.source['adj_patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
+                                         'y': [ucl, ucl, lcl, lcl]}
+        self.source['adj_center_line'].data = {'x': [min(x), max(x)],
+                                               'y': [center_line] * 2,
+                                               'mrn': ['center line'] * 2}
+
+        self.source['adj_lcl_line'].data = {'x': [min(x), max(x)],
+                                            'y': [lcl] * 2,
+                                            'mrn': ['center line'] * 2}
+        self.source['adj_ucl_line'].data = {'x': [min(x), max(x)],
+                                            'y': [ucl] * 2,
+                                            'mrn': ['center line'] * 2}
 
         self.update_bokeh_layout_in_wx_python()
 
