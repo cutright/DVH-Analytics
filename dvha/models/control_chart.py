@@ -65,6 +65,7 @@ class ControlChartFrame:
         self.parent.Bind(wx.EVT_BUTTON, self.export_csv, id=self.button_export.GetId())
 
     def __set_properties(self):
+        # TODO: This tooltip doesn't show
         self.combo_box_model.SetToolTip("Models populated from those saved in Multi-Variable Regressions. "
                                         "Only models for the selected charting variable are shown.")
 
@@ -72,7 +73,7 @@ class ControlChartFrame:
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_plot = wx.BoxSizer(wx.HORIZONTAL)
         sizer_widgets = wx.StaticBoxSizer(wx.StaticBox(self.parent, wx.ID_ANY, ""), wx.HORIZONTAL)
-        sizer_lookback_units = wx.BoxSizer(wx.VERTICAL)
+        sizer_adjustment_model = wx.BoxSizer(wx.VERTICAL)
         sizer_y_axis = wx.BoxSizer(wx.VERTICAL)
 
         label_y_axis = wx.StaticText(self.parent, wx.ID_ANY, "Charting Variable:")
@@ -80,10 +81,10 @@ class ControlChartFrame:
         sizer_y_axis.Add(self.combo_box_y_axis, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(sizer_y_axis, 1, wx.EXPAND, 0)
 
-        label_lookback_units = wx.StaticText(self.parent, wx.ID_ANY, "Adjustment Model:")
-        sizer_lookback_units.Add(label_lookback_units, 0, wx.LEFT, 5)
-        sizer_lookback_units.Add(self.combo_box_model, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_widgets.Add(sizer_lookback_units, 1, wx.EXPAND, 0)
+        label_adjustment_model = wx.StaticText(self.parent, wx.ID_ANY, "Adjustment Model:")
+        sizer_adjustment_model.Add(label_adjustment_model, 0, wx.LEFT, 5)
+        sizer_adjustment_model.Add(self.combo_box_model, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_widgets.Add(sizer_adjustment_model, 1, wx.EXPAND, 0)
 
         sizer_widgets.Add(self.button_export, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(self.button_save_plot, 0, wx.ALL | wx.EXPAND, 5)
@@ -168,11 +169,11 @@ class ControlChartFrame:
 
         self.plot.update_plot(x, y_values_sorted, mrn_sorted, uid_sorted, dates_sorted, y_axis_label=self.y_axis)
 
-        if self.models and self.models[self.y_axis]:
+        if self.models and self.y_axis in self.models.keys():
             index = self.models[self.y_axis]['file_name'].index(self.selected_model)
-            data = self.models[self.y_axis]['data'][index]
-            data = self.stats_data.get_adjusted_control_chart(**data)
-            self.plot.update_adjusted_control_chart(**data)
+            model_data = self.models[self.y_axis]['data'][index]
+            adj_data = self.stats_data.get_adjusted_control_chart(**model_data)
+            self.plot.update_adjusted_control_chart(**adj_data)
 
     def update_data(self, dvh, stats_data):
         self.dvhs = dvh

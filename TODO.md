@@ -22,19 +22,18 @@
 
 3. **Regression**
     - [ ] Machine learning modules in Regression tab (after running multi-variable regression) aren't complete 
-    - [ ] Need to be able to store a model (particularly for use in Control Chart)
-    - [ ] Correlation Matrix from pure Bokeh App not yet used
+    - [X] Need to be able to store a model (particularly for use in Control Chart)
 
 4. **Control Chart**
-    - [ ] Implement Adjusted Control Charts based on a regression model
+    - [X] Implement Adjusted Control Charts based on a regression model
 
 5. **Database Editor**
     - [ ] Allow user to re-perform "post-import" calculations
 
 6. **Documentation**
-    - [ ] Review code, add doc strings and comments
+    - [X] Review code, add doc strings and comments
     - [ ] Rewrite/Update DVH Analytics manual
-    - [ ] Update LICENSE to include licenses of software dependencies
+    - [X] Update LICENSE to include licenses of software dependencies
 
 7. **GUI**
     - [ ] Move models.datatable.py to [ObjectListView](http://www.blog.pythonlibrary.org/2009/12/23/wxpython-using-objectlistview-instead-of-a-listctrl/)

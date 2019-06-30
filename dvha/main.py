@@ -689,9 +689,6 @@ class DVHAMainFrame(wx.Frame):
                           wx.OK | wx.ICON_WARNING)
 
     def on_about(self, evt):
-        # dlg = wx.MessageDialog(self, "DVH Analytics \n in wxPython", "About Sample Editor", wx.OK)
-        # dlg.ShowModal()
-        # dlg.Destroy()
         About()
 
     def on_pref(self, *args):
