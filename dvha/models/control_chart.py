@@ -138,18 +138,13 @@ class ControlChartFrame:
         self.update_plot()
 
     def on_combo_box_model(self, evt):
-        if self.y_axis in self.models:
-            index = self.models[self.y_axis]['file_name'].index(self.selected_model)
-            data = self.models[self.y_axis]['data'][index]
-            data = self.stats_data.get_adjusted_control_chart(**data)
-            print('data', data)
-            self.plot.update_adjusted_control_chart(*data)
+        self.update_plot(residual_only=True)
 
     def update_plot_ticker(self, evt):
         self.update_combo_box_model_choices()
         self.update_plot()
 
-    def update_plot(self):
+    def update_plot(self, residual_only=False):
 
         dates = self.stats_data.sim_study_dates
         y_data = self.stats_data.data[self.y_axis]['values']
@@ -167,12 +162,15 @@ class ControlChartFrame:
 
         x = list(range(1, len(dates)+1))
 
-        self.plot.update_plot(x, y_values_sorted, mrn_sorted, uid_sorted, dates_sorted, y_axis_label=self.y_axis)
+        if not residual_only:
+            self.plot.update_plot(x, y_values_sorted, mrn_sorted, uid_sorted, dates_sorted,
+                                  y_axis_label=self.y_axis, update_layout=not residual_only)
 
         if self.models and self.y_axis in self.models.keys():
             index = self.models[self.y_axis]['file_name'].index(self.selected_model)
             model_data = self.models[self.y_axis]['data'][index]
             adj_data = self.stats_data.get_adjusted_control_chart(**model_data)
+            adj_data['model_name'] = self.selected_model + '.mvr'
             self.plot.update_adjusted_control_chart(**adj_data)
 
     def update_data(self, dvh, stats_data):

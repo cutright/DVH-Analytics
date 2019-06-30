@@ -862,6 +862,7 @@ class PlotControlChart(Plot):
         self.type = 'control_chart'
         self.parent = parent
         self.init_size = {'plot': (850, 275)}
+        self.model_name = None
 
         self.y_axis_label = ''
         self.options = options
@@ -957,6 +958,13 @@ class PlotControlChart(Plot):
                                                   ('Value', '@y{0.2f}')],
                                         formatters={'dates': 'datetime'}))
 
+        self.adj_figure.add_tools(HoverTool(show_arrow=True,
+                                            tooltips=[('ID', '@mrn'),
+                                                      ('Date', '@dates{%F}'),
+                                                      ('Study', '@x'),
+                                                      ('Value', '@y{0.2f}')],
+                                            formatters={'dates': 'datetime'}))
+
     def __add_legend(self):
         # Set the legend
         legend_plot = Legend(items=[("Charting Variable   ", [self.plot_data]),
@@ -1001,7 +1009,7 @@ class PlotControlChart(Plot):
         self.adj_figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 904.)
         self.adj_figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 766.)
 
-    def update_plot(self, x, y, mrn, uid, dates, y_axis_label='Y Axis'):
+    def update_plot(self, x, y, mrn, uid, dates, y_axis_label='Y Axis', update_layout=True):
         self.set_figure_dimensions()
         self.clear_sources()
         self.y_axis_label = y_axis_label
@@ -1036,9 +1044,14 @@ class PlotControlChart(Plot):
         self.div_ucl.text = "<b>UCL</b>: %0.3f" % ucl
         self.div_lcl.text = "<b>LCL</b>: %0.3f" % lcl
 
-        self.update_bokeh_layout_in_wx_python()
+        if update_layout:
+            self.update_bokeh_layout_in_wx_python()
 
-    def update_adjusted_control_chart(self, x, residuals, mrn, uid, dates):
+    def update_adjusted_control_chart(self, x, residuals, mrn, uid, dates, model_name, update_layout=True):
+
+        self.model_name = model_name
+
+        x, residuals, mrn, uid, dates = self.clean_data(x, residuals, mrn=mrn, uid=uid, dates=dates)
 
         center_line, ucl, lcl = get_control_limits(residuals)
 
@@ -1067,22 +1080,39 @@ class PlotControlChart(Plot):
         self.div_adj_ucl.text = "<b>UCL</b>: %0.3f" % ucl
         self.div_adj_lcl.text = "<b>LCL</b>: %0.3f" % lcl
 
-        self.update_bokeh_layout_in_wx_python()
+        if update_layout:
+            self.update_bokeh_layout_in_wx_python()
 
     def clear_plot(self):
         self.clear_div()  # super class does not have these Div objects
         super().clear_plot()
 
+    def clear_sources(self):
+        super().clear_sources()
+        self.clear_div()
+
     def clear_div(self):
         self.div_center_line.text = "<b>Center line</b>:"
         self.div_ucl.text = "<b>UCL</b>:"
         self.div_lcl.text = "<b>LCL</b>:"
+        self.div_adj_center_line.text = "<b>Center line</b>:"
+        self.div_adj_ucl.text = "<b>UCL</b>:"
+        self.div_adj_lcl.text = "<b>LCL</b>:"
 
     def get_csv(self):
+
         data = self.source['plot'].data
-        csv_data = ['MRN,Study Instance UID,Study #,Date,%s' % self.y_axis_label]
+        resid = self.source['adj_plot'].data['y']
+        if resid:
+            residual_column = ',Residual%s' % [' (%s)' % self.model_name, ''][self.model_name is None]
+        else:
+            residual_column = ''
+        csv_data = ['MRN,Study Instance UID,Study #,Date,%s%s' % (self.y_axis_label, residual_column)]
         for i in range(len(data['mrn'])):
             csv_data.append(','.join(str(data[key][i]).replace(',', '^') for key in ['mrn', 'uid', 'x', 'dates', 'y']))
+            if resid:
+                csv_data[-1] = csv_data[-1] + ',%s' % resid[i]
+
         return '\n'.join(csv_data)
 
 
