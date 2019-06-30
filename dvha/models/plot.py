@@ -1051,8 +1051,6 @@ class PlotControlChart(Plot):
 
         self.model_name = model_name
 
-        x, residuals, mrn, uid, dates = self.clean_data(x, residuals, mrn=mrn, uid=uid, dates=dates)
-
         center_line, ucl, lcl = get_control_limits(residuals)
 
         colors = [self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR, self.options.PLOT_COLOR]
@@ -1082,6 +1080,26 @@ class PlotControlChart(Plot):
 
         if update_layout:
             self.update_bokeh_layout_in_wx_python()
+
+    def get_adjusted_control_chart(self, y_variable, x_variables, regression, stats_data):
+
+        X, y, mrn, uid, dates = stats_data.get_X_and_y(y_variable, x_variables, include_patient_info=True)
+        predictions = regression.reg.predict(X)
+        residuals = np.subtract(y, predictions)
+
+        x = [i + 1 for i in range(len(y))]
+
+        sort_index = sorted(range(len(dates)), key=lambda k: dates[k])
+        dates_sorted, residuals_sorted, mrn_sorted, uid_sorted = [], [], [], []
+
+        for s in range(len(dates)):
+            dates_sorted.append(dates[sort_index[s]])
+            residuals_sorted.append(residuals[sort_index[s]])
+            mrn_sorted.append(mrn[sort_index[s]])
+            uid_sorted.append(uid[sort_index[s]])
+
+        return {'x': x, 'residuals': residuals_sorted,
+                'mrn': mrn_sorted, 'uid': uid_sorted, 'dates': dates_sorted}
 
     def clear_plot(self):
         self.clear_div()  # super class does not have these Div objects

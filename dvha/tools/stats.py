@@ -206,6 +206,7 @@ class StatsData:
                 mrn.append(self.mrns[i])
                 uid.append(self.uids[i])
                 dates.append(self.sim_study_dates[i])
+
         data.append(y_var_data)
         for var in x_variables:
             x_var_data = []
@@ -214,32 +215,32 @@ class StatsData:
             data.append(x_var_data)
 
         data = np.array(data)
-        clean_data = data[:, ~np.any(np.isnan(data), axis=0)]
-        X = np.transpose(clean_data[1:])
-        y = clean_data[0]
+        bad_indices = get_index_of_nan(data)
+
+        for bad_index in bad_indices[::-1]:
+            data = np.delete(data, bad_index, 1)
+            mrn.pop(bad_index)
+            uid.pop(bad_index)
+            dates.pop(bad_index)
+
+        X = np.transpose(data[1:])
+        y = data[0]
 
         if not include_patient_info:
             return X, y
         return X, y, mrn, uid, dates
 
-    def get_adjusted_control_chart(self, y_variable, x_variables, regression):
 
-        X, y, mrn, uid, dates = self.get_X_and_y(y_variable, x_variables, include_patient_info=True)
-        predictions = regression.reg.predict(X)
-        residuals = np.subtract(y, predictions)
-        x = [i+1 for i in range(len(y))]
-
-        sort_index = sorted(range(len(dates)), key=lambda k: dates[k])
-        dates_sorted, residuals_sorted, mrn_sorted, uid_sorted = [], [], [], []
-
-        for s in range(len(dates)):
-            dates_sorted.append(dates[sort_index[s]])
-            residuals_sorted.append(residuals[sort_index[s]])
-            mrn_sorted.append(mrn[sort_index[s]])
-            uid_sorted.append(uid[sort_index[s]])
-
-        return {'x': x, 'residuals': residuals_sorted,
-                'mrn': mrn_sorted, 'uid': uid_sorted, 'dates': dates_sorted}
+def get_index_of_nan(numpy_array):
+    bad_indices = []
+    nan_data = np.isnan(numpy_array)
+    for var_data in nan_data:
+        indices = np.where(var_data)[0].tolist()
+        if indices:
+            bad_indices.extend(indices)
+    bad_indices = list(set(bad_indices))
+    bad_indices.sort()
+    return bad_indices
 
 
 def str_starts_with_any_in_list(string_a, string_list):

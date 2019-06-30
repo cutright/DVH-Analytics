@@ -169,9 +169,8 @@ class ControlChartFrame:
         if self.models and self.y_axis in self.models.keys():
             index = self.models[self.y_axis]['file_name'].index(self.selected_model)
             model_data = self.models[self.y_axis]['data'][index]
-            adj_data = self.stats_data.get_adjusted_control_chart(**model_data)
-            adj_data['model_name'] = self.selected_model + '.mvr'
-            self.plot.update_adjusted_control_chart(**adj_data)
+            adj_data = self.plot.get_adjusted_control_chart(stats_data=self.stats_data, **model_data)
+            self.plot.update_adjusted_control_chart(model_name=self.selected_model + '.mvr', **adj_data)
 
     def update_data(self, dvh, stats_data):
         self.dvhs = dvh
