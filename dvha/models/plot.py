@@ -1138,17 +1138,15 @@ class PlotRandomForest(Plot):
     """
     Generate plot for the Random Forest frame created in the MulitVariable Regression frame
     """
-    def __init__(self, parent, options, y, y_predict, mse):
+    def __init__(self, parent, options, X, y, multi_var_pred):
         """
         :param parent: the wx UI object where the plot will be displayed
         :param options: user preferences
         :type options: Options
+        :param X: independent data
+        :type X: numpy.array
         :param y: y-values from data
         :type y: list
-        :param y_predict: predicted y-values by random forest
-        :type y_predict: list
-        :param mse: mean square error of random forrest predictions
-        :type mse: float
         """
         Plot.__init__(self, parent, options)
 
@@ -1157,13 +1155,17 @@ class PlotRandomForest(Plot):
 
         self.init_size = {'plot': (400, 400)}
 
-        self.options = options
-        self.y = y
-        self.y_predict = y_predict
-        self.mse = mse
+        self.X, self.y, self.options = X, y, options
         self.x = list(range(1, len(self.y)+1))
+        self.multi_var_pred = multi_var_pred
 
-        self.source = {'plot': ColumnDataSource(data=dict(x=self.x, y=self.y, y_predict=self.y_predict))}
+        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], y_predict=[], multi_var_predict=[])),
+                       'importance': ColumnDataSource(data=dict(y=[], left=[], right=[], height=[]))}
+
+        self.figure.xaxis.axis_label = "Study"
+
+        self.imp_figure = figure(y_range=[''])
+        self.initialize_importance_figure()
 
         self.__add_plot_data()
         self.__do_layout()
@@ -1174,15 +1176,47 @@ class PlotRandomForest(Plot):
     def __add_plot_data(self):
         self.figure.circle('x', 'y', source=self.source['plot'], color='blue')
         self.figure.circle('x', 'y_predict', source=self.source['plot'], color='red')
+        self.figure.cross('x', 'multi_var_predict', source=self.source['plot'], color='black')
+
+        self.imp_figure.hbar('y', 'height', 'right', source=self.source['importance'])
 
     def __do_layout(self):
-        self.bokeh_layout = column(self.figure)
+        self.bokeh_layout = row(self.figure, self.imp_figure)
+
+    def initialize_importance_figure(self):
+        self.imp_figure.xaxis.axis_label = 'Importance'
+        self.imp_figure.yaxis.axis_label = ''
+        self.imp_figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.imp_figure.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.imp_figure.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.imp_figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.imp_figure.min_border = self.options.MIN_BORDER
+        self.imp_figure.yaxis.axis_label_text_baseline = "bottom"
 
     def set_figure_dimensions(self):
         # plot_width = 400, plot_height = 400, frame_size = (900, 600)
         panel_width, panel_height = self.parent.GetSize()
         self.figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 400.)
         self.figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 250.)
+        self.imp_figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 400.)
+        self.imp_figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 250.)
+
+    def update_data(self, y_pred, feature_importance, x_variables, y_variable):
+
+        self.source['plot'].data = {'x': self.x,
+                                    'y': self.y,
+                                    'y_predict': y_pred,
+                                    'multi_var_predict': self.multi_var_pred}
+
+        length = len(feature_importance)
+        self.source['importance'].data = {'y': [i+0.5 for i in range(length)],
+                                          'right': feature_importance,
+                                          'left': [0] * length,
+                                          'height': [0.5] * length}
+        self.imp_figure.y_range.factors = x_variables
+        self.figure.yaxis.axis_label = y_variable
+
+        self.update_bokeh_layout_in_wx_python()
 
 
 class PlotROIMap(Plot):

@@ -40,3 +40,4 @@
 7. **GUI**
     - [ ] Move models.datatable.py to [ObjectListView](http://www.blog.pythonlibrary.org/2009/12/23/wxpython-using-objectlistview-instead-of-a-listctrl/)
     - [ ] Allow for a simultaneous 2nd query as found in pure bokeh version of DVHA
+    - [ ] Window sizes should be relative to user's screen resolution

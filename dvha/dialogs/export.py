@@ -23,8 +23,7 @@ def save_data_to_file(frame, title, data, wildcard="CSV files (*.csv)|*.csv", da
     :param frame: GUI parent
     :param title: title for the file dialog window
     :type title: str
-    :param data: text data to be written
-    :type data: str
+    :param data: text data or pickle-able object to be written
     :param wildcard: restrict visible files and intended file extension
     :type wildcard: str
     :param data_type: either 'string' or 'pickle'

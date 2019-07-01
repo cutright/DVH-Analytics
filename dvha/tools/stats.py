@@ -17,7 +17,6 @@ from scipy import stats
 from sklearn import linear_model
 from sklearn.metrics import mean_squared_error, r2_score
 from regressors import stats as regressors_stats
-from sklearn.ensemble import RandomForestRegressor
 from dvha.db import sql_columns
 
 
@@ -339,28 +338,3 @@ def get_control_limits(y):
     lcl = center_line - 3 * avg_moving_range / scalar_d
 
     return center_line, ucl, lcl
-
-
-def get_random_forest(X, y, n_estimators=100, max_features=None):
-    """
-    Get random forest predictions and the mean square error with sklearn
-    :param X: independent data
-    :type X: numpy.array
-    :param y: dependent data
-    :type y: list
-    :param n_estimators:
-    :type n_estimators: int
-    :param max_features:
-    :type max_features: int
-    :return: predicted values, mean square error
-    :rtype: tuple
-    """
-    if max_features is None:
-        max_features = len(X[0, :])
-    regressor = RandomForestRegressor(n_estimators=n_estimators, max_features=max_features)
-    regressor.fit(X, y)
-    y_pred = regressor.predict(X)
-
-    mse = np.mean(np.square(np.subtract(y_pred, y)))
-
-    return y_pred, mse

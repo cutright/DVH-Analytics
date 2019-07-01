@@ -13,7 +13,7 @@ Class to view and calculate linear regressions
 import wx
 from pubsub import pub
 from dvha.models.plot import PlotRegression, PlotMultiVarRegression
-from dvha.models.random_forest import RandomForestFrame, RandomForestWorker
+from dvha.models.random_forest import RandomForestFrame
 from dvha.dialogs.export import save_data_to_file
 from dvha.paths import ICONS, MODELS_DIR
 from dvha.tools.utilities import set_msw_background_color, get_tree_ctrl_image
@@ -262,7 +262,8 @@ class RegressionFrame:
         if y_variable in list(self.x_variable_nodes):
             x_variables = list(self.x_variable_nodes[y_variable])
 
-            dlg = MultiVarResultsFrame(y_variable, x_variables, self.stats_data, self.options)
+            dlg = MultiVarResultsFrame(y_variable, x_variables,
+                                       self.stats_data, self.options, self.plot.reg.predictions)
             dlg.Show()
         else:
             wx.MessageBox('No data has been selected for regression.', 'Regression Error',
@@ -330,7 +331,7 @@ class MultiVarResultsFrame(wx.Frame):
     """
     Class to view multi-variable regression with data passed from RegressionFrame
     """
-    def __init__(self, y_variable, x_variables, stats_data, options):
+    def __init__(self, y_variable, x_variables, stats_data, options, multi_var_pred):
         """
         :param y_variable: dependent variable
         :type y_variable: str
@@ -342,6 +343,10 @@ class MultiVarResultsFrame(wx.Frame):
         :type options: Options
         """
         wx.Frame.__init__(self, None, title="Multi-Variable Model for %s" % y_variable)
+
+        self.y_variable = y_variable
+        self.x_variables = x_variables
+        self.multi_var_pred = multi_var_pred
 
         set_msw_background_color(self)  # If windows, change the background color
 
@@ -361,7 +366,6 @@ class MultiVarResultsFrame(wx.Frame):
         self.button_save_model = wx.Button(self, wx.ID_ANY, 'Save Model')
 
         self.__do_bind()
-        self.__do_subscribe()
         self.__set_properties()
         self.__do_layout()
 
@@ -373,9 +377,6 @@ class MultiVarResultsFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_model, id=self.button_save_model.GetId())
-
-    def __do_subscribe(self):
-        pub.subscribe(self.show_plot, "random_forest_complete")
 
     def __do_layout(self):
 
@@ -403,11 +404,7 @@ class MultiVarResultsFrame(wx.Frame):
         self.Center()
 
     def on_random_forest(self, evt):
-        RandomForestWorker(self.plot.X, self.plot.y)
-
-    def show_plot(self, msg):
-        frame = RandomForestFrame(self.plot.y, msg['y_predict'], msg['mse'], self.options)
-        frame.Show()
+        RandomForestFrame(self.plot.X, self.plot.y, self.x_variables, self.y_variable, self.options, self.multi_var_pred)
 
     def on_export(self, evt):
         save_data_to_file(self, 'Save multi-variable regression data to csv', self.plot.get_csv_data())
