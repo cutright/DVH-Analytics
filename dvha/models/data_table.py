@@ -36,7 +36,6 @@ class DataTable:
 
         self.layout = list_ctrl
 
-        # TODO: Initializing class with data does not display data?
         self.data = deepcopy(data)
         self.columns = deepcopy(columns)
         self.widths = widths
@@ -49,7 +48,8 @@ class DataTable:
                 column_length = len(self.columns)
             self.formats = [wx.LIST_FORMAT_LEFT] * column_length
         if data:
-            self.set_data(data, columns, formats)
+            # TODO: Initializing class with duplicates data in view?
+            self.set_data(data, columns, formats=formats)
         self.set_data_in_layout()
 
     def get_save_data(self):

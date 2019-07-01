@@ -38,7 +38,9 @@ class QueriedDataFrame(wx.Frame):
 
         self.list_ctrl = wx.ListCtrl(self, wx.ID_ANY,
                                      style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
-        self.data_table = DataTable(self.list_ctrl, data=self.table_data, columns=self.columns)
+        # self.data_table = DataTable(self.list_ctrl, data=self.table_data, columns=self.columns)
+        self.data_table = DataTable(self.list_ctrl)
+        self.data_table.set_data(self.table_data, self.columns)
 
         self.button_export = wx.Button(self, wx.ID_ANY, "Export to CSV")
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())

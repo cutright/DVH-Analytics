@@ -23,6 +23,8 @@
 3. **Regression**
     - [ ] Machine learning modules in Regression tab (after running multi-variable regression) aren't complete 
     - [X] Need to be able to store a model (particularly for use in Control Chart)
+    - [ ] Plot regression with ML
+    - [ ] importance bar chart
 
 4. **Control Chart**
     - [X] Implement Adjusted Control Charts based on a regression model
