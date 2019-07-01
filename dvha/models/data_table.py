@@ -156,7 +156,10 @@ class DataTable:
         if column in self.keys:
             index = self.columns.index(column)
             if self.layout:
-                self.layout.DeleteColumn(index)
+                try:
+                    self.layout.DeleteColumn(index)
+                except Exception as e:
+                    print(e)
             self.data.pop(column)
             self.columns.pop(index)
 
