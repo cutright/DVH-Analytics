@@ -765,6 +765,7 @@ class PlotMultiVarRegression(Plot):
         x_len = len(x_variables)
         self.X, self.y, self.mrn, self.uid, self.dates = stats_data.get_X_and_y(y_variable, x_variables,
                                                                                 include_patient_info=True)
+
         self.reg = MultiVariableRegression(self.X, self.y)
 
         self.source['residuals'].data = {'x': self.reg.predictions,
@@ -1138,7 +1139,7 @@ class PlotRandomForest(Plot):
     """
     Generate plot for the Random Forest frame created in the MulitVariable Regression frame
     """
-    def __init__(self, parent, options, X, y, multi_var_pred):
+    def __init__(self, parent, options, X, y, multi_var_pred, mrn, study_date):
         """
         :param parent: the wx UI object where the plot will be displayed
         :param options: user preferences
@@ -1158,30 +1159,84 @@ class PlotRandomForest(Plot):
         self.X, self.y, self.options = X, y, options
         self.x = list(range(1, len(self.y)+1))
         self.multi_var_pred = multi_var_pred
+        self.mrn = mrn
+        self.study_date = study_date
 
-        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], y_predict=[], multi_var_predict=[])),
+        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
+                       'plot_predict': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
+                       'plot_multi_var': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
+                       'diff_ml': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
+                       'diff_mvr': ColumnDataSource(data=dict(x=[], y=[],mrn=[], study_date=[])),
                        'importance': ColumnDataSource(data=dict(y=[], left=[], right=[], height=[]))}
 
         self.figure.xaxis.axis_label = "Study"
 
         self.imp_figure = figure(y_range=[''])
+        self.diff_figure = figure()
         self.initialize_importance_figure()
 
         self.__add_plot_data()
         self.__do_layout()
+        self.__add_hover()
+        self.__add_legend()
 
         self.set_figure_dimensions()
         self.update_bokeh_layout_in_wx_python()
 
     def __add_plot_data(self):
-        self.figure.circle('x', 'y', source=self.source['plot'], color='blue')
-        self.figure.circle('x', 'y_predict', source=self.source['plot'], color='red')
-        self.figure.cross('x', 'multi_var_predict', source=self.source['plot'], color='black')
+        self.y_data = self.figure.circle('x', 'y', source=self.source['plot'], color='blue')
+        self.y_ml = self.figure.circle('x', 'y', source=self.source['plot_predict'], color='red')
+        self.y_mv = self.figure.cross('x', 'y', source=self.source['plot_multi_var'], color='black')
 
-        self.imp_figure.hbar('y', 'height', 'right', source=self.source['importance'])
+        self.imp_figure.hbar('y', 'height', 'right', source=self.source['importance'],
+                             color=self.options.PLOT_COLOR, alpha=0.6)
+
+        # self.diff_figure.vbar('x', 'top', 'width', source=self.source['diff'])
+        # self.vbar = self.histogram.vbar(x='x', width='width', bottom=0, top='top', source=self.source['hist'],
+        #                                 color=self.options.PLOT_COLOR, alpha=self.options.HISTOGRAM_ALPHA)
+        self.diff_ml = self.diff_figure.vbar(x='x', top='y', bottom=0, width=0.3, source=self.source['diff_ml'],
+                                             color='black', alpha=0.6)
+        self.diff_mvr = self.diff_figure.vbar(x='x', top='y', bottom=0, width=0.3, source=self.source['diff_mvr'],
+                                              color='red', alpha=0.6)
 
     def __do_layout(self):
-        self.bokeh_layout = row(self.figure, self.imp_figure)
+        self.bokeh_layout = column(row(self.figure, self.imp_figure),
+                                   self.diff_figure)
+
+    def __add_hover(self):
+        self.figure.add_tools(HoverTool(show_arrow=True,
+                                        tooltips=[('ID', '@mrn'),
+                                                  ('Date', '@study_date{%F}'),
+                                                  ('x', '@x{0.2f}'),
+                                                  ('y', '@y{0.2f}')],
+                                        formatters={'study_date': 'datetime'}))
+
+        self.diff_figure.add_tools(HoverTool(show_arrow=True,
+                                             tooltips=[('ID', '@mrn'),
+                                                       ('Date', '@study_date{%F}'),
+                                                       ('x', '@x{0.2f}'),
+                                                       ('y', '@y{0.2f}')],
+                                             formatters={'study_date': 'datetime'}))
+
+        self.imp_figure.add_tools(HoverTool(show_arrow=True,
+                                            tooltips=[('Importance', '@right{0.3f}')]))
+
+    def __add_legend(self):
+        legend = Legend(items=[("Data  ", [self.y_data]),
+                               ("Random Forest  ", [self.y_ml]),
+                               ("Multi-Variable Reg.  ", [self.y_mv])],
+                        orientation='horizontal')
+
+        legend_diff = Legend(items=[("Rand Forest  ", [self.diff_ml]),
+                                    ("Multi-Variable Reg.  ", [self.diff_mvr])],
+                             orientation='horizontal')
+
+        # Add the layout outside the plot, clicking legend item hides the line
+        self.figure.add_layout(legend, 'above')
+        self.figure.legend.click_policy = "hide"
+
+        self.diff_figure.add_layout(legend_diff, 'above')
+        self.diff_figure.legend.click_policy = "hide"
 
     def initialize_importance_figure(self):
         self.imp_figure.xaxis.axis_label = 'Importance'
@@ -1193,6 +1248,15 @@ class PlotRandomForest(Plot):
         self.imp_figure.min_border = self.options.MIN_BORDER
         self.imp_figure.yaxis.axis_label_text_baseline = "bottom"
 
+        self.diff_figure.xaxis.axis_label = 'Study'
+        self.diff_figure.yaxis.axis_label = 'y - prediction'
+        self.diff_figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.diff_figure.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.diff_figure.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.diff_figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.diff_figure.min_border = self.options.MIN_BORDER
+        self.diff_figure.yaxis.axis_label_text_baseline = "bottom"
+
     def set_figure_dimensions(self):
         # plot_width = 400, plot_height = 400, frame_size = (900, 600)
         panel_width, panel_height = self.parent.GetSize()
@@ -1200,20 +1264,32 @@ class PlotRandomForest(Plot):
         self.figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 250.)
         self.imp_figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 400.)
         self.imp_figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 250.)
+        self.diff_figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 400.)
+        self.diff_figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 250.)
 
     def update_data(self, y_pred, feature_importance, x_variables, y_variable):
 
-        self.source['plot'].data = {'x': self.x,
-                                    'y': self.y,
-                                    'y_predict': y_pred,
-                                    'multi_var_predict': self.multi_var_pred}
+        self.source['plot'].data = {'x': self.x, 'y': self.y, 'mrn': self.mrn, 'study_date': self.study_date}
+
+        self.source['plot_predict'].data = {'x': self.x, 'y': y_pred, 'mrn': self.mrn, 'study_date': self.study_date}
+
+        self.source['plot_multi_var'].data = {'x': self.x, 'y': self.multi_var_pred, 'mrn': self.mrn,
+                                              'study_date': self.study_date}
+
+        self.source['diff_ml'].data = {'x': np.array(self.x) - 0.15,
+                                       'y': np.subtract(np.array(self.y), np.array(self.multi_var_pred)),
+                                       'mrn': self.mrn, 'study_date': self.study_date}
+        self.source['diff_mvr'].data = {'x': np.array(self.x) + 0.15,
+                                        'y': np.subtract(np.array(self.y), np.array(y_pred)),
+                                        'mrn': self.mrn, 'study_date': self.study_date}
 
         length = len(feature_importance)
+        order = [i[0] for i in sorted(enumerate(feature_importance), key=lambda x:x[1])]
         self.source['importance'].data = {'y': [i+0.5 for i in range(length)],
-                                          'right': feature_importance,
+                                          'right': [feature_importance[i] for i in order],
                                           'left': [0] * length,
                                           'height': [0.5] * length}
-        self.imp_figure.y_range.factors = x_variables
+        self.imp_figure.y_range.factors = [x_variables[i] for i in order]
         self.figure.yaxis.axis_label = y_variable
 
         self.update_bokeh_layout_in_wx_python()

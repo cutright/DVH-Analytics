@@ -23,7 +23,7 @@ class RandomForestFrame(wx.Frame):
     """
     View random forest predictions for provided data
     """
-    def __init__(self, X, y, x_variables, y_variable, options, multi_var_pred):
+    def __init__(self, X, y, x_variables, y_variable, multi_var_pred, options, mrn, study_date):
         """
         :param X:
         :param y: data to be modeled
@@ -40,9 +40,9 @@ class RandomForestFrame(wx.Frame):
         self.X, self.y = X, y
         self.x_variables, self.y_variable = x_variables, y_variable
 
-        self.plot = PlotRandomForest(self, options, X, y, multi_var_pred)
+        self.plot = PlotRandomForest(self, options, X, y, multi_var_pred, mrn, study_date)
 
-        self.SetSize((882, 749))
+        self.SetSize((882, 950))
         self.spin_ctrl_trees = wx.SpinCtrl(self, wx.ID_ANY, "100", min=1, max=1000)
         self.spin_ctrl_features = wx.SpinCtrl(self, wx.ID_ANY, "2", min=2, max=len(x_variables))
         self.button_update = wx.Button(self, wx.ID_ANY, "Calculate")
@@ -52,6 +52,8 @@ class RandomForestFrame(wx.Frame):
         self.__do_bind()
 
         self.Show()
+
+        self.on_update(None)
 
     def __set_properties(self):
         self.SetTitle("Random Forest")
@@ -89,12 +91,13 @@ class RandomForestFrame(wx.Frame):
         sizer_wrapper.Add(sizer_input_and_plot, 1, wx.ALL | wx.EXPAND, 5)
 
         self.SetSizer(sizer_wrapper)
+        self.Center()
         self.Layout()
 
     def on_update(self, evt):
-        y_pred, mse, importances = get_random_forest(self.X, self.y, n_estimators=self.spin_ctrl_trees.GetValue(),
-                                                     max_features=self.spin_ctrl_features.GetValue())
-        self.plot.update_data(y_pred, importances, self.x_variables, self.y_variable)
+        y_pred, mse, importance = get_random_forest(self.X, self.y, n_estimators=self.spin_ctrl_trees.GetValue(),
+                                                    max_features=self.spin_ctrl_features.GetValue())
+        self.plot.update_data(y_pred, importance, self.x_variables, self.y_variable)
 
 
 # class RandomForestWorker(Thread):

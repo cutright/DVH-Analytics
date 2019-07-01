@@ -263,7 +263,7 @@ class RegressionFrame:
             x_variables = list(self.x_variable_nodes[y_variable])
 
             dlg = MultiVarResultsFrame(y_variable, x_variables,
-                                       self.stats_data, self.options, self.plot.reg.predictions)
+                                       self.stats_data, self.options)
             dlg.Show()
         else:
             wx.MessageBox('No data has been selected for regression.', 'Regression Error',
@@ -331,7 +331,7 @@ class MultiVarResultsFrame(wx.Frame):
     """
     Class to view multi-variable regression with data passed from RegressionFrame
     """
-    def __init__(self, y_variable, x_variables, stats_data, options, multi_var_pred):
+    def __init__(self, y_variable, x_variables, stats_data, options):
         """
         :param y_variable: dependent variable
         :type y_variable: str
@@ -346,7 +346,7 @@ class MultiVarResultsFrame(wx.Frame):
 
         self.y_variable = y_variable
         self.x_variables = x_variables
-        self.multi_var_pred = multi_var_pred
+        self.stats_data = stats_data
 
         set_msw_background_color(self)  # If windows, change the background color
 
@@ -404,7 +404,8 @@ class MultiVarResultsFrame(wx.Frame):
         self.Center()
 
     def on_random_forest(self, evt):
-        RandomForestFrame(self.plot.X, self.plot.y, self.x_variables, self.y_variable, self.options, self.multi_var_pred)
+        RandomForestFrame(self.plot.X, self.plot.y, self.x_variables, self.y_variable, self.plot.reg.predictions,
+                          self.options, self.plot.mrn, self.plot.dates)
 
     def on_export(self, evt):
         save_data_to_file(self, 'Save multi-variable regression data to csv', self.plot.get_csv_data())
