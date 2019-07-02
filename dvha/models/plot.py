@@ -1154,7 +1154,7 @@ class PlotRandomForest(Plot):
         self.type = 'random_forest'
         self.parent = parent
 
-        self.init_size = {'plot': (400, 400)}
+        self.init_size = {'plot': (750, 275)}
 
         self.X, self.y, self.options = X, y, options
         self.x = list(range(1, len(self.y)+1))
@@ -1195,13 +1195,12 @@ class PlotRandomForest(Plot):
         # self.vbar = self.histogram.vbar(x='x', width='width', bottom=0, top='top', source=self.source['hist'],
         #                                 color=self.options.PLOT_COLOR, alpha=self.options.HISTOGRAM_ALPHA)
         self.diff_ml = self.diff_figure.vbar(x='x', top='y', bottom=0, width=0.3, source=self.source['diff_ml'],
-                                             color='black', alpha=0.6)
+                                             color='red', alpha=0.6)
         self.diff_mvr = self.diff_figure.vbar(x='x', top='y', bottom=0, width=0.3, source=self.source['diff_mvr'],
-                                              color='red', alpha=0.6)
+                                              color='black', alpha=0.6)
 
     def __do_layout(self):
-        self.bokeh_layout = column(row(self.figure, self.imp_figure),
-                                   self.diff_figure)
+        self.bokeh_layout = column(self.figure, self.diff_figure, self.imp_figure)
 
     def __add_hover(self):
         self.figure.add_tools(HoverTool(show_arrow=True,
@@ -1249,7 +1248,7 @@ class PlotRandomForest(Plot):
         self.imp_figure.yaxis.axis_label_text_baseline = "bottom"
 
         self.diff_figure.xaxis.axis_label = 'Study'
-        self.diff_figure.yaxis.axis_label = 'y - prediction'
+        self.diff_figure.yaxis.axis_label = 'Residual'
         self.diff_figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
         self.diff_figure.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
         self.diff_figure.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
@@ -1276,12 +1275,12 @@ class PlotRandomForest(Plot):
         self.source['plot_multi_var'].data = {'x': self.x, 'y': self.multi_var_pred, 'mrn': self.mrn,
                                               'study_date': self.study_date}
 
-        self.source['diff_ml'].data = {'x': np.array(self.x) - 0.15,
-                                       'y': np.subtract(np.array(self.y), np.array(self.multi_var_pred)),
-                                       'mrn': self.mrn, 'study_date': self.study_date}
-        self.source['diff_mvr'].data = {'x': np.array(self.x) + 0.15,
-                                        'y': np.subtract(np.array(self.y), np.array(y_pred)),
+        self.source['diff_mvr'].data = {'x': np.array(self.x) - 0.2,
+                                        'y': np.subtract(np.array(self.y), np.array(self.multi_var_pred)),
                                         'mrn': self.mrn, 'study_date': self.study_date}
+        self.source['diff_ml'].data = {'x': np.array(self.x) + 0.2,
+                                       'y': np.subtract(np.array(self.y), np.array(y_pred)),
+                                       'mrn': self.mrn, 'study_date': self.study_date}
 
         length = len(feature_importance)
         order = [i[0] for i in sorted(enumerate(feature_importance), key=lambda x:x[1])]
