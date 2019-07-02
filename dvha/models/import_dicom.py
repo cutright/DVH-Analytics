@@ -30,7 +30,7 @@ from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, IMPORTED_DIR, 
 from dvha.tools.dicom_dose_sum import sum_dose_grids
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
-    set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi
+    set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_folders
 
 
 # TODO: Provide methods to write over-rides to DICOM file
@@ -147,6 +147,7 @@ class ImportDicomFrame(wx.Frame):
         After DICOM directory is scanned and sorted, parse_dicom_data will be called
         """
         pub.subscribe(self.parse_dicom_data, "parse_dicom_data")
+        pub.subscribe(self.remove_empty_folders, "remove_empty_folders")
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_browse, id=self.button_browse.GetId())
@@ -708,6 +709,9 @@ class ImportDicomFrame(wx.Frame):
             dlg.ShowModal()
             dlg.Destroy()
 
+    def remove_empty_folders(self):
+        remove_empty_folders(self.start_path)
+
     def parse_dicom_data(self):
         wait = wx.BusyInfo("Parsing DICOM data\nPlease wait...")
         parsed_uids = list(self.parsed_dicom_data)
@@ -1109,6 +1113,8 @@ class ImportWorker(Thread):
                     print('\tPlan UID: %s' % plan_uid)
 
                 plan_counter += 1
+
+        pub.sendMessage("remove_empty_folders")
 
     def import_study(self, plan_uid, final_plan_in_study=True):
         """

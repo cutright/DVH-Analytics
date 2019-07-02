@@ -501,19 +501,21 @@ def move_imported_dicom_files(dicom_files, new_dir):
                 pass
 
 
-# def remove_empty_folders(start_path):
-#     if start_path[0:2] == './':
-#         rel_path = start_path[2:]
-#         start_path = os.path.join(SCRIPT_DIR, rel_path)
-#
-#     for (path, dirs, files) in os.walk(start_path, topdown=False):
-#         if files:
-#             continue
-#         try:
-#             if path != start_path:
-#                 os.rmdir(path)
-#         except OSError:
-#             pass
+def remove_empty_folders(start_path):
+    for (path, dirs, files) in os.walk(start_path, topdown=False):
+        if files:
+            continue
+        try:
+            if path != start_path:
+                os.rmdir(path)
+        except OSError:
+            pass
+
+    if not os.listdir(start_path):
+        try:
+            os.rmdir(start_path)
+        except OSError:
+            pass
 
 
 def move_all_files(new_dir, old_dir):
