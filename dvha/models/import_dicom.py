@@ -86,11 +86,12 @@ class ImportDicomFrame(wx.Frame):
                       'physician': wx.ComboBox(self, wx.ID_ANY, choices=self.roi_map.get_physicians(),
                                                style=wx.CB_DROPDOWN | wx.CB_READONLY),
                       'tx_site': wx.ComboBox(self, wx.ID_ANY, choices=tx_sites, style=wx.CB_DROPDOWN),
-                      'rx_dose': wx.TextCtrl(self, wx.ID_ANY, ""),
-                      'fx_grp': wx.ComboBox(self, wx.ID_ANY, choices=['1'], style=wx.CB_DROPDOWN | wx.CB_READONLY)}
+                      'rx_dose': wx.TextCtrl(self, wx.ID_ANY, "")}
+        # 'fx_grp': wx.ComboBox(self, wx.ID_ANY, choices=['1'], style=wx.CB_DROPDOWN | wx.CB_READONLY)}
+
         self.input['physician'].SetValue('')
         self.input['tx_site'].SetValue('')
-        self.input['fx_grp'].SetValue('1')
+        # self.input['fx_grp'].SetValue('1')
         self.button_edit_sim_study_date = wx.Button(self, wx.ID_ANY, "Edit")
         self.button_edit_birth_date = wx.Button(self, wx.ID_ANY, "Edit")
 
@@ -218,7 +219,7 @@ class ImportDicomFrame(wx.Frame):
         sizer_rx = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
         sizer_rx_fx_grp_input = wx.BoxSizer(wx.HORIZONTAL)
         sizer_rx_input = wx.BoxSizer(wx.VERTICAL)
-        sizer_fx_grp_input = wx.BoxSizer(wx.VERTICAL)
+        # sizer_fx_grp_input = wx.BoxSizer(wx.VERTICAL)
         sizer_checkbox_rx = wx.BoxSizer(wx.HORIZONTAL)
         sizer_tx_site = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
         sizer_tx_site_checkbox = wx.BoxSizer(wx.HORIZONTAL)
@@ -316,13 +317,13 @@ class ImportDicomFrame(wx.Frame):
         sizer_plan_data.Add(sizer_tx_site, 1, wx.ALL | wx.EXPAND, 5)
 
         self.label['rx_dose'] = wx.StaticText(self, wx.ID_ANY, "Rx Dose (Gy):")
-        self.label['fx_grp'] = wx.StaticText(self, wx.ID_ANY, "Fx Group:")
+        # self.label['fx_grp'] = wx.StaticText(self, wx.ID_ANY, "Fx Group:")
         sizer_rx_input.Add(self.label['rx_dose'], 0, 0, 0)
         sizer_rx_input.Add(self.input['rx_dose'], 0, 0, 0)
-        sizer_fx_grp_input.Add(self.label['fx_grp'], 0, wx.LEFT, 20)
-        sizer_fx_grp_input.Add(self.input['fx_grp'], 0, wx.LEFT, 20)
+        # sizer_fx_grp_input.Add(self.label['fx_grp'], 0, wx.LEFT, 20)
+        # sizer_fx_grp_input.Add(self.input['fx_grp'], 0, wx.LEFT, 20)
         sizer_rx_fx_grp_input.Add(sizer_rx_input, 0, 0, 0)
-        sizer_rx_fx_grp_input.Add(sizer_fx_grp_input, 0, 0 , 0)
+        # sizer_rx_fx_grp_input.Add(sizer_fx_grp_input, 0, 0, 0)
         sizer_rx.Add(sizer_rx_fx_grp_input, 0, 0, 0)
         sizer_checkbox_rx.Add(self.checkbox['rx_dose_1'], 0, wx.RIGHT, 20)
         sizer_checkbox_rx.Add(self.checkbox['rx_dose_2'], 0, 0, 0)
