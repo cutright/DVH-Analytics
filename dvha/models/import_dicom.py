@@ -110,7 +110,6 @@ class ImportDicomFrame(wx.Frame):
         self.input_roi = {'physician': wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY),
                           'type': wx.ComboBox(self, wx.ID_ANY, choices=self.options.ROI_TYPES, style=wx.CB_DROPDOWN)}
         self.input_roi['type'].SetValue('')
-        self.button_autodetect_targets = wx.Button(self, wx.ID_ANY, "Autodetect Target/Tumor ROIs")
         self.button_roi_manager = wx.Button(self, wx.ID_ANY, "ROI Manager")
 
         self.disable_inputs()
@@ -178,7 +177,6 @@ class ImportDicomFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_import, id=self.button_import.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_cancel, id=self.button_cancel.GetId())
 
-        self.Bind(wx.EVT_BUTTON, self.on_autodetect_target, id=self.button_autodetect_targets.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_roi_manager, id=self.button_roi_manager.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.on_physician_roi_change, id=self.input_roi['physician'].GetId())
 
@@ -336,7 +334,6 @@ class ImportDicomFrame(wx.Frame):
         sizer_roi_tree.Add(self.tree_ctrl_roi, 1, wx.ALL | wx.EXPAND, 0)
         self.panel_roi_tree.SetSizer(sizer_roi_tree)
         sizer_roi_map.Add(self.panel_roi_tree, 1, wx.EXPAND, 0)
-        sizer_roi_map.Add(self.button_autodetect_targets, 0, wx.EXPAND | wx.ALL, 5)
         sizer_roi_map.Add(self.button_roi_manager, 0, wx.EXPAND | wx.ALL, 5)
 
         self.label['physician_roi'] = wx.StaticText(self, wx.ID_ANY, "Physician's ROI Label:")
@@ -574,7 +571,6 @@ class ImportDicomFrame(wx.Frame):
         self.button_edit_sim_study_date.Disable()
         self.button_edit_birth_date.Disable()
         self.button_apply_plan_data.Disable()
-        self.button_autodetect_targets.Disable()
         self.button_roi_manager.Disable()
         self.button_delete_study.Disable()
         self.button_add_physician.Disable()
@@ -587,7 +583,6 @@ class ImportDicomFrame(wx.Frame):
         self.button_edit_sim_study_date.Enable()
         self.button_edit_birth_date.Enable()
         self.button_apply_plan_data.Enable()
-        self.button_autodetect_targets.Enable()
         self.button_roi_manager.Enable()
         self.button_delete_study.Enable()
         self.button_add_physician.Enable()
@@ -731,6 +726,8 @@ class ImportDicomFrame(wx.Frame):
                                                                roi_map=self.roi_map)
 
             wx.CallAfter(self.gauge.SetValue, int(100 * (plan_counter+1) / plan_total))
+        self.label_progress.SetLabelText("Auto-detecting plans missing PTV labels")
+        self.autodetect_target_for_plans_missing_targets()
         self.gauge.Hide()
         self.label_progress.SetLabelText("All %s plans parsed" % plan_total)
 
@@ -824,12 +821,13 @@ class ImportDicomFrame(wx.Frame):
         self.validate(self.selected_uid)
         self.update_warning_label()
 
-    def on_autodetect_target(self, evt):
-        for roi in self.dicom_importer.roi_name_map.values():
-            self.parsed_dicom_data[self.selected_uid].autodetect_target_roi_type(roi['key'])
-        self.update_roi_inputs()
-        self.validate(self.selected_uid)
+    def autodetect_target_for_plans_missing_targets(self):
+        for uid, parsed_dicom_data in self.parsed_dicom_data.items():
+            if not parsed_dicom_data.ptv_exists:
+                parsed_dicom_data.autodetect_target_roi_type()
+                self.validate(uid)
         self.update_warning_label()
+        self.update_roi_inputs()
 
     def on_roi_manager(self, evt):
         RoiManager(self, self.roi_map, self.input['physician'].GetValue(), self.input_roi['physician'].GetValue())

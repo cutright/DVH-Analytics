@@ -725,21 +725,26 @@ class DICOM_Parser:
             return self.roi_type_over_ride[key]
         return self.dicompyler_rt_structures[key]['type'].upper()
 
-    def autodetect_target_roi_type(self, key):
+    def autodetect_target_roi_type(self, key=None):
         """
         Target/tumor ROIs are often not labeled properly in ROI Type, but often start with correct acronym
         any ROI that starts with GTV, CTV, ITV, or PTV and is followed by nothing, a single number, or a character
         then a single number will be flagged.
-        :param key: the index of the roi
+        :param key: the index of the roi, if key is None, will search all keys
         """
 
-        roi_name = self.dicompyler_rt_structures[key]['name'].lower()
-        roi_name_len = len(roi_name)
-        if (roi_name_len > 2 and roi_name[0:3] in {'gtv', 'ctv', 'itv', 'ptv'}) and \
-                ((roi_name_len == 3) or
-                 (roi_name_len == 4 and roi_name[3].isdigit()) or
-                 (roi_name_len == 5 and not roi_name[3].isdigit() and roi_name[4].isdigit())):
-            self.roi_type_over_ride[key] = roi_name[0:3].upper()
+        if key is None:
+            roi_names = {key: structure['name'].lower() for key, structure in self.dicompyler_rt_structures.items()}
+        else:
+            roi_names = {key: self.dicompyler_rt_structures[key]['name'].lower()}
+
+        for key, roi_name in roi_names.items():
+            roi_name_len = len(roi_name)
+            if (roi_name_len > 2 and roi_name[0:3] in {'gtv', 'ctv', 'itv', 'ptv'}) and \
+                    ((roi_name_len == 3) or
+                     (roi_name_len == 4 and roi_name[3].isdigit()) or
+                     (roi_name_len == 5 and not roi_name[3].isdigit() and roi_name[4].isdigit())):
+                self.roi_type_over_ride[key] = roi_name[0:3].upper()
 
     def reset_roi_type_over_ride(self, key):
         self.roi_type_over_ride[key] = None
