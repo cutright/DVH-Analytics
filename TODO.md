@@ -23,8 +23,8 @@
 3. **Regression**
     - [ ] Machine learning modules in Regression tab (after running multi-variable regression) aren't complete 
     - [X] Need to be able to store a model (particularly for use in Control Chart)
-    - [ ] Plot regression with ML
-    - [ ] importance bar chart
+    - [X] Plot regression with ML
+    - [X] importance bar chart
 
 4. **Control Chart**
     - [X] Implement Adjusted Control Charts based on a regression model
@@ -41,3 +41,7 @@
     - [ ] Move models.datatable.py to [ObjectListView](http://www.blog.pythonlibrary.org/2009/12/23/wxpython-using-objectlistview-instead-of-a-listctrl/)
     - [ ] Allow for a simultaneous 2nd query as found in pure bokeh version of DVHA
     - [ ] Window sizes should be relative to user's screen resolution
+
+8. **Calculations**
+    - [ ] dicopyler's dvhcalc.get_dvh().min reporting excessively small doses
+    - [x] sample roi's for min distance calcualtions
