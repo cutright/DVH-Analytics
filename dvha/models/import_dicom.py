@@ -30,7 +30,7 @@ from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, IMPORTED_DIR, 
 from dvha.tools.dicom_dose_sum import sum_dose_grids
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
-    set_msw_background_color, is_windows, get_tree_ctrl_image
+    set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi
 
 
 # TODO: Provide methods to write over-rides to DICOM file
@@ -1209,6 +1209,7 @@ class ImportWorker(Thread):
 
                 # Calculate minimum, mean, median, and max distances and DTH
                 tv_coord = db_update.get_treatment_volume_coord(tv)
+                tv_coord = sample_roi(tv_coord)
                 self.post_import_calc('Distances to PTV', study_uid, post_import_rois,
                                       db_update.min_distances, tv_coord)
                 if self.terminate['status']:

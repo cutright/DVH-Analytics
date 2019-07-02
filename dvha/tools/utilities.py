@@ -639,3 +639,42 @@ def load_object_from_file(abs_file_path):
         with open(abs_file_path, 'rb') as infile:
             obj = pickle.load(infile)
         return obj
+
+
+def sample_list(some_list, max_size, n):
+    """
+    Reduce a list by given factor iteratively until list size less than max_size
+    :param some_list: any list you like!
+    :type some_list: list
+    :param max_size: the maximum number of items in the returned list
+    :type max_size: int
+    :param n: remove every nth element
+    :type n: int
+    :return: sampled list
+    :rtype: list
+    """
+    while len(some_list) > max_size:
+        some_list = remove_every_nth_element(some_list, n)
+    return some_list
+
+
+def remove_every_nth_element(some_list, n):
+    return [value for i, value in enumerate(some_list) if i % n != 0]
+
+
+def sample_roi(roi_coord, max_point_count=5000, iterative_reduction=0.1):
+    """
+    Iteratively sample a list of 3D points by the iterative_reduction until the size of the list is < max_point_count
+    This is used to reduce the number of points used in the ptv distance calculations because:
+        1) Shapely returns a much large number of points when calculating total PTVs
+        2) Users could easily run into memory issues using scip.dist if all points are used (particularly on MSW)
+    :param roi_coord: a list of 3D points representing an roi
+    :type roi_coord: list
+    :param max_point_count: the maximum number of points in the returned roi_coord
+    :type max_point_count: int
+    :param iterative_reduction: iteratively remove this fraction of points until len < max_point_count
+    :type iterative_reduction: float
+    :return: sampled roi
+    :rtype: list
+    """
+    return sample_list(roi_coord, max_point_count, int(1 / iterative_reduction))

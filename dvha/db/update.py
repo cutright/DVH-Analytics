@@ -18,7 +18,7 @@ from dvha.db.sql_connector import DVH_SQL
 from dvha.tools import roi_geometry as roi_geom
 from dvha.tools import roi_formatter as roi_form
 from dvha.tools.mlc_analyzer import Beam as BeamAnalyzer
-from dvha.tools.utilities import calc_stats
+from dvha.tools.utilities import calc_stats, sample_roi
 
 
 def centroid(study_instance_uid, roi_name):
@@ -109,6 +109,9 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
         treatment_volume_coord = roi_form.get_roi_coordinates_from_planes(roi_geom.union(ptvs))
 
     oar_coordinates = roi_form.get_roi_coordinates_from_string(oar_coordinates_string[0][0])
+
+    treatment_volume_coord = sample_roi(treatment_volume_coord)
+    oar_coordinates = sample_roi(oar_coordinates)
 
     error = False
     try:
