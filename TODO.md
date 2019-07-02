@@ -12,7 +12,7 @@
             - [ ] Rx dose of 2nd plan not importing?
             - [ ] Allow a single structure file for two plans pointing to same file
             - [ ] Dose sums that require interpolation failing. Issue posted [here](https://groups.google.com/forum/?utm_medium=email&utm_source=footer#!msg/dicompyler/qkU2CtYzgLg/EbaV5foXAgAJ)
-            - [ ] move_files should be called after study completely imported, not plan
+            - [X] move_files should be called after study completely imported, not plan
 
 2. **Open/Save and Import**
     * *Open/Save*
@@ -44,4 +44,5 @@
 
 8. **Calculations**
     - [ ] dicopyler's dvhcalc.get_dvh().min reporting excessively small doses
-    - [x] sample roi's for min distance calcualtions
+    - [x] sample roi's for min distance calculations
+    - [ ] Min distance calculation needs points sampled inside top and bottom slices

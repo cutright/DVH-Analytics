@@ -30,7 +30,7 @@ def sum_dose_grids(dose_grids):
     return dose_sum
 
 
-# Slightly modifed from https://github.com/dicompyler/dicompyler-plugins/blob/master/plugins/plansum/plansum.py
+# Slightly modified from https://github.com/dicompyler/dicompyler-plugins/blob/master/plugins/plansum/plansum.py
 def sum_two_dose_grids(old, new):
     """ Given two Dicom RTDose objects, returns a summed RTDose object"""
     """The summed RTDose object will consist of pixels inside the region of 
@@ -43,17 +43,16 @@ def sum_two_dose_grids(old, new):
         the dose objects could be directly summed.  Used for unit testing."""
 
     # Recycle the new Dicom object to store the summed dose values
-    # TODO: Test does this actually just edit new?
     sum_dcm = new
 
     # Test if dose grids are coincident.  If so, we can directly sum the
     # pixel arrays.
-    print('Old ImagePositionPatient', old.ImagePositionPatient)
-    print('New ImagePositionPatient', new.ImagePositionPatient)
-    if (old.ImagePositionPatient == new.ImagePositionPatient and
-            old.pixel_array.shape == new.pixel_array.shape and
-            old.PixelSpacing == new.PixelSpacing and
-            old.GridFrameOffsetVector == new.GridFrameOffsetVector) or True:
+
+    #  For now, always do straight sum
+    if True or (old.ImagePositionPatient == new.ImagePositionPatient and
+                old.pixel_array.shape == new.pixel_array.shape and
+                old.PixelSpacing == new.PixelSpacing and
+                old.GridFrameOffsetVector == new.GridFrameOffsetVector):
         print("PlanSum: Using direct summation")
         dose_sum = old.pixel_array * old.DoseGridScaling + new.pixel_array * new.DoseGridScaling
 
