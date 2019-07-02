@@ -116,17 +116,22 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
     error = False
     try:
         data = roi_geom.min_distances_to_target(oar_coordinates, treatment_volume_coord)
-    except MemoryError as e:
-        print("Memory Error: ", e)
-        error = True
-        data = None
-    except Exception as e:
-        print('Error: ', e)
-        error = True
-        data = None
-    if error:
-        print('Error reported for %s with study_instance_uid %s' % (roi_name, study_instance_uid))
-        print('Skipping PTV distance and DTH calculations for this ROI.')
+    except MemoryError:
+        try:
+            treatment_volume_coord = sample_roi(treatment_volume_coord,  max_point_count=4000)
+            oar_coordinates = sample_roi(oar_coordinates,  max_point_count=4000)
+            data = roi_geom.min_distances_to_target(oar_coordinates, treatment_volume_coord)
+        except MemoryError as e:
+            print("Memory Error: ", e)
+            error = True
+            data = None
+        except Exception as e:
+            print('Error: ', e)
+            error = True
+            data = None
+        if error:
+            print('Error reported for %s with study_instance_uid %s' % (roi_name, study_instance_uid))
+            print('Skipping PTV distance and DTH calculations for this ROI.')
 
     if data is not None:
         dth = roi_geom.dth(data)
