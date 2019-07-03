@@ -36,6 +36,8 @@ class DataTable:
 
         self.layout = list_ctrl
 
+        self.sort_indices = None
+
         self.data = deepcopy(data)
         self.columns = deepcopy(columns)
         self.widths = widths
@@ -395,14 +397,25 @@ class DataTable:
         return bool(self.row_count)
 
     def sort_table(self, evt):
+
         if self.data:
             key = self.columns[evt.Column]  # get the column name from the column index (evt.Column)
             sort_indices = get_sorted_indices(self.data[key])  # handles str and float mixtures
+
+            if self.sort_indices is None:
+                self.sort_indices = list(range(len(self.data[key])))
 
             # reverse order if already sorted
             if sort_indices == list(range(len(sort_indices))):
                 sort_indices = sort_indices[::-1]
 
+            self.sort_indices = [self.sort_indices[i] for i in sort_indices]  # keep original order
+
             # reorder data and reinitialize table view
             self.data = {column: [self.data[column][i] for i in sort_indices] for column in self.columns}
             self.set_data(self.data, self.columns, self.formats)
+
+    def get_data_in_original_order(self):
+        if self.sort_indices is None:
+            return self.data
+        return {column: [self.data[column][i] for i in self.sort_indices] for column in self.columns}
