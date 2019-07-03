@@ -58,7 +58,7 @@ class RegressionFrame:
         self.combo_box_y_axis = wx.ComboBox(self.pane_plot, wx.ID_ANY, choices=[],
                                             style=wx.CB_DROPDOWN | wx.TE_READONLY)
         self.spin_button_y_axis = wx.SpinButton(self.pane_plot, wx.ID_ANY, style=wx.SP_WRAP)
-        self.checkbox = wx.CheckBox(self.pane_plot, wx.ID_ANY, "Include in Multi-Var\nRegression")
+        self.checkbox = wx.CheckBox(self.pane_plot, wx.ID_ANY, "Include", style=wx.ALIGN_RIGHT)
         self.plot = PlotRegression(self.pane_plot, self.options)
         self.button_multi_var_reg_model = wx.Button(self.pane_tree, wx.ID_ANY, 'Run Selected Model')
         self.button_multi_var_reg_model.Disable()
@@ -94,6 +94,7 @@ class RegressionFrame:
         sizer_plot_pane = wx.BoxSizer(wx.VERTICAL)
         sizer_plot_view = wx.BoxSizer(wx.HORIZONTAL)
         sizer_input = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_check_box = wx.BoxSizer(wx.HORIZONTAL)
 
         sizer_y_axis = wx.BoxSizer(wx.VERTICAL)
         sizer_y_axis_select = wx.BoxSizer(wx.HORIZONTAL)
@@ -111,11 +112,15 @@ class RegressionFrame:
         self.pane_tree.SetSizer(sizer_tree)
 
         label_x_axis = wx.StaticText(self.pane_plot, wx.ID_ANY, "Independent Variable (x-axis):")
-        sizer_x_axis.Add(label_x_axis, 0, 0, 0)
+        sizer_check_box.Add(label_x_axis, 1, wx.EXPAND, 0)
+        sizer_check_box.Add(self.checkbox, 0, wx.LEFT | wx.RIGHT, 10)
+        sizer_x_axis.Add(sizer_check_box, 1, wx.EXPAND, 0)
         sizer_x_axis_select.Add(self.combo_box_x_axis, 1, wx.EXPAND, 0)
         sizer_x_axis_select.Add(self.spin_button_x_axis, 0, 0, 0)
         sizer_x_axis.Add(sizer_x_axis_select, 1, wx.EXPAND, 0)
         sizer_input.Add(sizer_x_axis, 1, wx.ALL, 5)
+
+        sizer_input.Add((30, 10), 0, 0, 0)
 
         label_y_axis = wx.StaticText(self.pane_plot, wx.ID_ANY, "Dependent Variable (y-axis):")
         sizer_y_axis.Add(label_y_axis, 0, 0, 0)
@@ -124,7 +129,6 @@ class RegressionFrame:
         sizer_y_axis.Add(sizer_y_axis_select, 1, wx.EXPAND, 0)
         sizer_input.Add(sizer_y_axis, 1, wx.ALL, 5)
 
-        sizer_input.Add(self.checkbox, 0, wx.ALL, 20)
         sizer_plot_pane.Add(sizer_input, 0, wx.EXPAND, 0)
         sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
         sizer_plot_view.Add(sizer_plot, 1, wx.EXPAND, 10)
