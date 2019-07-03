@@ -113,38 +113,43 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
     treatment_volume_coord = sample_roi(treatment_volume_coord)
     oar_coordinates = sample_roi(oar_coordinates)
 
-    error = False
     try:
         data = roi_geom.min_distances_to_target(oar_coordinates, treatment_volume_coord)
     except MemoryError:
         try:
-            treatment_volume_coord = sample_roi(treatment_volume_coord, max_point_count=3500)
-            oar_coordinates = sample_roi(oar_coordinates,  max_point_count=3500)
+            treatment_volume_coord = sample_roi(treatment_volume_coord, max_point_count=3000)
+            oar_coordinates = sample_roi(oar_coordinates,  max_point_count=3000)
             data = roi_geom.min_distances_to_target(oar_coordinates, treatment_volume_coord)
         except MemoryError as e:
             print("Memory Error: ", e)
-            error = True
+            print('Error reported for %s with study_instance_uid %s' % (roi_name, study_instance_uid))
+            print('Skipping PTV distance and DTH calculations for this ROI.')
             data = None
         except Exception as e:
             print('Error: ', e)
-            error = True
-            data = None
-        if error:
             print('Error reported for %s with study_instance_uid %s' % (roi_name, study_instance_uid))
             print('Skipping PTV distance and DTH calculations for this ROI.')
+            data = None
 
     if data is not None:
-        dth = roi_geom.dth(data)
-        dth_string = ','.join(['%.3f' % num for num in dth])
+        try:
+            dth = roi_geom.dth(data)
+            dth_string = ','.join(['%.3f' % num for num in dth])
 
-        data_map = {'dist_to_ptv_min': round(float(np.min(data)), 2),
-                    'dist_to_ptv_mean': round(float(np.mean(data)), 2),
-                    'dist_to_ptv_median': round(float(np.median(data)), 2),
-                    'dist_to_ptv_max': round(float(np.max(data)), 2),
-                    'dth_string': dth_string}
+            data_map = {'dist_to_ptv_min': round(float(np.min(data)), 2),
+                        'dist_to_ptv_mean': round(float(np.mean(data)), 2),
+                        'dist_to_ptv_median': round(float(np.median(data)), 2),
+                        'dist_to_ptv_max': round(float(np.max(data)), 2),
+                        'dth_string': dth_string}
+        except MemoryError as e:
+            print("Memory Error: ", e)
+            print('Error reported for %s with study_instance_uid %s' % (roi_name, study_instance_uid))
+            print('Skipping PTV distance and DTH calculations for this ROI.')
+            data_map = None
 
-        for key, value in data_map.items():
-            update_dvhs_table(study_instance_uid, roi_name, key, value)
+        if data_map:
+            for key, value in data_map.items():
+                update_dvhs_table(study_instance_uid, roi_name, key, value)
 
 
 def treatment_volume_overlap(study_instance_uid, roi_name, pre_calc=None):
