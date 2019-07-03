@@ -680,3 +680,15 @@ def sample_roi(roi_coord, max_point_count=5000, iterative_reduction=0.1):
     :rtype: list
     """
     return sample_list(roi_coord, max_point_count, int(1 / iterative_reduction))
+
+
+def get_sorted_indices(some_list):
+    try:
+        return [i[0] for i in sorted(enumerate(some_list), key=lambda x: x[1])]
+    except TypeError:  # can't sort if a mix of str and float
+        try:
+            temp_data = [[value, -float('inf')][value == 'None'] for value in some_list]
+            return [i[0] for i in sorted(enumerate(temp_data), key=lambda x: x[1])]
+        except TypeError:
+            temp_data = [str(value) for value in some_list]
+            return [i[0] for i in sorted(enumerate(temp_data), key=lambda x: x[1])]

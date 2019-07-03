@@ -38,15 +38,14 @@ class QueriedDataFrame(wx.Frame):
 
         self.list_ctrl = wx.ListCtrl(self, wx.ID_ANY,
                                      style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
+
         # self.data_table = DataTable(self.list_ctrl, data=self.table_data, columns=self.columns)
         self.data_table = DataTable(self.list_ctrl)
         self.data_table.set_data(self.table_data, self.columns)
 
         self.button_export = wx.Button(self, wx.ID_ANY, "Export to CSV")
-        self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())
 
-        self.Bind(wx.EVT_CLOSE, self.on_close)
-
+        self.__do_bind()
         self.__set_properties()
         self.__do_layout()
 
@@ -54,6 +53,11 @@ class QueriedDataFrame(wx.Frame):
 
     def __set_properties(self):
         self.SetSize((1200, 800))
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())
+        self.Bind(wx.EVT_LIST_COL_CLICK, self.sort_table, self.list_ctrl)
+        self.Bind(wx.EVT_CLOSE, self.on_close)
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -98,3 +102,6 @@ class QueriedDataFrame(wx.Frame):
         short_cut = ['DVHs', 'Plans', 'Rxs', 'Beams'].index(self.sql_table) + 1
         show_hide = ['Show', 'Hide']['Show' in self.menu.GetLabel(self.menu_item_id)]
         self.menu.SetLabel(self.menu_item_id, '%s %s\tCtrl+%s' % (show_hide, self.sql_table, short_cut))
+
+    def sort_table(self, evt):
+        self.data_table.sort_table(evt)

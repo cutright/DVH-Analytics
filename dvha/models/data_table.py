@@ -12,7 +12,7 @@ A class to sync a data object and list_ctrl
 
 from copy import deepcopy
 import wx
-from dvha.tools.utilities import get_selected_listctrl_items
+from dvha.tools.utilities import get_selected_listctrl_items, get_sorted_indices
 
 
 class DataTable:
@@ -393,3 +393,16 @@ class DataTable:
     @property
     def has_data(self):
         return bool(self.row_count)
+
+    def sort_table(self, evt):
+        if self.data:
+            key = self.columns[evt.Column]  # get the column name from the column index (evt.Column)
+            sort_indices = get_sorted_indices(self.data[key])  # handles str and float mixtures
+
+            # reverse order if already sorted
+            if sort_indices == list(range(len(sort_indices))):
+                sort_indices = sort_indices[::-1]
+
+            # reorder data and reinitialize table view
+            self.data = {column: [self.data[column][i] for i in sort_indices] for column in self.columns}
+            self.set_data(self.data, self.columns, self.formats)

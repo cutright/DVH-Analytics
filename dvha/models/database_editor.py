@@ -163,6 +163,8 @@ class DatabaseEditorFrame(wx.Frame):
         for key, button in self.button.items():
             self.Bind(wx.EVT_BUTTON, getattr(self, 'on_' + key), id=button.GetId())
 
+        self.Bind(wx.EVT_LIST_COL_CLICK, self.sort_query_results, self.list_ctrl_query_results)
+
     def on_tree_add(self, evt):
         self.update_selected_tree_items()
 
@@ -254,3 +256,6 @@ class DatabaseEditorFrame(wx.Frame):
 
     def on_remap_roi_names(self, evt):
         RemapROIFrame(self.roi_map, remap_all=True)
+
+    def sort_query_results(self, evt):
+        self.data_query_results.sort_table(evt)

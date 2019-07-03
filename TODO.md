@@ -38,11 +38,12 @@
     - [X] Update LICENSE to include licenses of software dependencies
 
 7. **GUI**
-    - [ ] Move models.datatable.py to [ObjectListView](http://www.blog.pythonlibrary.org/2009/12/23/wxpython-using-objectlistview-instead-of-a-listctrl/)
+    - [X] Allow sorting of tables (added in DataTable object)
+        - [ ] Rad bio and Endpoint table need to remember original order before implementing sort
     - [ ] Allow for a simultaneous 2nd query as found in pure bokeh version of DVHA
     - [ ] Window sizes should be relative to user's screen resolution
 
 8. **Calculations**
-    - [ ] dicopyler's dvhcalc.get_dvh().min reporting excessively small doses
+    - [ ] dicompyler's dvhcalc.get_dvh().min sometimes reporting excessively small doses
     - [x] sample roi's for min distance calculations
     - [ ] Min distance calculation needs points sampled inside top and bottom slices
