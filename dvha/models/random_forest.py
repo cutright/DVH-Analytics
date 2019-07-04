@@ -42,7 +42,7 @@ class RandomForestFrame(wx.Frame):
 
         self.plot = PlotRandomForest(self, options, X, y, multi_var_pred, mrn, study_date)
 
-        self.SetSize((882, 950))
+        self.SetSize((1000, 750))
         self.spin_ctrl_trees = wx.SpinCtrl(self, wx.ID_ANY, "100", min=1, max=1000)
         self.spin_ctrl_features = wx.SpinCtrl(self, wx.ID_ANY, "2", min=2, max=len(x_variables))
         self.button_update = wx.Button(self, wx.ID_ANY, "Calculate")

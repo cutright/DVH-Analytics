@@ -1154,7 +1154,9 @@ class PlotRandomForest(Plot):
         self.type = 'random_forest'
         self.parent = parent
 
-        self.init_size = {'plot': (750, 275)}
+        self.init_size = {'plot': (580, 275),
+                          'diff': (580, 275),
+                          'importance': (400, 550)}
 
         self.X, self.y, self.options = X, y, options
         self.x = list(range(1, len(self.y)+1))
@@ -1200,7 +1202,8 @@ class PlotRandomForest(Plot):
                                               color='black', alpha=0.6)
 
     def __do_layout(self):
-        self.bokeh_layout = column(self.figure, self.diff_figure, self.imp_figure)
+        self.bokeh_layout = row(column(self.figure, self.diff_figure),
+                                self.imp_figure)
 
     def __add_hover(self):
         self.figure.add_tools(HoverTool(show_arrow=True,
@@ -1261,10 +1264,10 @@ class PlotRandomForest(Plot):
         panel_width, panel_height = self.parent.GetSize()
         self.figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 400.)
         self.figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 250.)
-        self.imp_figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 400.)
-        self.imp_figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 250.)
-        self.diff_figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 400.)
-        self.diff_figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 250.)
+        self.imp_figure.plot_width = int(self.init_size['importance'][0] * float(panel_width) / 400.)
+        self.imp_figure.plot_height = int(self.init_size['importance'][1] * float(panel_height) / 250.)
+        self.diff_figure.plot_width = int(self.init_size['diff'][0] * float(panel_width) / 400.)
+        self.diff_figure.plot_height = int(self.init_size['diff'][1] * float(panel_height) / 250.)
 
     def update_data(self, y_pred, feature_importance, x_variables, y_variable):
 
