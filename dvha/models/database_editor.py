@@ -18,7 +18,7 @@ from dvha.db.sql_to_python import get_database_tree
 from dvha.db.sql_connector import DVH_SQL, SQLError
 from dvha.models.data_table import DataTable
 from dvha.dialogs.export import save_data_to_file
-from dvha.tools.utilities import set_msw_background_color
+from dvha.tools.utilities import set_msw_background_color, get_window_size
 from dvha.models.roi_map import RemapROIFrame
 
 
@@ -38,7 +38,7 @@ class DatabaseEditorFrame(wx.Frame):
         self.roi_map = roi_map
         self.db_tree = self.get_db_tree()
 
-        self.SetSize((1330, 820))
+        self.SetSize(get_window_size(0.792, 0.781))
 
         self.window_db_editor = wx.SplitterWindow(self, wx.ID_ANY, style=wx.SP_3D)
         self.window_pane_db_tree = wx.ScrolledWindow(self.window_db_editor, wx.ID_ANY,

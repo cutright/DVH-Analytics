@@ -21,7 +21,7 @@ from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddVariationDial
 from dvha.models.data_table import DataTable
 from dvha.models.plot import PlotROIMap
 from dvha.tools.errors import ROIVariationError, ROIVariationErrorDialog
-from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_elapsed_time
+from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_elapsed_time, get_window_size
 from dvha.tools.roi_name_manager import clean_name
 
 
@@ -38,7 +38,8 @@ class ROIMapFrame(wx.Frame):
 
         self.roi_map = roi_map
 
-        self.SetSize((1500, 800))
+        self.window_size = get_window_size(0.893, 0.762)
+        self.SetSize(self.window_size)
         self.window = wx.SplitterWindow(self, wx.ID_ANY)
         self.window_tree = wx.Panel(self.window, wx.ID_ANY, style=wx.BORDER_SUNKEN)
 
@@ -280,7 +281,7 @@ class ROIMapFrame(wx.Frame):
 
         self.window_editor.SetSizer(sizer_editor)
         self.window.SplitVertically(self.window_tree, self.window_editor)
-        self.window.SetSashPosition(825)
+        self.window.SetSashPosition(int(self.window_size[0] * 0.55))
         sizer_wrapper.Add(self.window, 1, wx.EXPAND, 0)
 
         self.SetSizer(sizer_wrapper)

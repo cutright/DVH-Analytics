@@ -15,6 +15,7 @@ from copy import deepcopy
 from dvha.models.data_table import DataTable
 from dvha.dialogs.main import AddEndpointDialog, DelEndpointDialog
 from dvha.dialogs.export import save_data_to_file
+from dvha.tools.utilities import get_window_size
 
 
 class EndpointFrame:
@@ -49,7 +50,7 @@ class EndpointFrame:
 
         self.table = wx.ListCtrl(self.parent, wx.ID_ANY,
                                  style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
-        self.table.SetMinSize((1046, 800))
+        self.table.SetMinSize(get_window_size(0.623, 0.762))
         self.data_table = DataTable(self.table)
 
         self.endpoint_defs = DataTable(None, columns=['label', 'output_type', 'input_type',

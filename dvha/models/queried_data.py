@@ -14,6 +14,7 @@ import wx
 from dvha.models.data_table import DataTable
 from dvha.db.sql_columns import all_columns as sql_column_info
 from dvha.dialogs.export import save_data_to_file
+from dvha.tools.utilities import get_window_size
 
 
 class QueriedDataFrame(wx.Frame):
@@ -52,7 +53,7 @@ class QueriedDataFrame(wx.Frame):
         self.run()
 
     def __set_properties(self):
-        self.SetSize((1200, 800))
+        self.SetSize(get_window_size(0.714, 0.762))
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())

@@ -16,7 +16,7 @@ from dvha.models.plot import PlotRegression, PlotMultiVarRegression
 from dvha.models.random_forest import RandomForestFrame
 from dvha.dialogs.export import save_data_to_file
 from dvha.paths import ICONS, MODELS_DIR
-from dvha.tools.utilities import set_msw_background_color, get_tree_ctrl_image
+from dvha.tools.utilities import set_msw_background_color, get_tree_ctrl_image, get_window_size
 
 
 class RegressionFrame:
@@ -116,16 +116,16 @@ class RegressionFrame:
         sizer_check_box.Add(self.checkbox, 0, wx.LEFT | wx.RIGHT, 10)
         sizer_x_axis.Add(sizer_check_box, 1, wx.EXPAND, 0)
         sizer_x_axis_select.Add(self.combo_box_x_axis, 1, wx.EXPAND, 0)
-        sizer_x_axis_select.Add(self.spin_button_x_axis, 0, 0, 0)
+        sizer_x_axis_select.Add(self.spin_button_x_axis, 0, wx.EXPAND, 0)
         sizer_x_axis.Add(sizer_x_axis_select, 1, wx.EXPAND, 0)
         sizer_input.Add(sizer_x_axis, 1, wx.ALL, 5)
 
         sizer_input.Add((30, 10), 0, 0, 0)
 
         label_y_axis = wx.StaticText(self.pane_plot, wx.ID_ANY, "Dependent Variable (y-axis):")
-        sizer_y_axis.Add(label_y_axis, 0, 0, 0)
+        sizer_y_axis.Add(label_y_axis, 1, 0, 0)
         sizer_y_axis_select.Add(self.combo_box_y_axis, 1, wx.EXPAND, 0)
-        sizer_y_axis_select.Add(self.spin_button_y_axis, 0, 0, 0)
+        sizer_y_axis_select.Add(self.spin_button_y_axis, 0, wx.EXPAND, 0)
         sizer_y_axis.Add(sizer_y_axis_select, 1, wx.EXPAND, 0)
         sizer_input.Add(sizer_y_axis, 1, wx.ALL, 5)
 
@@ -374,13 +374,14 @@ class MultiVarResultsFrame(wx.Frame):
         self.__do_layout()
 
     def __set_properties(self):
-        self.SetMinSize((825, 725))
+        self.SetMinSize(get_window_size(0.491, 0.690))
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_random_forest, id=self.button['Random Forest'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_model, id=self.button_save_model.GetId())
+        self.Bind(wx.EVT_SIZE, self.on_resize)
 
     def __do_layout(self):
 
@@ -425,3 +426,14 @@ class MultiVarResultsFrame(wx.Frame):
         save_data_to_file(self, 'Save Model', data,
                           wildcard="MVR files (*.mvr)|*.mvr", data_type='pickle', initial_dir=MODELS_DIR)
         pub.sendMessage('control_chart_update_models')
+
+    def redraw_plot(self):
+        self.plot.redraw_plot()
+
+    def on_resize(self, *evt):
+        try:
+            self.Refresh()
+            self.Layout()
+            wx.CallAfter(self.redraw_plot)
+        except RuntimeError:
+            pass

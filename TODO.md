@@ -41,7 +41,7 @@
     - [X] Allow sorting of tables (added in DataTable object)
         - [ ] Rad bio and Endpoint table need to remember original order before implementing sort
     - [ ] Allow for a simultaneous 2nd query as found in pure bokeh version of DVHA
-    - [ ] Window sizes should be relative to user's screen resolution
+    - [X] Window sizes should be relative to user's screen resolution
 
 8. **Calculations**
     - [ ] dicompyler's dvhcalc.get_dvh().min sometimes reporting excessively small doses

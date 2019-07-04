@@ -35,7 +35,7 @@ from dvha.options import Options
 from dvha.paths import LOGO_PATH, DATA_DIR, ICONS
 from dvha.tools.roi_name_manager import DatabaseROIs
 from dvha.tools.stats import StatsData
-from dvha.tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux,\
+from dvha.tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux, get_window_size, \
     save_object_to_file, load_object_from_file, set_msw_background_color, initialize_directories_and_settings
 
 
@@ -307,8 +307,10 @@ class DVHAMainFrame(wx.Frame):
                                      "(i.e., Plan, Structure, Dose). Since the data is extracted directly from DICOM "
                                      "files, we intend to accommodate an array of treatment planning system vendors.",
                                      style=wx.ALIGN_CENTER)
-        text_welcome.SetMinSize((700, 500))
-        text_welcome.Wrap(500)
+
+        text_welcome_size = get_window_size(0.417, 0.476)
+        text_welcome.SetMinSize(text_welcome_size)
+        text_welcome.Wrap(text_welcome_size[1])
 
         sizer_welcome = wx.BoxSizer(wx.VERTICAL)
         sizer_welcome.Add(bitmap_logo, 0, wx.ALIGN_CENTER | wx.LEFT | wx.RIGHT | wx.TOP, 100)
@@ -351,8 +353,10 @@ class DVHAMainFrame(wx.Frame):
 
         self.SetSizer(sizer_main)
         self.Layout()
-        self.SetSize((1400, 900))
-        self.Centre()
+
+        self.SetSize(get_window_size(0.833, 0.857))
+
+        self.Center()
 
     def __enable_notebook_tabs(self):
         for key in self.tab_keys:

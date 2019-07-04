@@ -19,7 +19,8 @@ from bokeh.layouts import column, row
 from bokeh.palettes import Colorblind8 as palette
 import itertools
 import numpy as np
-from os.path import join
+from os.path import join, isdir
+from os import mkdir
 from dvha.tools.utilities import collapse_into_single_dates, moving_avg, is_windows
 from dvha.tools.stats import MultiVariableRegression, get_control_limits
 from dvha.paths import TEMP_DIR
@@ -88,7 +89,9 @@ class Plot:
 
     def update_bokeh_layout_in_wx_python(self):
         self.html_str = get_layout_html(self.bokeh_layout)
-        if is_windows():  # Windows requires LoadURL() in addition to changing the IE emulation level done in dvha_app.py
+        if is_windows():  # Windows requires LoadURL()
+            if not isdir(TEMP_DIR):
+                mkdir(TEMP_DIR)
             web_file = join(TEMP_DIR, "%s.html" % self.type)
             with open(web_file, 'wb') as f:
                 f.write(self.html_str.encode("utf-8"))
@@ -146,8 +149,8 @@ class PlotStatDVH(Plot):
 
         self.type = 'dvh'
         self.parent = parent
-        self.init_size = {'plot': (800, 400),
-                          'table': (800, 275)}
+        self.size_factor = {'plot': (0.885, 0.522),
+                            'table': (0.885, 0.359)}
 
         self.options = options
         self.dvh = dvh
@@ -231,16 +234,15 @@ class PlotStatDVH(Plot):
                                formatter=NumberFormatter(format="0.00")),
                    TableColumn(field="max_dose", title="Max Dose", width=80,
                                formatter=NumberFormatter(format="0.00")), ]
-        self.table = DataTable(source=self.source['dvh'], columns=columns,
-                               width=self.init_size['table'][0], height=self.init_size['table'][1])
+        self.table = DataTable(source=self.source['dvh'], columns=columns,)
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.GetSize()
 
-        self.figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 904.)
-        self.figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 766.)
-        self.table.width = int(self.init_size['table'][0] * float(panel_width) / 904.)
-        self.table.height = int(self.init_size['table'][1] * float(panel_height) / 766.)
+        self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
+        self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
+        self.table.width = int(self.size_factor['table'][0] * float(panel_width))
+        self.table.height = int(self.size_factor['table'][1] * float(panel_height))
 
     def update_plot(self, dvh):
 
@@ -323,8 +325,8 @@ class PlotTimeSeries(Plot):
 
         self.type = 'time_series'
         self.parent = parent
-        self.init_size = {'plot': (800, 325),
-                          'hist': (800, 275)}
+        self.size_factor = {'plot': (0.885, 0.424),
+                            'hist': (0.885, 0.359)}
 
         self.options = options
         self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[])),
@@ -333,6 +335,8 @@ class PlotTimeSeries(Plot):
                        'bound': ColumnDataSource(data=dict(x=[], mrn=[], upper=[], avg=[], lower=[])),
                        'patch': ColumnDataSource(data=dict(x=[], y=[]))}
         self.y_axis_label = ''
+
+        self.div = Div(text='<hr>')
 
         self.__add_plot_data()
         self.__add_histogram_data()
@@ -355,8 +359,7 @@ class PlotTimeSeries(Plot):
 
     def __add_histogram_data(self):
         tools = "pan,wheel_zoom,box_zoom,reset,crosshair,save"
-        self.histogram = figure(tools=tools, active_drag="box_zoom",
-                                width=self.init_size['hist'][0], height=self.init_size['hist'][1])
+        self.histogram = figure(tools=tools, active_drag="box_zoom")
         self.histogram.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
         self.histogram.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
         self.histogram.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
@@ -394,7 +397,7 @@ class PlotTimeSeries(Plot):
 
     def __do_layout(self):
         self.bokeh_layout = column(self.figure,
-                                   Div(text='<hr>', width=self.init_size['plot'][0]),
+                                   self.div,
                                    self.histogram)
 
     def update_plot(self, x, y, mrn, uid, y_axis_label='Y Axis', avg_len=1, percentile=90., bin_size=10):
@@ -462,10 +465,11 @@ class PlotTimeSeries(Plot):
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.GetSize()
-        self.figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 904.)
-        self.figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 766.)
-        self.histogram.plot_width = int(self.init_size['hist'][0] * float(panel_width) / 904.)
-        self.histogram.plot_height = int(self.init_size['hist'][1] * float(panel_height) / 766.)
+        self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
+        self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
+        self.histogram.plot_width = int(self.size_factor['hist'][0] * float(panel_width))
+        self.histogram.plot_height = int(self.size_factor['hist'][1] * float(panel_height))
+        self.div.width = int(self.size_factor['plot'][0] * float(panel_width))
 
 
 class PlotRegression(Plot):
@@ -482,10 +486,10 @@ class PlotRegression(Plot):
 
         self.type = 'regression'
         self.parent = parent
-        self.init_size = {'plot': (550, 300),
-                          'table': (550, 100),
-                          'resid': (275, 200),
-                          'prob': (275, 200)}
+        self.size_factor = {'plot': (0.927, 0.421),
+                            'table': (0.927, 0.140),
+                            'resid': (0.464, 0.281),
+                            'prob': (0.464, 0.281)}
 
         self.x_axis_title, self.y_axis_title = '', ''
         self.reg = None
@@ -506,12 +510,10 @@ class PlotRegression(Plot):
         self.__do_layout()
 
     def __create_additional_figures(self):
-        self.figure_residual_fits = figure(plot_width=self.init_size['resid'][0],
-                                           plot_height=self.init_size['resid'][1])
+        self.figure_residual_fits = figure()
         self.figure_residual_fits.xaxis.axis_label = 'Fitted Values'
         self.figure_residual_fits.yaxis.axis_label = 'Residuals'
-        self.figure_prob_plot = figure(plot_width=self.init_size['prob'][0],
-                                       plot_height=self.init_size['prob'][1])
+        self.figure_prob_plot = figure()
         self.figure_prob_plot.xaxis.axis_label = 'Quantiles'
         self.figure_prob_plot.yaxis.axis_label = 'Ordered Values'
 
@@ -523,8 +525,7 @@ class PlotRegression(Plot):
                    TableColumn(field="p_value", title="p-value", formatter=NumberFormatter(format="0.000"), width=50),
                    TableColumn(field="spacer", title="", width=2),
                    TableColumn(field="fit_param", title="", width=75)]
-        self.regression_table = DataTable(source=self.source['table'], columns=columns, index_position=None,
-                                          width=self.init_size['table'][0], height=self.init_size['table'][1])
+        self.regression_table = DataTable(source=self.source['table'], columns=columns, index_position=None)
 
     def __add_plot_data(self):
         self.plot_data = self.figure.circle('x', 'y', source=self.source['plot'], size=self.options.REGRESSION_CIRCLE_SIZE,
@@ -574,14 +575,14 @@ class PlotRegression(Plot):
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.GetSize()
-        self.figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 593.)
-        self.figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 712.)
-        self.figure_residual_fits.plot_width = int(self.init_size['resid'][0] * float(panel_width) / 593.)
-        self.figure_residual_fits.plot_height = int(self.init_size['resid'][1] * float(panel_height) / 712.)
-        self.figure_prob_plot.plot_width = int(self.init_size['prob'][0] * float(panel_width) / 593.)
-        self.figure_prob_plot.plot_height = int(self.init_size['prob'][1] * float(panel_height) / 712.)
-        self.regression_table.width = int(self.init_size['table'][0] * float(panel_width) / 593.)
-        self.regression_table.height = int(self.init_size['table'][1] * float(panel_height) / 712.)
+        self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
+        self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
+        self.figure_residual_fits.plot_width = int(self.size_factor['resid'][0] * float(panel_width))
+        self.figure_residual_fits.plot_height = int(self.size_factor['resid'][1] * float(panel_height))
+        self.figure_prob_plot.plot_width = int(self.size_factor['prob'][0] * float(panel_width))
+        self.figure_prob_plot.plot_height = int(self.size_factor['prob'][1] * float(panel_height))
+        self.regression_table.width = int(self.size_factor['table'][0] * float(panel_width))
+        self.regression_table.height = int(self.size_factor['table'][1] * float(panel_height))
 
     def update_trend(self, x_var):
         x, y, mrn = self.clean_data(self.source['plot'].data['x'],
@@ -681,9 +682,9 @@ class PlotMultiVarRegression(Plot):
         self.type = 'multi-variable_regression'
         self.parent = parent
 
-        self.init_size = {'resid': (400, 400),
-                          'prob': (400, 400),
-                          'table': (750, 250)}
+        self.size_factor = {'resid': (0.475, 0.45),
+                            'prob': (0.475, 0.45),
+                            'table': (0.95, 0.45)}
 
         self.options = options
         self.X, self.y = None, None
@@ -750,12 +751,12 @@ class PlotMultiVarRegression(Plot):
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.GetSize()
-        self.figure.plot_width = int(self.init_size['resid'][0] * float(panel_width) / 400.)
-        self.figure.plot_height = int(self.init_size['resid'][1] * float(panel_height) / 250.)
-        self.figure_prob_plot.plot_width = int(self.init_size['prob'][0] * float(panel_width) / 400.)
-        self.figure_prob_plot.plot_height = int(self.init_size['prob'][1] * float(panel_height) / 250.)
-        self.regression_table.width = int(self.init_size['table'][0] * float(panel_width) / 400.)
-        self.regression_table.height = int(self.init_size['table'][1] * float(panel_height) / 250.)
+        self.figure.plot_width = int(self.size_factor['resid'][0] * float(panel_width))
+        self.figure.plot_height = int(self.size_factor['resid'][1] * float(panel_height))
+        self.figure_prob_plot.plot_width = int(self.size_factor['prob'][0] * float(panel_width))
+        self.figure_prob_plot.plot_height = int(self.size_factor['prob'][1] * float(panel_height))
+        self.regression_table.width = int(self.size_factor['table'][0] * float(panel_width))
+        self.regression_table.height = int(self.size_factor['table'][1] * float(panel_height))
 
     def update_plot(self, y_variable, x_variables, stats_data):
         self.set_figure_dimensions()
@@ -862,7 +863,7 @@ class PlotControlChart(Plot):
 
         self.type = 'control_chart'
         self.parent = parent
-        self.init_size = {'plot': (850, 275)}
+        self.size_factor = {'plot': (0.940, 0.359)}
         self.model_name = None
 
         self.y_axis_label = ''
@@ -1005,10 +1006,10 @@ class PlotControlChart(Plot):
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.GetSize()
-        self.figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 904.)
-        self.figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 766.)
-        self.adj_figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 904.)
-        self.adj_figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 766.)
+        self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
+        self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
+        self.adj_figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
+        self.adj_figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
 
     def update_plot(self, x, y, mrn, uid, dates, y_axis_label='Y Axis', update_layout=True):
         self.set_figure_dimensions()
@@ -1154,9 +1155,9 @@ class PlotRandomForest(Plot):
         self.type = 'random_forest'
         self.parent = parent
 
-        self.init_size = {'plot': (580, 275),
-                          'diff': (580, 275),
-                          'importance': (400, 550)}
+        self.size_factor = {'plot': (0.6, 0.425),
+                            'diff': (0.6, 0.425),
+                            'importance': (0.35, 0.85)}
 
         self.X, self.y, self.options = X, y, options
         self.x = list(range(1, len(self.y)+1))
@@ -1186,20 +1187,30 @@ class PlotRandomForest(Plot):
         self.update_bokeh_layout_in_wx_python()
 
     def __add_plot_data(self):
-        self.y_data = self.figure.circle('x', 'y', source=self.source['plot'], color='blue')
-        self.y_ml = self.figure.circle('x', 'y', source=self.source['plot_predict'], color='red')
-        self.y_mv = self.figure.cross('x', 'y', source=self.source['plot_multi_var'], color='black')
+        self.y_data = self.figure.cross('x', 'y', source=self.source['plot'],
+                                        color=self.options.RANDOM_FOREST_COLOR_DATA,
+                                        size=self.options.RANDOM_FOREST_CIRCLE_SIZE)
+        self.y_ml = self.figure.circle('x', 'y', source=self.source['plot_predict'],
+                                       color=self.options.RANDOM_FOREST_COLOR_PREDICT,
+                                       size=self.options.RANDOM_FOREST_CIRCLE_SIZE,
+                                       alpha=self.options.RANDOM_FOREST_ALPHA)
+        self.y_mv = self.figure.circle('x', 'y', source=self.source['plot_multi_var'],
+                                       color=self.options.RANDOM_FOREST_COLOR_MULTI_VAR,
+                                       size=self.options.RANDOM_FOREST_CIRCLE_SIZE,
+                                       alpha=self.options.RANDOM_FOREST_ALPHA)
 
         self.imp_figure.hbar('y', 'height', 'right', source=self.source['importance'],
-                             color=self.options.PLOT_COLOR, alpha=0.6)
+                             color=self.options.PLOT_COLOR, alpha=self.options.RANDOM_FOREST_ALPHA)
 
         # self.diff_figure.vbar('x', 'top', 'width', source=self.source['diff'])
         # self.vbar = self.histogram.vbar(x='x', width='width', bottom=0, top='top', source=self.source['hist'],
         #                                 color=self.options.PLOT_COLOR, alpha=self.options.HISTOGRAM_ALPHA)
         self.diff_ml = self.diff_figure.vbar(x='x', top='y', bottom=0, width=0.3, source=self.source['diff_ml'],
-                                             color='red', alpha=0.6)
+                                             color=self.options.RANDOM_FOREST_COLOR_PREDICT,
+                                             alpha=self.options.RANDOM_FOREST_ALPHA)
         self.diff_mvr = self.diff_figure.vbar(x='x', top='y', bottom=0, width=0.3, source=self.source['diff_mvr'],
-                                              color='black', alpha=0.6)
+                                              color=self.options.RANDOM_FOREST_COLOR_MULTI_VAR,
+                                              alpha=self.options.RANDOM_FOREST_ALPHA)
 
     def __do_layout(self):
         self.bokeh_layout = row(column(self.figure, self.diff_figure),
@@ -1209,14 +1220,14 @@ class PlotRandomForest(Plot):
         self.figure.add_tools(HoverTool(show_arrow=True,
                                         tooltips=[('ID', '@mrn'),
                                                   ('Date', '@study_date{%F}'),
-                                                  ('x', '@x{0.2f}'),
+                                                  ('x', '@x{int}'),
                                                   ('y', '@y{0.2f}')],
                                         formatters={'study_date': 'datetime'}))
 
         self.diff_figure.add_tools(HoverTool(show_arrow=True,
                                              tooltips=[('ID', '@mrn'),
                                                        ('Date', '@study_date{%F}'),
-                                                       ('x', '@x{0.2f}'),
+                                                       ('x', '@x{int}'),
                                                        ('y', '@y{0.2f}')],
                                              formatters={'study_date': 'datetime'}))
 
@@ -1262,12 +1273,12 @@ class PlotRandomForest(Plot):
     def set_figure_dimensions(self):
         # plot_width = 400, plot_height = 400, frame_size = (900, 600)
         panel_width, panel_height = self.parent.GetSize()
-        self.figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 400.)
-        self.figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 250.)
-        self.imp_figure.plot_width = int(self.init_size['importance'][0] * float(panel_width) / 400.)
-        self.imp_figure.plot_height = int(self.init_size['importance'][1] * float(panel_height) / 250.)
-        self.diff_figure.plot_width = int(self.init_size['diff'][0] * float(panel_width) / 400.)
-        self.diff_figure.plot_height = int(self.init_size['diff'][1] * float(panel_height) / 250.)
+        self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
+        self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
+        self.imp_figure.plot_width = int(self.size_factor['importance'][0] * float(panel_width))
+        self.imp_figure.plot_height = int(self.size_factor['importance'][1] * float(panel_height))
+        self.diff_figure.plot_width = int(self.size_factor['diff'][0] * float(panel_width))
+        self.diff_figure.plot_height = int(self.size_factor['diff'][1] * float(panel_height))
 
     def update_data(self, y_pred, feature_importance, x_variables, y_variable):
 
@@ -1312,7 +1323,7 @@ class PlotROIMap(Plot):
         self.type = 'roi_map'
         self.parent = parent
 
-        self.init_size = {'plot': (800, 700)}
+        self.size_factor = {'plot': (0.972, 0.904)}
 
         self.roi_map = roi_map
 
@@ -1380,5 +1391,5 @@ class PlotROIMap(Plot):
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.GetSize()
-        self.figure.plot_width = int(self.init_size['plot'][0] * float(panel_width) / 823.)
-        self.figure.plot_height = int(self.init_size['plot'][1] * float(panel_height) / 774.)
+        self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
+        self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))

@@ -30,7 +30,7 @@ from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, IMPORTED_DIR, 
 from dvha.tools.dicom_dose_sum import sum_dose_grids
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
-    set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_folders
+    set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_folders, get_window_size
 
 
 # TODO: Provide methods to write over-rides to DICOM file
@@ -57,7 +57,7 @@ class ImportDicomFrame(wx.Frame):
         with DVH_SQL() as cnx:
             cnx.initialize_database()
 
-        self.SetSize((1350, 800))
+        self.SetSize(get_window_size(0.804, 0.762))
 
         self.parsed_dicom_data = {}
         self.selected_uid = None

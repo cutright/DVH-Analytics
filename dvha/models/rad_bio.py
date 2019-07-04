@@ -14,7 +14,7 @@ import wx
 from copy import deepcopy
 from dvha.models.data_table import DataTable
 from dvha.models.dvh import calc_eud, calc_tcp
-from dvha.tools.utilities import convert_value_to_str, get_selected_listctrl_items, float_or_none
+from dvha.tools.utilities import convert_value_to_str, get_selected_listctrl_items, float_or_none, get_window_size
 from dvha.dialogs.export import save_data_to_file
 
 
@@ -116,7 +116,7 @@ class RadBioFrame:
                                                wx.FONTWEIGHT_BOLD, 0, ""))
         sizer_published_values.Add(label_published_values, 0, wx.ALL, 5)
         sizer_published_values.Add(self.table_published_values, 1, wx.ALL, 10)
-        sizer_published_values.SetMinSize((500, 335))
+        sizer_published_values.SetMinSize(get_window_size(0.298, 0.319))
         sizer_main.Add(sizer_published_values, 1, wx.ALL | wx.EXPAND, 10)
 
         label_parameters = wx.StaticText(self.parent, wx.ID_ANY, "Parameters:")

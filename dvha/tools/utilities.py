@@ -692,3 +692,17 @@ def get_sorted_indices(some_list):
         except TypeError:
             temp_data = [str(value) for value in some_list]
             return [i[0] for i in sorted(enumerate(temp_data), key=lambda x: x[1])]
+
+
+def get_window_size(width, height):
+    """
+    Function used to adapt frames/windows for the user's resolution
+    :param width: fractional width of the user's screen
+    :param height: fractional height of the user's screen
+    :return: window size
+    :rtype: tuple
+    """
+    user_width, user_height = wx.GetDisplaySize()
+    if user_width / user_height < 1.5:  # catch 4:3 or non-widescreen
+        user_height = user_width / 1.6
+    return tuple([int(width * user_width), int(height * user_height)])
