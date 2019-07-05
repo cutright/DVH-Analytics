@@ -698,7 +698,8 @@ class ImportDicomFrame(wx.Frame):
     def on_import(self, evt):
         if self.parsed_dicom_data and self.dicom_importer.checked_plans:
             ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
-                         self.checkbox_include_uncategorized.GetValue(), self.terminate)
+                         self.checkbox_include_uncategorized.GetValue(), self.terminate,
+                         self.dicom_importer.other_dicom_files)
             dlg = ImportStatusDialog(self.terminate)
             # calling self.Close() below caused issues in Windows if Show() used instead of ShowModal()
             [dlg.Show, dlg.ShowModal][is_windows()]()
@@ -898,7 +899,7 @@ class ImportStatusDialog(wx.Dialog):
         Terminate will be linked to ImportWorker, which will periodically check it's value, if true
         the thread will gracefully terminate. This class can set terminate to true with the cancel button.
         :param terminate: will cancel ImportWorker thread if set to True
-        :type terminate: bool
+        :type terminate: dict
         """
         wx.Dialog.__init__(self, None)
         self.gauge_study = wx.Gauge(self, wx.ID_ANY, 100)
@@ -1017,7 +1018,7 @@ class ImportWorker(Thread):
     """
     Create a thread separate from the GUI to perform the import calculations
     """
-    def __init__(self, data, checked_uids, import_uncategorized, terminate):
+    def __init__(self, data, checked_uids, import_uncategorized, terminate, other_dicom_files):
         """
         :param data: parsed dicom data
         :type data: dict
@@ -1026,7 +1027,9 @@ class ImportWorker(Thread):
         :param import_uncategorized: if True, import rois with names that that are not mapped
         :type import_uncategorized: bool
         :param terminate: thread will periodically check this value, if true, gracefully terminate
-        :type terminate: bool
+        :type terminate: dict
+        :param other_dicom_files: other dicom files found in the import directory
+        :type other_dicom_files: dict
         """
         Thread.__init__(self)
 
@@ -1034,6 +1037,7 @@ class ImportWorker(Thread):
         self.checked_uids = checked_uids
         self.import_uncategorized = import_uncategorized
         self.terminate = terminate
+        self.other_dicom_files = other_dicom_files
 
         with DVH_SQL() as cnx:
             self.last_import_time = cnx.now  # use psql time rather than CPU since time stamps in DB are based on psql
@@ -1241,7 +1245,7 @@ class ImportWorker(Thread):
 
         # Move files to imported directory
         if final_plan_in_study:
-            self.move_files(plan_uid)
+            self.move_files(plan_uid, study_uid)
 
             # Record the time per SQL of last complete import for a study
             with DVH_SQL() as cnx:
@@ -1281,17 +1285,17 @@ class ImportWorker(Thread):
             wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
             func(uid, roi_name, pre_calc=pre_calc)
 
-    def move_files(self, uid):
-        # TODO: Need to move other files, e.g., CT files
+    def move_files(self, uid, study_uid):
         files = [self.data[uid].plan_file,
                  self.data[uid].structure_file,
                  self.data[uid].dose_file]
+        if study_uid in self.other_dicom_files.keys():
+            files.extend(self.other_dicom_files[study_uid])
 
         new_dir = join(self.data[uid].import_path, self.data[uid].mrn)
         move_files_to_new_path(files, new_dir)
 
         # remove old directory if empty
-        # TODO: Does not remove all empty directories? (e.g., directory from Delete Data function in DB editor)
         for file in files:
             old_dir = dirname(file)
             if isdir(old_dir) and not listdir(old_dir):

@@ -63,6 +63,7 @@ class DicomImporter:
         self.file_nodes = {}  # key: absolute file path
 
         self.dicom_file_paths = {}
+        self.other_dicom_files = {}
         self.current_index = 0
         self.file_types = ['rtplan', 'rtstruct', 'rtdose']
         self.file_tree = {}
@@ -98,7 +99,7 @@ class DicomImporter:
         """
         DicomDirectoryParserFrame(self.start_path, search_subfolders=self.search_subfolders)
 
-    def set_file_tree(self, tree, file_paths):
+    def set_file_tree(self, tree, file_paths, other_dicom_files):
         """
         DicomDirectoryParserThread subscribes to this function to initiate the tree_ctrl_files build
         :param tree: the plan_file_sets object from DicomDirectoryParserThread
@@ -108,6 +109,7 @@ class DicomImporter:
         """
         self.file_tree = tree
         self.dicom_file_paths = file_paths
+        self.other_dicom_files = other_dicom_files
         wx.CallAfter(self.build_tree_ctrl_files)
 
     def get_file_type(self, dicom_dataset):
@@ -395,6 +397,7 @@ class DicomDirectoryParserThread(Thread):
         self.start_path = start_path
         self.search_subfolders = search_subfolders
         self.file_types = ['rtplan', 'rtstruct', 'rtdose']
+        self.req_tags = ['StudyInstanceUID', 'SOPInstanceUID', 'PatientName', 'PatientID']
 
         self.dicom_tag_values = {}
         self.dicom_files = {key: [] for key in self.file_types}
@@ -412,6 +415,8 @@ class DicomDirectoryParserThread(Thread):
         file_paths = get_file_paths(self.start_path, search_subfolders=self.search_subfolders)
         file_count = len(file_paths)
 
+        other_dicom_files = {}
+
         for file_index, file_path in enumerate(file_paths):
             msg = {'label': "File Name: %s" % os.path.basename(file_path),
                    'gauge': file_index / file_count}
@@ -423,49 +428,57 @@ class DicomDirectoryParserThread(Thread):
                 ds = None
 
             if ds is not None:
-                modality = ds.Modality.lower()
-                timestamp = os.path.getmtime(file_path)
 
-                self.dicom_files[modality].append(file_path)
-
-                self.dicom_tag_values[file_path] = {'timestamp': timestamp,
-                                                    'study_instance_uid': ds.StudyInstanceUID,
-                                                    'sop_instance_uid': ds.SOPInstanceUID,
-                                                    'patient_name': ds.PatientName,
-                                                    'mrn': ds.PatientID}
-
-                # All RT Plan files need to be found first
-                if modality == 'rtplan':
-                    uid = ds.ReferencedStructureSetSequence[0].ReferencedSOPInstanceUID
-                    mrn = self.dicom_tag_values[file_path]['mrn']
-                    self.uid_to_mrn[uid] = ds.PatientID
-                    self.dicom_tag_values[file_path]['ref_sop_instance'] = {'type': 'struct',
-                                                                            'uid': uid}
-                    study_uid = ds.StudyInstanceUID
-                    plan_uid = ds.SOPInstanceUID
-                    if mrn not in list(self.plan_file_sets):
-                        self.plan_file_sets[mrn] = {}
-
-                    if study_uid not in list(self.plan_file_sets[mrn]):
-                        self.plan_file_sets[mrn][study_uid] = {}
-
-                    self.plan_file_sets[mrn][study_uid][plan_uid] = {'rtplan': {'file_path': file_path,
-                                                                                'sop_instance_uid': plan_uid},
-                                                                     'rtstruct': {'file_path': None,
-                                                                                  'sop_instance_uid': None},
-                                                                     'rtdose': {'file_path': None,
-                                                                                'sop_instance_uid': None}}
-                    if plan_uid not in self.dicom_file_paths.keys():
-                        self.dicom_file_paths[plan_uid] = {key: [] for key in self.file_types + ['other']}
-                    self.dicom_file_paths[plan_uid]['rtplan'] = [file_path]
-
-                elif modality == 'rtdose':
-                    uid = ds.ReferencedRTPlanSequence[0].ReferencedSOPInstanceUID
-                    self.dicom_tag_values[file_path]['ref_sop_instance'] = {'type': 'plan',
-                                                                            'uid': uid}
+                if not self.is_data_set_valid(ds):
+                    print('Cannot parse %s\nOne of these tags is missing: %s' % (file_path, ', '.join(self.req_tags)))
                 else:
-                    self.dicom_tag_values[file_path]['ref_sop_instance'] = {'type': None,
-                                                                            'uid': None}
+                    modality = ds.Modality.lower()
+                    timestamp = os.path.getmtime(file_path)
+
+                    self.dicom_tag_values[file_path] = {'timestamp': timestamp,
+                                                        'study_instance_uid': ds.StudyInstanceUID,
+                                                        'sop_instance_uid': ds.SOPInstanceUID,
+                                                        'patient_name': ds.PatientName,
+                                                        'mrn': ds.PatientID}
+                    if modality not in self.file_types:
+                        if ds.StudyInstanceUID not in other_dicom_files.keys():
+                            other_dicom_files[ds.StudyInstanceUID] = []
+                        other_dicom_files[ds.StudyInstanceUID].append(file_path)  # Store these to move after import
+                    else:
+                        self.dicom_files[modality].append(file_path)
+
+                        # All RT Plan files need to be found first
+                        if modality == 'rtplan':
+                            uid = ds.ReferencedStructureSetSequence[0].ReferencedSOPInstanceUID
+                            mrn = self.dicom_tag_values[file_path]['mrn']
+                            self.uid_to_mrn[uid] = ds.PatientID
+                            self.dicom_tag_values[file_path]['ref_sop_instance'] = {'type': 'struct',
+                                                                                    'uid': uid}
+                            study_uid = ds.StudyInstanceUID
+                            plan_uid = ds.SOPInstanceUID
+                            if mrn not in list(self.plan_file_sets):
+                                self.plan_file_sets[mrn] = {}
+
+                            if study_uid not in list(self.plan_file_sets[mrn]):
+                                self.plan_file_sets[mrn][study_uid] = {}
+
+                            self.plan_file_sets[mrn][study_uid][plan_uid] = {'rtplan': {'file_path': file_path,
+                                                                                        'sop_instance_uid': plan_uid},
+                                                                             'rtstruct': {'file_path': None,
+                                                                                          'sop_instance_uid': None},
+                                                                             'rtdose': {'file_path': None,
+                                                                                        'sop_instance_uid': None}}
+                            if plan_uid not in self.dicom_file_paths.keys():
+                                self.dicom_file_paths[plan_uid] = {key: [] for key in self.file_types + ['other']}
+                            self.dicom_file_paths[plan_uid]['rtplan'] = [file_path]
+
+                        elif modality == 'rtdose':
+                            uid = ds.ReferencedRTPlanSequence[0].ReferencedSOPInstanceUID
+                            self.dicom_tag_values[file_path]['ref_sop_instance'] = {'type': 'plan',
+                                                                                    'uid': uid}
+                        else:
+                            self.dicom_tag_values[file_path]['ref_sop_instance'] = {'type': None,
+                                                                                    'uid': None}
 
         # associate appropriate rtdose files to plans
         for file_index, dose_file in enumerate(self.dicom_files['rtdose']):
@@ -500,4 +513,10 @@ class DicomDirectoryParserThread(Thread):
                                 self.dicom_file_paths[plan_uid]['rtstruct'] = [struct_file]
 
         wx.CallAfter(pub.sendMessage, 'dicom_directory_parser_set_file_tree',
-                     tree=self.plan_file_sets, file_paths=self.dicom_file_paths)
+                     tree=self.plan_file_sets, file_paths=self.dicom_file_paths, other_dicom_files=other_dicom_files)
+
+    def is_data_set_valid(self, ds):
+        for tag in self.req_tags:
+            if not hasattr(ds, tag):
+                return False
+        return True

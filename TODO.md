@@ -3,7 +3,7 @@
 1. **Import**
     - [ ] Need to test import of DICOM files other than Plan, Dose, Structure
         - [X] Non-DICOM files are properly ignored
-        - [ ] Test DICOM files other than plan, dose, structure 
+        - [X] Test DICOM files other than plan, dose, structure 
     - [ ] Imports based on sop instance uid rather than study instance uid
         - [X] Update file tree to Patient -> Study -> Plan -> Files
         - [X] Auto combine multiple plans within one study_instance_uid
