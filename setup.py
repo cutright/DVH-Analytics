@@ -20,7 +20,7 @@ requires = [
     'scipy',
     'pydicom >= 1.0',
     'dicompyler-core',
-    'bokeh >= 1.0.4',
+    'bokeh >= 1.2',
     'python-dateutil',
     'psycopg2-binary',
     'shapely[vectorized]',
