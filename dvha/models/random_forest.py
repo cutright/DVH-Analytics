@@ -51,8 +51,6 @@ class RandomForestFrame(wx.Frame):
         self.button_save_plot = wx.Button(self, wx.ID_ANY, "Save Plot")
         self.button_export = wx.Button(self, wx.ID_ANY, "Export Data")
 
-        self.calc_parameters = None
-
         self.__set_properties()
         self.__do_layout()
         self.__do_bind()
@@ -82,13 +80,11 @@ class RandomForestFrame(wx.Frame):
         sizer_trees = wx.BoxSizer(wx.HORIZONTAL)
 
         label_trees = wx.StaticText(self, wx.ID_ANY, "Number of trees:")
-        label_trees.SetToolTip(self.spin_ctrl_trees.GetToolTip())
         sizer_trees.Add(label_trees, 0, wx.ALL, 5)
         sizer_trees.Add(self.spin_ctrl_trees, 0, wx.ALL, 5)
         sizer_hyper_parameters.Add(sizer_trees, 1, wx.EXPAND, 0)
 
         label_features = wx.StaticText(self, wx.ID_ANY, "Max feature count:")
-        label_features.SetToolTip(self.spin_ctrl_features.GetToolTip())
         sizer_features.Add(label_features, 0, wx.ALL, 5)
         sizer_features.Add(self.spin_ctrl_features, 0, wx.ALL, 5)
         sizer_hyper_parameters.Add(sizer_features, 1, wx.EXPAND, 0)
@@ -110,8 +106,6 @@ class RandomForestFrame(wx.Frame):
         y_pred, mse, importance = get_random_forest(self.X, self.y, n_estimators=self.spin_ctrl_trees.GetValue(),
                                                     max_features=self.spin_ctrl_features.GetValue())
         self.plot.update_data(y_pred, importance, self.x_variables, self.y_variable, mse, self.uid)
-
-        self.calc_parameters = [self.spin_ctrl_trees.GetValue(), self.spin_ctrl_features.GetValue()]
 
     def redraw_plot(self):
         self.plot.redraw_plot()
