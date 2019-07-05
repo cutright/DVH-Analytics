@@ -24,7 +24,7 @@ class RandomForestFrame(wx.Frame):
     """
     View random forest predictions for provided data
     """
-    def __init__(self, X, y, x_variables, y_variable, multi_var_pred, multi_var_mse, options, mrn, study_date):
+    def __init__(self, X, y, x_variables, y_variable, multi_var_pred, multi_var_mse, options, mrn, study_date, uid):
         """
         :param X:
         :param y: data to be modeled
@@ -39,7 +39,7 @@ class RandomForestFrame(wx.Frame):
         set_msw_background_color(self)  # If windows, change the background color
 
         self.X, self.y = X, y
-        self.x_variables, self.y_variable = x_variables, y_variable
+        self.x_variables, self.y_variable, self.uid = x_variables, y_variable, uid
 
         self.plot = PlotRandomForest(self, options, X, y, multi_var_pred, mrn, study_date, multi_var_mse)
 
@@ -48,8 +48,10 @@ class RandomForestFrame(wx.Frame):
         init_features = [1, 2][len(x_variables) > 1]
         self.spin_ctrl_features = wx.SpinCtrl(self, wx.ID_ANY, str(init_features), min=1, max=len(x_variables))
         self.button_calculate = wx.Button(self, wx.ID_ANY, "Calculate")
-        self.button_save = wx.Button(self, wx.ID_ANY, "Save Plot")
+        self.button_save_plot = wx.Button(self, wx.ID_ANY, "Save Plot")
         self.button_export = wx.Button(self, wx.ID_ANY, "Export Data")
+
+        self.calc_parameters = None
 
         self.__set_properties()
         self.__do_layout()
@@ -68,28 +70,31 @@ class RandomForestFrame(wx.Frame):
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_update, id=self.button_calculate.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())
         self.Bind(wx.EVT_SIZE, self.on_resize)
 
     def __do_layout(self):
-        # begin wxGlade: MyFrame.__do_layout
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_input_and_plot = wx.BoxSizer(wx.VERTICAL)
         sizer_hyper_parameters = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Hyper-parameters:"), wx.HORIZONTAL)
         sizer_features = wx.BoxSizer(wx.HORIZONTAL)
         sizer_trees = wx.BoxSizer(wx.HORIZONTAL)
 
-        label_trees = wx.StaticText(self, wx.ID_ANY, "Number of Trees:")
+        label_trees = wx.StaticText(self, wx.ID_ANY, "Number of trees:")
+        label_trees.SetToolTip(self.spin_ctrl_trees.GetToolTip())
         sizer_trees.Add(label_trees, 0, wx.ALL, 5)
         sizer_trees.Add(self.spin_ctrl_trees, 0, wx.ALL, 5)
         sizer_hyper_parameters.Add(sizer_trees, 1, wx.EXPAND, 0)
 
         label_features = wx.StaticText(self, wx.ID_ANY, "Max feature count:")
+        label_features.SetToolTip(self.spin_ctrl_features.GetToolTip())
         sizer_features.Add(label_features, 0, wx.ALL, 5)
         sizer_features.Add(self.spin_ctrl_features, 0, wx.ALL, 5)
         sizer_hyper_parameters.Add(sizer_features, 1, wx.EXPAND, 0)
 
         sizer_hyper_parameters.Add(self.button_calculate, 0, wx.ALL, 5)
-        sizer_hyper_parameters.Add(self.button_save, 0, wx.ALL, 5)
+        sizer_hyper_parameters.Add(self.button_save_plot, 0, wx.ALL, 5)
         sizer_hyper_parameters.Add(self.button_export, 0, wx.ALL, 5)
 
         sizer_input_and_plot.Add(sizer_hyper_parameters, 0, wx.EXPAND, 0)
@@ -104,7 +109,9 @@ class RandomForestFrame(wx.Frame):
     def on_update(self, evt):
         y_pred, mse, importance = get_random_forest(self.X, self.y, n_estimators=self.spin_ctrl_trees.GetValue(),
                                                     max_features=self.spin_ctrl_features.GetValue())
-        self.plot.update_data(y_pred, importance, self.x_variables, self.y_variable, mse)
+        self.plot.update_data(y_pred, importance, self.x_variables, self.y_variable, mse, self.uid)
+
+        self.calc_parameters = [self.spin_ctrl_trees.GetValue(), self.spin_ctrl_features.GetValue()]
 
     def redraw_plot(self):
         self.plot.redraw_plot()
@@ -118,7 +125,7 @@ class RandomForestFrame(wx.Frame):
             pass
 
     def on_export(self, evt):
-        save_data_to_file(self, 'Save random forest data to csv', self.plot.get_csv_data())
+        save_data_to_file(self, 'Save random forest data to csv', self.plot.get_csv())
 
     def on_save_plot(self, evt):
         save_data_to_file(self, 'Save random forest plot', self.plot.html_str,

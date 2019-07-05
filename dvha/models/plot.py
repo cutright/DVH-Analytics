@@ -1171,6 +1171,8 @@ class PlotRandomForest(Plot):
         self.mrn = mrn
         self.study_date = study_date
 
+        self.y_variable = ''
+
         self.div = Div()
 
         self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
@@ -1289,9 +1291,12 @@ class PlotRandomForest(Plot):
         self.diff_figure.plot_width = int(self.size_factor['diff'][0] * float(panel_width))
         self.diff_figure.plot_height = int(self.size_factor['diff'][1] * float(panel_height))
 
-    def update_data(self, y_pred, feature_importance, x_variables, y_variable, mse):
+    def update_data(self, y_pred, feature_importance, x_variables, y_variable, mse, uid):
 
-        self.source['plot'].data = {'x': self.x, 'y': self.y, 'mrn': self.mrn, 'study_date': self.study_date}
+        self.y_variable = y_variable
+
+        self.source['plot'].data = {'x': self.x, 'y': self.y, 'mrn': self.mrn,
+                                    'study_date': self.study_date, 'uid': uid}
 
         self.source['plot_predict'].data = {'x': self.x, 'y': y_pred, 'mrn': self.mrn, 'study_date': self.study_date}
 
@@ -1323,10 +1328,13 @@ class PlotRandomForest(Plot):
     def get_csv(self):
 
         data = self.source['plot'].data
-        csv_data = ['MRN,Study Instance UID,Study #,Date,' % self.figure.yaxis.axis_label]
+        csv_data = ['MRN,Study Instance UID,Study #,Date,%s,Random Forest, Multi-Variable Regression' % self.y_variable]
         for i in range(len(data['mrn'])):
             csv_data.append(','.join(str(data[key][i]).replace(',', '^')
                                      for key in ['mrn', 'uid', 'x', 'study_date', 'y']))
+            csv_data[-1] = "%s,%s,%s" % (csv_data[-1],
+                                         self.source['plot_predict'].data['y'][i],
+                                         self.source['plot_multi_var'].data['y'][i])
 
         return '\n'.join(csv_data)
 
