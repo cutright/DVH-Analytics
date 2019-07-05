@@ -15,7 +15,7 @@ import wx.adv
 from dateutil.parser import parse as parse_date
 import matplotlib.colors as plot_colors
 from os.path import isdir
-from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog
+from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_window_size
 from dvha.db import sql_columns
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, LICENSE_PATH
@@ -231,16 +231,20 @@ class AddEndpointDialog(wx.Dialog):
                 self.units_out]
 
 
-class DelEndpointDialog(wx.Dialog):
+class SelectFromListDialog(wx.Dialog):
     """
-    Delete an endpoint from the table in Endpoints tab
+    Select an item in a list
     """
-    def __init__(self, endpoints):
-        wx.Dialog.__init__(self, None, title='Delete Endpoint')
+    def __init__(self, title, column, choices, exclude=None, size=None, column_width=200, selections=None):
+        wx.Dialog.__init__(self, None, title=title)
 
-        self.endpoints = endpoints
+        self.column = column
+        self.choices = choices
+        self.exclude = [exclude, []][exclude is None]
+        self.size = size
+        self.column_width = column_width
 
-        self.list_ctrl_endpoints = wx.ListCtrl(self, wx.ID_ANY, style=wx.LC_REPORT)
+        self.list_ctrl = wx.ListCtrl(self, wx.ID_ANY, style=wx.LC_REPORT)
         self.button_select_all = wx.Button(self, wx.ID_ANY, "Select All")
         self.button_deselect_all = wx.Button(self, wx.ID_ANY, "Deselect All")
         self.button_ok = wx.Button(self, wx.ID_OK, "OK")
@@ -252,12 +256,15 @@ class DelEndpointDialog(wx.Dialog):
         self.__set_properties()
         self.__do_layout()
 
-    def __set_properties(self):
-        self.list_ctrl_endpoints.AppendColumn("Endpoint", format=wx.LIST_FORMAT_LEFT, width=200)
+        if selections:
+            self.set_selection(selections)
 
-        for ep in self.endpoints:
-            if ep not in {'MRN', 'Tx Site', 'ROI Name'}:
-                self.list_ctrl_endpoints.InsertItem(50000, ep)
+    def __set_properties(self):
+        self.list_ctrl.AppendColumn(self.column, format=wx.LIST_FORMAT_LEFT, width=self.column_width)
+
+        for choice in self.choices:
+            if choice not in self.exclude:
+                self.list_ctrl.InsertItem(50000, choice)
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -265,31 +272,35 @@ class DelEndpointDialog(wx.Dialog):
         sizer_select = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
         sizer_select_buttons = wx.BoxSizer(wx.HORIZONTAL)
 
-        sizer_select.Add(self.list_ctrl_endpoints, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_select.Add(self.list_ctrl, 1, wx.ALL | wx.EXPAND, 5)
         sizer_select_buttons.Add(self.button_select_all, 0, wx.ALL, 5)
         sizer_select_buttons.Add(self.button_deselect_all, 0, wx.ALL, 5)
         sizer_select.Add(sizer_select_buttons, 0, wx.ALIGN_CENTER | wx.ALL, 0)
-        sizer_wrapper.Add(sizer_select, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_wrapper.Add(sizer_select, 1, wx.ALL | wx.EXPAND, 5)
 
         sizer_ok_cancel.Add(self.button_ok, 0, wx.ALL, 5)
         sizer_ok_cancel.Add(self.button_cancel, 0, wx.ALL, 5)
         sizer_wrapper.Add(sizer_ok_cancel, 0, wx.ALIGN_CENTER | wx.ALL, 5)
 
         self.SetSizer(sizer_wrapper)
-        sizer_wrapper.Fit(self)
+        if self.size:
+            self.SetSize(self.size)
+        else:
+            sizer_wrapper.Fit(self)
         self.Layout()
+        self.Center()
 
     @property
     def selected_indices(self):
-        return get_selected_listctrl_items(self.list_ctrl_endpoints)
+        return get_selected_listctrl_items(self.list_ctrl)
 
     @property
     def selected_values(self):
-        return [self.list_ctrl_endpoints.GetItem(i, 0).GetText() for i in self.selected_indices]
+        return [self.list_ctrl.GetItem(i, 0).GetText() for i in self.selected_indices]
 
     @property
-    def endpoint_count(self):
-        return len(self.endpoints)-2
+    def item_count(self):
+        return len(self.choices) - len(self.exclude)
 
     def select_all(self, evt):
         self.apply_global_selection()
@@ -298,8 +309,29 @@ class DelEndpointDialog(wx.Dialog):
         self.apply_global_selection(on=0)
 
     def apply_global_selection(self, on=1):
-        for i in range(self.endpoint_count):
-            self.list_ctrl_endpoints.Select(i, on=on)
+        for i in range(self.item_count):
+            self.list_ctrl.Select(i, on=on)
+
+    def set_selection(self, selections):
+        for selection in selections:
+            index = self.choices.index(selection)
+            self.list_ctrl.Select(index, on=True)
+
+
+class DelEndpointDialog(SelectFromListDialog):
+    def __init__(self, endpoints):
+        SelectFromListDialog.__init__(self, "Delete Endpoint", "Endpoints", endpoints,
+                                      exclude={'MRN', 'Tx Site', 'ROI Name', 'Volume (cc)'})
+
+
+class SelectRegressionVariablesDialog(SelectFromListDialog):
+    def __init__(self, dependent_variable, independent_variable_choices, selections=None):
+        self.dependent_variable = dependent_variable
+        self.independent_variable_choices = independent_variable_choices
+        size = get_window_size(1, 0.8)
+        SelectFromListDialog.__init__(self, "Select Variables for %s" % dependent_variable,
+                                      "Independent Variables", independent_variable_choices,
+                                      size=(350, size[1]), column_width=250, selections=selections)
 
 
 def query_dlg(parent, query_type, set_values=False):

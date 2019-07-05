@@ -15,6 +15,7 @@ from pubsub import pub
 from dvha.models.plot import PlotRegression, PlotMultiVarRegression
 from dvha.models.random_forest import RandomForestFrame
 from dvha.dialogs.export import save_data_to_file
+from dvha.dialogs.main import SelectRegressionVariablesDialog
 from dvha.paths import ICONS, MODELS_DIR
 from dvha.tools.utilities import set_msw_background_color, get_tree_ctrl_image, get_window_size
 
@@ -62,6 +63,7 @@ class RegressionFrame:
         self.plot = PlotRegression(self.pane_plot, self.options)
         self.button_multi_var_reg_model = wx.Button(self.pane_tree, wx.ID_ANY, 'Run Selected Model')
         self.button_multi_var_reg_model.Disable()
+        self.button_multi_var_quick_select = wx.Button(self.pane_tree, wx.ID_ANY, 'Variable Quick Select')
         self.button_single_var_export = wx.Button(self.pane_tree, wx.ID_ANY, 'Export Plot Data')
         self.button_single_var_plot_save = wx.Button(self.pane_tree, wx.ID_ANY, 'Save Plot')
 
@@ -83,6 +85,7 @@ class RegressionFrame:
         self.parent.Bind(wx.EVT_SPIN, self.spin_y, id=self.spin_button_y_axis.GetId())
         self.parent.Bind(wx.EVT_CHECKBOX, self.on_checkbox, id=self.checkbox.GetId())
         self.pane_tree.Bind(wx.EVT_BUTTON, self.on_regression, id=self.button_multi_var_reg_model.GetId())
+        self.pane_tree.Bind(wx.EVT_BUTTON, self.on_quick_select, id=self.button_multi_var_quick_select.GetId())
         self.pane_tree.Bind(wx.EVT_TREE_SEL_CHANGED, self.on_tree_select, id=self.tree_ctrl.GetId())
 
         self.pane_tree.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_single_var_export.GetId())
@@ -105,6 +108,7 @@ class RegressionFrame:
 
         sizer_tree = wx.BoxSizer(wx.VERTICAL)
         sizer_tree.Add(self.button_multi_var_reg_model, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_tree.Add(self.button_multi_var_quick_select, 0, wx.EXPAND | wx.ALL, 5)
         sizer_tree.Add(self.tree_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_single_var_export.Add(self.button_single_var_export, 0, wx.EXPAND | wx.ALL, 5)
         sizer_single_var_export.Add(self.button_single_var_plot_save, 1, wx.EXPAND | wx.ALL, 5)
@@ -209,7 +213,7 @@ class RegressionFrame:
         else:
             print('ERROR: x-axis choice is empty.')
 
-    def on_checkbox(self, evt):
+    def on_checkbox(self, *evt):
         y_value = self.combo_box_y_axis.GetValue()
         x_value = self.combo_box_x_axis.GetValue()
         [self.del_regression, self.add_regression][self.checkbox.GetValue()](y_value, x_value)
@@ -330,6 +334,31 @@ class RegressionFrame:
     def on_export(self, evt):
         save_data_to_file(self.pane_tree, 'Export linear regression data', self.plot.get_csv_data())
 
+    def on_quick_select(self, evt):
+        if self.y_axis in list(self.x_variable_nodes):
+            selections = list(self.x_variable_nodes[self.y_axis])
+        else:
+            selections = None
+        choices = [choice for choice in self.combo_box_x_axis.GetItems() if choice != self.y_axis]
+        choices.sort()
+        dlg = SelectRegressionVariablesDialog(self.y_axis, choices, selections=selections)
+        res = dlg.ShowModal()
+
+        if res == wx.ID_OK:
+            for value in dlg.independent_variable_choices:
+                if value in dlg.selected_values:
+                    if self.y_axis not in list(self.x_variable_nodes) or \
+                        (self.y_axis in list(self.x_variable_nodes) and
+                         value not in list(self.x_variable_nodes[self.y_axis])):
+                        self.add_regression(dlg.dependent_variable, value, select_item=False)
+                else:
+                    if self.y_axis in list(self.x_variable_nodes) and value in list(self.x_variable_nodes[self.y_axis]):
+                        self.del_regression(dlg.dependent_variable, value)
+            if self.x_axis in dlg.selected_values and not self.checkbox.GetValue():
+                self.checkbox.SetValue(True)
+                self.on_checkbox()
+        dlg.Destroy()
+
 
 class MultiVarResultsFrame(wx.Frame):
     """
@@ -409,8 +438,7 @@ class MultiVarResultsFrame(wx.Frame):
         self.Center()
 
     def on_random_forest(self, evt):
-        RandomForestFrame(self.plot.X, self.plot.y, self.x_variables, self.y_variable, self.plot.reg.predictions,
-                          self.plot.reg.mse, self.options, self.plot.mrn, self.plot.dates, self.stats_data.uids)
+        RandomForestFrame(**self.plot.final_stats_data)
 
     def on_export(self, evt):
         save_data_to_file(self, 'Save multi-variable regression data to csv', self.plot.get_csv_data())

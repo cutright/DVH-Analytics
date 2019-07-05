@@ -852,6 +852,18 @@ class PlotMultiVarRegression(Plot):
     def get_regression_csv_row(var_name, data, var_type='Independent'):
         return '%s,%s,%s' % (var_type, var_name, ','.join(str(a) for a in data))
 
+    @property
+    def final_stats_data(self):
+        return {'X': self.X, 'y': self.y,
+                'x_variables': self.x_variables,
+                'y_variable': self.y_variable,
+                'multi_var_pred': self.reg.predictions,
+                'multi_var_mse': self.reg.mse,
+                'options': self.options,
+                'mrn': self.mrn,
+                'study_date': self.dates,
+                'uid': self.uid}
+
 
 class PlotControlChart(Plot):
     """
