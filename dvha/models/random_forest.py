@@ -15,6 +15,7 @@ import numpy as np
 # from threading import Thread
 # from pubsub import pub
 from sklearn.ensemble import RandomForestRegressor
+from dvha.dialogs.export import save_data_to_file
 from dvha.models.plot import PlotRandomForest
 from dvha.tools.utilities import set_msw_background_color, get_window_size
 
@@ -23,7 +24,7 @@ class RandomForestFrame(wx.Frame):
     """
     View random forest predictions for provided data
     """
-    def __init__(self, X, y, x_variables, y_variable, multi_var_pred, options, mrn, study_date):
+    def __init__(self, X, y, x_variables, y_variable, multi_var_pred, multi_var_mse, options, mrn, study_date):
         """
         :param X:
         :param y: data to be modeled
@@ -40,14 +41,15 @@ class RandomForestFrame(wx.Frame):
         self.X, self.y = X, y
         self.x_variables, self.y_variable = x_variables, y_variable
 
-        self.plot = PlotRandomForest(self, options, X, y, multi_var_pred, mrn, study_date)
+        self.plot = PlotRandomForest(self, options, X, y, multi_var_pred, mrn, study_date, multi_var_mse)
 
         self.SetSize(get_window_size(0.595, 0.714))
         self.spin_ctrl_trees = wx.SpinCtrl(self, wx.ID_ANY, "100", min=1, max=1000)
         init_features = [1, 2][len(x_variables) > 1]
-        self.spin_ctrl_features = wx.SpinCtrl(self, wx.ID_ANY, str(init_features),
-                                              min=init_features, max=len(x_variables))
-        self.button_update = wx.Button(self, wx.ID_ANY, "Calculate")
+        self.spin_ctrl_features = wx.SpinCtrl(self, wx.ID_ANY, str(init_features), min=1, max=len(x_variables))
+        self.button_calculate = wx.Button(self, wx.ID_ANY, "Calculate")
+        self.button_save = wx.Button(self, wx.ID_ANY, "Save Plot")
+        self.button_export = wx.Button(self, wx.ID_ANY, "Export Data")
 
         self.__set_properties()
         self.__do_layout()
@@ -65,7 +67,7 @@ class RandomForestFrame(wx.Frame):
         self.spin_ctrl_features.SetToolTip("Maximum number of features when splitting")
 
     def __do_bind(self):
-        self.Bind(wx.EVT_BUTTON, self.on_update, id=self.button_update.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_update, id=self.button_calculate.GetId())
         self.Bind(wx.EVT_SIZE, self.on_resize)
 
     def __do_layout(self):
@@ -86,7 +88,9 @@ class RandomForestFrame(wx.Frame):
         sizer_features.Add(self.spin_ctrl_features, 0, wx.ALL, 5)
         sizer_hyper_parameters.Add(sizer_features, 1, wx.EXPAND, 0)
 
-        sizer_hyper_parameters.Add(self.button_update, 0, wx.ALL, 5)
+        sizer_hyper_parameters.Add(self.button_calculate, 0, wx.ALL, 5)
+        sizer_hyper_parameters.Add(self.button_save, 0, wx.ALL, 5)
+        sizer_hyper_parameters.Add(self.button_export, 0, wx.ALL, 5)
 
         sizer_input_and_plot.Add(sizer_hyper_parameters, 0, wx.EXPAND, 0)
 
@@ -100,7 +104,7 @@ class RandomForestFrame(wx.Frame):
     def on_update(self, evt):
         y_pred, mse, importance = get_random_forest(self.X, self.y, n_estimators=self.spin_ctrl_trees.GetValue(),
                                                     max_features=self.spin_ctrl_features.GetValue())
-        self.plot.update_data(y_pred, importance, self.x_variables, self.y_variable)
+        self.plot.update_data(y_pred, importance, self.x_variables, self.y_variable, mse)
 
     def redraw_plot(self):
         self.plot.redraw_plot()
@@ -112,6 +116,13 @@ class RandomForestFrame(wx.Frame):
             wx.CallAfter(self.redraw_plot)
         except RuntimeError:
             pass
+
+    def on_export(self, evt):
+        save_data_to_file(self, 'Save random forest data to csv', self.plot.get_csv_data())
+
+    def on_save_plot(self, evt):
+        save_data_to_file(self, 'Save random forest plot', self.plot.html_str,
+                          wildcard="HTML files (*.html)|*.html")
 
 
 # class RandomForestWorker(Thread):

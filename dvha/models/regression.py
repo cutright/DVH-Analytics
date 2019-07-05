@@ -410,7 +410,7 @@ class MultiVarResultsFrame(wx.Frame):
 
     def on_random_forest(self, evt):
         RandomForestFrame(self.plot.X, self.plot.y, self.x_variables, self.y_variable, self.plot.reg.predictions,
-                          self.options, self.plot.mrn, self.plot.dates)
+                          self.plot.reg.mse, self.options, self.plot.mrn, self.plot.dates)
 
     def on_export(self, evt):
         save_data_to_file(self, 'Save multi-variable regression data to csv', self.plot.get_csv_data())
