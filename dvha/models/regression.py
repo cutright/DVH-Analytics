@@ -62,7 +62,6 @@ class RegressionFrame:
         self.checkbox = wx.CheckBox(self.pane_plot, wx.ID_ANY, "Include", style=wx.ALIGN_RIGHT)
         self.plot = PlotRegression(self.pane_plot, self.options)
         self.button_multi_var_reg_model = wx.Button(self.pane_tree, wx.ID_ANY, 'Run Selected Model')
-        self.button_multi_var_reg_model.Disable()
         self.button_multi_var_quick_select = wx.Button(self.pane_tree, wx.ID_ANY, 'Variable Quick Select')
         self.button_single_var_export = wx.Button(self.pane_tree, wx.ID_ANY, 'Export Plot Data')
         self.button_single_var_plot_save = wx.Button(self.pane_tree, wx.ID_ANY, 'Save Plot')
@@ -217,8 +216,6 @@ class RegressionFrame:
         y_value = self.combo_box_y_axis.GetValue()
         x_value = self.combo_box_x_axis.GetValue()
         [self.del_regression, self.add_regression][self.checkbox.GetValue()](y_value, x_value)
-
-        self.button_multi_var_reg_model.Enable(bool(len(list(self.y_variable_nodes))))
 
     def add_regression(self, y_var, x_var, select_item=True):
         """

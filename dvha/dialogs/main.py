@@ -331,7 +331,7 @@ class SelectRegressionVariablesDialog(SelectFromListDialog):
         size = get_window_size(1, 0.8)
         SelectFromListDialog.__init__(self, "Select Variables for %s" % dependent_variable,
                                       "Independent Variables", independent_variable_choices,
-                                      size=(350, size[1]), column_width=250, selections=selections)
+                                      size=(350, size[1]), column_width=300, selections=selections)
 
 
 def query_dlg(parent, query_type, set_values=False):

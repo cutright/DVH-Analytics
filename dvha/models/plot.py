@@ -1282,7 +1282,7 @@ class PlotRandomForest(Plot):
         self.imp_figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
         self.imp_figure.min_border = self.options.MIN_BORDER
         # self.imp_figure.yaxis.axis_label_text_baseline = "bottom"
-        self.imp_figure.xaxis.major_label_orientation = -pi/3
+        self.imp_figure.xaxis.major_label_orientation = -pi/2
 
         self.diff_figure.xaxis.axis_label = 'Study'
         self.diff_figure.yaxis.axis_label = 'Residual'
