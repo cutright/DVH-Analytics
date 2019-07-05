@@ -500,7 +500,7 @@ class PlotRegression(Plot):
         self.options = options
         self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], dates=[])),
                        'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
-                       'residuals': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'residuals': ColumnDataSource(data=dict(x=[], y=[], mrn=[], date=[])),
                        'residuals_zero': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'prob': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'prob_45': ColumnDataSource(data=dict(x=[], y=[])),
@@ -562,6 +562,17 @@ class PlotRegression(Plot):
                                                   ('x', '@x{0.2f}'),
                                                   ('y', '@y{0.2f}')]))
 
+        self.figure_residual_fits.add_tools(HoverTool(show_arrow=True,
+                                            tooltips=[('ID', '@mrn'),
+                                                      ('Date', '@date{%F}'),
+                                                      ('x', '@x{0.2f}'),
+                                                      ('y', '@y{0.2f}')],
+                                            formatters={'date': 'datetime'}))
+
+        self.figure_prob_plot.add_tools(HoverTool(show_arrow=True,
+                                                  tooltips=[('x', '@x{0.2f}'),
+                                                            ('y', '@y{0.2f}')]))
+
     def __do_layout(self):
         self.bokeh_layout = column(self.figure,
                                    self.regression_table,
@@ -589,9 +600,10 @@ class PlotRegression(Plot):
         self.regression_table.height = int(self.size_factor['table'][1] * float(panel_height))
 
     def update_trend(self, x_var):
-        x, y, mrn = self.clean_data(self.source['plot'].data['x'],
-                                    self.source['plot'].data['y'],
-                                    mrn=self.source['plot'].data['mrn'])
+        x, y, mrn, date = self.clean_data(self.source['plot'].data['x'],
+                                          self.source['plot'].data['y'],
+                                          mrn=self.source['plot'].data['mrn'],
+                                          dates=self.source['plot'].data['date'])
 
         data = np.array([y, x])
         clean_data = data[:, ~np.any(np.isnan(data), axis=0)]
@@ -605,7 +617,8 @@ class PlotRegression(Plot):
 
         self.source['residuals'].data = {'x': self.reg.predictions,
                                          'y': self.reg.residuals,
-                                         'mrn': mrn}
+                                         'mrn': mrn,
+                                         'date': date}
 
         self.source['residuals_zero'].data = {'x': [min(self.reg.predictions), max(self.reg.predictions)],
                                               'y': [0, 0],
@@ -695,9 +708,9 @@ class PlotMultiVarRegression(Plot):
         self.x_variables, self.y_variable, self.stats_data = None, None, None
         self.mrn, self.uid, self.dates = None, None, None
         self.reg = None
-        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[])),
+        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], date=[])),
                        'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
-                       'residuals': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'residuals': ColumnDataSource(data=dict(x=[], y=[], mrn=[], date=[])),
                        'residuals_zero': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'prob': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'prob_45': ColumnDataSource(data=dict(x=[], y=[])),
@@ -706,6 +719,7 @@ class PlotMultiVarRegression(Plot):
 
         self.__add_additional_figures()
         self.__add_plot_data()
+        self.__add_hover()
         self.__create_table()
         self.__do_layout()
 
@@ -738,6 +752,18 @@ class PlotMultiVarRegression(Plot):
                                                        line_dash=self.options.REGRESSION_RESIDUAL_LINE_DASH,
                                                        alpha=self.options.REGRESSION_RESIDUAL_ALPHA,
                                                        color=self.options.REGRESSION_RESIDUAL_LINE_COLOR)
+
+    def __add_hover(self):
+        self.figure.add_tools(HoverTool(show_arrow=True,
+                                        tooltips=[('ID', '@mrn'),
+                                                  ('Date', '@date{%F}'),
+                                                  ('x', '@x{0.2f}'),
+                                                  ('y', '@y{0.2f}')],
+                                        formatters={'date': 'datetime'}))
+
+        self.figure_prob_plot.add_tools(HoverTool(show_arrow=True,
+                                                  tooltips=[('x', '@x{0.2f}'),
+                                                            ('y', '@y{0.2f}')]))
 
     def __create_table(self):
         columns = [TableColumn(field="var", title="", width=100),
@@ -774,7 +800,9 @@ class PlotMultiVarRegression(Plot):
         self.reg = MultiVariableRegression(self.X, self.y)
 
         self.source['residuals'].data = {'x': self.reg.predictions,
-                                         'y': self.reg.residuals}
+                                         'y': self.reg.residuals,
+                                         'mrn': self.mrn,
+                                         'date': self.dates}
 
         self.source['residuals_zero'].data = {'x': [min(self.reg.predictions), max(self.reg.predictions)],
                                               'y': [0, 0],
