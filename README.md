@@ -2,8 +2,6 @@
   <img src="https://user-images.githubusercontent.com/4778878/30754005-b7a7e808-9f86-11e7-8b0f-79d1006babdf.jpg" alt="fastlane Logo" />
 </h3>
 
-# DVH Analytics
-
 Welcome to the brand new DVH Analytics, rewritten as a native OS application with wxPython. This version is currently 
 only available as source code during the public beta. Compiled versions will be available after successful testing. The 
 previous web-based version can be found [here](https://github.com/cutright/DVH-Analytics) but is no longer being 
@@ -16,7 +14,7 @@ The application builds a SQL database of DVHs and various planning parameters fr
 (i.e., Plan, Structure, Dose). Since the data is extracted directly from DICOM files, we intend
 to accommodate an array of treatment planning system vendors.
 
-<img src='https://user-images.githubusercontent.com/4778878/60750740-c9120400-9f72-11e9-8c70-a735eb03c6e0.jpg' align='right' width='400' alt="DVH Analytics screenshot">
+<img src='https://user-images.githubusercontent.com/4778878/60757973-027c5b00-9fd7-11e9-9660-31f94ebf8b56.jpg' align='right' width='400' alt="DVH Analytics screenshot">
 
 In addition to viewing DVH data, this software provides methods to:
 

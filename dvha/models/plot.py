@@ -1361,7 +1361,7 @@ class PlotRandomForest(Plot):
 
         self.div.text = "<b>Mean Square Error</b>: %0.2f (RF) --- %0.2f (MVR)" % (mse, self.multi_var_mse)
 
-        self.figure.xaxis.axis_label = y_variable
+        self.figure.yaxis.axis_label = y_variable
 
         self.update_bokeh_layout_in_wx_python()
 
