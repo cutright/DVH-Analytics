@@ -1139,13 +1139,9 @@ class ImportWorker(Thread):
                           'DVHs': []}
 
         if not self.import_uncategorized:  # remove uncategorized ROIs unless this is checked
-            ignore_me = []
             for roi_key in list(roi_name_map):
-                if self.data[plan_uid].get_physician_roi(roi_key) == 'uncategorized' and \
-                        self.data[plan_uid].get_roi_type(roi_key) not in {'GTV', 'CTV', 'ITV', 'PTV'}:
-                    ignore_me.append(roi_key)
-            for roi_key in ignore_me:
-                roi_name_map.pop(roi_key)
+                if self.data[plan_uid].get_physician_roi(roi_key) == 'uncategorized':
+                    roi_name_map.pop(roi_key)
 
         post_import_rois = []
         roi_total = len(roi_name_map)
@@ -1155,7 +1151,7 @@ class ImportWorker(Thread):
                 if self.terminate['status']:
                     return
 
-                # Skip dvh calculation if roi was already imported (e.g, from previous plan in this study
+                # Skip dvh calculation if roi was already imported (e.g, from previous plan in this study)
                 if not cnx.is_roi_imported(roi_name_map[roi_key], study_uid):
 
                     # Send messages to status dialog about progress
