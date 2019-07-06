@@ -1,11 +1,7 @@
 # Installation notes for DVH Analytics
 
-## Before you start
-Please note you must have a PostgreSQL DB setup prior to use. 
-See [PostgreSQL Notes](#PostgreSQL).
-
 ## Pre-requisites
- - [PostgreSQL](https://www.postgresql.org/) (tested with 9.6)
+ - [PostgreSQL](https://www.postgresql.org/)
  - [Python >=3.5](https://www.python.org/downloads/release)
  - Additional python libraries as specifed in 
  [requirements.txt](https://github.com/cutright/DVH-Analytics-Desktop/blob/master/requirements.txt)

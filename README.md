@@ -7,7 +7,9 @@
 # DVH Analytics
 
 Welcome to the brand new DVH Analytics, rewritten as a native OS application with wxPython. This version is currently 
-only available as source code during the public beta. Compiled versions will be available after successful testing.
+only available as source code during the public beta. Compiled versions will be available after successful testing. The 
+previous web-based version can be found [here](https://github.com/cutright/DVH-Analytics) but is no longer being 
+developed.
 
 DVH Analytics is a software application to help radiation oncology departments build an in-house database of treatment 
 planning data for the purpose of historical comparisons and statistical analysis.
@@ -33,7 +35,7 @@ The code is built upon these core libraries:
 * [dicompyler-core](https://pypi.python.org/pypi/dicompyler-core) - Extensible radiation therapy research platform and viewer for DICOM and DICOM RT
 * [Bokeh](http://bokeh.pydata.org/en/latest/index.html) - Interactive Web Plotting for Python
 
-For installation instructions of the source code, see our [installation notes](https://github.com/cutright/DVH-Analytics/blob/master/install_notes.md).  
+For installation instructions of the source code, see our [installation notes](https://github.com/cutright/DVH-Analytics-Desktop/blob/master/install_notes.md). 
 
 
 ### Citing DVH Analytics
