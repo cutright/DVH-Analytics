@@ -16,8 +16,8 @@ The application builds a SQL database of DVHs and various planning parameters fr
 (i.e., Plan, Structure, Dose). Since the data is extracted directly from DICOM files, we intend
 to accommodate an array of treatment planning system vendors.
 
-<img src='https://user-images.githubusercontent.com/4778878/60750740-c9120400-9f72-11e9-8c70-a735eb03c6e0.jpg' align='right' width='600' alt="DVH Analytics screenshot">
-<img src='https://user-images.githubusercontent.com/4778878/60750758-ff4f8380-9f72-11e9-881d-eef7fa1efc95.jpg' align='right' width='600' alt="DVH Analytics screenshot">
+<img src='https://user-images.githubusercontent.com/4778878/60750740-c9120400-9f72-11e9-8c70-a735eb03c6e0.jpg' align='right' width='450' alt="DVH Analytics screenshot">
+<img src='https://user-images.githubusercontent.com/4778878/60750758-ff4f8380-9f72-11e9-881d-eef7fa1efc95.jpg' align='right' width='450' alt="DVH Analytics screenshot">
 
 
 In addition to viewing DVH data, this software provides methods to:
