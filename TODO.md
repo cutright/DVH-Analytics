@@ -8,11 +8,11 @@
         - [X] Update file tree to Patient -> Study -> Plan -> Files
         - [X] Auto combine multiple plans within one study_instance_uid
         - [ ] Implement dicom_dose_sum.py borrowed from dicompyler plugin (testing failed)
-            - [ ] Still need to properly assign files (only one file per study, not a list)
-            - [ ] Rx dose of 2nd plan not importing?
-            - [ ] Allow a single structure file for two plans pointing to same file
-            - [ ] Dose sums that require interpolation failing. Issue posted [here](https://groups.google.com/forum/?utm_medium=email&utm_source=footer#!msg/dicompyler/qkU2CtYzgLg/EbaV5foXAgAJ)
-            - [X] move_files should be called after study completely imported, not plan
+        - [ ] Still need to properly assign files (only one file per study, not a list)
+        - [ ] Rx dose of 2nd plan not importing?
+        - [ ] Allow a single structure file for two plans pointing to same file
+        - [ ] Dose sums that require interpolation failing. Issue posted [here](https://groups.google.com/forum/?utm_medium=email&utm_source=footer#!msg/dicompyler/qkU2CtYzgLg/EbaV5foXAgAJ)
+        - [X] move_files should be called after study completely imported, not plan
 
 2. **Open/Save and Import**
     * *Open/Save*
