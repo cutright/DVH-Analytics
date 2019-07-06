@@ -4,7 +4,7 @@
 
 Welcome to the brand new DVH Analytics, rewritten as a native OS application with wxPython. This version is currently 
 only available as source code during the public beta. Compiled versions will be available after successful testing. The 
-previous web-based version can be found [here](https://github.com/cutright/DVH-Analytics) but is no longer being 
+previous web-based version can be found [here](https://github.com/cutright/DVH-Analytics-Bokeh) but is no longer being 
 developed.
 
 ### How to Run
@@ -30,7 +30,7 @@ In addition to viewing DVH data, this software provides methods to:
 - create time-series plots of various planning and dosimetric variables
 - calculate correlations
 - generate multi-variable linear and machine learning regressions.
-- Additional screenshots available [here](https://github.com/cutright/DVH-Analytics-Desktop/issues/9).
+- Additional screenshots available [here](https://github.com/cutright/DVH-Analytics/issues/9).
 
 
 The code is built upon these core libraries:
@@ -39,7 +39,7 @@ The code is built upon these core libraries:
 * [dicompyler-core](https://pypi.python.org/pypi/dicompyler-core) - Extensible radiation therapy research platform and viewer for DICOM and DICOM RT
 * [Bokeh](http://bokeh.pydata.org/en/latest/index.html) - Interactive Web Plotting for Python
 
-For installation instructions of the source code, see our [installation notes](https://github.com/cutright/DVH-Analytics-Desktop/blob/master/install_notes.md). 
+For installation instructions of the source code, see our [installation notes](https://github.com/cutright/DVH-Analytics/blob/master/install_notes.md). 
 
 
 ### Citing DVH Analytics
