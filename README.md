@@ -8,8 +8,8 @@ previous web-based version can be found [here](https://github.com/cutright/DVH-A
 developed.
 
 ### How to Run
-Clone this project, install python dependencies, then call the following from the top-level project directory 
-with python 3:
+Clone this project and install python dependencies.  
+Then call the following from the top-level project directory with python 3:
 ~~~
 python dvha_app.py
 ~~~
