@@ -17,8 +17,6 @@ The application builds a SQL database of DVHs and various planning parameters fr
 to accommodate an array of treatment planning system vendors.
 
 <img src='https://user-images.githubusercontent.com/4778878/60750740-c9120400-9f72-11e9-8c70-a735eb03c6e0.jpg' align='right' width='400' alt="DVH Analytics screenshot">
-<img src='https://user-images.githubusercontent.com/4778878/60750758-ff4f8380-9f72-11e9-881d-eef7fa1efc95.jpg' align='right' width='400' alt="DVH Analytics screenshot">
-
 
 In addition to viewing DVH data, this software provides methods to:
 
@@ -26,6 +24,7 @@ In addition to viewing DVH data, this software provides methods to:
 - create time-series plots of various planning and dosimetric variables
 - calculate correlations
 - generate multi-variable linear and machine learning regressions.
+- Additional screenshots available [here](https://github.com/cutright/DVH-Analytics-Desktop/issues/9).
 
 
 The code is built upon these core libraries:
@@ -34,7 +33,7 @@ The code is built upon these core libraries:
 * [dicompyler-core](https://pypi.python.org/pypi/dicompyler-core) - Extensible radiation therapy research platform and viewer for DICOM and DICOM RT
 * [Bokeh](http://bokeh.pydata.org/en/latest/index.html) - Interactive Web Plotting for Python
 
-For installation instructions of the source code, see our [installation notes](https://github.com/cutright/DVH-Analytics/blob/master/install_notes.md).
+For installation instructions of the source code, see our [installation notes](https://github.com/cutright/DVH-Analytics/blob/master/install_notes.md).  
 
 
 ### Citing DVH Analytics
