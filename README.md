@@ -1,5 +1,3 @@
-# DVH-Analytics
-
 <h3 align="center">
   <img src="https://user-images.githubusercontent.com/4778878/30754005-b7a7e808-9f86-11e7-8b0f-79d1006babdf.jpg" alt="fastlane Logo" />
 </h3>
@@ -43,7 +41,7 @@ DOI: [https://doi.org/10.1002/acm2.12401](https://doi.org/10.1002/acm2.12401)
 “DVH Analytics: A DVH Database for Clinicians and Researchers,” J. App. Clin. Med. Phys. - JACMP-2018-01083
 
 
-## Dependencies
+### Dependencies
 * [Python](https://www.python.org) >=3.5
 * [wxPython Phoenix](https://github.com/wxWidgets/Phoenix) >= 4.0.4
 * [Pydicom](https://github.com/darcymason/pydicom) >=1.0
