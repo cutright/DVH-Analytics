@@ -13,6 +13,10 @@ for the project), run (assuming python points to an instance of python 3):
 python dvha_app.py
 ~~~
 
+## Shapely
+The python package Shapely frequently has issues installing on Windows. If your pip install failed, consider installing 
+Shapely from [here](https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely).
+
 ## PostgreSQL
 If you have access to a PostgreSQL DB, you simply need to fill in the login information by going to 
 the menu bar: Settings -> Database Settings.

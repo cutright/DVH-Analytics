@@ -7,8 +7,9 @@ only available as source code during the public beta. Compiled versions will be 
 previous web-based version can be found [here](https://github.com/cutright/DVH-Analytics) but is no longer being 
 developed.
 
-### How to Run DVH Analytics
-Clone this project, then call the following from the top-level project directory with python 3:
+### How to Run
+Clone this project, install all python dependencies, then call the following from the top-level project directory 
+with python 3:
 ~~~
 python dvha_app.py
 ~~~
