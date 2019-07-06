@@ -38,60 +38,63 @@ class DVH:
 
         # Get DVH data from SQL and set as attributes
         dvh_data = QuerySQL('DVHs', constraints_str)
-        ignored_keys = {'cnx', 'cursor', 'table_name', 'constraints_str', 'condition_str'}
-        self.keys = []
-        for key, value in dvh_data.__dict__.items():
-            if not key.startswith("__") and key not in ignored_keys:
-                setattr(self, key, value)
-                if '_string' not in key:
-                    self.keys.append(key)
+        if dvh_data.mrn:
+            ignored_keys = {'cnx', 'cursor', 'table_name', 'constraints_str', 'condition_str'}
+            self.keys = []
+            for key, value in dvh_data.__dict__.items():
+                if not key.startswith("__") and key not in ignored_keys:
+                    setattr(self, key, value)
+                    if '_string' not in key:
+                        self.keys.append(key)
 
-        # Move mrn to beginning of self.keys
-        if 'mrn' in self.keys:
-            self.keys.pop(self.keys.index('mrn'))
-            self.keys.insert(0, 'mrn')
+            # Move mrn to beginning of self.keys
+            if 'mrn' in self.keys:
+                self.keys.pop(self.keys.index('mrn'))
+                self.keys.insert(0, 'mrn')
 
-        # Add these properties to dvh_data since they aren't in the DVHs SQL table
-        self.count = len(self.mrn)
-        self.study_count = len(uid)
-        self.rx_dose = self.get_plan_values('rx_dose')
-        self.sim_study_date = self.get_plan_values('sim_study_date')
-        self.keys.append('rx_dose')
-        self.endpoints = {'data': None,
-                          'defs': None}
-        self.eud = None
-        self.ntcp_or_tcp = None
+            # Add these properties to dvh_data since they aren't in the DVHs SQL table
+            self.count = len(self.mrn)
+            self.study_count = len(uid)
+            self.rx_dose = self.get_plan_values('rx_dose')
+            self.sim_study_date = self.get_plan_values('sim_study_date')
+            self.keys.append('rx_dose')
+            self.endpoints = {'data': None,
+                              'defs': None}
+            self.eud = None
+            self.ntcp_or_tcp = None
 
-        self.bin_count = max([value.count(',') + 1 for value in self.dvh_string])
+            self.bin_count = max([value.count(',') + 1 for value in self.dvh_string])
 
-        self.dvh = np.zeros([self.bin_count, self.count])
+            self.dvh = np.zeros([self.bin_count, self.count])
 
-        # Get needed values not in DVHs table
-        for i in range(self.count):
-            # Process dvh_string to numpy array, and pad with zeros at the end
-            # so that all dvhs are the same length
-            current_dvh = np.array(self.dvh_string[i].split(','), dtype='|S4').astype(np.float)
-            current_dvh_max = np.max(current_dvh)
-            if current_dvh_max > 0:
-                current_dvh = np.divide(current_dvh, current_dvh_max)
-            zero_fill = np.zeros(self.bin_count - len(current_dvh))
-            self.dvh[:, i] = np.concatenate((current_dvh, zero_fill))
+            # Get needed values not in DVHs table
+            for i in range(self.count):
+                # Process dvh_string to numpy array, and pad with zeros at the end
+                # so that all dvhs are the same length
+                current_dvh = np.array(self.dvh_string[i].split(','), dtype='|S4').astype(np.float)
+                current_dvh_max = np.max(current_dvh)
+                if current_dvh_max > 0:
+                    current_dvh = np.divide(current_dvh, current_dvh_max)
+                zero_fill = np.zeros(self.bin_count - len(current_dvh))
+                self.dvh[:, i] = np.concatenate((current_dvh, zero_fill))
 
-        self.dth = []
-        for i in range(self.count):
-            # Process dth_string to numpy array
-            try:
-                self.dth.append(np.array(self.dth_string[i].split(','), dtype='|S4').astype(np.float))
-            except:
-                self.dth.append(np.array([0]))
+            self.dth = []
+            for i in range(self.count):
+                # Process dth_string to numpy array
+                try:
+                    self.dth.append(np.array(self.dth_string[i].split(','), dtype='|S4').astype(np.float))
+                except:
+                    self.dth.append(np.array([0]))
 
-        # Store these now so they can be saved in DVH object without needing to query later
-        with DVH_SQL() as cnx:
-            self.physician_count = len(cnx.get_unique_values('Plans', 'physician',
-                                                             "study_instance_uid in ('%s')" % "','".join(self.uid)))
-        self.total_fxs = self.get_plan_values('fxs')
-        self.fx_dose = self.get_rx_values('fx_dose')
-        self.ptv_overlap = self.ptv_overlap
+            # Store these now so they can be saved in DVH object without needing to query later
+            with DVH_SQL() as cnx:
+                self.physician_count = len(cnx.get_unique_values('Plans', 'physician',
+                                                                 "study_instance_uid in ('%s')" % "','".join(self.uid)))
+            self.total_fxs = self.get_plan_values('fxs')
+            self.fx_dose = self.get_rx_values('fx_dose')
+            self.ptv_overlap = self.ptv_overlap
+        else:
+            self.count = 0
 
     def get_plan_values(self, plan_column):
         """

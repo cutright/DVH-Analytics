@@ -137,7 +137,7 @@ class DVHAMainFrame(wx.Frame):
         # file_menu.Append(wx.ID_NEW, '&New')
         menu_open = file_menu.Append(wx.ID_OPEN, '&Open\tCtrl+O')
         menu_save = file_menu.Append(wx.ID_ANY, '&Save\tCtrl+S')
-        menu_close = file_menu.Append(wx.ID_ANY, '&Close\tCtrl+W')
+        menu_close = file_menu.Append(wx.ID_ANY, '&Close')
 
         export_plot = wx.Menu()
         export_dvhs = export_plot.Append(wx.ID_ANY, 'DVHs')
@@ -167,7 +167,7 @@ class DVHAMainFrame(wx.Frame):
         menu_user_settings = settings_menu.Append(wx.ID_ANY, '&User Settings\tCtrl+,')
 
         help_menu = wx.Menu()
-        menu_about = help_menu.Append(wx.ID_ANY, '&About\tCtrl+A')
+        menu_about = help_menu.Append(wx.ID_ANY, '&About')
 
         self.Bind(wx.EVT_MENU, self.on_quit, qmi)
         self.Bind(wx.EVT_MENU, self.on_open, menu_open)
@@ -564,22 +564,28 @@ class DVHAMainFrame(wx.Frame):
             uids, dvh_str = self.get_query()
             self.dvh = DVH(dvh_condition=dvh_str, uid=uids)
 
-        self.endpoint.update_dvh(self.dvh)
-        self.text_summary.SetLabelText(self.dvh.get_summary())
-        self.plot.update_plot(self.dvh)
-        del wait
-        self.notebook_main_view.SetSelection(1)
-        self.update_data(load_saved_dvh_data=load_saved_dvh_data)
-        self.time_series.update_data(self.dvh, self.data)
-        if self.dvh.count > 1:
-            self.control_chart.update_data(self.dvh, self.stats_data)
+        if self.dvh.count:
+            self.endpoint.update_dvh(self.dvh)
+            self.text_summary.SetLabelText(self.dvh.get_summary())
+            self.plot.update_plot(self.dvh)
+            del wait
+            self.notebook_main_view.SetSelection(1)
+            self.update_data(load_saved_dvh_data=load_saved_dvh_data)
+            self.time_series.update_data(self.dvh, self.data)
+            if self.dvh.count > 1:
+                self.control_chart.update_data(self.dvh, self.stats_data)
 
-        self.radbio.update_dvh_data(self.dvh)
+            self.radbio.update_dvh_data(self.dvh)
 
-        self.__enable_notebook_tabs()
+            self.__enable_notebook_tabs()
 
-        self.save_data['main_categorical'] = self.data_table_categorical.get_save_data()
-        self.save_data['main_numerical'] = self.data_table_numerical.get_save_data()
+            self.save_data['main_categorical'] = self.data_table_categorical.get_save_data()
+            self.save_data['main_numerical'] = self.data_table_numerical.get_save_data()
+        else:
+            del wait
+            wx.MessageBox('No DVHs returned. Please modify query or import more data.', 'Query Error',
+                          wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+            self.dvh = None
 
     def get_query(self):
 
