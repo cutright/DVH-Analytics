@@ -7,11 +7,13 @@ only available as source code during the public beta. Compiled versions will be 
 previous web-based version can be found [here](https://github.com/cutright/DVH-Analytics) but is no longer being 
 developed.
 
-To run, clone this project and run the following from the top-level project directory with python 3:
+### How to Run DVH Analytics
+Clone this project, then call the following from the top-level project directory with python 3:
 ~~~
 python dvha_app.py
 ~~~
 
+### About
 DVH Analytics is a software application to help radiation oncology departments build an in-house database of treatment 
 planning data for the purpose of historical comparisons and statistical analysis.
 
