@@ -4,6 +4,7 @@ v0.6.1 (TBD)
 --------------------
  - [Control Chart] Adjusted Control Charts automatically populated from Regressions tab after running model
  - [Regression] Run all regressions on instead of just the selected
+ - [Regression] Added Gradient Boosting
 
 v0.6.0 (2019.7.6)
 --------------------

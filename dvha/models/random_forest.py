@@ -11,11 +11,10 @@ Class to view and calculate Random Forest
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx
-import numpy as np
 # from threading import Thread
 # from pubsub import pub
-from sklearn.ensemble import RandomForestRegressor
 from dvha.dialogs.export import save_data_to_file
+from dvha.tools.machine_learning import get_random_forest
 from dvha.models.plot import PlotRandomForest
 from dvha.tools.utilities import set_msw_background_color, get_window_size
 
@@ -24,7 +23,8 @@ class RandomForestFrame(wx.Frame):
     """
     View random forest predictions for provided data
     """
-    def __init__(self, X, y, x_variables, y_variable, multi_var_pred, multi_var_mse, options, mrn, study_date, uid):
+    def __init__(self, X, y, x_variables, y_variable, multi_var_pred, multi_var_mse, options, mrn, study_date, uid,
+                 regressor=get_random_forest, title='Random Forest'):
         """
         :param X:
         :param y: data to be modeled
@@ -40,6 +40,9 @@ class RandomForestFrame(wx.Frame):
 
         self.X, self.y = X, y
         self.x_variables, self.y_variable, self.uid = x_variables, y_variable, uid
+
+        self.regressor = regressor
+        self.title = title
 
         self.plot = PlotRandomForest(self, options, X, y, multi_var_pred, mrn, study_date, multi_var_mse)
 
@@ -60,7 +63,7 @@ class RandomForestFrame(wx.Frame):
         self.on_update(None)
 
     def __set_properties(self):
-        self.SetTitle("Random Forest")
+        self.SetTitle(self.title)
         self.spin_ctrl_trees.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
                                              wx.FONTWEIGHT_NORMAL, 0, ".SF NS Text"))
         self.spin_ctrl_trees.SetToolTip("n_estimators")
@@ -103,8 +106,8 @@ class RandomForestFrame(wx.Frame):
         self.Layout()
 
     def on_update(self, evt):
-        y_pred, mse, importance = get_random_forest(self.X, self.y, n_estimators=self.spin_ctrl_trees.GetValue(),
-                                                    max_features=self.spin_ctrl_features.GetValue())
+        y_pred, mse, importance = self.regressor(self.X, self.y, n_estimators=self.spin_ctrl_trees.GetValue(),
+                                                 max_features=self.spin_ctrl_features.GetValue())
         self.plot.update_data(y_pred, importance, self.x_variables, self.y_variable, mse, self.uid)
 
     def redraw_plot(self):
@@ -152,28 +155,3 @@ class RandomForestFrame(wx.Frame):
 #         y_predict, mse = get_random_forest(self.X, self.y, **self.kwargs)
 #         msg = {'y_predict': y_predict, 'mse': mse}
 #         wx.CallAfter(pub.sendMessage, "random_forest_complete", msg=msg)
-
-
-def get_random_forest(X, y, n_estimators=100, max_features=None):
-    """
-    Get random forest predictions and the mean square error with sklearn
-    :param X: independent data
-    :type X: numpy.array
-    :param y: dependent data
-    :type y: list
-    :param n_estimators:
-    :type n_estimators: int
-    :param max_features:
-    :type max_features: int
-    :return: predicted values, mean square error
-    :rtype: tuple
-    """
-    if max_features is None:
-        max_features = len(X[0, :])
-    regressor = RandomForestRegressor(n_estimators=n_estimators, max_features=max_features)
-    regressor.fit(X, y)
-    y_pred = regressor.predict(X)
-
-    mse = np.mean(np.square(np.subtract(y_pred, y)))
-
-    return y_pred, mse, regressor.feature_importances_
