@@ -102,10 +102,14 @@ class StatsData:
         """
         bad_vars = []
         for var_name, var_obj in self.data.items():
-            if 'Date' not in var_name:
+            if 'Date' in var_name:
+                if var_name != 'Simulation Date':
+                    bad_vars.append(var_name)
+            else:
                 values = [float(val) for val in var_obj['values'] if val != 'None' and val is not None]
                 if not any(np.diff(values).tolist()):
                     bad_vars.append(var_name)
+
         for var in bad_vars:
             self.data.pop(var)
 

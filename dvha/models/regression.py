@@ -107,10 +107,10 @@ class RegressionFrame:
 
         sizer_tree = wx.BoxSizer(wx.VERTICAL)
         sizer_tree.Add(self.button_multi_var_reg_model, 0, wx.EXPAND | wx.ALL, 5)
-        sizer_tree.Add(self.button_multi_var_quick_select, 0, wx.EXPAND | wx.ALL, 5)
         sizer_tree.Add(self.tree_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        sizer_single_var_export.Add(self.button_single_var_export, 0, wx.EXPAND | wx.ALL, 5)
-        sizer_single_var_export.Add(self.button_single_var_plot_save, 1, wx.EXPAND | wx.ALL, 5)
+        sizer_tree.Add(self.button_multi_var_quick_select, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_single_var_export.Add(self.button_single_var_export, 0, wx.EXPAND | wx.BOTTOM | wx.RIGHT, 5)
+        sizer_single_var_export.Add(self.button_single_var_plot_save, 1, wx.EXPAND | wx.LEFT | wx.BOTTOM, 5)
         sizer_tree.Add(sizer_single_var_export, 0, wx.EXPAND | wx.ALL, 5)
         self.pane_tree.SetSizer(sizer_tree)
 
@@ -226,6 +226,7 @@ class RegressionFrame:
         :type x_var: str
         :param select_item: If True, select the item in the TreeCtrl
         """
+
         if y_var not in list(self.y_variable_nodes):
             self.y_variable_nodes[y_var] = self.tree_ctrl.AppendItem(self.tree_ctrl_root, y_var)
             self.tree_ctrl.SetItemData(self.y_variable_nodes[y_var], None)
@@ -384,6 +385,10 @@ class MultiVarResultsFrame(wx.Frame):
 
         self.plot = PlotMultiVarRegression(self, options)
         self.plot.update_plot(y_variable, x_variables, stats_data)
+        msg = {'y_variable': y_variable,
+               'x_variables': x_variables,
+               'regression': self.plot.reg}
+        pub.sendMessage('control_chart_set_model', **msg)
 
         algorithms = ['Random Forest', 'Support Vector Machines', 'Decision Trees', 'Gradient Boosted']
         self.button = {key: wx.Button(self, wx.ID_ANY, key) for key in algorithms}
@@ -449,8 +454,7 @@ class MultiVarResultsFrame(wx.Frame):
                 'regression': self.plot.reg,
                 'x_variables': self.plot.x_variables}
         save_data_to_file(self, 'Save Model', data,
-                          wildcard="MVR files (*.mvr)|*.mvr", data_type='pickle', initial_dir=MODELS_DIR)
-        pub.sendMessage('control_chart_update_models')
+                          wildcard="REG files (*.reg)|*.reg", data_type='pickle', initial_dir=MODELS_DIR)
 
     def redraw_plot(self):
         self.plot.redraw_plot()

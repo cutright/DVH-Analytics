@@ -908,7 +908,6 @@ class PlotControlChart(Plot):
         self.type = 'control_chart'
         self.parent = parent
         self.size_factor = {'plot': (0.940, 0.359)}
-        self.model_name = None
 
         self.y_axis_label = ''
         self.options = options
@@ -1093,9 +1092,7 @@ class PlotControlChart(Plot):
         if update_layout:
             self.update_bokeh_layout_in_wx_python()
 
-    def update_adjusted_control_chart(self, x, residuals, mrn, uid, dates, model_name, update_layout=True):
-
-        self.model_name = model_name
+    def update_adjusted_control_chart(self, x, residuals, mrn, uid, dates, update_layout=True):
 
         center_line, ucl, lcl = get_control_limits(residuals)
 

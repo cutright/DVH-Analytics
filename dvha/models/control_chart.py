@@ -11,16 +11,12 @@ Class for the Control Chart frame in the main view
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx
-from os.path import basename
 from pubsub import pub
 from dvha.models.plot import PlotControlChart
 from dvha.db import sql_columns
 from dvha.dialogs.export import save_data_to_file
-from dvha.paths import MODELS_DIR
-from dvha.tools.utilities import get_file_paths, load_object_from_file
 
 
-# TODO: ControlChartFrame in development
 class ControlChartFrame:
     """
     Object to be passed into notebook panel for the Control Chart tab
@@ -44,142 +40,86 @@ class ControlChartFrame:
 
         self.y_axis_options = sql_columns.numerical
 
-        self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, style=wx.CB_DROPDOWN)
-        self.combo_box_model = wx.ComboBox(self.parent, wx.ID_ANY, style=wx.CB_DROPDOWN)
+        self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, style=wx.CB_DROPDOWN | wx.CB_READONLY)
 
         self.button_export = wx.Button(self.parent, wx.ID_ANY, "Export")
         self.button_save_plot = wx.Button(self.parent, wx.ID_ANY, "Save Plot")
         self.plot = PlotControlChart(self.parent, options)
 
-        self.__set_properties()
         self.__do_bind()
-        self.__do_layout()
+        self.__set_properties()
         self.__do_subscribe()
-
-        self.load_models()
+        self.__do_layout()
 
     def __do_bind(self):
         self.parent.Bind(wx.EVT_COMBOBOX, self.on_combo_box_y, id=self.combo_box_y_axis.GetId())
-        self.parent.Bind(wx.EVT_COMBOBOX, self.on_combo_box_model, id=self.combo_box_model.GetId())
         self.parent.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
         self.parent.Bind(wx.EVT_BUTTON, self.export_csv, id=self.button_export.GetId())
 
     def __set_properties(self):
-        # TODO: This tooltip doesn't show
-        self.combo_box_model.SetToolTip("Models populated from those saved in Multi-Variable Regressions. "
-                                        "Only models for the selected charting variable are shown.")
+        self.combo_box_y_axis.SetMinSize((300, 25))
+
+    def __do_subscribe(self):
+        pub.subscribe(self.set_model, "control_chart_set_model")
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_plot = wx.BoxSizer(wx.HORIZONTAL)
         sizer_widgets = wx.StaticBoxSizer(wx.StaticBox(self.parent, wx.ID_ANY, ""), wx.HORIZONTAL)
-        sizer_adjustment_model = wx.BoxSizer(wx.VERTICAL)
         sizer_y_axis = wx.BoxSizer(wx.VERTICAL)
 
         label_y_axis = wx.StaticText(self.parent, wx.ID_ANY, "Charting Variable:")
         sizer_y_axis.Add(label_y_axis, 0, wx.LEFT, 5)
         sizer_y_axis.Add(self.combo_box_y_axis, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_widgets.Add(sizer_y_axis, 1, wx.EXPAND, 0)
-
-        label_adjustment_model = wx.StaticText(self.parent, wx.ID_ANY, "Adjustment Model:")
-        sizer_adjustment_model.Add(label_adjustment_model, 0, wx.LEFT, 5)
-        sizer_adjustment_model.Add(self.combo_box_model, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_widgets.Add(sizer_adjustment_model, 1, wx.EXPAND, 0)
+        sizer_widgets.Add(sizer_y_axis, 0, wx.EXPAND, 0)
 
         sizer_widgets.Add(self.button_export, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(self.button_save_plot, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_wrapper.Add(sizer_widgets, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 5)
+        sizer_wrapper.Add(sizer_widgets, 0, wx.EXPAND | wx.BOTTOM, 5)
+        sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_plot, 1, wx.EXPAND, 0)
 
         self.layout = sizer_wrapper
-
-    def __do_subscribe(self):
-        pub.subscribe(self.load_models, 'control_chart_update_models')
 
     def update_combo_box_y_choices(self):
         if self.stats_data:
             self.choices = self.stats_data.control_chart_variables
             self.choices.sort()
             self.combo_box_y_axis.SetItems(self.choices)
-            self.combo_box_y_axis.SetValue('ROI Volume')
-            self.update_combo_box_model_choices()
+            self.combo_box_y_axis.SetValue('ROI Max Dose')
 
     @property
     def y_axis(self):
         return self.combo_box_y_axis.GetValue()
 
-    @property
-    def selected_model(self):
-        return self.combo_box_model.GetValue()
-
-    def update_combo_box_model_choices(self):
-        self.combo_box_model.Clear()
-        if self.models and self.y_axis in self.models and 'file_name' in self.models[self.y_axis]:
-            choices = self.models[self.y_axis]['file_name']
-            if choices:
-                self.combo_box_model.SetItems(choices)
-                self.combo_box_model.SetValue(choices[0])
-
-    def load_models(self):
-        self.models = {}
-        file_paths = get_file_paths(MODELS_DIR, extension='.mvr')
-        for f in file_paths:
-            model = load_object_from_file(f)
-            if 'y_variable' in list(model) and 'regression' in list(model):
-                y_var = model['y_variable']
-                if y_var not in list(self.models):
-                    self.models[y_var] = {'file_name': [], 'data': []}
-                self.models[y_var]['file_name'].append(basename(f).replace('.mvr', ''))
-                self.models[y_var]['data'].append(model)
-
     def on_combo_box_y(self, evt):
-        self.update_combo_box_model_choices()
         self.update_plot()
-
-    def on_combo_box_model(self, evt):
-        self.update_plot(residual_only=True)
 
     def update_plot_ticker(self, evt):
-        self.update_combo_box_model_choices()
         self.update_plot()
 
-    def update_plot(self, residual_only=False):
+    def update_plot(self):
 
         dates = self.stats_data.sim_study_dates
-        y_data = self.stats_data.data[self.y_axis]['values']
-        mrn_data = self.stats_data.mrns
-        uid_data = self.stats_data.uids
-
         sort_index = sorted(range(len(dates)), key=lambda k: dates[k])
-        dates_sorted, y_values_sorted, mrn_sorted, uid_sorted = [], [], [], []
-
-        for s in range(len(dates)):
-            dates_sorted.append(dates[sort_index[s]])
-            y_values_sorted.append(y_data[sort_index[s]])
-            mrn_sorted.append(mrn_data[sort_index[s]])
-            uid_sorted.append(uid_data[sort_index[s]])
+        dates_sorted = [dates[i] for i in sort_index]
+        y_values_sorted = [self.stats_data.data[self.y_axis]['values'][i] for i in sort_index]
+        mrn_sorted = [self.stats_data.mrns[i] for i in sort_index]
+        uid_sorted = [self.stats_data.uids[i] for i in sort_index]
 
         x = list(range(1, len(dates)+1))
 
-        if not residual_only:
-            self.plot.update_plot(x, y_values_sorted, mrn_sorted, uid_sorted, dates_sorted,
-                                  y_axis_label=self.y_axis, update_layout=not residual_only)
+        self.plot.update_plot(x, y_values_sorted, mrn_sorted, uid_sorted, dates_sorted, y_axis_label=self.y_axis)
 
         if self.models and self.y_axis in self.models.keys():
-            index = self.models[self.y_axis]['file_name'].index(self.selected_model)
-            model_data = self.models[self.y_axis]['data'][index]
+            model_data = self.models[self.y_axis]
             adj_data = self.plot.get_adjusted_control_chart(stats_data=self.stats_data, **model_data)
-            self.plot.update_adjusted_control_chart(model_name=self.selected_model + '.mvr', **adj_data)
+            self.plot.update_adjusted_control_chart(**adj_data)
 
     def update_data(self, dvh, stats_data):
         self.dvhs = dvh
         self.stats_data = stats_data
-        try:
-            self.update_plot()
-        except KeyError:
-            # TODO: Print error in GUI
-            pass
+        self.update_plot()
 
     @property
     def variables(self):
@@ -218,7 +158,6 @@ class ControlChartFrame:
         pass
 
     def get_csv(self, selection=None):
-        # TODO: Update to export specified variables
         return self.plot.get_csv()
 
     def export_csv(self, evt):
@@ -231,3 +170,14 @@ class ControlChartFrame:
     @property
     def has_data(self):
         return self.combo_box_y_axis.IsEnabled()
+
+    def set_model(self, y_variable, x_variables, regression):
+        self.models[y_variable] = {'y_variable': y_variable,
+                                   'x_variables': x_variables,
+                                   'regression': regression}
+        if self.y_axis == y_variable:
+            wx.CallAfter(self.update_plot)
+
+    def delete_model(self, y_variable):
+        if y_variable in list(self.models):
+            self.models.pop(y_variable)
