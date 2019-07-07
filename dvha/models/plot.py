@@ -1178,9 +1178,9 @@ class PlotControlChart(Plot):
         return '\n'.join(csv_data)
 
 
-class PlotRandomForest(Plot):
+class PlotMachineLearning(Plot):
     """
-    Generate plot for the Random Forest frame created in the MultiVariable Regression frame
+    Generate plot for Machine Learning frames created in the MultiVariable Regression frame
     """
     def __init__(self, parent, options, X, y, multi_var_pred, mrn, study_date, multi_var_mse):
         """
@@ -1319,8 +1319,9 @@ class PlotRandomForest(Plot):
         self.diff_figure.yaxis.axis_label_text_baseline = "bottom"
 
     def set_figure_dimensions(self):
-        # plot_width = 400, plot_height = 400, frame_size = (900, 600)
-        panel_width, panel_height = self.parent.GetSize()
+        # not working?
+        # panel_width, panel_height = self.parent.GetSize()
+        panel_width, panel_height = 1050, 950
         self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
         self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
         self.imp_figure.plot_width = int(self.size_factor['importance'][0] * float(panel_width))

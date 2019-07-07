@@ -3,8 +3,9 @@
 v0.6.1 (TBD)
 --------------------
  - [Control Chart] Adjusted Control Charts automatically populated from Regressions tab after running model
- - [Regression] Run all regressions on instead of just the selected
- - [Regression] Added Gradient Boosting
+ - [Regression] Run all regressions on run
+ - [Machine Learning] Redesigned PlotRandomForest class to PlotMachineLearning to support Random Forest, Decision Tree,
+  and Gradient Boost
 
 v0.6.0 (2019.7.6)
 --------------------

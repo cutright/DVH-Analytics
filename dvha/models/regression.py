@@ -13,11 +13,10 @@ Class to view and calculate linear regressions
 import wx
 from pubsub import pub
 from dvha.models.plot import PlotRegression, PlotMultiVarRegression
-from dvha.models.random_forest import RandomForestFrame
+from dvha.models.machine_learning import RandomForestFrame, GradientBoostingFrame, DecisionTreeFrame
 from dvha.dialogs.export import save_data_to_file
 from dvha.dialogs.main import SelectRegressionVariablesDialog
 from dvha.paths import ICONS, MODELS_DIR
-from dvha.tools.machine_learning import get_gradient_boosting
 from dvha.tools.utilities import set_msw_background_color, get_tree_ctrl_image, get_window_size
 
 
@@ -107,9 +106,9 @@ class RegressionFrame:
         sizer_single_var_export = wx.BoxSizer(wx.HORIZONTAL)
 
         sizer_tree = wx.BoxSizer(wx.VERTICAL)
-        sizer_tree.Add(self.button_multi_var_reg_model, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_tree.Add(self.button_multi_var_reg_model, 0, wx.EXPAND | wx.TOP | wx.LEFT | wx.RIGHT, 5)
+        sizer_tree.Add(self.button_multi_var_quick_select, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
         sizer_tree.Add(self.tree_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        sizer_tree.Add(self.button_multi_var_quick_select, 0, wx.EXPAND | wx.ALL, 5)
         sizer_single_var_export.Add(self.button_single_var_export, 0, wx.EXPAND | wx.BOTTOM | wx.RIGHT, 5)
         sizer_single_var_export.Add(self.button_single_var_plot_save, 1, wx.EXPAND | wx.LEFT | wx.BOTTOM, 5)
         sizer_tree.Add(sizer_single_var_export, 0, wx.EXPAND | wx.ALL, 5)
@@ -391,11 +390,9 @@ class MultiVarResultsFrame(wx.Frame):
                'regression': self.plot.reg}
         pub.sendMessage('control_chart_set_model', **msg)
 
-        algorithms = ['Random Forest', 'Support Vector Machines', 'Decision Trees', 'Gradient Boosting']
+        algorithms = ['Random Forest', 'Support Vector Machines', 'Decision Tree', 'Gradient Boosting']
         self.button = {key: wx.Button(self, wx.ID_ANY, key) for key in algorithms}
-        for key in algorithms:
-            if key not in {'Random Forest', 'Gradient Boosting'}:
-                self.button[key].Disable()
+        self.button['Support Vector Machines'].Disable()
 
         self.button_export = wx.Button(self, wx.ID_ANY, 'Export Plot Data')
         self.button_save_plot = wx.Button(self, wx.ID_ANY, 'Save Plot')
@@ -411,6 +408,7 @@ class MultiVarResultsFrame(wx.Frame):
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_random_forest, id=self.button['Random Forest'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_gradient_boosting, id=self.button['Gradient Boosting'].GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_decision_tree, id=self.button['Decision Tree'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_model, id=self.button_save_model.GetId())
@@ -442,10 +440,13 @@ class MultiVarResultsFrame(wx.Frame):
         self.Center()
 
     def on_random_forest(self, evt):
-        RandomForestFrame(**self.plot.final_stats_data)
+        RandomForestFrame(self.plot.final_stats_data)
 
     def on_gradient_boosting(self, evt):
-        RandomForestFrame(title='Gradient Boosting', regressor=get_gradient_boosting, **self.plot.final_stats_data)
+        GradientBoostingFrame(self.plot.final_stats_data)
+
+    def on_decision_tree(self, evt):
+        DecisionTreeFrame(self.plot.final_stats_data)
 
     def on_export(self, evt):
         save_data_to_file(self, 'Save multi-variable regression data to csv', self.plot.get_csv_data())
