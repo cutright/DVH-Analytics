@@ -61,7 +61,7 @@ class RegressionFrame:
         self.spin_button_y_axis = wx.SpinButton(self.pane_plot, wx.ID_ANY, style=wx.SP_WRAP)
         self.checkbox = wx.CheckBox(self.pane_plot, wx.ID_ANY, "Include", style=wx.ALIGN_RIGHT)
         self.plot = PlotRegression(self.pane_plot, self.options)
-        self.button_multi_var_reg_model = wx.Button(self.pane_tree, wx.ID_ANY, 'Run Selected Model')
+        self.button_multi_var_reg_model = wx.Button(self.pane_tree, wx.ID_ANY, 'Run Regressions')
         self.button_multi_var_quick_select = wx.Button(self.pane_tree, wx.ID_ANY, 'Variable Quick Select')
         self.button_single_var_export = wx.Button(self.pane_tree, wx.ID_ANY, 'Export Plot Data')
         self.button_single_var_plot_save = wx.Button(self.pane_tree, wx.ID_ANY, 'Save Plot')
@@ -262,18 +262,18 @@ class RegressionFrame:
 
     def on_regression(self, evt):
         """
-        Launch the multi-variable regression for the currently selected dependent variable
+        Launch the multi-variable regression for all x_variable_nodes
         """
-        y_variable = self.combo_box_y_axis.GetValue()
-        if y_variable in list(self.x_variable_nodes):
-            x_variables = list(self.x_variable_nodes[y_variable])
-
-            dlg = MultiVarResultsFrame(y_variable, x_variables,
-                                       self.stats_data, self.options)
-            dlg.Show()
-        else:
+        if not list(self.x_variable_nodes):
             wx.MessageBox('No data has been selected for regression.', 'Regression Error',
                           wx.OK | wx.ICON_WARNING)
+        else:
+            for y_variable in list(self.x_variable_nodes):
+                x_variables = list(self.x_variable_nodes[y_variable])
+
+                dlg = MultiVarResultsFrame(y_variable, x_variables,
+                                           self.stats_data, self.options)
+                dlg.Show()
 
     def on_tree_select(self, evt):
         selection = evt.GetItem()
