@@ -52,7 +52,7 @@ class MachineLearningFrame(wx.Frame):
 
     def set_properties(self):
         self.SetTitle(self.title)
-        self.SetMinSize(get_window_size(0.5, 0.5))
+        self.SetMinSize(get_window_size(0.6, 0.5))
         self.set_defaults()
         for key, input_obj in self.input.items():
             input_obj.SetToolTip(self.tool_tips[key])

@@ -1201,9 +1201,9 @@ class PlotMachineLearning(Plot):
         self.parent = parent
         self.feature_importance = feature_importance
 
-        self.size_factor = {'plot': (0.5, 0.425),
-                            'diff': (0.5, 0.425),
-                            'importance': (0.4, 0.85)}
+        self.size_factor = {'plot': (0.42, 0.425),
+                            'diff': (0.42, 0.425),
+                            'importance': (0.28, 0.85)}
 
         self.X, self.y, self.options = X, y, options
         self.x = list(range(1, len(self.y)+1))
