@@ -1363,7 +1363,7 @@ class PlotMachineLearning(Plot):
             self.imp_figure.x_range.factors = [x_variables[i] for i in order]
             self.imp_figure.y_range = Range1d(0, max(feature_importance) * 1.05)
 
-        self.div.text = "<b>Mean Square Error</b>: %0.2f (RF) --- %0.2f (MVR)" % (mse, self.multi_var_mse)
+        self.div.text = "<b>Mean Square Error</b>: %0.2f (%s) --- %0.2f (MVR)" % (mse, self.ml_type, self.multi_var_mse)
 
         self.figure.yaxis.axis_label = y_variable
 
