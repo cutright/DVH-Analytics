@@ -1182,7 +1182,7 @@ class PlotMachineLearning(Plot):
     """
     Generate plot for Machine Learning frames created in the MultiVariable Regression frame
     """
-    def __init__(self, parent, options, X, y, multi_var_pred, mrn, study_date, multi_var_mse, size,
+    def __init__(self, parent, options, X, y, multi_var_pred, mrn, study_date, multi_var_mse,
                  feature_importance=True, ml_type=None):
         """
         :param parent: the wx UI object where the plot will be displayed
@@ -1200,9 +1200,9 @@ class PlotMachineLearning(Plot):
         self.parent = parent
         self.feature_importance = feature_importance
 
-        self.size_factor = {'plot': (0.5, 0.45),
-                            'diff': (0.5, 0.45),
-                            'importance': (0.4, 0.9)}
+        self.size_factor = {'plot': (0.5, 0.425),
+                            'diff': (0.5, 0.425),
+                            'importance': (0.4, 0.85)}
 
         self.X, self.y, self.options = X, y, options
         self.x = list(range(1, len(self.y)+1))
@@ -1210,7 +1210,6 @@ class PlotMachineLearning(Plot):
         self.multi_var_mse = multi_var_mse
         self.mrn = mrn
         self.study_date = study_date
-        self.size = size
 
         self.y_variable = ''
 
@@ -1327,9 +1326,7 @@ class PlotMachineLearning(Plot):
         self.diff_figure.yaxis.axis_label_text_baseline = "bottom"
 
     def set_figure_dimensions(self):
-        # not working?
-        # panel_width, panel_height = self.parent.GetSize()
-        panel_width, panel_height = self.size[0], self.size[1]
+        panel_width, panel_height = self.parent.frame_size
         self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
         self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
         self.imp_figure.plot_width = int(self.size_factor['importance'][0] * float(panel_width))

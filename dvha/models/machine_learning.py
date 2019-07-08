@@ -17,20 +17,20 @@ from sklearn.svm import SVR
 from sklearn.tree import DecisionTreeRegressor
 from dvha.dialogs.export import save_data_to_file
 from dvha.models.plot import PlotMachineLearning
+from dvha.tools.utilities import set_msw_background_color, get_window_size
 
 
 class MachineLearningFrame(wx.Frame):
-    def __init__(self, data, title, size, regressor, tool_tips, feature_importance=True, ml_type=None):
+    def __init__(self, data, title, regressor, tool_tips, feature_importance=True, ml_type=None):
         wx.Frame.__init__(self, None)
 
         self.data = data
         self.regressor = regressor
         self.reg = None
         self.title = title
-        self.size = size
         self.tool_tips = tool_tips
 
-        self.plot = PlotMachineLearning(self, size=self.size, feature_importance=feature_importance, ml_type=ml_type,
+        self.plot = PlotMachineLearning(self, feature_importance=feature_importance, ml_type=ml_type,
                                         **self.plot_data)
 
         self.input = {}
@@ -40,6 +40,7 @@ class MachineLearningFrame(wx.Frame):
         self.button_calculate = wx.Button(self, wx.ID_ANY, "Calculate")
         self.button_export_data = wx.Button(self, wx.ID_ANY, "Export Data")
         self.button_save_plot = wx.Button(self, wx.ID_ANY, "Save Plot")
+        self.button_save_model = wx.Button(self, wx.ID_ANY, "Save Model")
 
         self.do_bind()
 
@@ -47,10 +48,11 @@ class MachineLearningFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_calculate, id=self.button_calculate.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export_data.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
+        self.Bind(wx.EVT_SIZE, self.on_resize)
 
     def set_properties(self):
         self.SetTitle(self.title)
-        self.SetSize(self.size)
+        self.SetMinSize(get_window_size(0.5, 0.5))
         self.set_defaults()
         for key, input_obj in self.input.items():
             input_obj.SetToolTip(self.tool_tips[key])
@@ -61,28 +63,32 @@ class MachineLearningFrame(wx.Frame):
         sizer_actions = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Actions"), wx.VERTICAL)
         sizer_param = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Parameters"), wx.VERTICAL)
 
-        sizer_input = {variable: wx.BoxSizer(wx.VERTICAL) for variable in self.input.keys()}
+        sizer_input = {variable: wx.BoxSizer(wx.HORIZONTAL) for variable in self.input.keys()}
 
         variables = list(self.input)
         variables.sort()
         for variable in variables:
-            sizer_input[variable].Add(wx.StaticText(self, wx.ID_ANY, "%s:" % variable), 0, wx.EXPAND, 0)
+            sizer_input[variable].Add(wx.StaticText(self, wx.ID_ANY, "%s:\t" % variable), 0, wx.EXPAND, 0)
             sizer_input[variable].Add(self.input[variable], 1, wx.EXPAND, 0)
-            sizer_param.Add(sizer_input[variable], 1, wx.EXPAND, 0)
+            sizer_param.Add(sizer_input[variable], 1, wx.EXPAND | wx.ALL, 2)
 
         sizer_side_bar.Add(sizer_param, 0, wx.ALL | wx.EXPAND, 5)
 
         sizer_actions.Add(self.button_calculate, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         sizer_actions.Add(self.button_export_data, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        sizer_actions.Add(self.button_save_plot, 1, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        sizer_actions.Add(self.button_save_plot, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        sizer_actions.Add(self.button_save_model, 1, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_side_bar.Add(sizer_actions, 0, wx.ALL | wx.EXPAND, 5)
 
         sizer_wrapper.Add(sizer_side_bar, 0, wx.EXPAND, 0)
 
         sizer_wrapper.Add(self.plot.layout, 1, wx.EXPAND, 0)
 
+        set_msw_background_color(self)  # If windows, change the background color
+
         self.SetSizer(sizer_wrapper)
         self.Layout()
+        self.Fit()
         self.Center()
 
     def get_param(self, variable):
@@ -192,10 +198,14 @@ class MachineLearningFrame(wx.Frame):
         self.Show()
         self.on_calculate(None)
 
+    @property
+    def frame_size(self):
+        return self.GetSize()
+
 
 class RandomForestFrame(MachineLearningFrame):
     def __init__(self, data):
-        MachineLearningFrame.__init__(self, data, 'Random Forest', (1200, 775), RandomForestRegressor, RF_TOOL_TIPS,
+        MachineLearningFrame.__init__(self, data, 'Random Forest', RandomForestRegressor, RF_TOOL_TIPS,
                                       ml_type='Random Forest')
 
         self.input = {'n_estimators': wx.TextCtrl(self, wx.ID_ANY, "100"),
@@ -248,7 +258,7 @@ class RandomForestFrame(MachineLearningFrame):
 
 class GradientBoostingFrame(MachineLearningFrame):
     def __init__(self, data):
-        MachineLearningFrame.__init__(self, data, 'Gradient Boosting', (1200, 1000),
+        MachineLearningFrame.__init__(self, data, 'Gradient Boosting',
                                       GradientBoostingRegressor, GB_TOOL_TIPS, ml_type='Gradient Boosting')
 
         self.input = {'loss': wx.ComboBox(self, wx.ID_ANY, choices=["ls", "lad", "huber", "quantile"],
@@ -320,7 +330,7 @@ class GradientBoostingFrame(MachineLearningFrame):
 
 class DecisionTreeFrame(MachineLearningFrame):
     def __init__(self, data):
-        MachineLearningFrame.__init__(self, data, 'Decision Tree', (1200, 700),
+        MachineLearningFrame.__init__(self, data, 'Decision Tree',
                                       DecisionTreeRegressor, DT_TOOL_TIPS, ml_type='Decision Tree')
 
         self.input = {'criterion': wx.ComboBox(self, wx.ID_ANY, choices=["mse", "friedman_mse", "mae"],
@@ -367,7 +377,7 @@ class DecisionTreeFrame(MachineLearningFrame):
 
 class SupportVectorRegressionFrame(MachineLearningFrame):
     def __init__(self, data):
-        MachineLearningFrame.__init__(self, data, 'Support Vector Machine', (1200, 700),
+        MachineLearningFrame.__init__(self, data, 'Support Vector Machine',
                                       SVR, SVR_TOOL_TIPS, feature_importance=False, ml_type='SVM')
 
         self.input = {'kernel': wx.ComboBox(self, wx.ID_ANY, "rbf",
@@ -434,12 +444,12 @@ RF_TOOL_TIPS = {'n_estimators': "int\nThe number of trees in the forest.",
                                             " node. Samples have equal weight when sample_weight is not"
                                             " provided.",
                 'max_features': "int, float, string, or None\nThe number of features to consider when "
-                                "looking for the best split:\n•\tIf int, then consider max_features "
-                                "features at each split.\n•\tIf float, then max_features is a fraction"
+                                "looking for the best split:\n• If int, then consider max_features "
+                                "features at each split.\n• If float, then max_features is a fraction"
                                 " and int(max_features * n_features) features are considered at each "
-                                "split.\n•\tIf “auto”, then max_features=n_features.\n•\tIf “sqrt”, "
-                                "then max_features=sqrt(n_features).\n•\tIf “log2”, then max_"
-                                "features=log2(n_features).\n•\tIf None, then max_features=n_features.",
+                                "split.\n• If “auto”, then max_features=n_features.\n• If “sqrt”, "
+                                "then max_features=sqrt(n_features).\n• If “log2”, then max_"
+                                "features=log2(n_features).\n• If None, then max_features=n_features.",
                 'max_leaf_nodes': "int or None\nGrow a tree with max_leaf_nodes in best-first fashion. "
                                   "Best nodes are defined as relative reduction in impurity. If None "
                                   "then unlimited number of leaf nodes.",
@@ -487,16 +497,16 @@ GB_TOOL_TIPS = {'loss': "loss function to be optimized. ‘ls’ refers to least
                              "best performance; the best value depends on the interaction of the input"
                              " variables.",
                 'min_samples_split': "int, float\nThe minimum number of samples required to split an "
-                                     "internal node:\n•\tIf int, then consider min_samples_split as "
-                                     "the minimum number.\n•\tIf float, then min_samples_split is a "
+                                     "internal node:\n• If int, then consider min_samples_split as "
+                                     "the minimum number.\n• If float, then min_samples_split is a "
                                      "fraction and ceil(min_samples_split * n_samples) are the minimum"
                                      " number of samples for each split.",
                 'min_samples_leaf': "int, float\nThe minimum number of samples required to be at a "
                                     "leaf node. A split point at any depth will only be considered if "
                                     "it leaves at least min_samples_leaf training samples in each of "
                                     "the left and right branches. This may have the effect of "
-                                    "smoothing the model, especially in regression.\n•\tIf int, then "
-                                    "consider min_samples_leaf as the minimum number.\n•\tIf float, "
+                                    "smoothing the model, especially in regression.\n• If int, then "
+                                    "consider min_samples_leaf as the minimum number.\n• If float, "
                                     "then min_samples_leaf is a fraction and ceil(min_samples_leaf * "
                                     "n_samples) are the minimum number of samples for each node.",
                 'min_weight_fraction_leaf': "float\nThe minimum weighted fraction of the sum total of "
@@ -504,12 +514,12 @@ GB_TOOL_TIPS = {'loss': "loss function to be optimized. ‘ls’ refers to least
                                             "leaf node. Samples have equal weight when sample_weight is"
                                             " not provided.",
                 'max_features': "int, float, string, or None\nThe number of features to consider when"
-                                " looking for the best split:\n•\tIf int, then consider max_features"
-                                " features at each split.\n•\tIf float, then max_features is a "
+                                " looking for the best split:\n• If int, then consider max_features"
+                                " features at each split.\n• If float, then max_features is a "
                                 "fraction and int(max_features * n_features) features are considered "
-                                "at each split.\n•\tIf “auto”, then max_features=n_features.\n•\tIf "
-                                "“sqrt”, then max_features=sqrt(n_features).\n•\tIf “log2”, then max"
-                                "_features=log2(n_features).\n•\tIf None, then max_features=n_features."
+                                "at each split.\n• If “auto”, then max_features=n_features.\n• If "
+                                "“sqrt”, then max_features=sqrt(n_features).\n• If “log2”, then max"
+                                "_features=log2(n_features).\n• If None, then max_features=n_features."
                                 "\nChoosing max_features < n_features leads to a reduction of variance"
                                 " and an increase in bias.",
                 'alpha': "float\nThe alpha-quantile of the huber loss function and the quantile loss "
@@ -582,12 +592,12 @@ DT_TOOL_TIPS = {'criterion': "The function to measure the quality of a split. Su
                                             " node. Samples have equal weight when sample_weight is not"
                                             " provided.",
                 'max_features': "int, float, string, or None\nThe number of features to consider when"
-                                " looking for the best split:\n•\tIf int, then consider max_features "
-                                "features at each split.\n•\tIf float, then max_features is a fraction"
+                                " looking for the best split:\n• If int, then consider max_features "
+                                "features at each split.\n• If float, then max_features is a fraction"
                                 " and int(max_features * n_features) features are considered at each "
-                                "split.\n•\tIf “auto”, then max_features=n_features.\n•\tIf “sqrt”, "
-                                "then max_features=sqrt(n_features).\n•\tIf “log2”, "
-                                "then max_features=log2(n_features).\n•\tIf None, then "
+                                "split.\n• If “auto”, then max_features=n_features.\n• If “sqrt”, "
+                                "then max_features=sqrt(n_features).\n• If “log2”, "
+                                "then max_features=log2(n_features).\n• If None, then "
                                 "max_features=n_features.",
                 'max_leaf_nodes': "int or None\nGrow a tree with max_leaf_nodes in best-first fashion. "
                                   "Best nodes are defined as relative reduction in impurity. If None "
