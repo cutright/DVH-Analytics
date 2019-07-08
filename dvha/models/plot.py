@@ -1183,7 +1183,7 @@ class PlotMachineLearning(Plot):
     Generate plot for Machine Learning frames created in the MultiVariable Regression frame
     """
     def __init__(self, parent, options, X, y, multi_var_pred, mrn, study_date, multi_var_mse,
-                 feature_importance=True, ml_type=None):
+                 feature_importance=True, ml_type=None, ml_type_short=None):
         """
         :param parent: the wx UI object where the plot will be displayed
         :param options: user preferences
@@ -1197,6 +1197,7 @@ class PlotMachineLearning(Plot):
 
         self.type = 'machine_learning'
         self.ml_type = ml_type
+        self.ml_type_short = ml_type_short
         self.parent = parent
         self.feature_importance = feature_importance
 
@@ -1363,7 +1364,8 @@ class PlotMachineLearning(Plot):
             self.imp_figure.x_range.factors = [x_variables[i] for i in order]
             self.imp_figure.y_range = Range1d(0, max(feature_importance) * 1.05)
 
-        self.div.text = "<b>Mean Square Error</b>: %0.2f (%s) --- %0.2f (MVR)" % (mse, self.ml_type, self.multi_var_mse)
+        self.div.text = "<b>Mean Square Error</b>: %0.2f (%s) --- %0.2f (MVR)" % \
+                        (mse, self.ml_type_short, self.multi_var_mse)
 
         self.figure.yaxis.axis_label = y_variable
 

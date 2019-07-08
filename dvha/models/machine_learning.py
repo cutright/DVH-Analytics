@@ -21,7 +21,7 @@ from dvha.tools.utilities import set_msw_background_color, get_window_size
 
 
 class MachineLearningFrame(wx.Frame):
-    def __init__(self, data, title, regressor, tool_tips, feature_importance=True, ml_type=None):
+    def __init__(self, data, title, regressor, tool_tips, feature_importance=True):
         wx.Frame.__init__(self, None)
 
         self.data = data
@@ -30,8 +30,8 @@ class MachineLearningFrame(wx.Frame):
         self.title = title
         self.tool_tips = tool_tips
 
-        self.plot = PlotMachineLearning(self, feature_importance=feature_importance, ml_type=ml_type,
-                                        **self.plot_data)
+        self.plot = PlotMachineLearning(self, feature_importance=feature_importance, ml_type=title,
+                                        ml_type_short=self.ml_type_short, **self.plot_data)
 
         self.input = {}
         self.defaults = {}
@@ -202,11 +202,14 @@ class MachineLearningFrame(wx.Frame):
     def frame_size(self):
         return self.GetSize()
 
+    @property
+    def ml_type_short(self):
+        return ''.join([s[0] for s in self.title.split(' ')]).upper()
+
 
 class RandomForestFrame(MachineLearningFrame):
     def __init__(self, data):
-        MachineLearningFrame.__init__(self, data, 'Random Forest', RandomForestRegressor, RF_TOOL_TIPS,
-                                      ml_type='Random Forest')
+        MachineLearningFrame.__init__(self, data, 'Random Forest', RandomForestRegressor, RF_TOOL_TIPS)
 
         self.input = {'n_estimators': wx.TextCtrl(self, wx.ID_ANY, "100"),
                       'criterion': wx.ComboBox(self, wx.ID_ANY, choices=["mse", "mae"],
@@ -258,8 +261,7 @@ class RandomForestFrame(MachineLearningFrame):
 
 class GradientBoostingFrame(MachineLearningFrame):
     def __init__(self, data):
-        MachineLearningFrame.__init__(self, data, 'Gradient Boosting',
-                                      GradientBoostingRegressor, GB_TOOL_TIPS, ml_type='Gradient Boosting')
+        MachineLearningFrame.__init__(self, data, 'Gradient Boosting', GradientBoostingRegressor, GB_TOOL_TIPS)
 
         self.input = {'loss': wx.ComboBox(self, wx.ID_ANY, choices=["ls", "lad", "huber", "quantile"],
                                           style=wx.CB_DROPDOWN | wx.CB_READONLY),
@@ -330,8 +332,7 @@ class GradientBoostingFrame(MachineLearningFrame):
 
 class DecisionTreeFrame(MachineLearningFrame):
     def __init__(self, data):
-        MachineLearningFrame.__init__(self, data, 'Decision Tree',
-                                      DecisionTreeRegressor, DT_TOOL_TIPS, ml_type='Decision Tree')
+        MachineLearningFrame.__init__(self, data, 'Decision Tree',  DecisionTreeRegressor, DT_TOOL_TIPS)
 
         self.input = {'criterion': wx.ComboBox(self, wx.ID_ANY, choices=["mse", "friedman_mse", "mae"],
                                                style=wx.CB_DROPDOWN | wx.CB_READONLY),
@@ -377,8 +378,8 @@ class DecisionTreeFrame(MachineLearningFrame):
 
 class SupportVectorRegressionFrame(MachineLearningFrame):
     def __init__(self, data):
-        MachineLearningFrame.__init__(self, data, 'Support Vector Machine',
-                                      SVR, SVR_TOOL_TIPS, feature_importance=False, ml_type='SVM')
+        MachineLearningFrame.__init__(self, data, 'Support Vector Machine', SVR, SVR_TOOL_TIPS,
+                                      feature_importance=False)
 
         self.input = {'kernel': wx.ComboBox(self, wx.ID_ANY, "rbf",
                                             choices=["linear", "poly", "rbf", "sigmoid", "precomputed"],
