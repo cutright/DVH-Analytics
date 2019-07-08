@@ -13,7 +13,8 @@ Class to view and calculate linear regressions
 import wx
 from pubsub import pub
 from dvha.models.plot import PlotRegression, PlotMultiVarRegression
-from dvha.models.machine_learning import RandomForestFrame, GradientBoostingFrame, DecisionTreeFrame
+from dvha.models.machine_learning import RandomForestFrame, GradientBoostingFrame, DecisionTreeFrame,\
+    SupportVectorRegressionFrame
 from dvha.dialogs.export import save_data_to_file
 from dvha.dialogs.main import SelectRegressionVariablesDialog
 from dvha.paths import ICONS, MODELS_DIR
@@ -390,9 +391,8 @@ class MultiVarResultsFrame(wx.Frame):
                'regression': self.plot.reg}
         pub.sendMessage('control_chart_set_model', **msg)
 
-        algorithms = ['Random Forest', 'Support Vector Machines', 'Decision Tree', 'Gradient Boosting']
-        self.button = {key: wx.Button(self, wx.ID_ANY, key) for key in algorithms}
-        self.button['Support Vector Machines'].Disable()
+        algorithms = ['Random Forest', 'Epsilon-Support Vector Regression', 'Decision Tree', 'Gradient Boosting']
+        self.button = {key: wx.Button(self, wx.ID_ANY, key) for key in algorithms}\
 
         self.button_export = wx.Button(self, wx.ID_ANY, 'Export Plot Data')
         self.button_save_plot = wx.Button(self, wx.ID_ANY, 'Save Plot')
@@ -409,6 +409,8 @@ class MultiVarResultsFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_random_forest, id=self.button['Random Forest'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_gradient_boosting, id=self.button['Gradient Boosting'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_decision_tree, id=self.button['Decision Tree'].GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_support_vector_regression,
+                  id=self.button['Epsilon-Support Vector Regression'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_model, id=self.button_save_model.GetId())
@@ -447,6 +449,9 @@ class MultiVarResultsFrame(wx.Frame):
 
     def on_decision_tree(self, evt):
         DecisionTreeFrame(self.plot.final_stats_data)
+
+    def on_support_vector_regression(self, evt):
+        SupportVectorRegressionFrame(self.plot.final_stats_data)
 
     def on_export(self, evt):
         save_data_to_file(self, 'Save multi-variable regression data to csv', self.plot.get_csv_data())

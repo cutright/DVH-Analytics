@@ -1182,7 +1182,8 @@ class PlotMachineLearning(Plot):
     """
     Generate plot for Machine Learning frames created in the MultiVariable Regression frame
     """
-    def __init__(self, parent, options, X, y, multi_var_pred, mrn, study_date, multi_var_mse):
+    def __init__(self, parent, options, X, y, multi_var_pred, mrn, study_date, multi_var_mse, size,
+                 feature_importance=True, ml_type=None):
         """
         :param parent: the wx UI object where the plot will be displayed
         :param options: user preferences
@@ -1194,12 +1195,14 @@ class PlotMachineLearning(Plot):
         """
         Plot.__init__(self, parent, options)
 
-        self.type = 'random_forest'
+        self.type = 'machine_learning'
+        self.ml_type = ml_type
         self.parent = parent
+        self.feature_importance = feature_importance
 
-        self.size_factor = {'plot': (0.6, 0.425),
-                            'diff': (0.6, 0.425),
-                            'importance': (0.35, 0.8)}
+        self.size_factor = {'plot': (0.5, 0.45),
+                            'diff': (0.5, 0.45),
+                            'importance': (0.4, 0.9)}
 
         self.X, self.y, self.options = X, y, options
         self.x = list(range(1, len(self.y)+1))
@@ -1207,6 +1210,7 @@ class PlotMachineLearning(Plot):
         self.multi_var_mse = multi_var_mse
         self.mrn = mrn
         self.study_date = study_date
+        self.size = size
 
         self.y_variable = ''
 
@@ -1257,9 +1261,13 @@ class PlotMachineLearning(Plot):
                                                alpha=self.options.RANDOM_FOREST_ALPHA * 0.7)
 
     def __do_layout(self):
-        self.bokeh_layout = row(column(self.figure, self.diff_figure),
-                                column(row(Spacer(width=50), self.div),
-                                       self.imp_figure))
+        if self.feature_importance:
+            self.bokeh_layout = row(column(self.figure, self.diff_figure),
+                                    column(row(Spacer(width=50), self.div),
+                                           self.imp_figure))
+        else:
+            self.bokeh_layout = row(column(self.figure, self.diff_figure),
+                                    column(row(Spacer(width=50), self.div)))
 
     def __add_hover(self):
         self.figure.add_tools(HoverTool(show_arrow=True,
@@ -1278,16 +1286,16 @@ class PlotMachineLearning(Plot):
                                              formatters={'study_date': 'datetime'}))
 
         self.imp_figure.add_tools(HoverTool(show_arrow=True, mode='vline',
-                                            tooltips=[('Importance', '@top{0.3f}'),
+                                            tooltips=[('Importance', '@top{0.4f}'),
                                                       ('Variable', '@variable')]))
 
     def __add_legend(self):
         legend = Legend(items=[("Data  ", [self.y_data]),
-                               ("Random Forest  ", [self.y_ml]),
+                               ("%s  " % self.ml_type, [self.y_ml]),
                                ("Multi-Variable Reg.  ", [self.y_mv])],
                         orientation='horizontal')
 
-        legend_diff = Legend(items=[("Random Forest  ", [self.diff_ml]),
+        legend_diff = Legend(items=[("%s  " % self.ml_type, [self.diff_ml]),
                                     ("Multi-Variable Reg.  ", [self.diff_mvr])],
                              orientation='horizontal')
 
@@ -1321,7 +1329,7 @@ class PlotMachineLearning(Plot):
     def set_figure_dimensions(self):
         # not working?
         # panel_width, panel_height = self.parent.GetSize()
-        panel_width, panel_height = 1050, 950
+        panel_width, panel_height = self.size[0], self.size[1]
         self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
         self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
         self.imp_figure.plot_width = int(self.size_factor['importance'][0] * float(panel_width))
@@ -1347,15 +1355,16 @@ class PlotMachineLearning(Plot):
                                     'y0': [0] * len(self.x),
                                     'mrn': self.mrn, 'study_date': self.study_date}
 
-        length = len(feature_importance)
-        order = [i[0] for i in sorted(enumerate(feature_importance), key=lambda x:x[1])]
-        order = order[::-1]
-        self.source['importance'].data = {'x': [i+0.5 for i in range(length)],
-                                          'top': [feature_importance[i] for i in order],
-                                          'width': [0.5] * length,
-                                          'variable': [x_variables[i] for i in order]}
-        self.imp_figure.x_range.factors = [x_variables[i] for i in order]
-        self.imp_figure.y_range = Range1d(0, max(feature_importance) * 1.05)
+        if feature_importance is not None:
+            length = len(feature_importance)
+            order = [i[0] for i in sorted(enumerate(feature_importance), key=lambda x:x[1])]
+            order = order[::-1]
+            self.source['importance'].data = {'x': [i+0.5 for i in range(length)],
+                                              'top': [feature_importance[i] for i in order],
+                                              'width': [0.5] * length,
+                                              'variable': [x_variables[i] for i in order]}
+            self.imp_figure.x_range.factors = [x_variables[i] for i in order]
+            self.imp_figure.y_range = Range1d(0, max(feature_importance) * 1.05)
 
         self.div.text = "<b>Mean Square Error</b>: %0.2f (RF) --- %0.2f (MVR)" % (mse, self.multi_var_mse)
 
