@@ -13,6 +13,7 @@ Classes to view and calculate Machine Learning predictions
 import wx
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.model_selection import train_test_split
 from sklearn.svm import SVR
 from sklearn.tree import DecisionTreeRegressor
 from dvha.dialogs.export import save_data_to_file
@@ -21,7 +22,7 @@ from dvha.tools.utilities import set_msw_background_color, get_window_size
 
 
 class MachineLearningFrame(wx.Frame):
-    def __init__(self, data, title, regressor, tool_tips, feature_importance=True):
+    def __init__(self, data, title, regressor, tool_tips):
         wx.Frame.__init__(self, None)
 
         self.data = data
@@ -30,12 +31,13 @@ class MachineLearningFrame(wx.Frame):
         self.title = title
         self.tool_tips = tool_tips
 
-        self.plot = PlotMachineLearning(self, feature_importance=feature_importance, ml_type=title,
-                                        ml_type_short=self.ml_type_short, **self.plot_data)
+        self.plot = PlotMachineLearning(self, ml_type=title, ml_type_short=self.ml_type_short, **data)
 
         self.input = {}
         self.defaults = {}
         self.getters = {}
+
+        self.test_size_input = wx.TextCtrl(self, wx.ID_ANY, "0.2")
 
         self.button_calculate = wx.Button(self, wx.ID_ANY, "Calculate")
         self.button_export_data = wx.Button(self, wx.ID_ANY, "Export Data")
@@ -52,7 +54,7 @@ class MachineLearningFrame(wx.Frame):
 
     def set_properties(self):
         self.SetTitle(self.title)
-        self.SetMinSize(get_window_size(0.6, 0.5))
+        self.SetMinSize(get_window_size(0.8, 0.5))
         self.set_defaults()
         for key, input_obj in self.input.items():
             input_obj.SetToolTip(self.tool_tips[key])
@@ -63,14 +65,19 @@ class MachineLearningFrame(wx.Frame):
         sizer_actions = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Actions"), wx.VERTICAL)
         sizer_param = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Parameters"), wx.VERTICAL)
 
-        sizer_input = {variable: wx.BoxSizer(wx.HORIZONTAL) for variable in self.input.keys()}
-
         variables = list(self.input)
         variables.sort()
+
+        sizer_input = {variable: wx.BoxSizer(wx.HORIZONTAL) for variable in variables + ['test_size']}
+
         for variable in variables:
             sizer_input[variable].Add(wx.StaticText(self, wx.ID_ANY, "%s:\t" % variable), 0, wx.EXPAND, 0)
             sizer_input[variable].Add(self.input[variable], 1, wx.EXPAND, 0)
             sizer_param.Add(sizer_input[variable], 1, wx.EXPAND | wx.ALL, 2)
+
+        sizer_input['test_size'].Add(wx.StaticText(self, wx.ID_ANY, "%s:\t" % 'test_size'), 0, wx.EXPAND, 0)
+        sizer_input['test_size'].Add(self.test_size_input, 1, wx.EXPAND, 0)
+        sizer_param.Add(sizer_input['test_size'], 1, wx.EXPAND | wx.ALL, 2)
 
         sizer_side_bar.Add(sizer_param, 0, wx.ALL | wx.EXPAND, 5)
 
@@ -156,23 +163,11 @@ class MachineLearningFrame(wx.Frame):
 
     @property
     def plot_data(self):
-        return {key: self.data[key]
-                for key in {'options', 'X', 'y', 'multi_var_pred', 'mrn', 'study_date', 'multi_var_mse'}}
+        self.reg = self.regressor(**self.input_parameters)
+        return MachineLearningPlotData(self.data['X'], self.data['y'], self.reg, float(self.test_size_input.GetValue()))
 
     def on_calculate(self, evt):
-        self.reg = self.regressor(**self.input_parameters)
-        self.reg.fit(self.data['X'], self.data['y'])
-        y_pred = self.reg.predict(self.data['X'])
-
-        mse = np.mean(np.square(np.subtract(y_pred, self.data['y'])))
-
-        if hasattr(self.reg, 'feature_importances_'):
-            feature_importances = self.reg.feature_importances_
-        else:
-            feature_importances = None
-
-        self.plot.update_data(y_pred, feature_importances, self.data['x_variables'], self.data['y_variable'],
-                              mse, self.data['uid'])
+        self.plot.update_data(self.plot_data)
 
     def redraw_plot(self):
         self.plot.redraw_plot()
@@ -649,3 +644,40 @@ SVR_TOOL_TIPS = {'kernel': "string\n"
                                "Specify the size of the kernel cache (in MB)",
                  'max_iter': "int\n"
                              "Hard limit on iterations within solver, or -1 for no limit."}
+
+
+class MachineLearningPlotData:
+    def __init__(self, X, y, reg, test_size, random_state=None):
+        self.reg = reg
+        self.test_size = test_size
+        self.random_state = random_state
+
+        indices = list(range(len(y)))
+
+        # split the data for training and testing
+        split_data = train_test_split(X, indices, test_size=test_size, random_state=random_state)
+        self.X = {'data': X, 'train': split_data[0], 'test': split_data[1]}
+        self.indices = {'data': indices, 'train': split_data[2], 'test': split_data[3]}
+        self.y = {'data': y, 'train': [y[i] for i in split_data[2]], 'test': [y[i] for i in split_data[3]]}
+        self.x = {key: [i + 1 for i in range(len(data))] for key, data in self.y.items()}
+
+        # Train model, then calculate predictions, residuals, and mse
+        self.reg.fit(self.X['train'], self.y['train'])
+        self.predictions = {key: self.get_prediction(key) for key in self.y.keys()}
+        self.residuals = {key: self.get_residual(key) for key in self.y.keys()}
+        self.mse = {key: self.get_mse(key) for key in self.y.keys()}
+
+    def get_prediction(self, key):
+        return self.reg.predict(self.X[key])
+
+    def get_mse(self, key):
+        return np.mean(np.square(np.subtract(self.predictions[key], self.y[key])))
+
+    def get_residual(self, key):
+        return np.subtract(self.y[key], self.reg.predict(self.X[key]))
+
+    @property
+    def feature_importances(self):
+        if hasattr(self.reg, 'feature_importances_'):
+            return self.reg.feature_importances_
+        return None

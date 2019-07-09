@@ -1182,16 +1182,12 @@ class PlotMachineLearning(Plot):
     """
     Generate plot for Machine Learning frames created in the MultiVariable Regression frame
     """
-    def __init__(self, parent, options, X, y, multi_var_pred, mrn, study_date, multi_var_mse,
-                 feature_importance=True, ml_type=None, ml_type_short=None):
+    def __init__(self, parent, options, multi_var_pred, multi_var_mse, x_variables, y_variable, mrn, study_date, uid,
+                 ml_type=None, ml_type_short=None, **kwargs):
         """
         :param parent: the wx UI object where the plot will be displayed
         :param options: user preferences
         :type options: Options
-        :param X: independent data
-        :type X: numpy.array
-        :param y: y-values from data
-        :type y: list
         """
         Plot.__init__(self, parent, options)
 
@@ -1199,33 +1195,43 @@ class PlotMachineLearning(Plot):
         self.ml_type = ml_type
         self.ml_type_short = ml_type_short
         self.parent = parent
-        self.feature_importance = feature_importance
-
-        self.size_factor = {'plot': (0.42, 0.425),
-                            'diff': (0.42, 0.425),
-                            'importance': (0.28, 0.85)}
-
-        self.X, self.y, self.options = X, y, options
-        self.x = list(range(1, len(self.y)+1))
-        self.multi_var_pred = multi_var_pred
-        self.multi_var_mse = multi_var_mse
         self.mrn = mrn
         self.study_date = study_date
+        self.uid = uid
 
-        self.y_variable = ''
+        self.size_factor = {'plot': (0.35, 0.425),
+                            'diff': (0.35, 0.425),
+                            'importance': (0.28, 0.85)}
+
+        self.options = options
+        self.multi_var_pred = multi_var_pred
+        self.multi_var_mse = multi_var_mse
+
+        self.y_variable = y_variable
+        self.x_variables = x_variables
+
+        self.div_title_train = Div(text="<b>Training Data</b>")
+        self.div_title_test = Div(text="<b>Testing Data</b>")
 
         self.div = Div()
+        self.div_test = Div()
 
         self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
                        'plot_predict': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
                        'plot_multi_var': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
                        'diff': ColumnDataSource(data=dict(x=[], y_ml=[], y_mvr=[], y0=[], mrn=[], study_date=[])),
-                       'importance': ColumnDataSource(data=dict(x=[], top=[], width=[], variable=[]))}
+                       'importance': ColumnDataSource(data=dict(x=[], top=[], width=[], variable=[])),
+                       'plot_test': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
+                       'plot_predict_test': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
+                       'plot_multi_var_test': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
+                       'diff_test': ColumnDataSource(data=dict(x=[], y_ml=[], y_mvr=[], y0=[], mrn=[], study_date=[]))}
 
         self.figure.xaxis.axis_label = "Study"
 
-        self.imp_figure = figure(x_range=[''], tools="")
+        # self.imp_figure = figure(x_range=[''], tools="")
         self.diff_figure = figure(tools=DEFAULT_TOOLS)
+        self.figure_test = figure(tools=DEFAULT_TOOLS)
+        self.diff_figure_test = figure(tools=DEFAULT_TOOLS)
         self.initialize_importance_figure()
 
         self.__add_plot_data()
@@ -1246,8 +1252,8 @@ class PlotMachineLearning(Plot):
                                        color=self.options.RANDOM_FOREST_COLOR_MULTI_VAR,
                                        alpha=self.options.RANDOM_FOREST_ALPHA)
 
-        self.imp_figure.vbar(x='x', width='width', bottom=0, top='top', source=self.source['importance'],
-                             color=self.options.RANDOM_FOREST_COLOR_PREDICT, alpha=0.6)
+        # self.imp_figure.vbar(x='x', width='width', bottom=0, top='top', source=self.source['importance'],
+        #                      color=self.options.RANDOM_FOREST_COLOR_PREDICT, alpha=0.6)
 
         # since hover for varea doesn't work
         self.diff_figure.circle(x='x', y='y0', source=self.source['diff'], alpha=0)
@@ -1260,14 +1266,33 @@ class PlotMachineLearning(Plot):
                                                color=self.options.RANDOM_FOREST_COLOR_MULTI_VAR,
                                                alpha=self.options.RANDOM_FOREST_ALPHA * 0.7)
 
+        # Test Data ###################
+        self.y_data_test = self.figure_test.cross('x', 'y', source=self.source['plot_test'],
+                                        color=self.options.RANDOM_FOREST_COLOR_DATA, size=5)
+        self.y_ml_test = self.figure_test.circle('x', 'y', source=self.source['plot_predict_test'],
+                                       color=self.options.RANDOM_FOREST_COLOR_PREDICT,
+                                       alpha=self.options.RANDOM_FOREST_ALPHA)
+        self.y_mv_test = self.figure_test.circle('x', 'y', source=self.source['plot_multi_var_test'],
+                                       color=self.options.RANDOM_FOREST_COLOR_MULTI_VAR,
+                                       alpha=self.options.RANDOM_FOREST_ALPHA)
+
+        # self.imp_figure.vbar(x='x', width='width', bottom=0, top='top', source=self.source['importance'],
+        #                      color=self.options.RANDOM_FOREST_COLOR_PREDICT, alpha=0.6)
+
+        # since hover for varea doesn't work
+        self.diff_figure_test.circle(x='x', y='y0', source=self.source['diff_test'], alpha=0)
+
+        self.diff_ml_test = self.diff_figure_test.varea(x='x', y1='y_ml', y2='y0', source=self.source['diff_test'],
+                                              color=self.options.RANDOM_FOREST_COLOR_PREDICT,
+                                              alpha=self.options.RANDOM_FOREST_ALPHA * 0.7)
+
+        self.diff_mvr_test = self.diff_figure_test.varea(x='x', y1='y_mvr', y2='y0', source=self.source['diff_test'],
+                                               color=self.options.RANDOM_FOREST_COLOR_MULTI_VAR,
+                                               alpha=self.options.RANDOM_FOREST_ALPHA * 0.7)
+
     def __do_layout(self):
-        if self.feature_importance:
-            self.bokeh_layout = row(column(self.figure, self.diff_figure),
-                                    column(row(Spacer(width=50), self.div),
-                                           self.imp_figure))
-        else:
-            self.bokeh_layout = row(column(self.figure, self.diff_figure),
-                                    column(row(Spacer(width=50), self.div)))
+        self.bokeh_layout = row(column(self.div_title_train, self.div, self.figure, self.diff_figure),
+                                column(self.div_title_test, self.div_test, self.figure_test, self.diff_figure_test))
 
     def __add_hover(self):
         self.figure.add_tools(HoverTool(show_arrow=True,
@@ -1285,9 +1310,24 @@ class PlotMachineLearning(Plot):
                                                        ('MVR', '@y_mvr{0.2f}')],
                                              formatters={'study_date': 'datetime'}))
 
-        self.imp_figure.add_tools(HoverTool(show_arrow=True, mode='vline',
-                                            tooltips=[('Importance', '@top{0.4f}'),
-                                                      ('Variable', '@variable')]))
+        self.figure_test.add_tools(HoverTool(show_arrow=True,
+                                        tooltips=[('ID', '@mrn'),
+                                                  ('Date', '@study_date{%F}'),
+                                                  ('Study', '@x{int}'),
+                                                  ('Value', '@y{0.2f}')],
+                                        formatters={'study_date': 'datetime'}))
+
+        self.diff_figure_test.add_tools(HoverTool(show_arrow=True, mode='vline',
+                                             tooltips=[('ID', '@mrn'),
+                                                       ('Date', '@study_date{%F}'),
+                                                       ('Study', '@x{int}'),
+                                                       ('RF.', '@y_ml{0.2f}'),
+                                                       ('MVR', '@y_mvr{0.2f}')],
+                                             formatters={'study_date': 'datetime'}))
+
+        # self.imp_figure.add_tools(HoverTool(show_arrow=True, mode='vline',
+        #                                     tooltips=[('Importance', '@top{0.4f}'),
+        #                                               ('Variable', '@variable')]))
 
     def __add_legend(self):
         legend = Legend(items=[("Data  ", [self.y_data]),
@@ -1306,16 +1346,32 @@ class PlotMachineLearning(Plot):
         self.diff_figure.add_layout(legend_diff, 'above')
         self.diff_figure.legend.click_policy = "hide"
 
+        legend_test = Legend(items=[("Data  ", [self.y_data_test]),
+                               ("%s  " % self.ml_type, [self.y_ml_test]),
+                               ("Multi-Variable Reg.  ", [self.y_mv_test])],
+                        orientation='horizontal')
+
+        legend_diff_test = Legend(items=[("%s  " % self.ml_type, [self.diff_ml_test]),
+                                    ("Multi-Variable Reg.  ", [self.diff_mvr_test])],
+                             orientation='horizontal')
+
+        # Add the layout outside the plot, clicking legend item hides the line
+        self.figure_test.add_layout(legend_test, 'above')
+        self.figure_test.legend.click_policy = "hide"
+
+        self.diff_figure_test.add_layout(legend_diff_test, 'above')
+        self.diff_figure_test.legend.click_policy = "hide"
+
     def initialize_importance_figure(self):
-        self.imp_figure.yaxis.axis_label = 'Importance'
-        self.imp_figure.xaxis.axis_label = ''
-        self.imp_figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.imp_figure.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.imp_figure.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.imp_figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.imp_figure.min_border = self.options.MIN_BORDER
-        # self.imp_figure.yaxis.axis_label_text_baseline = "bottom"
-        self.imp_figure.xaxis.major_label_orientation = -pi/2
+        # self.imp_figure.yaxis.axis_label = 'Importance'
+        # self.imp_figure.xaxis.axis_label = ''
+        # self.imp_figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        # self.imp_figure.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        # self.imp_figure.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        # self.imp_figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        # self.imp_figure.min_border = self.options.MIN_BORDER
+        # # self.imp_figure.yaxis.axis_label_text_baseline = "bottom"
+        # self.imp_figure.xaxis.major_label_orientation = -pi/2
 
         self.diff_figure.xaxis.axis_label = 'Study'
         self.diff_figure.yaxis.axis_label = 'Residual'
@@ -1325,49 +1381,128 @@ class PlotMachineLearning(Plot):
         self.diff_figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
         self.diff_figure.min_border = self.options.MIN_BORDER
         self.diff_figure.yaxis.axis_label_text_baseline = "bottom"
+        self.diff_figure.x_range = self.figure.x_range
+
+        self.figure_test.xaxis.axis_label = 'Study'
+        self.figure_test.yaxis.axis_label = self.y_variable
+        self.figure_test.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.figure_test.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.figure_test.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.figure_test.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.figure_test.min_border = self.options.MIN_BORDER
+        self.figure_test.yaxis.axis_label_text_baseline = "bottom"
+        self.figure_test.y_range = self.figure.y_range
+
+        self.diff_figure_test.xaxis.axis_label = 'Study'
+        self.diff_figure_test.yaxis.axis_label = 'Residual'
+        self.diff_figure_test.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.diff_figure_test.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.diff_figure_test.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.diff_figure_test.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.diff_figure_test.min_border = self.options.MIN_BORDER
+        self.diff_figure_test.yaxis.axis_label_text_baseline = "bottom"
+        self.diff_figure_test.y_range = self.diff_figure.y_range
+        self.diff_figure_test.x_range = self.figure_test.x_range
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.frame_size
         self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
         self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
-        self.imp_figure.plot_width = int(self.size_factor['importance'][0] * float(panel_width))
-        self.imp_figure.plot_height = int(self.size_factor['importance'][1] * float(panel_height))
+        # self.imp_figure.plot_width = int(self.size_factor['importance'][0] * float(panel_width))
+        # self.imp_figure.plot_height = int(self.size_factor['importance'][1] * float(panel_height))
         self.diff_figure.plot_width = int(self.size_factor['diff'][0] * float(panel_width))
         self.diff_figure.plot_height = int(self.size_factor['diff'][1] * float(panel_height))
 
-    def update_data(self, y_pred, feature_importance, x_variables, y_variable, mse, uid):
+        self.figure_test.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
+        self.figure_test.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
+        # self.imp_figure.plot_width = int(self.size_factor['importance'][0] * float(panel_width))
+        # self.imp_figure.plot_height = int(self.size_factor['importance'][1] * float(panel_height))
+        self.diff_figure_test.plot_width = int(self.size_factor['diff'][0] * float(panel_width))
+        self.diff_figure_test.plot_height = int(self.size_factor['diff'][1] * float(panel_height))
 
-        self.y_variable = y_variable
+    def update_data(self, plot_data):
+        """
+        :param plot_data:
+        :type plot_data: MachineLearningPlotData
+        :return:
+        """
 
-        self.source['plot'].data = {'x': self.x, 'y': self.y, 'mrn': self.mrn,
-                                    'study_date': self.study_date, 'uid': uid}
+        x = plot_data.x['train']
+        y = plot_data.y['train']
+        y_pred = plot_data.predictions['train']
+        multi_var_pred = [self.multi_var_pred[i] for i in plot_data.indices['train']]
+        mrn = [self.mrn[i] for i in plot_data.indices['train']]
+        uid = [self.uid[i] for i in plot_data.indices['train']]
+        study_date = [self.study_date[i] for i in plot_data.indices['train']]
 
-        self.source['plot_predict'].data = {'x': self.x, 'y': y_pred, 'mrn': self.mrn, 'study_date': self.study_date}
+        self.source['plot'].data = {'x': x, 'y': y, 'mrn': mrn,
+                                    'study_date': study_date, 'uid': uid}
 
-        self.source['plot_multi_var'].data = {'x': self.x, 'y': self.multi_var_pred, 'mrn': self.mrn,
-                                              'study_date': self.study_date}
+        self.source['plot_predict'].data = {'x': x, 'y': y_pred, 'mrn': mrn, 'study_date': study_date}
 
-        self.source['diff'].data = {'x': self.x,
-                                    'y_mvr': np.subtract(np.array(self.y), np.array(self.multi_var_pred)),
-                                    'y_ml': np.subtract(np.array(self.y), np.array(y_pred)),
-                                    'y0': [0] * len(self.x),
-                                    'mrn': self.mrn, 'study_date': self.study_date}
+        self.source['plot_multi_var'].data = {'x': x, 'y': multi_var_pred, 'mrn': mrn,
+                                              'study_date': study_date}
 
-        if feature_importance is not None:
-            length = len(feature_importance)
-            order = [i[0] for i in sorted(enumerate(feature_importance), key=lambda x:x[1])]
-            order = order[::-1]
-            self.source['importance'].data = {'x': [i+0.5 for i in range(length)],
-                                              'top': [feature_importance[i] for i in order],
-                                              'width': [0.5] * length,
-                                              'variable': [x_variables[i] for i in order]}
-            self.imp_figure.x_range.factors = [x_variables[i] for i in order]
-            self.imp_figure.y_range = Range1d(0, max(feature_importance) * 1.05)
+        self.source['diff'].data = {'x': x,
+                                    'y_mvr': np.subtract(np.array(y), np.array(multi_var_pred)),
+                                    'y_ml': np.subtract(np.array(y), np.array(y_pred)),
+                                    'y0': [0] * len(x),
+                                    'mrn': mrn, 'study_date': study_date}
 
-        self.div.text = "<b>Mean Square Error</b>: %0.2f (%s) --- %0.2f (MVR)" % \
-                        (mse, self.ml_type_short, self.multi_var_mse)
+        # if feature_importance is not None:
+        #     length = len(feature_importance)
+        #     order = [i[0] for i in sorted(enumerate(feature_importance), key=lambda x:x[1])]
+        #     order = order[::-1]
+        #     self.source['importance'].data = {'x': [i+0.5 for i in range(length)],
+        #                                       'top': [feature_importance[i] for i in order],
+        #                                       'width': [0.5] * length,
+        #                                       'variable': [x_variables[i] for i in order]}
+        #     self.imp_figure.x_range.factors = [x_variables[i] for i in order]
+        #     self.imp_figure.y_range = Range1d(0, max(feature_importance) * 1.05)
 
-        self.figure.yaxis.axis_label = y_variable
+        self.div.text = "<u>Mean Square Error</u>: %0.2f (%s) --- %0.2f (MVR)" % \
+                        (plot_data.mse['train'], self.ml_type_short, self.multi_var_mse)
+
+        #####
+        # Test data
+        #####
+        x = plot_data.x['test']
+        y = plot_data.y['test']
+        y_pred = plot_data.predictions['test']
+        multi_var_pred = [self.multi_var_pred[i] for i in plot_data.indices['test']]
+        mrn = [self.mrn[i] for i in plot_data.indices['test']]
+        uid = [self.uid[i] for i in plot_data.indices['test']]
+        study_date = [self.study_date[i] for i in plot_data.indices['test']]
+
+        self.source['plot_test'].data = {'x': x, 'y': y, 'mrn': mrn,
+                                    'study_date': study_date, 'uid': uid}
+
+        self.source['plot_predict_test'].data = {'x': x, 'y': y_pred, 'mrn': mrn, 'study_date': study_date}
+
+        self.source['plot_multi_var_test'].data = {'x': x, 'y': multi_var_pred, 'mrn': mrn,
+                                              'study_date': study_date}
+
+        self.source['diff_test'].data = {'x': x,
+                                    'y_mvr': np.subtract(np.array(y), np.array(multi_var_pred)),
+                                    'y_ml': np.subtract(np.array(y), np.array(y_pred)),
+                                    'y0': [0] * len(x),
+                                    'mrn': mrn, 'study_date': study_date}
+
+        # if feature_importance is not None:
+        #     length = len(feature_importance)
+        #     order = [i[0] for i in sorted(enumerate(feature_importance), key=lambda x:x[1])]
+        #     order = order[::-1]
+        #     self.source['importance'].data = {'x': [i+0.5 for i in range(length)],
+        #                                       'top': [feature_importance[i] for i in order],
+        #                                       'width': [0.5] * length,
+        #                                       'variable': [x_variables[i] for i in order]}
+        #     self.imp_figure.x_range.factors = [x_variables[i] for i in order]
+        #     self.imp_figure.y_range = Range1d(0, max(feature_importance) * 1.05)
+
+        self.div_test.text = "<u>Mean Square Error</u>: %0.2f (%s) --- %0.2f (MVR)" % \
+                        (plot_data.mse['test'], self.ml_type_short, self.multi_var_mse)
+
+        self.figure.yaxis.axis_label = self.y_variable
 
         self.update_bokeh_layout_in_wx_python()
 
