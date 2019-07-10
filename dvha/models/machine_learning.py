@@ -37,7 +37,21 @@ class MachineLearningFrame(wx.Frame):
         self.defaults = {}
         self.getters = {}
 
-        self.test_size_input = wx.TextCtrl(self, wx.ID_ANY, "0.2")
+        self.data_split_input = {'test_size': wx.TextCtrl(self, wx.ID_ANY, "0.2"),
+                                 'train_size': wx.TextCtrl(self, wx.ID_ANY, "None"),
+                                 'random_state': wx.TextCtrl(self, wx.ID_ANY, "None"),
+                                 'shuffle': wx.ComboBox(self, wx.ID_ANY, choices=["True", "False"],
+                                                        style=wx.CB_DROPDOWN | wx.CB_READONLY)}
+
+        self.data_split_defaults = {'test_size': 0.2,
+                                    'train_size': None,
+                                    'random_state': None,
+                                    'shuffle': True}
+
+        self.data_split_getters = {'test_size': self.to_float_or_none,
+                                   'train_size': self.to_float_or_none,
+                                   'random_state': self.to_int_or_none,
+                                   'shuffle': self.to_bool}
 
         self.button_calculate = wx.Button(self, wx.ID_ANY, "Calculate")
         self.button_export_data = wx.Button(self, wx.ID_ANY, "Export Data")
@@ -56,30 +70,40 @@ class MachineLearningFrame(wx.Frame):
         self.SetTitle(self.title)
         self.SetMinSize(get_window_size(0.8, 0.7))
         self.set_defaults()
+
         for key, input_obj in self.input.items():
             input_obj.SetToolTip(self.tool_tips[key])
+
+        for key, input_obj in self.data_split_input.items():
+            input_obj.SetToolTip(DATA_SPLIT_TOOL_TIPS[key])
 
     def do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.HORIZONTAL)
         sizer_side_bar = wx.BoxSizer(wx.VERTICAL)
         sizer_actions = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Actions"), wx.VERTICAL)
         sizer_param = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Parameters"), wx.VERTICAL)
+        sizer_split_param = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Data Split"), wx.VERTICAL)
 
         variables = list(self.input)
         variables.sort()
+        sizer_input = {variable: wx.BoxSizer(wx.HORIZONTAL) for variable in variables}
 
-        sizer_input = {variable: wx.BoxSizer(wx.HORIZONTAL) for variable in variables + ['test_size']}
+        split_variables = ['test_size', 'train_size', 'random_state', 'shuffle']
+        sizer_split_input = {variable: wx.BoxSizer(wx.HORIZONTAL) for variable in split_variables}
 
         for variable in variables:
             sizer_input[variable].Add(wx.StaticText(self, wx.ID_ANY, "%s:\t" % variable), 0, wx.EXPAND, 0)
             sizer_input[variable].Add(self.input[variable], 1, wx.EXPAND, 0)
             sizer_param.Add(sizer_input[variable], 1, wx.EXPAND | wx.ALL, 2)
 
-        sizer_input['test_size'].Add(wx.StaticText(self, wx.ID_ANY, "%s:\t" % 'test_size'), 0, wx.EXPAND, 0)
-        sizer_input['test_size'].Add(self.test_size_input, 1, wx.EXPAND, 0)
-        sizer_param.Add(sizer_input['test_size'], 1, wx.EXPAND | wx.ALL, 2)
-
         sizer_side_bar.Add(sizer_param, 0, wx.ALL | wx.EXPAND, 5)
+
+        for variable in split_variables:
+            sizer_split_input[variable].Add(wx.StaticText(self, wx.ID_ANY, "%s:\t" % variable), 0, wx.EXPAND, 0)
+            sizer_split_input[variable].Add(self.data_split_input[variable], 1, wx.EXPAND, 0)
+            sizer_split_param.Add(sizer_split_input[variable], 1, wx.EXPAND | wx.ALL, 2)
+
+        sizer_side_bar.Add(sizer_split_param, 0, wx.ALL | wx.EXPAND, 5)
 
         sizer_actions.Add(self.button_calculate, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         sizer_actions.Add(self.button_export_data, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
@@ -99,19 +123,31 @@ class MachineLearningFrame(wx.Frame):
         self.Center()
 
     def get_param(self, variable):
+        ans = variable in list(self.input)
+        input_dict = [self.data_split_input, self.input][ans]
+        default_dict = [self.data_split_defaults, self.defaults][ans]
+        getters_dict = [self.data_split_getters, self.getters][ans]
+
         try:
-            return self.getters[variable](self.input[variable].GetValue())
+            return getters_dict[variable](input_dict[variable].GetValue())
         except:
-            return self.defaults[variable]
+            return default_dict[variable]
 
     def set_defaults(self):
         for variable, input_obj in self.input.items():
-            self.input[variable].SetValue(self.to_str_for_gui(self.defaults[variable]))
+            input_obj.SetValue(self.to_str_for_gui(self.defaults[variable]))
+        for variable, input_obj in self.data_split_input.items():
+            input_obj.SetValue(self.to_str_for_gui(self.data_split_defaults[variable]))
 
     @property
     def input_parameters(self):
         return {variable: self.get_param(variable) for variable in self.input.keys()
                 if self.get_param(variable) != self.defaults[variable]}
+
+    @property
+    def data_split_parameters(self):
+        return {variable: self.get_param(variable) for variable in self.data_split_input.keys()
+                if self.get_param(variable) != self.data_split_defaults[variable]}
 
     def to_int_or_none(self, str_value):
         if str_value.lower() == 'none':
@@ -164,7 +200,7 @@ class MachineLearningFrame(wx.Frame):
     @property
     def plot_data(self):
         self.reg = self.regressor(**self.input_parameters)
-        return MachineLearningPlotData(self.data['X'], self.data['y'], self.reg, float(self.test_size_input.GetValue()))
+        return MachineLearningPlotData(self.data['X'], self.data['y'], self.reg, **self.data_split_parameters)
 
     def on_calculate(self, evt):
         self.plot.update_data(self.plot_data)
@@ -644,17 +680,33 @@ SVR_TOOL_TIPS = {'kernel': "string\n"
                  'max_iter': "int\n"
                              "Hard limit on iterations within solver, or -1 for no limit."}
 
+DATA_SPLIT_TOOL_TIPS = {'test_size': "float, int, or None\n"
+                                     "If float, should be between 0.0 and 1.0 and represent the proportion of the "
+                                     "dataset to include in the test split. If int, represents the absolute number of "
+                                     "test samples. If None, the value is set to the complement of the train size. If "
+                                     "train_size is also None, it will be set to 0.25.",
+                        'train_size': "float, int, or None\n"
+                                      "If float, should be between 0.0 and 1.0 and represent the proportion of the "
+                                      "dataset to include in the train split. If int, represents the absolute number "
+                                      "of train samples. If None, the value is automatically set to the complement of "
+                                      "the test size.",
+                        'random_state': "int or None\n"
+                                        "If int, random_state is the seed used by the random number generator; If None,"
+                                        " the random number generator is the RandomState instance used by np.random.",
+                        'shuffle': "boolean\n"
+                                   "Whether or not to shuffle the data before splitting. If shuffle=False then stratify"
+                                   " must be None."}
+
 
 class MachineLearningPlotData:
-    def __init__(self, X, y, reg, test_size, random_state=None):
+    def __init__(self, X, y, reg, **kwargs):
         self.reg = reg
-        self.test_size = test_size
-        self.random_state = random_state
+        self.split_args = kwargs
 
         indices = list(range(len(y)))
 
         # split the data for training and testing
-        split_data = train_test_split(X, indices, test_size=test_size, random_state=random_state)
+        split_data = train_test_split(X, indices, **kwargs)
         self.X = {'data': X, 'train': split_data[0], 'test': split_data[1]}
         self.indices = {'data': indices, 'train': split_data[2], 'test': split_data[3]}
         self.y = {'data': y, 'train': [y[i] for i in split_data[2]], 'test': [y[i] for i in split_data[3]]}
