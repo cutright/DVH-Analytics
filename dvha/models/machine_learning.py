@@ -54,7 +54,7 @@ class MachineLearningFrame(wx.Frame):
 
     def set_properties(self):
         self.SetTitle(self.title)
-        self.SetMinSize(get_window_size(0.8, 0.5))
+        self.SetMinSize(get_window_size(0.8, 0.7))
         self.set_defaults()
         for key, input_obj in self.input.items():
             input_obj.SetToolTip(self.tool_tips[key])
@@ -373,8 +373,7 @@ class DecisionTreeFrame(MachineLearningFrame):
 
 class SupportVectorRegressionFrame(MachineLearningFrame):
     def __init__(self, data):
-        MachineLearningFrame.__init__(self, data, 'Support Vector Machine', SVR, SVR_TOOL_TIPS,
-                                      feature_importance=False)
+        MachineLearningFrame.__init__(self, data, 'Support Vector Machine', SVR, SVR_TOOL_TIPS)
 
         self.input = {'kernel': wx.ComboBox(self, wx.ID_ANY, "rbf",
                                             choices=["linear", "poly", "rbf", "sigmoid", "precomputed"],
