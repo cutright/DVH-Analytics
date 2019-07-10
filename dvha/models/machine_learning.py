@@ -17,7 +17,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVR
 from sklearn.tree import DecisionTreeRegressor
 from dvha.dialogs.export import save_data_to_file
-from dvha.models.plot import PlotMachineLearning
+from dvha.models.plot import PlotMachineLearning, PlotFeatureImportance
 from dvha.tools.utilities import set_msw_background_color, get_window_size
 
 
@@ -26,12 +26,15 @@ class MachineLearningFrame(wx.Frame):
         wx.Frame.__init__(self, None)
 
         self.data = data
+
         self.regressor = regressor
         self.reg = None
         self.title = title
         self.tool_tips = tool_tips
 
         self.plot = PlotMachineLearning(self, ml_type=title, ml_type_short=self.ml_type_short, **data)
+
+        self.feature_importance_dlg = None
 
         self.input = {}
         self.defaults = {}
@@ -54,6 +57,7 @@ class MachineLearningFrame(wx.Frame):
                                    'shuffle': self.to_bool}
 
         self.button_calculate = wx.Button(self, wx.ID_ANY, "Calculate")
+        self.button_importance = wx.Button(self, wx.ID_ANY, "Importance Plot")
         self.button_export_data = wx.Button(self, wx.ID_ANY, "Export Data")
         self.button_save_plot = wx.Button(self, wx.ID_ANY, "Save Plot")
         self.button_save_model = wx.Button(self, wx.ID_ANY, "Save Model")
@@ -62,6 +66,7 @@ class MachineLearningFrame(wx.Frame):
 
     def do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_calculate, id=self.button_calculate.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_feature_importance, id=self.button_importance.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export_data.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
         self.Bind(wx.EVT_SIZE, self.on_resize)
@@ -102,6 +107,7 @@ class MachineLearningFrame(wx.Frame):
         sizer_side_bar.Add(sizer_split_param, 0, wx.ALL | wx.EXPAND, 5)
 
         sizer_actions.Add(self.button_calculate, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        sizer_actions.Add(self.button_importance, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         sizer_actions.Add(self.button_export_data, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_actions.Add(self.button_save_plot, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_actions.Add(self.button_save_model, 1, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
@@ -232,6 +238,12 @@ class MachineLearningFrame(wx.Frame):
     @property
     def ml_type_short(self):
         return ''.join([s[0] for s in self.title.split(' ')]).upper()
+
+    def on_feature_importance(self, evt):
+        title = "Importance Figure for %s (%s)" % (self.title, self.data['y_variable'])
+        self.feature_importance_dlg = FeatureImportanceFrame(self.data['options'], self.data['x_variables'],
+                                                             self.reg.feature_importances_, title)
+        self.feature_importance_dlg.Show()
 
 
 class RandomForestFrame(MachineLearningFrame):
@@ -443,6 +455,8 @@ class SupportVectorRegressionFrame(MachineLearningFrame):
                         'shrinking': self.to_bool,
                         'cache_size': self.to_float_or_none,
                         'max_iter': self.to_int}
+
+        self.button_importance.Disable()
 
         self.run()
 
@@ -728,3 +742,43 @@ class MachineLearningPlotData:
         if hasattr(self.reg, 'feature_importances_'):
             return self.reg.feature_importances_
         return None
+
+
+class FeatureImportanceFrame(wx.Frame):
+    def __init__(self, options, x_variables, feature_importances, title):
+        wx.Frame.__init__(self, None)
+
+        self.title = title
+
+        self.plot = PlotFeatureImportance(self, options, x_variables, feature_importances)
+
+        self.set_properties()
+        self.do_layout()
+
+        self.Bind(wx.EVT_SIZE, self.on_resize)
+
+    def set_properties(self):
+        self.SetTitle(self.title)
+        self.SetMinSize(get_window_size(0.35, 0.8))
+
+    def do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_wrapper.Add(self.plot.layout, 1, wx.EXPAND, 0)
+
+        set_msw_background_color(self)  # If windows, change the background color
+
+        self.SetSizer(sizer_wrapper)
+        self.Layout()
+        self.Fit()
+        self.Center()
+
+    def redraw_plot(self):
+        self.plot.redraw_plot()
+
+    def on_resize(self, *evt):
+        try:
+            self.Refresh()
+            self.Layout()
+            wx.CallAfter(self.redraw_plot)
+        except RuntimeError:
+            pass

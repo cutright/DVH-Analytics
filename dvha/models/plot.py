@@ -1428,6 +1428,73 @@ class PlotMachineLearning(Plot):
         return '\n'.join(csv_data)
 
 
+class PlotFeatureImportance(Plot):
+    def __init__(self, parent, options, x_variables, feature_importances):
+        Plot.__init__(self, parent, options)
+
+        self.size_factor = {'plot': (0.95, 0.9)}
+
+        self.type = 'feature_importance'
+
+        self.parent = parent
+        self.options = options
+
+        self.x_variables = x_variables
+        self.feature_importances = feature_importances
+
+        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[]))}
+
+        self.figure = figure(y_range=[''], tools="")
+
+        self.initialize_figures()
+
+        self.__add_plot_data()
+        self.__do_layout()
+        self.__add_hover()
+
+        self.set_figure_dimensions()
+
+        self.set_data()
+
+        self.update_bokeh_layout_in_wx_python()
+
+    def __add_plot_data(self):
+        self.figure.hbar(y='y', right='right', left=0, height='height', source=self.source['plot'],
+                         color=self.options.RANDOM_FOREST_COLOR_PREDICT, alpha=0.6)
+
+    def __do_layout(self):
+        self.bokeh_layout = column(self.figure)
+
+    def __add_hover(self):
+        self.figure.add_tools(HoverTool(show_arrow=True, mode='hline',
+                                        tooltips=[('Importance', '@right{0.4f}'),
+                                                  ('Variable', '@variable')]))
+
+    def initialize_figures(self):
+        self.figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.figure.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.figure.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.figure.min_border = self.options.MIN_BORDER
+        self.figure.xaxis.axis_label_text_baseline = "bottom"
+        self.figure.xaxis.axis_label = 'Importance'
+
+    def set_figure_dimensions(self):
+        panel_width, panel_height = self.parent.GetSize()
+        self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
+        self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
+
+    def set_data(self):
+        length = len(self.feature_importances)
+        order = [i[0] for i in sorted(enumerate(self.feature_importances), key=lambda x:x[1])]
+        self.source['plot'].data = {'y': [i+0.5 for i in range(length)],
+                                    'right': [self.feature_importances[i] for i in order],
+                                    'height': [0.5] * length,
+                                    'variable': [self.x_variables[i] for i in order]}
+        self.figure.y_range.factors = [self.x_variables[i] for i in order]
+        self.figure.x_range = Range1d(0, max(self.feature_importances) * 1.05)
+
+
 class PlotROIMap(Plot):
     """
     Generate visual representation of the roi map
