@@ -1198,6 +1198,7 @@ class PlotMachineLearning(Plot):
         self.mrn = mrn
         self.study_date = study_date
         self.uid = uid
+        self.X, self.y = None, None
 
         self.size_factor = {'data': (0.35, 0.425),
                             'diff': (0.35, 0.425),
@@ -1360,6 +1361,8 @@ class PlotMachineLearning(Plot):
         :return:
         """
 
+        self.X = plot_data.X['data']
+
         for data_type in {'train', 'test'}:
             x = plot_data.x[data_type]
             y = plot_data.y[data_type]
@@ -1411,6 +1414,16 @@ class PlotMachineLearning(Plot):
                                              self.source[data_type]['predict'].data['y'][i],
                                              self.source[data_type]['multi_var'].data['y'][i])
             csv_data.append('\n')
+
+        # Original dataset (in case not all data was used for training and testing
+        data = self.source['data']['data'].data
+        csv_data.append('%s Data\n%s' % (['Training', 'Testing'][data_type == 'test'], col_titles))
+        for i in range(len(data['mrn'])):
+            csv_data.append(','.join(str(data[key][i]).replace(',', '^')
+                                     for key in ['mrn', 'uid', 'x', 'study_date', 'y']))
+            csv_data[-1] = "%s,%s,%s" % (csv_data[-1],
+                                         self.source[data_type]['predict'].data['y'][i],
+                                         self.source[data_type]['multi_var'].data['y'][i])
 
         return '\n'.join(csv_data)
 

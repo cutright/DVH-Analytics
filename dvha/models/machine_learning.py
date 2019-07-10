@@ -37,13 +37,13 @@ class MachineLearningFrame(wx.Frame):
         self.defaults = {}
         self.getters = {}
 
-        self.data_split_input = {'test_size': wx.TextCtrl(self, wx.ID_ANY, "0.2"),
+        self.data_split_input = {'test_size': wx.TextCtrl(self, wx.ID_ANY, "0.25"),
                                  'train_size': wx.TextCtrl(self, wx.ID_ANY, "None"),
                                  'random_state': wx.TextCtrl(self, wx.ID_ANY, "None"),
                                  'shuffle': wx.ComboBox(self, wx.ID_ANY, choices=["True", "False"],
                                                         style=wx.CB_DROPDOWN | wx.CB_READONLY)}
 
-        self.data_split_defaults = {'test_size': 0.2,
+        self.data_split_defaults = {'test_size': 0.25,
                                     'train_size': None,
                                     'random_state': None,
                                     'shuffle': True}
@@ -87,22 +87,18 @@ class MachineLearningFrame(wx.Frame):
         variables = list(self.input)
         variables.sort()
         sizer_input = {variable: wx.BoxSizer(wx.HORIZONTAL) for variable in variables}
-
-        split_variables = ['test_size', 'train_size', 'random_state', 'shuffle']
-        sizer_split_input = {variable: wx.BoxSizer(wx.HORIZONTAL) for variable in split_variables}
-
         for variable in variables:
             sizer_input[variable].Add(wx.StaticText(self, wx.ID_ANY, "%s:\t" % variable), 0, wx.EXPAND, 0)
             sizer_input[variable].Add(self.input[variable], 1, wx.EXPAND, 0)
             sizer_param.Add(sizer_input[variable], 1, wx.EXPAND | wx.ALL, 2)
-
         sizer_side_bar.Add(sizer_param, 0, wx.ALL | wx.EXPAND, 5)
 
+        split_variables = ['test_size', 'train_size', 'random_state', 'shuffle']
+        sizer_split_input = {variable: wx.BoxSizer(wx.HORIZONTAL) for variable in split_variables}
         for variable in split_variables:
             sizer_split_input[variable].Add(wx.StaticText(self, wx.ID_ANY, "%s:\t" % variable), 0, wx.EXPAND, 0)
             sizer_split_input[variable].Add(self.data_split_input[variable], 1, wx.EXPAND, 0)
             sizer_split_param.Add(sizer_split_input[variable], 1, wx.EXPAND | wx.ALL, 2)
-
         sizer_side_bar.Add(sizer_split_param, 0, wx.ALL | wx.EXPAND, 5)
 
         sizer_actions.Add(self.button_calculate, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
