@@ -13,6 +13,7 @@ Then call the following from the top-level project directory with python 3:
 ~~~
 python dvha_app.py
 ~~~
+For installation instructions of the source code, see our [installation notes](https://github.com/cutright/DVH-Analytics/blob/master/install_notes.md). 
 
 ### About
 DVH Analytics is a software application to help radiation oncology departments build an in-house database of treatment 
@@ -38,8 +39,6 @@ The code is built upon these core libraries:
 * [Pydicom](http://code.google.com/p/pydicom/) - Read, modify and write DICOM files with python code
 * [dicompyler-core](https://pypi.python.org/pypi/dicompyler-core) - Extensible radiation therapy research platform and viewer for DICOM and DICOM RT
 * [Bokeh](http://bokeh.pydata.org/en/latest/index.html) - Interactive Web Plotting for Python
-
-For installation instructions of the source code, see our [installation notes](https://github.com/cutright/DVH-Analytics/blob/master/install_notes.md). 
 
 
 ### Citing DVH Analytics
