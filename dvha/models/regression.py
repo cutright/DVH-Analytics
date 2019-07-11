@@ -62,7 +62,7 @@ class RegressionFrame:
         self.spin_button_y_axis = wx.SpinButton(self.pane_plot, wx.ID_ANY, style=wx.SP_WRAP)
         self.checkbox = wx.CheckBox(self.pane_plot, wx.ID_ANY, "Include", style=wx.ALIGN_RIGHT)
         self.plot = PlotRegression(self.pane_plot, self.options)
-        self.button_multi_var_reg_model = wx.Button(self.pane_tree, wx.ID_ANY, 'Run Regressions')
+        self.button_multi_var_reg_model = wx.Button(self.pane_tree, wx.ID_ANY, 'Run Multi-Variable Regressions')
         self.button_multi_var_quick_select = wx.Button(self.pane_tree, wx.ID_ANY, 'Variable Quick Select')
         self.button_single_var_export = wx.Button(self.pane_tree, wx.ID_ANY, 'Export Plot Data')
         self.button_single_var_plot_save = wx.Button(self.pane_tree, wx.ID_ANY, 'Save Plot')
@@ -391,7 +391,7 @@ class MultiVarResultsFrame(wx.Frame):
                'regression': self.plot.reg}
         pub.sendMessage('control_chart_set_model', **msg)
 
-        algorithms = ['Random Forest', 'Epsilon-Support Vector Regression', 'Decision Tree', 'Gradient Boosting']
+        algorithms = ['Random Forest', 'Support Vector Machine', 'Decision Tree', 'Gradient Boosting']
         self.button = {key: wx.Button(self, wx.ID_ANY, key) for key in algorithms}\
 
         self.button_export = wx.Button(self, wx.ID_ANY, 'Export Plot Data')
@@ -410,7 +410,7 @@ class MultiVarResultsFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_gradient_boosting, id=self.button['Gradient Boosting'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_decision_tree, id=self.button['Decision Tree'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_support_vector_regression,
-                  id=self.button['Epsilon-Support Vector Regression'].GetId())
+                  id=self.button['Support Vector Machine'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_model, id=self.button_save_model.GetId())
@@ -463,7 +463,8 @@ class MultiVarResultsFrame(wx.Frame):
     def on_save_model(self, evt):
         data = {'y_variable': self.plot.y_variable,
                 'regression': self.plot.reg,
-                'x_variables': self.plot.x_variables}
+                'x_variables': self.plot.x_variables,
+                'regression_type': 'multi-variable-linear'}
         save_data_to_file(self, 'Save Model', data,
                           wildcard="REG files (*.reg)|*.reg", data_type='pickle', initial_dir=MODELS_DIR)
 

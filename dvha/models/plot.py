@@ -1200,9 +1200,8 @@ class PlotMachineLearning(Plot):
         self.uid = uid
         self.X, self.y = None, None
 
-        self.size_factor = {'data': (0.35, 0.425),
-                            'diff': (0.35, 0.425),
-                            'importance': (0.28, 0.85)}
+        self.size_factor = {'data': (0.38, 0.425),
+                            'diff': (0.38, 0.425)}
 
         self.options = options
         self.multi_var_pred = multi_var_pred
@@ -1231,7 +1230,6 @@ class PlotMachineLearning(Plot):
 
         self.figure.xaxis.axis_label = "Study"
 
-        # self.imp_figure = figure(x_range=[''], tools="")
         self.figures = {'train': {'data': figure(tools=DEFAULT_TOOLS),
                                   'diff': figure(tools=DEFAULT_TOOLS)},
                         'test': {'data': figure(tools=DEFAULT_TOOLS),
@@ -1269,12 +1267,6 @@ class PlotMachineLearning(Plot):
                                                                      color=opt.RANDOM_FOREST_COLOR_MULTI_VAR,
                                                                      alpha=opt.RANDOM_FOREST_ALPHA * 0.7)}
 
-        # self.imp_figure.vbar(x='x', width='width', bottom=0, top='top', source=self.source['importance'],
-        #                      color=self.options.RANDOM_FOREST_COLOR_PREDICT, alpha=0.6)
-
-        # self.imp_figure.vbar(x='x', width='width', bottom=0, top='top', source=self.source['importance'],
-        #                      color=self.options.RANDOM_FOREST_COLOR_PREDICT, alpha=0.6)
-
     def __do_layout(self):
         self.bokeh_layout = row(column(self.div_title['train'], self.div_mse['train'],
                                        self.figures['train']['data'], self.figures['train']['diff']),
@@ -1294,13 +1286,9 @@ class PlotMachineLearning(Plot):
                                                                 tooltips=[('ID', '@mrn'),
                                                                           ('Date', '@study_date{%F}'),
                                                                           ('Study', '@x{int}'),
-                                                                          ('RF.', '@y_ml{0.2f}'),
+                                                                          (self.ml_type_short, '@y_ml{0.2f}'),
                                                                           ('MVR', '@y_mvr{0.2f}')],
                                                                 formatters={'study_date': 'datetime'}))
-
-        # self.imp_figure.add_tools(HoverTool(show_arrow=True, mode='vline',
-        #                                     tooltips=[('Importance', '@top{0.4f}'),
-        #                                               ('Variable', '@variable')]))
 
     def __add_legend(self):
         legend = {}
@@ -1317,21 +1305,11 @@ class PlotMachineLearning(Plot):
                 self.figures[data_type][key].legend.click_policy = "hide"
 
     def initialize_figures(self):
-        # self.imp_figure.yaxis.axis_label = 'Importance'
-        # self.imp_figure.xaxis.axis_label = ''
-        # self.imp_figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        # self.imp_figure.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        # self.imp_figure.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        # self.imp_figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        # self.imp_figure.min_border = self.options.MIN_BORDER
-        # # self.imp_figure.yaxis.axis_label_text_baseline = "bottom"
-        # self.imp_figure.xaxis.major_label_orientation = -pi/2
 
         for data_type in {'train', 'test'}:
             for key in {'data', 'diff'}:
                 fig = self.figures[data_type][key]
                 fig.xaxis.axis_label = 'Study'
-                fig.yaxis.axis_label = 'Residual'
                 fig.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
                 fig.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
                 fig.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
@@ -1341,6 +1319,9 @@ class PlotMachineLearning(Plot):
                 if data_type == 'test':
                     fig.background_fill_color = "black"
                     fig.background_fill_alpha = 0.05
+
+            self.figures[data_type]['data'].yaxis.axis_label = self.y_variable
+            self.figures[data_type]['diff'].yaxis.axis_label = 'Residual'
 
         self.figures['train']['diff'].x_range = self.figures['train']['data'].x_range
         self.figures['test']['data'].y_range = self.figures['train']['data'].y_range
@@ -1386,17 +1367,6 @@ class PlotMachineLearning(Plot):
             self.div_mse[data_type].text = "<u>Mean Square Error</u>: %0.2f (%s) --- %0.2f (MVR)" % \
                                            (plot_data.mse[data_type], self.ml_type_short, self.multi_var_mse)
 
-        # if feature_importance is not None:
-        #     length = len(feature_importance)
-        #     order = [i[0] for i in sorted(enumerate(feature_importance), key=lambda x:x[1])]
-        #     order = order[::-1]
-        #     self.source['importance'].data = {'x': [i+0.5 for i in range(length)],
-        #                                       'top': [feature_importance[i] for i in order],
-        #                                       'width': [0.5] * length,
-        #                                       'variable': [x_variables[i] for i in order]}
-        #     self.imp_figure.x_range.factors = [x_variables[i] for i in order]
-        #     self.imp_figure.y_range = Range1d(0, max(feature_importance) * 1.05)
-
         self.update_bokeh_layout_in_wx_python()
 
     def get_csv(self):
@@ -1416,25 +1386,27 @@ class PlotMachineLearning(Plot):
             csv_data.append('\n')
 
         # Original dataset (in case not all data was used for training and testing
-        data = self.source['data']['data'].data
-        csv_data.append('%s Data\n%s' % (['Training', 'Testing'][data_type == 'test'], col_titles))
-        for i in range(len(data['mrn'])):
-            csv_data.append(','.join(str(data[key][i]).replace(',', '^')
-                                     for key in ['mrn', 'uid', 'x', 'study_date', 'y']))
-            csv_data[-1] = "%s,%s,%s" % (csv_data[-1],
-                                         self.source[data_type]['predict'].data['y'][i],
-                                         self.source[data_type]['multi_var'].data['y'][i])
+        # data = self.source['data'].data
+        # csv_data.append('%s Data\n%s' % (['Training', 'Testing'][data_type == 'test'], col_titles))
+        # for i in range(len(data['mrn'])):
+        #     csv_data.append(','.join(str(data[key][i]).replace(',', '^')
+        #                              for key in ['mrn', 'uid', 'x', 'study_date', 'y']))
+        #     csv_data[-1] = "%s,%s,%s" % (csv_data[-1],
+        #                                  self.source[data_type]['predict'].data['y'][i],
+        #                                  self.source[data_type]['multi_var'].data['y'][i])
 
         return '\n'.join(csv_data)
 
 
 class PlotFeatureImportance(Plot):
-    def __init__(self, parent, options, x_variables, feature_importances):
+    def __init__(self, parent, options, x_variables, feature_importances, title):
         Plot.__init__(self, parent, options)
 
         self.size_factor = {'plot': (0.95, 0.9)}
 
         self.type = 'feature_importance'
+
+        self.div_title = Div(text="<b>%s</b>" % title)
 
         self.parent = parent
         self.options = options
@@ -1463,7 +1435,8 @@ class PlotFeatureImportance(Plot):
                          color=self.options.RANDOM_FOREST_COLOR_PREDICT, alpha=0.6)
 
     def __do_layout(self):
-        self.bokeh_layout = column(self.figure)
+        self.bokeh_layout = column(self.div_title,
+                                   self.figure)
 
     def __add_hover(self):
         self.figure.add_tools(HoverTool(show_arrow=True, mode='hline',

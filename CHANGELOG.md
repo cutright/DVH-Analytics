@@ -1,11 +1,14 @@
 # Change log of DVH Analytics
 
-v0.6.1 (TBD)
+v0.6.1 (2019.7.10)
 --------------------
  - [Control Chart] Adjusted Control Charts automatically populated from Regressions tab after running model
  - [Regression] Run all regressions on run
  - [Machine Learning] Redesigned PlotRandomForest class to PlotMachineLearning to support Random Forest, Decision Tree, 
  Gradient Boost, and Support Vector Machine
+ - [Machine Learning] Modules redesigned to allow for complete input parameter customization
+ - [Machine Learning] Modules allow for data splitting (training and testing)
+ - [Machine Learning] Models can be saved to a pickle file, their use not yet implemented
 
 v0.6.0 (2019.7.6)
 --------------------

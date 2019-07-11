@@ -17,6 +17,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVR
 from sklearn.tree import DecisionTreeRegressor
 from dvha.dialogs.export import save_data_to_file
+from dvha.paths import MODELS_DIR
 from dvha.models.plot import PlotMachineLearning, PlotFeatureImportance
 from dvha.tools.utilities import set_msw_background_color, get_window_size
 
@@ -69,6 +70,7 @@ class MachineLearningFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_feature_importance, id=self.button_importance.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export_data.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_save_model, id=self.button_save_model.GetId())
         self.Bind(wx.EVT_SIZE, self.on_resize)
 
     def set_properties(self):
@@ -151,6 +153,28 @@ class MachineLearningFrame(wx.Frame):
         return {variable: self.get_param(variable) for variable in self.data_split_input.keys()
                 if self.get_param(variable) != self.data_split_defaults[variable]}
 
+    def to_int_float_or_none(self, str_value):
+        if str_value.lower() == 'none':
+            return None
+        return self.to_int_or_float(str_value)
+
+    @staticmethod
+    def to_int_float_string_or_none(str_value):
+        if str_value.lower() == 'none':
+            return None
+        if str_value.isnumeric():  # int
+            return int(float(str_value))
+        if '.' in str_value and len(str_value.split('.') == 2):
+            return float(str_value)
+        return str_value
+
+
+    @staticmethod
+    def to_int_or_float(str_value):
+        if str_value.isnumeric():  # int
+            return int(float(str_value))
+        return float(str_value)
+
     def to_int_or_none(self, str_value):
         if str_value.lower() == 'none':
             return None
@@ -171,6 +195,13 @@ class MachineLearningFrame(wx.Frame):
 
     @staticmethod
     def to_str(str_value):
+        return str_value
+
+    @staticmethod
+    def to_float_or_str(str_value):
+        if '.' in str_value and len(str_value.split('.') == 2):
+            if ("%s" % (str_value.split('.')[0] + str_value.split('.')[1])).isnumeric():
+                return float(str_value)
         return str_value
 
     def to_float_str_or_none(self, str_value):
@@ -201,11 +232,21 @@ class MachineLearningFrame(wx.Frame):
 
     @property
     def plot_data(self):
+        try:
+            self.reg = self.regressor(**self.input_parameters)
+            return MachineLearningPlotData(self.data['X'], self.data['y'], self.reg, **self.data_split_parameters)
+        except Exception as e:
+            wx.MessageBox(str(e), 'Error!',
+                          wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+
+    def do_regression(self):
         self.reg = self.regressor(**self.input_parameters)
         return MachineLearningPlotData(self.data['X'], self.data['y'], self.reg, **self.data_split_parameters)
 
     def on_calculate(self, evt):
-        self.plot.update_data(self.plot_data)
+        data = self.plot_data
+        if data is not None:
+            self.plot.update_data(data)
 
     def redraw_plot(self):
         self.plot.redraw_plot()
@@ -225,6 +266,14 @@ class MachineLearningFrame(wx.Frame):
         save_data_to_file(self, 'Save random forest plot', self.plot.html_str,
                           wildcard="HTML files (*.html)|*.html")
 
+    def on_save_model(self, evt):
+        data = {'y_variable': self.plot.y_variable,
+                'regression': self.reg,
+                'x_variables': self.plot.x_variables,
+                'regression_type': self.title.lower().replace(' ', '_')}
+        save_data_to_file(self, 'Save Model', data,
+                          wildcard="REG files (*.reg)|*.reg", data_type='pickle', initial_dir=MODELS_DIR)
+
     def run(self):
         self.set_properties()
         self.do_layout()
@@ -241,8 +290,9 @@ class MachineLearningFrame(wx.Frame):
 
     def on_feature_importance(self, evt):
         title = "Importance Figure for %s (%s)" % (self.title, self.data['y_variable'])
+        plot_title = "%s Feature Importances for %s" % (self.title, self.data['y_variable'])
         self.feature_importance_dlg = FeatureImportanceFrame(self.data['options'], self.data['x_variables'],
-                                                             self.reg.feature_importances_, title)
+                                                             self.reg.feature_importances_, title, plot_title)
         self.feature_importance_dlg.Show()
 
 
@@ -284,10 +334,10 @@ class RandomForestFrame(MachineLearningFrame):
         self.getters = {'n_estimators': self.to_int,
                         'criterion': self.to_str,
                         'max_depth': self.to_int_or_none,
-                        'min_samples_split': self.to_int,
-                        'min_samples_leaf': self.to_int,
+                        'min_samples_split': self.to_int_or_float,
+                        'min_samples_leaf': self.to_int_or_float,
                         'min_weight_fraction_leaf': self.to_float,
-                        'max_features': self.to_float_str_or_none,
+                        'max_features': self.to_int_float_string_or_none,
                         'max_leaf_nodes': self.to_int_or_none,
                         'min_impurity_decrease': self.to_float,
                         'bootstrap': self.to_bool,
@@ -352,10 +402,10 @@ class GradientBoostingFrame(MachineLearningFrame):
                         'subsample': self.to_float,
                         'criterion': self.to_str,
                         'max_depth': self.to_int,
-                        'min_samples_split': self.to_float,
-                        'min_samples_leaf': self.to_float,
+                        'min_samples_split': self.to_int_or_float,
+                        'min_samples_leaf': self.to_int_or_float,
                         'min_weight_fraction_leaf': self.to_float,
-                        'max_features': self.to_float_str_or_none,
+                        'max_features': self.to_int_float_string_or_none,
                         'alpha': self.to_float,
                         'max_leaf_nodes': self.to_int_or_none,
                         'min_impurity_decrease': self.to_float,
@@ -403,10 +453,10 @@ class DecisionTreeFrame(MachineLearningFrame):
         self.getters = {'criterion': self.to_str,
                         'splitter': self.to_str,
                         'max_depth': self.to_int_or_none,
-                        'min_samples_split': self.to_float,
-                        'min_samples_leaf': self.to_float,
+                        'min_samples_split': self.to_int_or_float,
+                        'min_samples_leaf': self.to_int_or_float,
                         'min_weight_fraction_leaf': self.to_float,
-                        'max_features': self.to_float_str_or_none,
+                        'max_features': self.to_int_float_string_or_none,
                         'max_leaf_nodes': self.to_int_or_none,
                         'min_impurity_decrease': self.to_float,
                         'random_state': self.to_int_or_none,
@@ -447,7 +497,7 @@ class SupportVectorRegressionFrame(MachineLearningFrame):
 
         self.getters = {'kernel': self.to_str,
                         'degree': self.to_int,
-                        'gamma': self.to_float_str_or_none,
+                        'gamma': self.to_float_or_str,
                         'coef0': self.to_float,
                         'tol': self.to_float,
                         'C': self.to_float,
@@ -745,12 +795,12 @@ class MachineLearningPlotData:
 
 
 class FeatureImportanceFrame(wx.Frame):
-    def __init__(self, options, x_variables, feature_importances, title):
+    def __init__(self, options, x_variables, feature_importances, frame_title, plot_title):
         wx.Frame.__init__(self, None)
 
-        self.title = title
+        self.title = frame_title
 
-        self.plot = PlotFeatureImportance(self, options, x_variables, feature_importances)
+        self.plot = PlotFeatureImportance(self, options, x_variables, feature_importances, plot_title)
 
         self.set_properties()
         self.do_layout()
