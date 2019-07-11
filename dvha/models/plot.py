@@ -908,7 +908,6 @@ class PlotControlChart(Plot):
         self.type = 'control_chart'
         self.parent = parent
         self.size_factor = {'plot': (0.940, 0.359)}
-        self.model_name = None
 
         self.y_axis_label = ''
         self.options = options
@@ -1093,9 +1092,7 @@ class PlotControlChart(Plot):
         if update_layout:
             self.update_bokeh_layout_in_wx_python()
 
-    def update_adjusted_control_chart(self, x, residuals, mrn, uid, dates, model_name, update_layout=True):
-
-        self.model_name = model_name
+    def update_adjusted_control_chart(self, x, residuals, mrn, uid, dates, update_layout=True):
 
         center_line, ucl, lcl = get_control_limits(residuals)
 
@@ -1181,51 +1178,63 @@ class PlotControlChart(Plot):
         return '\n'.join(csv_data)
 
 
-class PlotRandomForest(Plot):
+class PlotMachineLearning(Plot):
     """
-    Generate plot for the Random Forest frame created in the MultiVariable Regression frame
+    Generate plot for Machine Learning frames created in the MultiVariable Regression frame
     """
-    def __init__(self, parent, options, X, y, multi_var_pred, mrn, study_date, multi_var_mse):
+    def __init__(self, parent, options, multi_var_pred, multi_var_mse, x_variables, y_variable, mrn, study_date, uid,
+                 ml_type=None, ml_type_short=None, **kwargs):
         """
         :param parent: the wx UI object where the plot will be displayed
         :param options: user preferences
         :type options: Options
-        :param X: independent data
-        :type X: numpy.array
-        :param y: y-values from data
-        :type y: list
         """
         Plot.__init__(self, parent, options)
 
-        self.type = 'random_forest'
+        self.type = 'machine_learning'
+        self.ml_type = ml_type
+        self.ml_type_short = ml_type_short
         self.parent = parent
-
-        self.size_factor = {'plot': (0.6, 0.425),
-                            'diff': (0.6, 0.425),
-                            'importance': (0.35, 0.8)}
-
-        self.X, self.y, self.options = X, y, options
-        self.x = list(range(1, len(self.y)+1))
-        self.multi_var_pred = multi_var_pred
-        self.multi_var_mse = multi_var_mse
         self.mrn = mrn
         self.study_date = study_date
+        self.uid = uid
+        self.X, self.y = None, None
 
-        self.y_variable = ''
+        self.size_factor = {'data': (0.38, 0.425),
+                            'diff': (0.38, 0.425)}
 
-        self.div = Div()
+        self.options = options
+        self.multi_var_pred = multi_var_pred
+        self.multi_var_mse = multi_var_mse
 
-        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
-                       'plot_predict': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
-                       'plot_multi_var': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
-                       'diff': ColumnDataSource(data=dict(x=[], y_ml=[], y_mvr=[], y0=[], mrn=[], study_date=[])),
-                       'importance': ColumnDataSource(data=dict(x=[], top=[], width=[], variable=[]))}
+        self.y_variable = y_variable
+        self.x_variables = x_variables
+
+        self.div_title = {'train': Div(text="<b>Training Data</b>"),
+                          'test': Div(text="<b>Testing Data</b>")}
+
+        self.div_mse = {'train': Div(),
+                        'test': Div()}
+
+        self.source = {'train': {'data': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
+                                 'predict': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
+                                 'multi_var': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
+                                 'diff': ColumnDataSource(data=dict(x=[], y_ml=[], y_mvr=[], y0=[], mrn=[],
+                                                                    study_date=[])),
+                                 'importance': ColumnDataSource(data=dict(x=[], top=[], width=[], variable=[]))},
+                       'test': {'data': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
+                                'predict': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
+                                'multi_var': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
+                                'diff': ColumnDataSource(data=dict(x=[], y_ml=[], y_mvr=[], y0=[], mrn=[],
+                                                                   study_date=[]))}}
 
         self.figure.xaxis.axis_label = "Study"
 
-        self.imp_figure = figure(x_range=[''], tools="")
-        self.diff_figure = figure(tools=DEFAULT_TOOLS)
-        self.initialize_importance_figure()
+        self.figures = {'train': {'data': figure(tools=DEFAULT_TOOLS),
+                                  'diff': figure(tools=DEFAULT_TOOLS)},
+                        'test': {'data': figure(tools=DEFAULT_TOOLS),
+                                 'diff': figure(tools=DEFAULT_TOOLS)}}
+        self.initialize_figures()
 
         self.__add_plot_data()
         self.__do_layout()
@@ -1236,147 +1245,227 @@ class PlotRandomForest(Plot):
         self.update_bokeh_layout_in_wx_python()
 
     def __add_plot_data(self):
-        self.y_data = self.figure.cross('x', 'y', source=self.source['plot'],
-                                        color=self.options.RANDOM_FOREST_COLOR_DATA, size=5)
-        self.y_ml = self.figure.circle('x', 'y', source=self.source['plot_predict'],
-                                       color=self.options.RANDOM_FOREST_COLOR_PREDICT,
-                                       alpha=self.options.RANDOM_FOREST_ALPHA)
-        self.y_mv = self.figure.circle('x', 'y', source=self.source['plot_multi_var'],
-                                       color=self.options.RANDOM_FOREST_COLOR_MULTI_VAR,
-                                       alpha=self.options.RANDOM_FOREST_ALPHA)
+        self.glyphs = {}
 
-        self.imp_figure.vbar(x='x', width='width', bottom=0, top='top', source=self.source['importance'],
-                             color=self.options.RANDOM_FOREST_COLOR_PREDICT, alpha=0.6)
-
-        # since hover for varea doesn't work
-        self.diff_figure.circle(x='x', y='y0', source=self.source['diff'], alpha=0)
-
-        self.diff_ml = self.diff_figure.varea(x='x', y1='y_ml', y2='y0', source=self.source['diff'],
-                                              color=self.options.RANDOM_FOREST_COLOR_PREDICT,
-                                              alpha=self.options.RANDOM_FOREST_ALPHA * 0.7)
-
-        self.diff_mvr = self.diff_figure.varea(x='x', y1='y_mvr', y2='y0', source=self.source['diff'],
-                                               color=self.options.RANDOM_FOREST_COLOR_MULTI_VAR,
-                                               alpha=self.options.RANDOM_FOREST_ALPHA * 0.7)
+        for data_type in {'train', 'test'}:
+            srcs = self.source[data_type]
+            figs = self.figures[data_type]
+            opt = self.options
+            self.glyphs[data_type] = {'data': figs['data'].cross('x', 'y', source=srcs['data'],
+                                                                 color=opt.RANDOM_FOREST_COLOR_DATA, size=5),
+                                      'predict': figs['data'].circle('x', 'y', source=srcs['predict'],
+                                                                     color=opt.RANDOM_FOREST_COLOR_PREDICT,
+                                                                     alpha=opt.RANDOM_FOREST_ALPHA),
+                                      'multi_var': figs['data'].circle('x', 'y', source=srcs['multi_var'],
+                                                                       color=opt.RANDOM_FOREST_COLOR_MULTI_VAR,
+                                                                       alpha=opt.RANDOM_FOREST_ALPHA),
+                                      'diff': figs['diff'].circle(x='x', y='y0', source=srcs['diff'], alpha=0),
+                                      'diff_ml': figs['diff'].varea(x='x', y1='y_ml', y2='y0', source=srcs['diff'],
+                                                                    color=opt.RANDOM_FOREST_COLOR_PREDICT,
+                                                                    alpha=opt.RANDOM_FOREST_ALPHA * 0.7),
+                                      'diff_mvr': figs['diff'].varea(x='x', y1='y_mvr', y2='y0', source=srcs['diff'],
+                                                                     color=opt.RANDOM_FOREST_COLOR_MULTI_VAR,
+                                                                     alpha=opt.RANDOM_FOREST_ALPHA * 0.7)}
 
     def __do_layout(self):
-        self.bokeh_layout = row(column(self.figure, self.diff_figure),
-                                column(row(Spacer(width=50), self.div),
-                                       self.imp_figure))
+        self.bokeh_layout = row(column(self.div_title['train'], self.div_mse['train'],
+                                       self.figures['train']['data'], self.figures['train']['diff']),
+                                column(self.div_title['test'], self.div_mse['test'],
+                                       self.figures['test']['data'], self.figures['test']['diff']))
 
     def __add_hover(self):
-        self.figure.add_tools(HoverTool(show_arrow=True,
-                                        tooltips=[('ID', '@mrn'),
-                                                  ('Date', '@study_date{%F}'),
-                                                  ('Study', '@x{int}'),
-                                                  ('Value', '@y{0.2f}')],
-                                        formatters={'study_date': 'datetime'}))
+        for data_type in {'train', 'test'}:
+            self.figures[data_type]['data'].add_tools(HoverTool(show_arrow=True,
+                                                                tooltips=[('ID', '@mrn'),
+                                                                          ('Date', '@study_date{%F}'),
+                                                                          ('Study', '@x{int}'),
+                                                                          ('Value', '@y{0.2f}')],
+                                                                formatters={'study_date': 'datetime'}))
 
-        self.diff_figure.add_tools(HoverTool(show_arrow=True, mode='vline',
-                                             tooltips=[('ID', '@mrn'),
-                                                       ('Date', '@study_date{%F}'),
-                                                       ('Study', '@x{int}'),
-                                                       ('RF.', '@y_ml{0.2f}'),
-                                                       ('MVR', '@y_mvr{0.2f}')],
-                                             formatters={'study_date': 'datetime'}))
-
-        self.imp_figure.add_tools(HoverTool(show_arrow=True, mode='vline',
-                                            tooltips=[('Importance', '@top{0.3f}'),
-                                                      ('Variable', '@variable')]))
+            self.figures[data_type]['diff'].add_tools(HoverTool(show_arrow=True, mode='vline',
+                                                                tooltips=[('ID', '@mrn'),
+                                                                          ('Date', '@study_date{%F}'),
+                                                                          ('Study', '@x{int}'),
+                                                                          (self.ml_type_short, '@y_ml{0.2f}'),
+                                                                          ('MVR', '@y_mvr{0.2f}')],
+                                                                formatters={'study_date': 'datetime'}))
 
     def __add_legend(self):
-        legend = Legend(items=[("Data  ", [self.y_data]),
-                               ("Random Forest  ", [self.y_ml]),
-                               ("Multi-Variable Reg.  ", [self.y_mv])],
-                        orientation='horizontal')
+        legend = {}
+        for data_type in {'train', 'test'}:
+            legend[data_type] = {'data': Legend(items=[("Data  ", [self.glyphs[data_type]['data']]),
+                                                       ("%s  " % self.ml_type, [self.glyphs[data_type]['predict']]),
+                                                       ("Multi-Variable Reg.  ", [self.glyphs[data_type]['multi_var']])],
+                                                orientation='horizontal'),
+                                 'diff': Legend(items=[("%s  " % self.ml_type, [self.glyphs[data_type]['diff_ml']]),
+                                                       ("Multi-Variable Reg.  ", [self.glyphs[data_type]['diff_mvr']])],
+                                                orientation='horizontal')}
+            for key in {'data', 'diff'}:
+                self.figures[data_type][key].add_layout(legend[data_type][key], 'above')
+                self.figures[data_type][key].legend.click_policy = "hide"
 
-        legend_diff = Legend(items=[("Random Forest  ", [self.diff_ml]),
-                                    ("Multi-Variable Reg.  ", [self.diff_mvr])],
-                             orientation='horizontal')
+    def initialize_figures(self):
 
-        # Add the layout outside the plot, clicking legend item hides the line
-        self.figure.add_layout(legend, 'above')
-        self.figure.legend.click_policy = "hide"
+        for data_type in {'train', 'test'}:
+            for key in {'data', 'diff'}:
+                fig = self.figures[data_type][key]
+                fig.xaxis.axis_label = 'Study'
+                fig.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+                fig.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+                fig.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+                fig.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+                fig.min_border = self.options.MIN_BORDER
+                fig.yaxis.axis_label_text_baseline = "bottom"
+                if data_type == 'test':
+                    fig.background_fill_color = "black"
+                    fig.background_fill_alpha = 0.05
 
-        self.diff_figure.add_layout(legend_diff, 'above')
-        self.diff_figure.legend.click_policy = "hide"
+            self.figures[data_type]['data'].yaxis.axis_label = self.y_variable
+            self.figures[data_type]['diff'].yaxis.axis_label = 'Residual'
 
-    def initialize_importance_figure(self):
-        self.imp_figure.yaxis.axis_label = 'Importance'
-        self.imp_figure.xaxis.axis_label = ''
-        self.imp_figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.imp_figure.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.imp_figure.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.imp_figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.imp_figure.min_border = self.options.MIN_BORDER
-        # self.imp_figure.yaxis.axis_label_text_baseline = "bottom"
-        self.imp_figure.xaxis.major_label_orientation = -pi/2
-
-        self.diff_figure.xaxis.axis_label = 'Study'
-        self.diff_figure.yaxis.axis_label = 'Residual'
-        self.diff_figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.diff_figure.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.diff_figure.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.diff_figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.diff_figure.min_border = self.options.MIN_BORDER
-        self.diff_figure.yaxis.axis_label_text_baseline = "bottom"
+        self.figures['train']['diff'].x_range = self.figures['train']['data'].x_range
+        self.figures['test']['data'].y_range = self.figures['train']['data'].y_range
+        self.figures['test']['diff'].y_range = self.figures['train']['diff'].y_range
+        self.figures['test']['diff'].x_range = self.figures['test']['data'].x_range
 
     def set_figure_dimensions(self):
-        # plot_width = 400, plot_height = 400, frame_size = (900, 600)
-        panel_width, panel_height = self.parent.GetSize()
-        self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
-        self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
-        self.imp_figure.plot_width = int(self.size_factor['importance'][0] * float(panel_width))
-        self.imp_figure.plot_height = int(self.size_factor['importance'][1] * float(panel_height))
-        self.diff_figure.plot_width = int(self.size_factor['diff'][0] * float(panel_width))
-        self.diff_figure.plot_height = int(self.size_factor['diff'][1] * float(panel_height))
+        panel_width, panel_height = self.parent.frame_size
+        for data_type in {'train', 'test'}:
+            for key in ['data', 'diff']:
+                self.figures[data_type][key].plot_width = int(self.size_factor['data'][0] * float(panel_width))
+                self.figures[data_type][key].plot_height = int(self.size_factor['data'][1] * float(panel_height))
 
-    def update_data(self, y_pred, feature_importance, x_variables, y_variable, mse, uid):
+    def update_data(self, plot_data):
+        """
+        :param plot_data:
+        :type plot_data: MachineLearningPlotData
+        :return:
+        """
 
-        self.y_variable = y_variable
+        self.X = plot_data.X['data']
 
-        self.source['plot'].data = {'x': self.x, 'y': self.y, 'mrn': self.mrn,
-                                    'study_date': self.study_date, 'uid': uid}
+        for data_type in {'train', 'test'}:
+            x = plot_data.x[data_type]
+            y = plot_data.y[data_type]
+            y_pred = plot_data.predictions[data_type]
+            multi_var_pred = [self.multi_var_pred[i] for i in plot_data.indices[data_type]]
+            mrn = [self.mrn[i] for i in plot_data.indices[data_type]]
+            uid = [self.uid[i] for i in plot_data.indices[data_type]]
+            study_date = [self.study_date[i] for i in plot_data.indices[data_type]]
 
-        self.source['plot_predict'].data = {'x': self.x, 'y': y_pred, 'mrn': self.mrn, 'study_date': self.study_date}
+            srcs = self.source[data_type]
 
-        self.source['plot_multi_var'].data = {'x': self.x, 'y': self.multi_var_pred, 'mrn': self.mrn,
-                                              'study_date': self.study_date}
+            srcs['data'].data = {'x': x, 'y': y, 'mrn': mrn, 'study_date': study_date, 'uid': uid}
+            srcs['predict'].data = {'x': x, 'y': y_pred, 'mrn': mrn, 'study_date': study_date}
+            srcs['multi_var'].data = {'x': x, 'y': multi_var_pred, 'mrn': mrn, 'study_date': study_date}
+            srcs['diff'].data = {'x': x,
+                                 'y_mvr': np.subtract(np.array(y), np.array(multi_var_pred)),
+                                 'y_ml': np.subtract(np.array(y), np.array(y_pred)),
+                                 'y0': [0] * len(x),
+                                 'mrn': mrn, 'study_date': study_date}
 
-        self.source['diff'].data = {'x': self.x,
-                                    'y_mvr': np.subtract(np.array(self.y), np.array(self.multi_var_pred)),
-                                    'y_ml': np.subtract(np.array(self.y), np.array(y_pred)),
-                                    'y0': [0] * len(self.x),
-                                    'mrn': self.mrn, 'study_date': self.study_date}
-
-        length = len(feature_importance)
-        order = [i[0] for i in sorted(enumerate(feature_importance), key=lambda x:x[1])]
-        order = order[::-1]
-        self.source['importance'].data = {'x': [i+0.5 for i in range(length)],
-                                          'top': [feature_importance[i] for i in order],
-                                          'width': [0.5] * length,
-                                          'variable': [x_variables[i] for i in order]}
-        self.imp_figure.x_range.factors = [x_variables[i] for i in order]
-        self.imp_figure.y_range = Range1d(0, max(feature_importance) * 1.05)
-
-        self.div.text = "<b>Mean Square Error</b>: %0.2f (RF) --- %0.2f (MVR)" % (mse, self.multi_var_mse)
-
-        self.figure.yaxis.axis_label = y_variable
+            self.div_mse[data_type].text = "<u>Mean Square Error</u>: %0.2f (%s) --- %0.2f (MVR)" % \
+                                           (plot_data.mse[data_type], self.ml_type_short, self.multi_var_mse)
 
         self.update_bokeh_layout_in_wx_python()
 
     def get_csv(self):
 
-        data = self.source['plot'].data
-        csv_data = ['MRN,Study Instance UID,Study #,Date,%s,Random Forest, Multi-Variable Regression' % self.y_variable]
-        for i in range(len(data['mrn'])):
-            csv_data.append(','.join(str(data[key][i]).replace(',', '^')
-                                     for key in ['mrn', 'uid', 'x', 'study_date', 'y']))
-            csv_data[-1] = "%s,%s,%s" % (csv_data[-1],
-                                         self.source['plot_predict'].data['y'][i],
-                                         self.source['plot_multi_var'].data['y'][i])
+        col_titles = 'MRN,Study Instance UID,Study #,Date,%s,%s, Multi-Variable Regression' % \
+                     (self.y_variable, self.ml_type)
+        csv_data = []
+        for data_type in {'train', 'test'}:
+            data = self.source[data_type]['data'].data
+            csv_data.append('%s Data\n%s' % (['Training', 'Testing'][data_type == 'test'], col_titles))
+            for i in range(len(data['mrn'])):
+                csv_data.append(','.join(str(data[key][i]).replace(',', '^')
+                                         for key in ['mrn', 'uid', 'x', 'study_date', 'y']))
+                csv_data[-1] = "%s,%s,%s" % (csv_data[-1],
+                                             self.source[data_type]['predict'].data['y'][i],
+                                             self.source[data_type]['multi_var'].data['y'][i])
+            csv_data.append('\n')
+
+        # Original dataset (in case not all data was used for training and testing
+        # data = self.source['data'].data
+        # csv_data.append('%s Data\n%s' % (['Training', 'Testing'][data_type == 'test'], col_titles))
+        # for i in range(len(data['mrn'])):
+        #     csv_data.append(','.join(str(data[key][i]).replace(',', '^')
+        #                              for key in ['mrn', 'uid', 'x', 'study_date', 'y']))
+        #     csv_data[-1] = "%s,%s,%s" % (csv_data[-1],
+        #                                  self.source[data_type]['predict'].data['y'][i],
+        #                                  self.source[data_type]['multi_var'].data['y'][i])
 
         return '\n'.join(csv_data)
+
+
+class PlotFeatureImportance(Plot):
+    def __init__(self, parent, options, x_variables, feature_importances, title):
+        Plot.__init__(self, parent, options)
+
+        self.size_factor = {'plot': (0.95, 0.9)}
+
+        self.type = 'feature_importance'
+
+        self.div_title = Div(text="<b>%s</b>" % title)
+
+        self.parent = parent
+        self.options = options
+
+        self.x_variables = x_variables
+        self.feature_importances = feature_importances
+
+        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[]))}
+
+        self.figure = figure(y_range=[''], tools="")
+
+        self.initialize_figures()
+
+        self.__add_plot_data()
+        self.__do_layout()
+        self.__add_hover()
+
+        self.set_figure_dimensions()
+
+        self.set_data()
+
+        self.update_bokeh_layout_in_wx_python()
+
+    def __add_plot_data(self):
+        self.figure.hbar(y='y', right='right', left=0, height='height', source=self.source['plot'],
+                         color=self.options.RANDOM_FOREST_COLOR_PREDICT, alpha=0.6)
+
+    def __do_layout(self):
+        self.bokeh_layout = column(self.div_title,
+                                   self.figure)
+
+    def __add_hover(self):
+        self.figure.add_tools(HoverTool(show_arrow=True, mode='hline',
+                                        tooltips=[('Importance', '@right{0.4f}'),
+                                                  ('Variable', '@variable')]))
+
+    def initialize_figures(self):
+        self.figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.figure.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.figure.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.figure.min_border = self.options.MIN_BORDER
+        self.figure.xaxis.axis_label_text_baseline = "bottom"
+        self.figure.xaxis.axis_label = 'Importance'
+
+    def set_figure_dimensions(self):
+        panel_width, panel_height = self.parent.GetSize()
+        self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
+        self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
+
+    def set_data(self):
+        length = len(self.feature_importances)
+        order = [i[0] for i in sorted(enumerate(self.feature_importances), key=lambda x:x[1])]
+        self.source['plot'].data = {'y': [i+0.5 for i in range(length)],
+                                    'right': [self.feature_importances[i] for i in order],
+                                    'height': [0.5] * length,
+                                    'variable': [self.x_variables[i] for i in order]}
+        self.figure.y_range.factors = [self.x_variables[i] for i in order]
+        self.figure.x_range = Range1d(0, max(self.feature_importances) * 1.05)
 
 
 class PlotROIMap(Plot):

@@ -13,7 +13,8 @@ Class to view and calculate linear regressions
 import wx
 from pubsub import pub
 from dvha.models.plot import PlotRegression, PlotMultiVarRegression
-from dvha.models.random_forest import RandomForestFrame
+from dvha.models.machine_learning import RandomForestFrame, GradientBoostingFrame, DecisionTreeFrame,\
+    SupportVectorRegressionFrame
 from dvha.dialogs.export import save_data_to_file
 from dvha.dialogs.main import SelectRegressionVariablesDialog
 from dvha.paths import ICONS, MODELS_DIR
@@ -61,7 +62,7 @@ class RegressionFrame:
         self.spin_button_y_axis = wx.SpinButton(self.pane_plot, wx.ID_ANY, style=wx.SP_WRAP)
         self.checkbox = wx.CheckBox(self.pane_plot, wx.ID_ANY, "Include", style=wx.ALIGN_RIGHT)
         self.plot = PlotRegression(self.pane_plot, self.options)
-        self.button_multi_var_reg_model = wx.Button(self.pane_tree, wx.ID_ANY, 'Run Selected Model')
+        self.button_multi_var_reg_model = wx.Button(self.pane_tree, wx.ID_ANY, 'Run Multi-Variable Regressions')
         self.button_multi_var_quick_select = wx.Button(self.pane_tree, wx.ID_ANY, 'Variable Quick Select')
         self.button_single_var_export = wx.Button(self.pane_tree, wx.ID_ANY, 'Export Plot Data')
         self.button_single_var_plot_save = wx.Button(self.pane_tree, wx.ID_ANY, 'Save Plot')
@@ -106,11 +107,11 @@ class RegressionFrame:
         sizer_single_var_export = wx.BoxSizer(wx.HORIZONTAL)
 
         sizer_tree = wx.BoxSizer(wx.VERTICAL)
-        sizer_tree.Add(self.button_multi_var_reg_model, 0, wx.EXPAND | wx.ALL, 5)
-        sizer_tree.Add(self.button_multi_var_quick_select, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_tree.Add(self.button_multi_var_reg_model, 0, wx.EXPAND | wx.TOP | wx.LEFT | wx.RIGHT, 5)
+        sizer_tree.Add(self.button_multi_var_quick_select, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
         sizer_tree.Add(self.tree_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        sizer_single_var_export.Add(self.button_single_var_export, 0, wx.EXPAND | wx.ALL, 5)
-        sizer_single_var_export.Add(self.button_single_var_plot_save, 1, wx.EXPAND | wx.ALL, 5)
+        sizer_single_var_export.Add(self.button_single_var_export, 0, wx.EXPAND | wx.BOTTOM | wx.RIGHT, 5)
+        sizer_single_var_export.Add(self.button_single_var_plot_save, 1, wx.EXPAND | wx.LEFT | wx.BOTTOM, 5)
         sizer_tree.Add(sizer_single_var_export, 0, wx.EXPAND | wx.ALL, 5)
         self.pane_tree.SetSizer(sizer_tree)
 
@@ -226,6 +227,7 @@ class RegressionFrame:
         :type x_var: str
         :param select_item: If True, select the item in the TreeCtrl
         """
+
         if y_var not in list(self.y_variable_nodes):
             self.y_variable_nodes[y_var] = self.tree_ctrl.AppendItem(self.tree_ctrl_root, y_var)
             self.tree_ctrl.SetItemData(self.y_variable_nodes[y_var], None)
@@ -261,18 +263,18 @@ class RegressionFrame:
 
     def on_regression(self, evt):
         """
-        Launch the multi-variable regression for the currently selected dependent variable
+        Launch the multi-variable regression for all x_variable_nodes
         """
-        y_variable = self.combo_box_y_axis.GetValue()
-        if y_variable in list(self.x_variable_nodes):
-            x_variables = list(self.x_variable_nodes[y_variable])
-
-            dlg = MultiVarResultsFrame(y_variable, x_variables,
-                                       self.stats_data, self.options)
-            dlg.Show()
-        else:
+        if not list(self.x_variable_nodes):
             wx.MessageBox('No data has been selected for regression.', 'Regression Error',
                           wx.OK | wx.ICON_WARNING)
+        else:
+            for y_variable in list(self.x_variable_nodes):
+                x_variables = list(self.x_variable_nodes[y_variable])
+
+                dlg = MultiVarResultsFrame(y_variable, x_variables,
+                                           self.stats_data, self.options)
+                dlg.Show()
 
     def on_tree_select(self, evt):
         selection = evt.GetItem()
@@ -384,12 +386,13 @@ class MultiVarResultsFrame(wx.Frame):
 
         self.plot = PlotMultiVarRegression(self, options)
         self.plot.update_plot(y_variable, x_variables, stats_data)
+        msg = {'y_variable': y_variable,
+               'x_variables': x_variables,
+               'regression': self.plot.reg}
+        pub.sendMessage('control_chart_set_model', **msg)
 
-        algorithms = ['Random Forest', 'Support Vector Machines', 'Decision Trees', 'Gradient Boosted']
-        self.button = {key: wx.Button(self, wx.ID_ANY, key) for key in algorithms}
-        for key in algorithms:
-            if key not in {'Random Forest'}:
-                self.button[key].Disable()
+        algorithms = ['Random Forest', 'Support Vector Machine', 'Decision Tree', 'Gradient Boosting']
+        self.button = {key: wx.Button(self, wx.ID_ANY, key) for key in algorithms}\
 
         self.button_export = wx.Button(self, wx.ID_ANY, 'Export Plot Data')
         self.button_save_plot = wx.Button(self, wx.ID_ANY, 'Save Plot')
@@ -404,6 +407,10 @@ class MultiVarResultsFrame(wx.Frame):
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_random_forest, id=self.button['Random Forest'].GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_gradient_boosting, id=self.button['Gradient Boosting'].GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_decision_tree, id=self.button['Decision Tree'].GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_support_vector_regression,
+                  id=self.button['Support Vector Machine'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_model, id=self.button_save_model.GetId())
@@ -435,7 +442,16 @@ class MultiVarResultsFrame(wx.Frame):
         self.Center()
 
     def on_random_forest(self, evt):
-        RandomForestFrame(**self.plot.final_stats_data)
+        RandomForestFrame(self.plot.final_stats_data)
+
+    def on_gradient_boosting(self, evt):
+        GradientBoostingFrame(self.plot.final_stats_data)
+
+    def on_decision_tree(self, evt):
+        DecisionTreeFrame(self.plot.final_stats_data)
+
+    def on_support_vector_regression(self, evt):
+        SupportVectorRegressionFrame(self.plot.final_stats_data)
 
     def on_export(self, evt):
         save_data_to_file(self, 'Save multi-variable regression data to csv', self.plot.get_csv_data())
@@ -447,10 +463,10 @@ class MultiVarResultsFrame(wx.Frame):
     def on_save_model(self, evt):
         data = {'y_variable': self.plot.y_variable,
                 'regression': self.plot.reg,
-                'x_variables': self.plot.x_variables}
+                'x_variables': self.plot.x_variables,
+                'regression_type': 'multi-variable-linear'}
         save_data_to_file(self, 'Save Model', data,
-                          wildcard="MVR files (*.mvr)|*.mvr", data_type='pickle', initial_dir=MODELS_DIR)
-        pub.sendMessage('control_chart_update_models')
+                          wildcard="REG files (*.reg)|*.reg", data_type='pickle', initial_dir=MODELS_DIR)
 
     def redraw_plot(self):
         self.plot.redraw_plot()

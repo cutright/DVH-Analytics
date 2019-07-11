@@ -21,7 +21,7 @@
         - [ ] Allow user to import outcome or QA data to run correlations/stats
 
 3. **Regression**
-    - [ ] Machine learning modules in Regression tab (after running multi-variable regression) aren't complete 
+    - [X] Machine learning modules in Regression tab (after running multi-variable regression) aren't complete 
     - [X] Need to be able to store a model (particularly for use in Control Chart)
     - [X] Plot regression with ML
     - [X] importance bar chart

@@ -113,7 +113,7 @@ class DVHAMainFrame(wx.Frame):
         for key in self.toolbar_keys:
             bitmap = wx.Bitmap(ICONS[key], wx.BITMAP_TYPE_ANY)
             if is_windows() or is_linux():
-                bitmap = scale_bitmap(bitmap, 16, 16)
+                bitmap = scale_bitmap(bitmap, 30, 30)
             self.frame_toolbar.AddTool(self.toolbar_ids[key], key, bitmap,
                                        wx.NullBitmap, wx.ITEM_NORMAL, description[key], "")
 
