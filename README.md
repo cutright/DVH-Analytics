@@ -36,9 +36,10 @@ In addition to viewing DVH data, this software provides methods to:
 
 The code is built upon these core libraries:
 * [wxPython Phoenix](https://github.com/wxWidgets/Phoenix) - Build a native GUI on Windows, Mac, or Unix systems
-* [Pydicom](http://code.google.com/p/pydicom/) - Read, modify and write DICOM files with python code
-* [dicompyler-core](https://pypi.python.org/pypi/dicompyler-core) - Extensible radiation therapy research platform and viewer for DICOM and DICOM RT
-* [Bokeh](http://bokeh.pydata.org/en/latest/index.html) - Interactive Web Plotting for Python
+* [Pydicom](https://github.com/pydicom/pydicom) - Read, modify and write DICOM files with python code
+* [dicompyler-core](https://github.com/dicompyler/dicompyler-core) - Extensible radiation therapy research platform and viewer for DICOM and DICOM RT
+* [Bokeh](https://github.com/bokeh/bokeh) - Interactive Web Plotting for Python
+* [scikit-learn](https://github.com/scikit-learn/scikit-learn) - Machine Learning in Python
 
 
 ### Citing DVH Analytics
