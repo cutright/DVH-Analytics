@@ -108,10 +108,14 @@ class DefaultOptions:
         self.REGRESSION_RESIDUAL_LINE_COLOR = 'red'
 
         # Random forest
-        self.RANDOM_FOREST_ALPHA = 0.5
-        self.RANDOM_FOREST_COLOR_PREDICT = 'blue'
-        self.RANDOM_FOREST_COLOR_DATA = 'black'
-        self.RANDOM_FOREST_COLOR_MULTI_VAR = 'red'
+        self.MACHINE_LEARNING_ALPHA = 0.5
+        self.MACHINE_LEARNING_ALPHA_DIFF = 0.35
+        self.MACHINE_LEARNING_SIZE_PREDICT = 5
+        self.MACHINE_LEARNING_SIZE_DATA = 5
+        self.MACHINE_LEARNING_SIZE_MULTI_VAR = 5
+        self.MACHINE_LEARNING_COLOR_PREDICT = 'blue'
+        self.MACHINE_LEARNING_COLOR_DATA = 'black'
+        self.MACHINE_LEARNING_COLOR_MULTI_VAR = 'red'
 
         # This is the number of bins up do 100% used when resampling a DVH to fractional dose
         self.RESAMPLED_DVH_BIN_COUNT = 5000

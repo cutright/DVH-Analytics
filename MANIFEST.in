@@ -1,0 +1,6 @@
+recursive-include *.py
+include CHANGELOG.md
+include README.md
+include dvha/LICENSE
+include logo.png
+include icons/*.png

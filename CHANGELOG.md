@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.6.2 (TBD)
+--------------------
+ - [Machine Learning] More visual options available in settings
+
 v0.6.1 (2019.7.10)
 --------------------
  - [Control Chart] Adjusted Control Charts automatically populated from Regressions tab after running model

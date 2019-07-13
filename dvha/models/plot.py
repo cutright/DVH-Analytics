@@ -1252,20 +1252,23 @@ class PlotMachineLearning(Plot):
             figs = self.figures[data_type]
             opt = self.options
             self.glyphs[data_type] = {'data': figs['data'].cross('x', 'y', source=srcs['data'],
-                                                                 color=opt.RANDOM_FOREST_COLOR_DATA, size=5),
+                                                                 color=opt.MACHINE_LEARNING_COLOR_DATA,
+                                                                 size=opt.MACHINE_LEARNING_SIZE_DATA),
                                       'predict': figs['data'].circle('x', 'y', source=srcs['predict'],
-                                                                     color=opt.RANDOM_FOREST_COLOR_PREDICT,
-                                                                     alpha=opt.RANDOM_FOREST_ALPHA),
+                                                                     color=opt.MACHINE_LEARNING_COLOR_PREDICT,
+                                                                     alpha=opt.MACHINE_LEARNING_ALPHA,
+                                                                     size=opt.MACHINE_LEARNING_SIZE_PREDICT),
                                       'multi_var': figs['data'].circle('x', 'y', source=srcs['multi_var'],
-                                                                       color=opt.RANDOM_FOREST_COLOR_MULTI_VAR,
-                                                                       alpha=opt.RANDOM_FOREST_ALPHA),
+                                                                       color=opt.MACHINE_LEARNING_COLOR_MULTI_VAR,
+                                                                       alpha=opt.MACHINE_LEARNING_ALPHA,
+                                                                       size=opt.MACHINE_LEARNING_SIZE_MULTI_VAR),
                                       'diff': figs['diff'].circle(x='x', y='y0', source=srcs['diff'], alpha=0),
                                       'diff_ml': figs['diff'].varea(x='x', y1='y_ml', y2='y0', source=srcs['diff'],
-                                                                    color=opt.RANDOM_FOREST_COLOR_PREDICT,
-                                                                    alpha=opt.RANDOM_FOREST_ALPHA * 0.7),
+                                                                    color=opt.MACHINE_LEARNING_COLOR_PREDICT,
+                                                                    alpha=opt.MACHINE_LEARNING_ALPHA_DIFF),
                                       'diff_mvr': figs['diff'].varea(x='x', y1='y_mvr', y2='y0', source=srcs['diff'],
-                                                                     color=opt.RANDOM_FOREST_COLOR_MULTI_VAR,
-                                                                     alpha=opt.RANDOM_FOREST_ALPHA * 0.7)}
+                                                                     color=opt.MACHINE_LEARNING_COLOR_MULTI_VAR,
+                                                                     alpha=opt.MACHINE_LEARNING_ALPHA_DIFF)}
 
     def __do_layout(self):
         self.bokeh_layout = row(column(self.div_title['train'], self.div_mse['train'],
@@ -1432,7 +1435,7 @@ class PlotFeatureImportance(Plot):
 
     def __add_plot_data(self):
         self.figure.hbar(y='y', right='right', left=0, height='height', source=self.source['plot'],
-                         color=self.options.RANDOM_FOREST_COLOR_PREDICT, alpha=0.6)
+                         color=self.options.MACHINE_LEARNING_COLOR_PREDICT, alpha=0.6)
 
     def __do_layout(self):
         self.bokeh_layout = column(self.div_title,
