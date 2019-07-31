@@ -1115,6 +1115,7 @@ class ImportWorker(Thread):
                     print('WARNING: This plan could not be parsed. Skipping import. '
                           'Did you supply RT Structure, Dose, and Plan?')
                     print('\tPlan UID: %s' % plan_uid)
+                    print('\tMRN: %s' % self.data[plan_uid].mrn)
 
                 plan_counter += 1
 
@@ -1237,6 +1238,7 @@ class ImportWorker(Thread):
 
             else:
                 print("WARNING: No PTV found for %s" % plan_uid)
+                print("\tMRN: %s" % self.data[plan_uid].mrn)
                 print("\tSkipping PTV related calculations.")
 
         # Move files to imported directory
