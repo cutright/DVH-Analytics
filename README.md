@@ -48,7 +48,7 @@ DOI: [https://doi.org/10.1002/acm2.12401](https://doi.org/10.1002/acm2.12401)
 
 
 ### Dependencies
-* [Python](https://www.python.org) >=3.5
+* [Python](https://www.python.org) >=3
 * [wxPython Phoenix](https://github.com/wxWidgets/Phoenix) >= 4.0.4
 * [Pydicom](https://github.com/darcymason/pydicom) >=1.0
 * [dicompyler-core](https://pypi.python.org/pypi/dicompyler-core) 0.5.3

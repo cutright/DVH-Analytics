@@ -410,7 +410,7 @@ class DICOM_Parser:
                     'surface_area': [geometries['surface_area'], 'real'],
                     'ptv_overlap': [None, 'real'],
                     'import_time_stamp': [None, 'timestamp'],
-                    'centroid': [geometries['centroid'], 'varchar(35'],
+                    'centroid': [geometries['centroid'], 'varchar(35)'],
                     'dist_to_ptv_centroids': [None, 'real'],
                     'dth_string': [None, 'text'],
                     'spread_x': [geometries['spread'][0], 'real'],

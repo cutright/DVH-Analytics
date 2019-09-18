@@ -369,7 +369,7 @@ def get_treatment_volume_coord(tv):
 
 def query(table, column, condition):
     """
-    Automatically creates connection and for query
+    Automatically creates connection for query
     """
     with DVH_SQL() as cnx:
         ans = cnx.query(table, column, condition)
