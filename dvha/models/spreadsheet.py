@@ -4,7 +4,7 @@ import wx.grid
 import wx
 
 
-class MyGrid(wx.grid.Grid):
+class Spreadsheet(wx.grid.Grid):
     def __init__(self, parent):
         wx.grid.Grid.__init__(self, parent, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
         self.Bind(wx.EVT_KEY_DOWN, self.on_key)
@@ -87,11 +87,12 @@ class MyGrid(wx.grid.Grid):
 
         # Select if right clicked row or column is not in selection
         if event.GetRow() > -1:
-            if not self.IsInSelection(row=event.GetRow(), col=1):
-                self.SelectRow(event.GetRow())
-            self.selected_rows = self.GetSelectedRows()
-            menus += [(wx.NewId(), "Add row", self.add_rows)]
-            menus += [(wx.NewId(), "Delete row", self.delete_rows)]
+            # if not self.IsInSelection(row=event.GetRow(), col=1):
+            #     self.SelectRow(event.GetRow())
+            # self.selected_rows = self.GetSelectedRows()
+            # menus += [(wx.NewId(), "Add row", self.add_rows)]
+            # menus += [(wx.NewId(), "Delete row", self.delete_rows)]
+            pass
         elif event.GetCol() > -1:
             if not self.IsInSelection(row=1, col=event.GetCol()):
                 self.SelectCol(event.GetCol())
@@ -338,22 +339,23 @@ class MyGrid(wx.grid.Grid):
         self.delete(event)
 
 
-if __name__ == '__main__':
-    class MyFrame(wx.Frame):
-        def __init__(self, parent, ID, title, pos=wx.DefaultPosition, size=wx.Size(800, 400), style=wx.DEFAULT_FRAME_STYLE):
-            wx.Frame.__init__(self, parent, ID, title, pos, size, style)
-            agrid = MyGrid(self)
-            agrid.CreateGrid(7, 7)
-            for count in range(3):
-                for count2 in range(3):
-                    agrid.SetCellValue(count, count2, str(count + count2))
+# class MyFrame(wx.Frame):
+#     def __init__(self, parent, ID, title, pos=wx.DefaultPosition, size=wx.Size(800, 400), style=wx.DEFAULT_FRAME_STYLE):
+#         wx.Frame.__init__(self, parent, ID, title, pos, size, style)
+#         agrid = Spreadsheet(self)
+#         agrid.CreateGrid(7, 7)
+#         for count in range(3):
+#             for count2 in range(3):
+#                 agrid.SetCellValue(count, count2, str(count + count2))
 
-    class MyApp(wx.App):
-        def OnInit(self):
-            frame = MyFrame(None, -1, "A copy and paste grid")
-            frame.Show(True)
-            self.SetTopWindow(frame)
-            return True
 
-    app = MyApp()
-    app.MainLoop()
+# class MyApp(wx.App):
+#     def OnInit(self):
+#         frame = MyFrame(None, -1, "A copy and paste grid")
+#         frame.Show(True)
+#         self.SetTopWindow(frame)
+#         return True
+
+
+# app = MyApp()
+# app.MainLoop()

@@ -14,12 +14,11 @@ import wx.html2
 from bokeh.plotting import figure
 from bokeh.io.export import get_layout_html
 from bokeh.models import Legend, HoverTool, ColumnDataSource, DataTable, TableColumn,\
-    NumberFormatter, Div, Range1d, LabelSet, Spacer
+    NumberFormatter, Div, Range1d, LabelSet
 from bokeh.layouts import column, row
 from bokeh.palettes import Colorblind8 as palette
 import itertools
 import numpy as np
-from math import pi
 from os.path import join, isdir
 from os import mkdir
 from dvha.tools.utilities import collapse_into_single_dates, moving_avg, is_windows
@@ -167,8 +166,8 @@ class PlotStatDVH(Plot):
         self.stat_dvhs = {key: np.array(0) for key in ['min', 'q1', 'mean', 'median', 'q3', 'max']}
         self.x = []
 
-        self.__add_hover()
         self.__add_plot_data()
+        self.__add_hover()
         self.__add_legend()
         self.__create_table()
 
@@ -178,7 +177,7 @@ class PlotStatDVH(Plot):
         # TODO: custom hover not behaving?
         # Display only one tool tip (since many lines will overlap)
         # https://stackoverflow.com/questions/36434562/displaying-only-one-tooltip-when-using-the-hovertool-tool?rq=1
-        custom_hover = HoverTool()
+        custom_hover = HoverTool(renderers=[self.dvhs_renderer])
         custom_hover.tooltips = """
                     <style>
                         .bk-tooltip>div:not(:first-child) {display:none;}
@@ -191,9 +190,10 @@ class PlotStatDVH(Plot):
         self.figure.add_tools(custom_hover)
 
     def __add_plot_data(self):
-        self.figure.multi_line('x', 'y', source=self.source['dvh'], selection_color='color',
-                               line_width=self.options.DVH_LINE_WIDTH,
-                               alpha=0, line_dash=self.options.DVH_LINE_DASH, nonselection_alpha=0, selection_alpha=1)
+        self.dvhs_renderer = self.figure.multi_line('x', 'y', source=self.source['dvh'], selection_color='color',
+                                                    line_width=self.options.DVH_LINE_WIDTH, alpha=0,
+                                                    line_dash=self.options.DVH_LINE_DASH,
+                                                    nonselection_alpha=0, selection_alpha=1)
 
         # Add statistical plots to figure
         self.stats_max = self.figure.line('x', 'max', source=self.source['stats'],
@@ -392,11 +392,13 @@ class PlotTimeSeries(Plot):
                                         tooltips=[('ID', '@mrn'),
                                                   ('Date', '@x{%F}'),
                                                   ('Value', '@y{0.2f}')],
-                                        formatters={'x': 'datetime'}))
+                                        formatters={'x': 'datetime'},
+                                        renderers=[self.plot_data]))
 
         self.histogram.add_tools(HoverTool(show_arrow=True, line_policy='next', mode='vline',
                                            tooltips=[('Bin Center', '@x{0.2f}'),
-                                                     ('Counts', '@top')]))
+                                                     ('Counts', '@top')],
+                                           renderers=[self.vbar]))
 
     def __do_layout(self):
         self.bokeh_layout = column(self.figure,
@@ -560,18 +562,21 @@ class PlotRegression(Plot):
         self.figure.add_tools(HoverTool(show_arrow=True,
                                         tooltips=[('ID', '@mrn'),
                                                   ('x', '@x{0.2f}'),
-                                                  ('y', '@y{0.2f}')]))
+                                                  ('y', '@y{0.2f}')],
+                                        renderers=[self.plot_data]))
 
         self.figure_residual_fits.add_tools(HoverTool(show_arrow=True,
-                                            tooltips=[('ID', '@mrn'),
-                                                      ('Date', '@date{%F}'),
-                                                      ('x', '@x{0.2f}'),
-                                                      ('y', '@y{0.2f}')],
-                                            formatters={'date': 'datetime'}))
+                                                      tooltips=[('ID', '@mrn'),
+                                                                ('Date', '@date{%F}'),
+                                                                ('x', '@x{0.2f}'),
+                                                                ('y', '@y{0.2f}')],
+                                                      formatters={'date': 'datetime'},
+                                                      renderers=[self.plot_residuals]))
 
         self.figure_prob_plot.add_tools(HoverTool(show_arrow=True,
                                                   tooltips=[('x', '@x{0.2f}'),
-                                                            ('y', '@y{0.2f}')]))
+                                                            ('y', '@y{0.2f}')],
+                                                  renderers=[self.plot_prob]))
 
     def __do_layout(self):
         self.bokeh_layout = column(self.figure,
@@ -759,11 +764,13 @@ class PlotMultiVarRegression(Plot):
                                                   ('Date', '@date{%F}'),
                                                   ('x', '@x{0.2f}'),
                                                   ('y', '@y{0.2f}')],
-                                        formatters={'date': 'datetime'}))
+                                        formatters={'date': 'datetime'},
+                                        renderers=[self.plot_residuals]))
 
         self.figure_prob_plot.add_tools(HoverTool(show_arrow=True,
                                                   tooltips=[('x', '@x{0.2f}'),
-                                                            ('y', '@y{0.2f}')]))
+                                                            ('y', '@y{0.2f}')],
+                                                  renderers=[self.plot_prob]))
 
     def __create_table(self):
         columns = [TableColumn(field="var", title="", width=100),
@@ -1001,14 +1008,16 @@ class PlotControlChart(Plot):
                                                   ('Date', '@dates{%F}'),
                                                   ('Study', '@x'),
                                                   ('Value', '@y{0.2f}')],
-                                        formatters={'dates': 'datetime'}))
+                                        formatters={'dates': 'datetime'},
+                                        renderers=[self.plot_data]))
 
         self.adj_figure.add_tools(HoverTool(show_arrow=True,
                                             tooltips=[('ID', '@mrn'),
                                                       ('Date', '@dates{%F}'),
                                                       ('Study', '@x'),
                                                       ('Value', '@y{0.2f}')],
-                                            formatters={'dates': 'datetime'}))
+                                            formatters={'dates': 'datetime'},
+                                            renderers=[self.adj_plot_data]))
 
     def __add_legend(self):
         # Set the legend

@@ -60,6 +60,3 @@ ALTER TABLE Plans ADD COLUMN IF NOT EXISTS ptv_surface_area real;
 ALTER TABLE Plans ADD COLUMN IF NOT EXISTS ptv_volume real;
 ALTER TABLE Plans ADD COLUMN IF NOT EXISTS ptv_max_dose real;
 ALTER TABLE Plans ADD COLUMN IF NOT EXISTS ptv_min_dose real;
--- The following tabels ahve been added as of DVH Analytics 0.6.2
-CREATE TABLE IF NOT EXISTS Custom_Plans (mrn text, study_instance_uid text)
-CREATE TABLE IF NOT EXISTS Custom_DVHs (mrn text, study_instance_uid text, physician_roi varchar(50), physician varchar(50))

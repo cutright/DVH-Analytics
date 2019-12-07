@@ -3,6 +3,9 @@
 v0.6.2 (TBD)
 --------------------
  - [Machine Learning] More visual options available in settings
+ - [Plot Visuals] Hover information pop-ups display with data only. Trends, stats, etc. no longer clutter
+ - [Stats Data] Spreadsheet class created, used to display Stats data with ability to edit. 
+ This means you can add custom numerical data for trending, regressions, machine learning.
 
 v0.6.1 (2019.7.10)
 --------------------
