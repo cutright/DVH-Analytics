@@ -43,11 +43,7 @@ setup(
     keywords=['dvh', 'radiation therapy', 'research', 'dicom', 'dicom-rt', 'bokeh', 'analytics', 'wxpython'],
     classifiers=[],
     install_requires=requires,
-    entry_points={
-        'console_scripts': [
-            'dvha=dvha.main:start',
-        ],
-    },
+    entry_points={'console_scripts': ['dvha = dvha.main:start']},
     long_description="""DVH Database for Clinicians and Researchers
     
     DVH Analytics is a software application to help radiation oncology departments build an in-house database of 

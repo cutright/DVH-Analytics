@@ -19,6 +19,9 @@
         - [ ] Needs testing, crashes observed
     * *Import*
         - [ ] Allow user to import outcome or QA data to run correlations/stats
+        - [ ] Implement the grid cell editor in dvha.models.grid into the Database Editor
+            - [X] Allow for copy and paste from Excel
+            - [ ] Allow for custom columns
 
 3. **Regression**
     - [X] Machine learning modules in Regression tab (after running multi-variable regression) aren't complete 

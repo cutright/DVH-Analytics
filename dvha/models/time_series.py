@@ -37,6 +37,7 @@ class TimeSeriesFrame:
         self.options = options
         self.dvh = dvh
         self.data = data
+        self.custom_data = {}
 
         self.y_axis_options = sql_columns.numerical
 
@@ -124,6 +125,10 @@ class TimeSeriesFrame:
             y_data = self.dvh.endpoints['data'][y_axis_selection]
         elif y_axis_selection in ['EUD', 'NTCP or TCP']:
             y_data = getattr(self.dvh, y_axis_selection.lower().replace(' ', '_'))
+        elif y_axis_selection in self.custom_data.keys():
+            y_data = self.custom_data[y_axis_selection]['y']
+            uids = self.custom_data[y_axis_selection]['uid']
+            mrn_data = self.custom_data[y_axis_selection]['mrn']
         else:
             data_info = self.y_axis_options[y_axis_selection]
             table = data_info['table']
@@ -302,3 +307,7 @@ class TimeSeriesFrame:
     @property
     def has_data(self):
         return self.button_export_csv.IsEnabled()
+
+    def add_custom_data(self, option, data):
+        self.combo_box_y_axis.AppendItems([option])
+        self.custom_data[option] = data

@@ -49,6 +49,8 @@ class RegressionFrame:
 
         self.tree_ctrl_root = self.tree_ctrl.AddRoot('Regressions')
 
+        self.mvr_frames = []
+
     def __define_gui_objects(self):
         self.window = wx.SplitterWindow(self.parent, wx.ID_ANY)
         self.pane_tree = wx.ScrolledWindow(self.window, wx.ID_ANY, style=wx.TAB_TRAVERSAL)
@@ -272,9 +274,8 @@ class RegressionFrame:
             for y_variable in list(self.x_variable_nodes):
                 x_variables = list(self.x_variable_nodes[y_variable])
 
-                dlg = MultiVarResultsFrame(y_variable, x_variables,
-                                           self.stats_data, self.options)
-                dlg.Show()
+                self.mvr_frames.append(MultiVarResultsFrame(y_variable, x_variables, self.stats_data, self.options))
+                self.mvr_frames[-1].Show()
 
     def on_tree_select(self, evt):
         selection = evt.GetItem()
@@ -358,6 +359,12 @@ class RegressionFrame:
                 self.on_checkbox()
         dlg.Destroy()
 
+    def close_mvr_frames(self):
+        for frame in self.mvr_frames:
+            if type(frame) is MultiVarResultsFrame:
+                frame.close_ml_frames()
+                frame.Close()
+
 
 class MultiVarResultsFrame(wx.Frame):
     """
@@ -402,6 +409,8 @@ class MultiVarResultsFrame(wx.Frame):
         self.__set_properties()
         self.__do_layout()
 
+        self.ml_frames = []
+
     def __set_properties(self):
         self.SetMinSize(get_window_size(0.491, 0.690))
 
@@ -442,16 +451,16 @@ class MultiVarResultsFrame(wx.Frame):
         self.Center()
 
     def on_random_forest(self, evt):
-        RandomForestFrame(self.plot.final_stats_data)
+        self.ml_frames.append(RandomForestFrame(self.plot.final_stats_data))
 
     def on_gradient_boosting(self, evt):
-        GradientBoostingFrame(self.plot.final_stats_data)
+        self.ml_frames.append(GradientBoostingFrame(self.plot.final_stats_data))
 
     def on_decision_tree(self, evt):
-        DecisionTreeFrame(self.plot.final_stats_data)
+        self.ml_frames.append(DecisionTreeFrame(self.plot.final_stats_data))
 
     def on_support_vector_regression(self, evt):
-        SupportVectorRegressionFrame(self.plot.final_stats_data)
+        self.ml_frames.append(SupportVectorRegressionFrame(self.plot.final_stats_data))
 
     def on_export(self, evt):
         save_data_to_file(self, 'Save multi-variable regression data to csv', self.plot.get_csv_data())
@@ -478,3 +487,8 @@ class MultiVarResultsFrame(wx.Frame):
             wx.CallAfter(self.redraw_plot)
         except RuntimeError:
             pass
+
+    def close_ml_frames(self):
+        for frame in self.ml_frames:
+            if hasattr(frame, 'Close'):
+                frame.Close()

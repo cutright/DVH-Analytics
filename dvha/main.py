@@ -31,6 +31,7 @@ from dvha.models.time_series import TimeSeriesFrame
 from dvha.models.regression import RegressionFrame
 from dvha.models.control_chart import ControlChartFrame
 from dvha.models.roi_map import ROIMapFrame
+from dvha.models.stats_data_editor import StatsDataEditor
 from dvha.options import Options
 from dvha.paths import LOGO_PATH, DATA_DIR, ICONS
 from dvha.tools.roi_name_manager import DatabaseROIs
@@ -96,6 +97,8 @@ class DVHAMainFrame(wx.Frame):
         if not echo_sql_db():
             self.__disable_add_filter_buttons()
 
+        self.Bind(wx.EVT_CLOSE, self.on_quit)
+
     def __add_tool_bar(self):
         self.frame_toolbar = wx.ToolBar(self, -1, style=wx.TB_HORIZONTAL | wx.TB_TEXT)
         self.SetToolBar(self.frame_toolbar)
@@ -159,7 +162,8 @@ class DVHAMainFrame(wx.Frame):
         self.data_menu_items = {'DVHs': self.data_menu.Append(wx.ID_ANY, 'Show DVHs\tCtrl+1'),
                                 'Plans': self.data_menu.Append(wx.ID_ANY, 'Show Plans\tCtrl+2'),
                                 'Rxs': self.data_menu.Append(wx.ID_ANY, 'Show Rxs\tCtrl+3'),
-                                'Beams': self.data_menu.Append(wx.ID_ANY, 'Show Beams\tCtrl+4')}
+                                'Beams': self.data_menu.Append(wx.ID_ANY, 'Show Beams\tCtrl+4'),
+                                'StatsData': self.data_menu.Append(wx.ID_ANY, 'Show Stats Data\tCtrl+5')}
 
         settings_menu = wx.Menu()
         menu_pref = settings_menu.Append(wx.ID_PREFERENCES)
@@ -187,6 +191,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_view_plans, self.data_menu_items['Plans'])
         self.Bind(wx.EVT_MENU, self.on_view_rxs, self.data_menu_items['Rxs'])
         self.Bind(wx.EVT_MENU, self.on_view_beams, self.data_menu_items['Beams'])
+        self.Bind(wx.EVT_MENU, self.on_view_stats_data, self.data_menu_items['StatsData'])
 
         self.frame_menubar.Append(file_menu, '&File')
         self.frame_menubar.Append(self.data_menu, '&Data')
@@ -660,10 +665,17 @@ class DVHAMainFrame(wx.Frame):
     # --------------------------------------------------------------------------------------------------------------
     # Menu bar event functions
     # --------------------------------------------------------------------------------------------------------------
-    def on_quit(self, evt):
-        self.Close()
+    def close_windows(self):
+        for view in self.data_views.values():
+            if hasattr(view, 'Destroy'):
+                view.Destroy()
+        self.regression.close_mvr_frames()
 
-    def on_close(self, evt):
+    def on_quit(self, evt):
+        self.close_windows()
+        self.Destroy()
+
+    def on_close(self, *evt):
         if self.dvh:
             dlg = wx.MessageDialog(self, "Clear all data and plots?", caption='Close',
                                    style=wx.YES | wx.NO | wx.NO_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
@@ -691,6 +703,7 @@ class DVHAMainFrame(wx.Frame):
         self.regression.clear()
         self.control_chart.initialize_y_axis_options()
         self.control_chart.plot.clear_plot()
+        self.close_windows()
 
     def on_export(self, evt):
         if self.dvh is not None:
@@ -737,15 +750,24 @@ class DVHAMainFrame(wx.Frame):
     def on_view_beams(self, evt):
         self.view_table_data('Beams')
 
+    def on_view_stats_data(self, evt):
+        self.view_table_data('StatsData')
+
     def view_table_data(self, key):
         if key == 'DVHs':
             data = self.dvh
+        elif key == 'StatsData':
+            data = self.stats_data
         else:
             data = self.data[key]
 
         if data:
             if self.get_menu_item_status(key) == 'Show':
-                self.data_views[key] = QueriedDataFrame(data, key, self.data_menu, self.data_menu_items[key].GetId())
+                if key == 'StatsData':
+                    self.data_views[key] = StatsDataEditor(data, self.data_menu, self.data_menu_items[key].GetId(),
+                                                           self.time_series, self.regression, self.control_chart)
+                else:
+                    self.data_views[key] = QueriedDataFrame(data, key, self.data_menu, self.data_menu_items[key].GetId())
             else:
                 self.data_views[key].on_close()
                 self.data_views[key] = None
@@ -764,6 +786,13 @@ class DVHAMainFrame(wx.Frame):
             self.time_series.plot.redraw_plot()
             self.regression.plot.redraw_plot()
             self.control_chart.plot.redraw_plot()
+
+    def update_stats_data_plots(self):
+        if self.dvh:
+            self.time_series.update_plot()
+            self.time_series.update_y_axis_options()
+            self.regression.update_plot()
+            self.control_chart.update_plot()
 
     def on_resize(self, *evt):
         try:
@@ -787,6 +816,11 @@ class MainApp(wx.App):
         self.SetTopWindow(self.frame)
         self.frame.Show()
         return True
+
+    def OnExit(self):
+        for window in wx.GetTopLevelWindows():
+            wx.CallAfter(window.Close)
+        return super().OnExit()
 
 
 def start():
