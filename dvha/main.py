@@ -668,7 +668,10 @@ class DVHAMainFrame(wx.Frame):
     def close_windows(self):
         for view in self.data_views.values():
             if hasattr(view, 'Destroy'):
-                view.Destroy()
+                try:
+                    view.Destroy()
+                except RuntimeError:
+                    pass
         self.regression.close_mvr_frames()
 
     def on_quit(self, evt):

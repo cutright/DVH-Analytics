@@ -363,7 +363,10 @@ class RegressionFrame:
         for frame in self.mvr_frames:
             if type(frame) is MultiVarResultsFrame:
                 frame.close_ml_frames()
-                frame.Close()
+                try:
+                    frame.Close()
+                except RuntimeError:
+                    pass
 
 
 class MultiVarResultsFrame(wx.Frame):
@@ -491,4 +494,7 @@ class MultiVarResultsFrame(wx.Frame):
     def close_ml_frames(self):
         for frame in self.ml_frames:
             if hasattr(frame, 'Close'):
-                frame.Close()
+                try:
+                    frame.Close()
+                except RuntimeError:
+                    pass
