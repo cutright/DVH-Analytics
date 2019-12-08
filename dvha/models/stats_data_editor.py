@@ -37,6 +37,7 @@ class StatsDataEditor(wx.Frame):
         # For example, query button calls on_query when clicked
         for key, button in self.button.items():
             self.Bind(wx.EVT_BUTTON, getattr(self, 'on_' + key), id=button.GetId())
+        self.Bind(wx.EVT_CLOSE, self.on_close)
 
     def __create_data_grid(self):
         self.grid = StatsSpreadsheet(self)
