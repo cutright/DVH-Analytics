@@ -7,7 +7,6 @@
 import wx
 from dvha.models.spreadsheet import Spreadsheet
 from dvha.tools.utilities import get_window_size
-from datetime import datetime
 
 
 class StatsDataEditor(wx.Frame):
@@ -151,7 +150,8 @@ class StatsSpreadsheet(Spreadsheet):
 
     def convert_value(self, row, col):
         value = self.GetCellValue(row, col)
-        if value.lower() == 'none':
+        try:
+            return float(value)
+        except ValueError:
             return 'None'
-        return float(value)
 

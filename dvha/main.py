@@ -97,6 +97,8 @@ class DVHAMainFrame(wx.Frame):
         if not echo_sql_db():
             self.__disable_add_filter_buttons()
 
+        self.Bind(wx.EVT_CLOSE, self.on_quit)
+
     def __add_tool_bar(self):
         self.frame_toolbar = wx.ToolBar(self, -1, style=wx.TB_HORIZONTAL | wx.TB_TEXT)
         self.SetToolBar(self.frame_toolbar)
@@ -663,11 +665,17 @@ class DVHAMainFrame(wx.Frame):
     # --------------------------------------------------------------------------------------------------------------
     # Menu bar event functions
     # --------------------------------------------------------------------------------------------------------------
-    def on_quit(self, evt):
-        # TODO: close all open windows
-        self.Close()
+    def close_windows(self):
+        for view in self.data_views.values():
+            if hasattr(view, 'Destroy'):
+                view.Destroy()
+        self.regression.close_mvr_frames()
 
-    def on_close(self, evt):
+    def on_quit(self, evt):
+        self.close_windows()
+        self.Destroy()
+
+    def on_close(self, *evt):
         if self.dvh:
             dlg = wx.MessageDialog(self, "Clear all data and plots?", caption='Close',
                                    style=wx.YES | wx.NO | wx.NO_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
@@ -695,6 +703,7 @@ class DVHAMainFrame(wx.Frame):
         self.regression.clear()
         self.control_chart.initialize_y_axis_options()
         self.control_chart.plot.clear_plot()
+        self.close_windows()
 
     def on_export(self, evt):
         if self.dvh is not None:
@@ -807,6 +816,11 @@ class MainApp(wx.App):
         self.SetTopWindow(self.frame)
         self.frame.Show()
         return True
+
+    def OnExit(self):
+        for window in wx.GetTopLevelWindows():
+            wx.CallAfter(window.Close)
+        return super().OnExit()
 
 
 def start():

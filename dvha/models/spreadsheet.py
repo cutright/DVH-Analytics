@@ -98,7 +98,7 @@ class Spreadsheet(wx.grid.Grid):
                 self.SelectCol(event.GetCol())
             self.selected_cols = self.GetSelectedCols()
             menus += [(wx.NewId(), "Add column", self.add_cols)]
-            menus += [(wx.NewId(), "Delete column", self.delete_cols)]
+            # menus += [(wx.NewId(), "Delete column", self.delete_cols)]
         else:
             return
 
