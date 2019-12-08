@@ -121,7 +121,7 @@ class StatsSpreadsheet(Spreadsheet):
             self.SetCellValue(row+1, 0, mrn)
             self.SetCellValue(row+1, 1, self.stats_data.uids[row])
 
-        self.SetColMinimalAcceptableWidth(1000)
+        # self.SetColMinimalAcceptableWidth(1000)
         for col, label in enumerate(column_labels):
             # self.SetColMinimalWidth(col+2, 1000)
             self.SetCellValue(0, col+2, label)
