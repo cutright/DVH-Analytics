@@ -1,6 +1,6 @@
 # Change log of DVH Analytics
 
-v0.6.2 (TBD)
+v0.6.2 (2019.12.08)
 --------------------
  - [Machine Learning] More visual options available in settings
  - [Plot Visuals] Hover information pop-ups display with data only. Trends, stats, etc. no longer clutter
