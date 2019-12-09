@@ -423,7 +423,7 @@ class DicomDirectoryParserThread(Thread):
             wx.CallAfter(pub.sendMessage, "dicom_directory_parser_update", msg=msg)
 
             try:
-                ds = dicom.read_file(file_path, stop_before_pixels=True)
+                ds = dicom.read_file(file_path, stop_before_pixels=True, force=True)
             except InvalidDicomError:
                 ds = None
 
