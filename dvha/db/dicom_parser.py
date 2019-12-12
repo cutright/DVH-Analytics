@@ -56,15 +56,15 @@ class DICOM_Parser:
         self.dicompyler_rt_structures = None
 
         if plan:
-            self.rt_data['plan'] = dicom.read_file(plan)
+            self.rt_data['plan'] = dicom.read_file(plan, force=True)
             self.dicompyler_data['plan'] = dicomparser.DicomParser(plan)
             self.dicompyler_rt_plan = self.dicompyler_data['plan'].GetPlan()
         if structure:
-            self.rt_data['structure'] = dicom.read_file(structure)
+            self.rt_data['structure'] = dicom.read_file(structure, force=True)
             self.dicompyler_data['structure'] = dicomparser.DicomParser(structure)
             self.dicompyler_rt_structures = self.dicompyler_data['structure'].GetStructures()
         if dose:
-            self.rt_data['dose'] = dicom.read_file(dose)
+            self.rt_data['dose'] = dicom.read_file(dose, force=True)
             if dose_sum is None:
                 self.dicompyler_data['dose'] = dicomparser.DicomParser(dose).ds
             else:

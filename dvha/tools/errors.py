@@ -76,3 +76,14 @@ class ROIVariationErrorDialog(ErrorDialog):
         :type roi_variation_error: ROIVariationError
         """
         ErrorDialog.__init__(self, parent, str(roi_variation_error), "ROI Variation Error")
+
+
+class MemoryErrorDialog(ErrorDialog):
+    def __init__(self, parent, memory_error):
+        """
+        Error dialog using custom MemoryErrorDialog class
+        :param parent: the wx parent object
+        :param memory_error: MemoryError exception
+        :type memory_error: MemoryError
+        """
+        ErrorDialog.__init__(self, parent, str(memory_error), "Try asking for less data in one query.")

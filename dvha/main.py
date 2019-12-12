@@ -34,6 +34,7 @@ from dvha.models.roi_map import ROIMapFrame
 from dvha.models.stats_data_editor import StatsDataEditor
 from dvha.options import Options
 from dvha.paths import LOGO_PATH, DATA_DIR, ICONS
+from dvha.tools.errors import MemoryErrorDialog
 from dvha.tools.roi_name_manager import DatabaseROIs
 from dvha.tools.stats import StatsData
 from dvha.tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux, get_window_size, \
@@ -550,7 +551,11 @@ class DVHAMainFrame(wx.Frame):
 
     def exec_query_button(self, evt):
         # TODO: Thread this process
-        self.exec_query()
+        try:
+            self.exec_query()
+        except MemoryError as e:
+            MemoryErrorDialog(self, e)
+            self.close()
 
     def exec_query(self, load_saved_dvh_data=False):
         wait = wx.BusyCursor()
