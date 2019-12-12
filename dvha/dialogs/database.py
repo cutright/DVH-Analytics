@@ -648,7 +648,10 @@ class SQLSettingsDialog(wx.Dialog):
         if res == wx.ID_OK:
             new_config = {key: self.input[key].GetValue() for key in self.keys if self.input[key].GetValue()}
             write_sql_connection_settings(new_config)
-            if not validate_sql_connection(new_config):
+            if validate_sql_connection(new_config):
+                with DVH_SQL() as cnx:
+                    cnx.initialize_database()
+            else:
                 dlg = wx.MessageDialog(self, 'Connection to database could not be established.', 'ERROR!',
                                        wx.OK | wx.ICON_ERROR)
                 dlg.ShowModal()
