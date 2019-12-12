@@ -95,10 +95,9 @@ class DVHAMainFrame(wx.Frame):
         self.data_table_categorical = DataTable(self.table_categorical, columns=columns['categorical'])
         self.data_table_numerical = DataTable(self.table_numerical, columns=columns['numerical'])
 
-        if not echo_sql_db():
-            self.__disable_add_filter_buttons()
-
         self.Bind(wx.EVT_CLOSE, self.on_quit)
+
+        wx.CallAfter(self.__catch_failed_sql_connection_on_app_launch)
 
     def __add_tool_bar(self):
         self.frame_toolbar = wx.ToolBar(self, -1, style=wx.TB_HORIZONTAL | wx.TB_TEXT)
@@ -412,6 +411,11 @@ class DVHAMainFrame(wx.Frame):
             self.button_query_execute.Enable()
         else:
             self.button_query_execute.Disable()
+
+    def __catch_failed_sql_connection_on_app_launch(self):
+        if not echo_sql_db():
+            wx.MessageBox('Invalid credentials!', 'Echo SQL Database', wx.OK | wx.ICON_WARNING)
+            self.on_sql()
 
     # --------------------------------------------------------------------------------------------------------------
     # Menu bar event functions
