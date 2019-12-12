@@ -41,6 +41,14 @@ class ROIVariationError(Exception):
         return self.message
 
 
+class PlottingMemoryError(Exception):
+    def __init__(self, error_message):
+        self.message = error_message
+
+    def __str__(self):
+        return self.message
+
+
 class ErrorDialog:
     def __init__(self, parent, message, caption, flags=wx.ICON_ERROR | wx.OK | wx.OK_DEFAULT):
         """
@@ -79,11 +87,9 @@ class ROIVariationErrorDialog(ErrorDialog):
 
 
 class MemoryErrorDialog(ErrorDialog):
-    def __init__(self, parent, memory_error):
+    def __init__(self, parent, message):
         """
         Error dialog using custom MemoryErrorDialog class
         :param parent: the wx parent object
-        :param memory_error: MemoryError exception
-        :type memory_error: MemoryError
         """
-        ErrorDialog.__init__(self, parent, str(memory_error), "Try asking for less data in one query.")
+        ErrorDialog.__init__(self, parent, message, "Memory Error")

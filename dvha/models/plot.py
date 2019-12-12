@@ -21,6 +21,7 @@ import itertools
 import numpy as np
 from os.path import join, isdir
 from os import mkdir
+from dvha.tools.errors import PlottingMemoryError
 from dvha.tools.utilities import collapse_into_single_dates, moving_avg, is_windows
 from dvha.tools.stats import MultiVariableRegression, get_control_limits
 from dvha.paths import TEMP_DIR
@@ -92,7 +93,12 @@ class Plot:
             self.clear_source(key)
 
     def update_bokeh_layout_in_wx_python(self):
-        self.html_str = get_layout_html(self.bokeh_layout)
+        try:
+            self.html_str = get_layout_html(self.bokeh_layout)
+        except MemoryError:
+            print('ERROR: dvha.models.plot in Plot.update_bokeh_layout_in_wx_python with '
+                  'bokeh.io.export.get_layout_html() raised MemoryError')
+            raise PlottingMemoryError(self.type)
         if is_windows():  # Windows requires LoadURL()
             if not isdir(TEMP_DIR):
                 mkdir(TEMP_DIR)
