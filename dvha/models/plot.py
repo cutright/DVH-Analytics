@@ -1382,8 +1382,15 @@ class PlotMachineLearning(Plot):
                                  'y0': [0] * len(x),
                                  'mrn': mrn, 'study_date': study_date}
 
-            self.div_mse[data_type].text = "<u>Mean Square Error</u>: %0.2f (%s) --- %0.2f (MVR)" % \
-                                           (plot_data.mse[data_type], self.ml_type_short, self.multi_var_mse)
+            mse_values = [plot_data.mse[data_type], self.multi_var_mse]
+            mse_text = []
+            for i, mse in enumerate(mse_values):
+                if 1.0 < mse < 1000:
+                    mse_text.append("%0.2f" % mse)
+                else:
+                    mse_text.append("%0.2E" % mse)
+            self.div_mse[data_type].text = "<u>Mean Square Error</u>: %s (%s) --- %s (MVR)" % \
+                                           (mse_text[0], self.ml_type_short, mse_text[1])
 
         self.update_bokeh_layout_in_wx_python()
 

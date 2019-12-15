@@ -1,5 +1,10 @@
 # Change log of DVH Analytics
 
+v0.6.4 (TBD)
+--------------------
+ - [Machine Learning] Mean-square error prints in scientific notation if not between 1 and 1000
+
+
 v0.6.3 (2019.12.15)
 --------------------
  - [DICOM Importer] Display PTV ROI type in RT Structure tree.  Helpful for multi- PTV plans.
