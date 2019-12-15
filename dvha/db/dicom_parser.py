@@ -389,12 +389,8 @@ class DICOM_Parser:
         :rtype: dict
         """
 
-        dose = self.dicompyler_data['dose']
-        if not hasattr(dose, 'file_meta'):
-            dose = self.validate_transfer_syntax_uid(self.dicompyler_data['dose'])
-        structure = pydicom.read_file(self.structure_file, force=True)
-        if not hasattr(structure, 'file_meta'):
-            structure = self.validate_transfer_syntax_uid(structure)
+        dose = self.validate_transfer_syntax_uid(self.dicompyler_data['dose'])
+        structure = self.validate_transfer_syntax_uid(self.structure_file)
         dvh = dvhcalc.get_dvh(structure, dose, dvh_index)
 
         if dvh.volume > 0:  # ignore points and empty ROIs
