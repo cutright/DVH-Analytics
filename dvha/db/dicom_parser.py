@@ -389,8 +389,10 @@ class DICOM_Parser:
         :rtype: dict
         """
 
-        dose = self.validate_transfer_syntax_uid(self.dicompyler_data['dose'])
-        structure = self.validate_transfer_syntax_uid(self.structure_file)
+        dose = pydicom.read_file(self.dose_file, force=True)
+        dose = self.validate_transfer_syntax_uid(dose)
+        structure = pydicom.read_file(self.structure_file, force=True)
+        structure = self.validate_transfer_syntax_uid(structure)
         dvh = dvhcalc.get_dvh(structure, dose, dvh_index)
 
         if dvh.volume > 0:  # ignore points and empty ROIs
