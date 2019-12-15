@@ -23,7 +23,6 @@ from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file
 import pydicom
 from pydicom.uid import ImplicitVRLittleEndian
-from pynetdicom import PYNETDICOM_UID_PREFIX
 
 
 class DICOM_Parser:
@@ -389,11 +388,14 @@ class DICOM_Parser:
         :rtype: dict
         """
 
-        dose = pydicom.read_file(self.dose_file, force=True)
-        dose = self.validate_transfer_syntax_uid(dose)
-        structure = pydicom.read_file(self.structure_file, force=True)
-        structure = self.validate_transfer_syntax_uid(structure)
-        dvh = dvhcalc.get_dvh(structure, dose, dvh_index)
+        try:
+            dvh = dvhcalc.get_dvh(self.rt_data['structure'], self.dicompyler_data['dose'], dvh_index)
+        except AttributeError as e:
+            print(str(e), 'for MRN: %s' % self.mrn)
+            print('Applying validate_transfer_syntax_uid() due to missing data in user provided DICOM')
+            dose = self.validate_transfer_syntax_uid(self.rt_data['dose'])
+            structure = self.validate_transfer_syntax_uid(self.rt_data['structure'])
+            dvh = dvhcalc.get_dvh(structure, dose, dvh_index)
 
         if dvh.volume > 0:  # ignore points and empty ROIs
             geometries = self.get_dvh_geometries(dvh_index)
@@ -967,7 +969,7 @@ class DICOM_Parser:
     @staticmethod
     def validate_transfer_syntax_uid(data_set):
         meta = pydicom.Dataset()
-        meta.ImplementationClassUID = PYNETDICOM_UID_PREFIX
+        meta.ImplementationClassUID = pydicom.uid.generate_uid()
         meta.TransferSyntaxUID = ImplicitVRLittleEndian
         new_data_set = pydicom.FileDataset(filename_or_obj=None, dataset=data_set, is_little_endian=True,
                                            file_meta=meta)
