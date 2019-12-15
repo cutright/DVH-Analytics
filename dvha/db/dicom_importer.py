@@ -163,8 +163,17 @@ class DicomImporter:
             rois.sort()
             for roi in rois:
                 self.roi_nodes[roi] = self.tree_ctrl_rois.AppendItem(self.root_rois, roi, ct_type=0)
+                roi_type = [None, 'PTV'][self.roi_name_map[roi]['type'] == 'PTV']
+                self.update_tree_ctrl_roi_with_roi_type(roi, roi_type=roi_type)
         else:
             self.tree_ctrl_rois.SetItemBackgroundColour(self.root_rois, wx.Colour(255, 0, 0))
+
+    def update_tree_ctrl_roi_with_roi_type(self, roi, roi_type=None):
+        if roi_type is not None:
+            text = '%s ----- ROI Type: %s' % (roi, roi_type)
+        else:
+            text = roi
+        self.tree_ctrl_rois.SetItemText(self.roi_nodes[roi], text)
 
     def add_patient_node(self, mrn):
         """

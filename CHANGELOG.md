@@ -1,5 +1,14 @@
 # Change log of DVH Analytics
 
+v0.6.3 (2019.12.15)
+--------------------
+ - [DICOM Importer] Display PTV ROI type in RT Structure tree.  Helpful for multi- PTV plans.
+ - [DICOM Importer] Set force=True with pydicom.read_file() for XiO support  [issue #15](https://github.com/cutright/DVH-Analytics/issues/15)
+ - [Query] Added a catch and error dialog for a MemoryError when querying if users queries more data than their system can handle
+ - [Database Connection] Initialize SQL tables upon successful new database connection
+ - [Database Connection] Catch invalid SQL credentials at launch, automatically open connection settings dialog
+ - [DICOM Importer] Apply fix for TransferSyntaxUID error [issue #16](https://github.com/cutright/DVH-Analytics/issues/16)
+
 v0.6.2 (2019.12.08)
 --------------------
  - [Machine Learning] More visual options available in settings

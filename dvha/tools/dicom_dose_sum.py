@@ -49,10 +49,10 @@ def sum_two_dose_grids(old, new):
     # pixel arrays.
 
     #  For now, always do straight sum
-    if True or (old.ImagePositionPatient == new.ImagePositionPatient and
-                old.pixel_array.shape == new.pixel_array.shape and
-                old.PixelSpacing == new.PixelSpacing and
-                old.GridFrameOffsetVector == new.GridFrameOffsetVector):
+    if (old.ImagePositionPatient == new.ImagePositionPatient and
+        old.pixel_array.shape == new.pixel_array.shape and
+        old.PixelSpacing == new.PixelSpacing and
+        old.GridFrameOffsetVector == new.GridFrameOffsetVector):
         print("PlanSum: Using direct summation")
         dose_sum = old.pixel_array * old.DoseGridScaling + new.pixel_array * new.DoseGridScaling
 

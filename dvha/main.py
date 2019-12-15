@@ -34,6 +34,7 @@ from dvha.models.roi_map import ROIMapFrame
 from dvha.models.stats_data_editor import StatsDataEditor
 from dvha.options import Options
 from dvha.paths import LOGO_PATH, DATA_DIR, ICONS
+from dvha.tools.errors import MemoryErrorDialog, PlottingMemoryError
 from dvha.tools.roi_name_manager import DatabaseROIs
 from dvha.tools.stats import StatsData
 from dvha.tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux, get_window_size, \
@@ -94,10 +95,9 @@ class DVHAMainFrame(wx.Frame):
         self.data_table_categorical = DataTable(self.table_categorical, columns=columns['categorical'])
         self.data_table_numerical = DataTable(self.table_numerical, columns=columns['numerical'])
 
-        if not echo_sql_db():
-            self.__disable_add_filter_buttons()
-
         self.Bind(wx.EVT_CLOSE, self.on_quit)
+
+        wx.CallAfter(self.__catch_failed_sql_connection_on_app_launch)
 
     def __add_tool_bar(self):
         self.frame_toolbar = wx.ToolBar(self, -1, style=wx.TB_HORIZONTAL | wx.TB_TEXT)
@@ -256,7 +256,7 @@ class DVHAMainFrame(wx.Frame):
         self.button_numerical['add'].SetToolTip("Add a numerical data filter.")
         self.button_numerical['del'].SetToolTip("Delete the currently selected numerical data filter.")
         self.button_numerical['edit'].SetToolTip("Edit the currently selected data filter.")
-        self.button_query_execute.SetToolTip("Query the database with the filters entered below. At least one "
+        self.button_query_execute.SetToolTip("Query the database with the filters entered above. At least one "
                                              "filter must be added.")
 
     def __add_notebook_frames(self):
@@ -412,6 +412,11 @@ class DVHAMainFrame(wx.Frame):
         else:
             self.button_query_execute.Disable()
 
+    def __catch_failed_sql_connection_on_app_launch(self):
+        if not echo_sql_db():
+            wx.MessageBox('Invalid credentials!', 'Echo SQL Database', wx.OK | wx.ICON_WARNING)
+            self.on_sql()
+
     # --------------------------------------------------------------------------------------------------------------
     # Menu bar event functions
     # --------------------------------------------------------------------------------------------------------------
@@ -566,26 +571,38 @@ class DVHAMainFrame(wx.Frame):
         self.radbio.clear_data()
 
         if not load_saved_dvh_data:
-            uids, dvh_str = self.get_query()
+            try:
+                uids, dvh_str = self.get_query()
+            except MemoryError:
+                msg = "Querying memory error. Try querying less data. At least %s DVHs returned.\n"\
+                      "NOTE: Threshold of this error is dependent on your computer." % self.dvh.count
+                MemoryErrorDialog(self, msg)
+                self.close()
+                return
             self.dvh = DVH(dvh_condition=dvh_str, uid=uids)
 
         if self.dvh.count:
-            self.endpoint.update_dvh(self.dvh)
-            self.text_summary.SetLabelText(self.dvh.get_summary())
-            self.plot.update_plot(self.dvh)
-            del wait
-            self.notebook_main_view.SetSelection(1)
-            self.update_data(load_saved_dvh_data=load_saved_dvh_data)
-            self.time_series.update_data(self.dvh, self.data)
-            if self.dvh.count > 1:
-                self.control_chart.update_data(self.dvh, self.stats_data)
+            try:
+                self.endpoint.update_dvh(self.dvh)
+                self.text_summary.SetLabelText(self.dvh.get_summary())
 
-            self.radbio.update_dvh_data(self.dvh)
+                self.plot.update_plot(self.dvh)
+                del wait
+                self.notebook_main_view.SetSelection(1)
+                self.update_data(load_saved_dvh_data=load_saved_dvh_data)
+                self.time_series.update_data(self.dvh, self.data)
+                if self.dvh.count > 1:
+                    self.control_chart.update_data(self.dvh, self.stats_data)
 
-            self.__enable_notebook_tabs()
+                self.radbio.update_dvh_data(self.dvh)
 
-            self.save_data['main_categorical'] = self.data_table_categorical.get_save_data()
-            self.save_data['main_numerical'] = self.data_table_numerical.get_save_data()
+                self.__enable_notebook_tabs()
+
+                self.save_data['main_categorical'] = self.data_table_categorical.get_save_data()
+                self.save_data['main_numerical'] = self.data_table_numerical.get_save_data()
+            except PlottingMemoryError as e:
+                del wait
+                self.on_plotting_memory_error(str(e))
         else:
             del wait
             wx.MessageBox('No DVHs returned. Please modify query or import more data.', 'Query Error',
@@ -804,6 +821,13 @@ class DVHAMainFrame(wx.Frame):
             wx.CallAfter(self.redraw_plots)
         except RuntimeError:
             pass
+
+    def on_plotting_memory_error(self, plot_type):
+        plot_type = [' (Plot type: %s)' % plot_type, ''][plot_type is None]
+        msg = "Plotting memory error%s. Try querying less data. At least %s DVHs returned.\n" \
+              "NOTE: Threshold of this error is dependent on your computer." % (plot_type, self.dvh.count)
+        MemoryErrorDialog(self, msg)
+        self.close()
 
 
 class MainApp(wx.App):

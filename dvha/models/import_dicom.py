@@ -483,11 +483,17 @@ class ImportDicomFrame(wx.Frame):
             self.input_roi['physician'].SetValue(physician_roi)
             self.update_physician_roi_choices(physician_roi)
             self.input_roi['type'].SetValue(roi_type)
+
+            self.update_roi_text_with_roi_type(self.selected_roi, roi_type)
         else:
             self.input_roi['physician'].SetValue('')
             self.input_roi['type'].SetValue('')
         self.allow_input_roi_apply = True
         self.update_input_roi_physician_enable()
+
+    def update_roi_text_with_roi_type(self, roi, roi_type):
+        roi_type_for_tree_text = [None, 'PTV'][roi_type == 'PTV']
+        self.dicom_importer.update_tree_ctrl_roi_with_roi_type(roi, roi_type=roi_type_for_tree_text)
 
     def clear_plan_data(self):
         for input_obj in self.input.values():
@@ -653,7 +659,8 @@ class ImportDicomFrame(wx.Frame):
             roi_type_over_ride[key] = self.input_roi['type'].GetValue()
             self.validate(uid=self.selected_uid)
             self.update_warning_label()
-            self.dicom_importer.update_mapped_roi_status()
+            self.dicom_importer.update_mapped_roi_status(self.input['physician'].GetValue())
+            self.update_roi_text_with_roi_type(self.selected_roi, roi_type=self.input_roi['type'].GetValue())
 
     @staticmethod
     def validate_date(date):
@@ -964,14 +971,6 @@ class ImportStatusDialog(wx.Dialog):
         sizer_time_cancel.Add(self.button_cancel, 0, wx.ALL, 5)
         sizer_wrapper.Add(sizer_time_cancel, 1, wx.EXPAND | wx.ALL, 5)
 
-        # sizer_error_text.Add(self.error_details_text, 0, wx.EXPAND, 0)
-        # sizer_error_window.Add(sizer_error_text, 0, wx.E
-        # self.error_details_window.SetSizer(sizer_error_window)
-        #
-        # sizer_error_pane.Add(self.error_details_pane, 0, wx.ALL, 5)
-        # self.error_details_pane.SetSizer(sizer_error_pane)
-        # sizer_wrapper.Add(self.error_details_pane, 0, 0, 0)
-
         self.SetSizer(sizer_wrapper)
         self.Layout()
         self.Center()
@@ -1085,6 +1084,7 @@ class ImportWorker(Thread):
         If there are multiple plans for a study uid, sum the dose grids
         Import the study
         """
+
         study_uids = self.get_study_uids()
         plan_total = len(self.checked_uids)
         plan_counter = 0
@@ -1098,8 +1098,9 @@ class ImportWorker(Thread):
                 for plan_uid in plan_uid_set:
                     self.data[plan_uid].import_dose_sum(dose_sum)
 
-            for plan_uid in plan_uid_set:
+            for i, plan_uid in enumerate(plan_uid_set):
                 if plan_uid in list(self.data):
+
                     msg = {'patient_name': self.data[plan_uid].patient_name,
                            'uid': self.data[plan_uid].study_instance_uid_to_be_imported,
                            'progress': int(100 * plan_counter / plan_total),
@@ -1107,6 +1108,7 @@ class ImportWorker(Thread):
                            'study_total': plan_total}
                     wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
                     wx.CallAfter(pub.sendMessage, "update_elapsed_time")
+
                     self.import_study(plan_uid, final_plan_in_study=plan_uid == plan_uid_set[-1])
                     if self.terminate['status']:
                         self.delete_partially_updated_plan()
