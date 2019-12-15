@@ -21,6 +21,9 @@ from dvha.tools import roi_geometry as roi_calc
 from dvha.tools.mlc_analyzer import Beam as mlca
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file
+import pydicom
+from pydicom.uid import ImplicitVRLittleEndian
+from pynetdicom import PYNETDICOM_UID_PREFIX
 
 
 class DICOM_Parser:
@@ -386,7 +389,13 @@ class DICOM_Parser:
         :rtype: dict
         """
 
-        dvh = dvhcalc.get_dvh(self.structure_file, self.dicompyler_data['dose'], dvh_index)
+        dose = self.dicompyler_data['dose']
+        if not hasattr(dose, 'file_meta'):
+            dose = self.validate_transfer_syntax_uid(self.dicompyler_data['dose'])
+        structure = pydicom.read_file(self.structure_file, force=True)
+        if not hasattr(structure, 'file_meta'):
+            structure = self.validate_transfer_syntax_uid(structure)
+        dvh = dvhcalc.get_dvh(structure, dose, dvh_index)
 
         if dvh.volume > 0:  # ignore points and empty ROIs
             geometries = self.get_dvh_geometries(dvh_index)
@@ -956,6 +965,18 @@ class DICOM_Parser:
                 'complete_file_set': {'status': self.file_set_complete,
                                       'value': self.file_set_complete,
                                       'message': "Missing RT %s." % ', '.join(self.missing_files)}}
+
+    @staticmethod
+    def validate_transfer_syntax_uid(data_set):
+        meta = pydicom.Dataset()
+        meta.ImplementationClassUID = PYNETDICOM_UID_PREFIX
+        meta.TransferSyntaxUID = ImplicitVRLittleEndian
+        new_data_set = pydicom.FileDataset(filename_or_obj=None, dataset=data_set, is_little_endian=True,
+                                           file_meta=meta)
+        new_data_set.is_little_endian = True
+        new_data_set.is_implicit_VR = True
+
+        return new_data_set
 
 
 class BeamParser:
