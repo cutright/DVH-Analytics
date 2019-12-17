@@ -1320,7 +1320,10 @@ class RxParser:
 
     @property
     def fx_count(self):
-        return self.fx_grp_data.NumberOfFractionsPlanned
+        fx_count = self.fx_grp_data.NumberOfFractionsPlanned
+        if type(fx_count) is str:
+            return int(float(fx_count))
+        return fx_count
 
     @property
     def fx_dose(self):
