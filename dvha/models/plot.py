@@ -802,6 +802,7 @@ class PlotMultiVarRegression(Plot):
         self.regression_table.height = int(self.size_factor['table'][1] * float(panel_height))
 
     def update_plot(self, y_variable, x_variables, stats_data):
+        self.type = 'multi-variable_regression_%s' % y_variable.replace(' ', '_')
         self.set_figure_dimensions()
         self.y_variable, self.x_variables = y_variable, x_variables
         self.stats_data = stats_data
