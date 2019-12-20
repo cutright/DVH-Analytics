@@ -205,10 +205,9 @@ class StatsData:
         y_var_data = []
         for i, value in enumerate(self.data[y_variable]['values']):
             y_var_data.append([value, np.nan][value == 'None'])
-            if value != 'None':
-                mrn.append(self.mrns[i])
-                uid.append(self.uids[i])
-                dates.append(self.sim_study_dates[i])
+            mrn.append(self.mrns[i])
+            uid.append(self.uids[i])
+            dates.append(self.sim_study_dates[i])
 
         data.append(y_var_data)
         for var in x_variables:

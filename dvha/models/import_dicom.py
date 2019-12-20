@@ -106,6 +106,7 @@ class ImportDicomFrame(wx.Frame):
         self.gauge = wx.Gauge(self, -1, 100)
         self.button_import = wx.Button(self, wx.ID_ANY, "Import")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+        self.button_save_roi_map = wx.Button(self, wx.ID_ANY, "Save ROI Map")
 
         self.panel_roi_tree = wx.Panel(self, wx.ID_ANY, style=wx.BORDER_SUNKEN)
         self.input_roi = {'physician': wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY),
@@ -178,6 +179,7 @@ class ImportDicomFrame(wx.Frame):
 
         self.Bind(wx.EVT_BUTTON, self.on_import, id=self.button_import.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_cancel, id=self.button_cancel.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_save_roi_map, id=self.button_save_roi_map.GetId())
 
         self.Bind(wx.EVT_BUTTON, self.on_roi_manager, id=self.button_roi_manager.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.on_physician_roi_change, id=self.input_roi['physician'].GetId())
@@ -199,8 +201,9 @@ class ImportDicomFrame(wx.Frame):
                                  'no': self.image_list.Add(get_tree_ctrl_image(ICONS['ko-red']))}
         self.tree_ctrl_roi.AssignImageList(self.image_list)
 
-        self.button_cancel.SetToolTip("Changes to ROI Map will be disregarded.")
+        self.button_cancel.SetToolTip("Cancel and do not save ROI Map changes since last save.")
         self.button_import.SetToolTip("Save ROI Map changes and import checked studies.")
+        self.button_save_roi_map.SetToolTip("Save ROI Map changes.")
 
     def __do_layout(self):
         self.label = {}
@@ -363,6 +366,7 @@ class ImportDicomFrame(wx.Frame):
         sizer_warning.Add(self.label_warning, 1, wx.EXPAND, 0)
 
         sizer_warning_buttons.Add(sizer_warning, 1, wx.ALL | wx.EXPAND, 5)
+        sizer_buttons.Add(self.button_save_roi_map, 0, wx.ALL, 5)
         sizer_buttons.Add(self.button_import, 0, wx.ALL, 5)
         sizer_buttons.Add(self.button_cancel, 0, wx.ALL, 5)
         sizer_warning_buttons.Add(sizer_buttons, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
@@ -383,6 +387,9 @@ class ImportDicomFrame(wx.Frame):
     def on_cancel(self, evt):
         self.roi_map.import_from_file()  # reload from file, ignore changes
         self.Destroy()
+
+    def on_save_roi_map(self, evt):
+        self.roi_map.write_to_file()
 
     def on_browse(self, evt):
         """
@@ -704,6 +711,7 @@ class ImportDicomFrame(wx.Frame):
 
     def on_import(self, evt):
         if self.parsed_dicom_data and self.dicom_importer.checked_plans:
+            self.roi_map.write_to_file()
             ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
                          self.checkbox_include_uncategorized.GetValue(), self.terminate,
                          self.dicom_importer.other_dicom_files)

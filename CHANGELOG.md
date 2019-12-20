@@ -4,6 +4,8 @@ v0.6.4 (TBD)
 --------------------
  - [Machine Learning] Mean-square error prints in scientific notation if not between 1 and 1000
  - [DICOM Import] Ensure RxParser.fx_count is an integer (GH Issue 18)
+ - [Regressions] Bug fix when removing None and NaN data
+ - [DICOM Importer] Added Save ROI Map button, Importing actually saves ROI map now
 
 
 v0.6.3 (2019.12.15)
