@@ -64,6 +64,13 @@ class DefaultOptions:
         # Options for the time-series plot
         self.CORRELATION_POS_COLOR = 'blue'
         self.CORRELATION_NEG_COLOR = 'green'
+        self.CORRELATION_MATRIX_VARS = ['Beam Area (Mean)', 'Beam Dose (Mean)', 'Beam MU (Mean)',
+                                        'Beam Perimeter (Mean)', 'PTV Cross-Section Median', 'PTV Distance (Centroids)',
+                                        'PTV Distance (Max)', 'PTV Distance (Mean)', 'PTV Distance (Median)',
+                                        'PTV Distance (Min)', 'PTV Max Dose', 'PTV Min Dose', 'PTV Surface Area',
+                                        'PTV Volume', 'Plan Complexity', 'ROI Cross-Section Max',
+                                        'ROI Cross-Section Median', 'ROI Max Dose', 'ROI Mean Dose', 'ROI Min Dose',
+                                        'ROI Surface Area', 'ROI Volume', 'Rx Dose', 'Total Plan MU']
 
         # Options for the time-series plot
         self.TIME_SERIES_CIRCLE_SIZE = 10

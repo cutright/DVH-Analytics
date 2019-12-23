@@ -500,7 +500,7 @@ class PlotCorrelation(Plot):
         self.type = 'correlation'
         self.parent = parent
         self.options = options
-        self.size_factor = (2, 2)
+        self.size_factor = (0.9, 0.8)
 
         self.source = {'pos': ColumnDataSource(data=dict(x=[], y=[], color=[], alpha=[], size=[])),
                        'neg': ColumnDataSource(data=dict(x=[], y=[], color=[], alpha=[], size=[])),
@@ -565,8 +565,8 @@ class PlotCorrelation(Plot):
     def __do_layout(self):
         self.bokeh_layout = column(self.fig)
 
-    def update_plot_data(self, stats_data):
-        source_data, x_factors, y_factors = stats_data.get_corr_matrix_data(self.options)
+    def update_plot_data(self, stats_data, included_vars=None):
+        source_data, x_factors, y_factors = stats_data.get_corr_matrix_data(self.options, included_vars=included_vars)
         self.fig = figure(x_axis_location="above", x_range=x_factors, y_range=y_factors,
                           tools="pan, box_zoom, wheel_zoom, reset, save")
         self.__set_fig_attr()

@@ -254,8 +254,10 @@ class StatsData:
     def set_variable_units(self, variable, units):
         self.data[variable]['units'] = units
 
-    def get_corr_matrix_data(self, options):
-        categories = [c for c in list(self.data) if 'date' not in c.lower()]
+    def get_corr_matrix_data(self, options, included_vars=None):
+        if included_vars is None:
+            included_vars = list(self.data)
+        categories = [c for c in list(self.data) if 'date' not in c.lower() and c in included_vars]
         categories.sort()
         var_count = len(categories)
         categories_for_label = [category.replace("Control Point", "CP") for category in categories]
@@ -273,7 +275,7 @@ class StatsData:
         source_data = {sign: {sk: [] for sk in s_keys} for sign in ['pos', 'neg']}
         source_data['line'] = {'x': [0.5, var_count - 0.5], 'y': [var_count - 0.5, 0.5]}
 
-        max_size = 45
+        max_size = 20
         for x in range(var_count):
             for y in range(var_count):
                 if x > y:

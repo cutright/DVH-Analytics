@@ -600,7 +600,7 @@ class DVHAMainFrame(wx.Frame):
                 self.time_series.update_data(self.dvh, self.data)
                 if self.dvh.count > 1:
                     self.control_chart.update_data(self.dvh, self.stats_data)
-                    self.correlation.update_data(self.stats_data)
+                    self.correlation.update_data()
 
                 self.radbio.update_dvh_data(self.dvh)
 
@@ -679,6 +679,7 @@ class DVHAMainFrame(wx.Frame):
             self.stats_data = StatsData(self.dvh, self.data)
             self.regression.stats_data = self.stats_data
             self.control_chart.stats_data = self.stats_data
+            self.correlation.stats_data = self.stats_data
             try:
                 self.regression.update_combo_box_choices()
             except ValueError:
@@ -812,6 +813,7 @@ class DVHAMainFrame(wx.Frame):
         if self.dvh:
             self.plot.redraw_plot()
             self.time_series.plot.redraw_plot()
+            self.correlation.plot.redraw_plot()
             self.regression.plot.redraw_plot()
             self.control_chart.plot.redraw_plot()
 
