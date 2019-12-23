@@ -502,20 +502,18 @@ class PlotCorrelation(Plot):
         self.options = options
         self.size_factor = (0.9, 0.8)
 
-        self.source = {'pos': ColumnDataSource(data=dict(x=[], y=[], color=[], alpha=[], size=[])),
-                       'neg': ColumnDataSource(data=dict(x=[], y=[], color=[], alpha=[], size=[])),
+        self.source = {'corr': ColumnDataSource(data=dict(x=[], y=[], color=[], alpha=[], size=[])),
                        'line': ColumnDataSource(data=dict(x=[], y=[]))}
 
         self.__add_figure()
         self.__set_fig_attr()
         self.__add_plot_data()
-        self.__add_legend()
         self.__add_hover()
         self.__do_layout()
 
     def __add_figure(self):
         self.fig = figure(plot_width=900, plot_height=700, x_axis_location="above", x_range=[''], y_range=[''],
-                          tools="pan, box_zoom, wheel_zoom, reset, save")
+                          tools="pan, box_zoom, wheel_zoom, reset")
 
     def __set_fig_attr(self):
         self.fig.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
@@ -539,19 +537,8 @@ class PlotCorrelation(Plot):
         self.fig.outline_line_color = None
 
     def __add_plot_data(self):
-        self.pos = self.fig.circle(x='x', y='y', color='color', alpha='alpha', size='size', source=self.source['pos'])
-        self.neg = self.fig.circle(x='x', y='y', color='color', alpha='alpha', size='size', source=self.source['neg'])
+        self.corr = self.fig.circle(x='x', y='y', color='color', alpha='alpha', size='size', source=self.source['corr'])
         self.line = self.fig.line(x='x', y='y', source=self.source['line'])
-
-    def __add_legend(self):
-        # Set the legend
-        legend_corr = Legend(items=[("+r", [self.pos]),
-                                    ("-r", [self.neg])],
-                             location=(0, -575))
-
-        # Add the layout outside the plot, clicking legend item hides the line
-        self.fig.add_layout(legend_corr, 'right')
-        self.fig.legend.click_policy = "hide"
 
     def __add_hover(self):
         self.fig.add_tools(HoverTool(show_arrow=True, line_policy='next',
@@ -568,29 +555,24 @@ class PlotCorrelation(Plot):
     def update_plot_data(self, stats_data, included_vars=None):
         source_data, x_factors, y_factors = stats_data.get_corr_matrix_data(self.options, included_vars=included_vars)
         self.fig = figure(x_axis_location="above", x_range=x_factors, y_range=y_factors,
-                          tools="pan, box_zoom, wheel_zoom, reset, save")
+                          tools="pan, box_zoom, wheel_zoom, reset")
         self.__set_fig_attr()
         self.__add_plot_data()
-        self.__add_legend()
         self.__add_hover()
         self.__do_layout()
         self.set_figure_dimensions()
-        # for key in list(source_data['pos']):
-        #     print(key, len(source_data['pos'][key]))
-        self.source['pos'].data = source_data['pos']
-        self.source['neg'].data = source_data['neg']
-        self.source['line'].data = source_data['line']
 
-        # self.figure.x_range.factors = FactorRange(factors=x_factors)
-        # self.figure.y_range.factors = FactorRange(factors=y_factors)
+        self.source['corr'].data = source_data['corr']
+        self.source['line'].data = source_data['line']
 
         self.update_bokeh_layout_in_wx_python()
 
     def get_csv(self):
-        data = self.source['plot'].data
-        csv_data = ['MRN,Study Instance UID,Date,%s' % self.y_axis_label]
-        for i in range(len(data['mrn'])):
-            csv_data.append(','.join(str(data[key][i]).replace(',', '^') for key in ['mrn', 'uid', 'x', 'y']))
+        data = self.source['corr'].data
+        keys = ['x_name', 'y_name', 'r', 'p', 'x_normality', 'y_normality']
+        csv_data = [','.join(keys)]
+        for i in range(len(data['x'])):
+            csv_data.append(','.join(str(data[key][i]).replace(',', '^') for key in keys))
         return '\n'.join(csv_data)
 
     def set_figure_dimensions(self):

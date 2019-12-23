@@ -146,6 +146,7 @@ class DVHAMainFrame(wx.Frame):
         export_plot = wx.Menu()
         export_dvhs = export_plot.Append(wx.ID_ANY, 'DVHs')
         export_time_series = export_plot.Append(wx.ID_ANY, 'Time Series')
+        export_correlation = export_plot.Append(wx.ID_ANY, 'Correlation')
         export_regression = export_plot.Append(wx.ID_ANY, 'Regression')
         export_control_chart = export_plot.Append(wx.ID_ANY, 'Control Chart')
 
@@ -186,6 +187,7 @@ class DVHAMainFrame(wx.Frame):
 
         self.Bind(wx.EVT_MENU, self.on_save_plot_dvhs, export_dvhs)
         self.Bind(wx.EVT_MENU, self.on_save_plot_time_series, export_time_series)
+        self.Bind(wx.EVT_MENU, self.on_save_plot_correlation, export_correlation)
         self.Bind(wx.EVT_MENU, self.on_save_plot_regression, export_regression)
         self.Bind(wx.EVT_MENU, self.on_save_plot_control_chart, export_control_chart)
         self.Bind(wx.EVT_MENU, self.on_view_dvhs, self.data_menu_items['DVHs'])
@@ -757,6 +759,10 @@ class DVHAMainFrame(wx.Frame):
 
     def on_save_plot_time_series(self, evt):
         save_data_to_file(self, 'Save Time Series plot', self.time_series.plot.html_str,
+                          wildcard="HTML files (*.html)|*.html")
+
+    def on_save_plot_correlation(self, evt):
+        save_data_to_file(self, 'Save Correlation plot', self.correlation.plot.html_str,
                           wildcard="HTML files (*.html)|*.html")
 
     def on_save_plot_regression(self, evt):

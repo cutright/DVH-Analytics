@@ -272,8 +272,8 @@ class StatsData:
         y_factors = categories_for_label[::-1]
 
         s_keys = ['x', 'y', 'x_name', 'y_name', 'color', 'alpha', 'r', 'p', 'size', 'x_normality', 'y_normality']
-        source_data = {sign: {sk: [] for sk in s_keys} for sign in ['pos', 'neg']}
-        source_data['line'] = {'x': [0.5, var_count - 0.5], 'y': [var_count - 0.5, 0.5]}
+        source_data = {'corr': {sk: [] for sk in s_keys},
+                       'line': {'x': [0.5, var_count - 0.5], 'y': [var_count - 0.5, 0.5]}}
 
         max_size = 20
         for x in range(var_count):
@@ -291,29 +291,25 @@ class StatsData:
                         r, p_value = scipy_stats.pearsonr(x_data, y_data)
                     else:
                         r, p_value = 0, 0
-
-                    sign = ['neg', 'pos'][r >= 0]
-
-                    color = getattr(options, 'CORRELATION_%s_COLOR' % sign.upper())
-                    source_data[sign]['color'].append(color)
-
                     if np.isnan(r):
                         r = 0
 
-                    source_data[sign]['r'].append(r)
-                    source_data[sign]['p'].append(p_value)
-                    source_data[sign]['alpha'].append(abs(r))
-                    source_data[sign]['size'].append(max_size * abs(r))
-                    source_data[sign]['x'].append(x + 0.5)  # 0.5 offset due to bokeh 0.12.9 bug
-                    source_data[sign]['y'].append(var_count - y - 0.5)  # 0.5 offset due to bokeh 0.12.9 bug
-                    source_data[sign]['x_name'].append(categories_for_label[x])
-                    source_data[sign]['y_name'].append(categories_for_label[y])
+                    sign = ['neg', 'pos'][r >= 0]
+                    color = getattr(options, 'CORRELATION_%s_COLOR' % sign.upper())
+                    source_data['corr']['color'].append(color)
+                    source_data['corr']['r'].append(r)
+                    source_data['corr']['p'].append(p_value)
+                    source_data['corr']['alpha'].append(abs(r))
+                    source_data['corr']['size'].append(max_size * abs(r))
+                    source_data['corr']['x'].append(x + 0.5)  # 0.5 offset due to bokeh 0.12.9 bug
+                    source_data['corr']['y'].append(var_count - y - 0.5)  # 0.5 offset due to bokeh 0.12.9 bug
+                    source_data['corr']['x_name'].append(categories_for_label[x])
+                    source_data['corr']['y_name'].append(categories_for_label[y])
 
                     x_norm, x_p = scipy_stats.normaltest(x_data)
                     y_norm, y_p = scipy_stats.normaltest(y_data)
-
-                    source_data[sign]['x_normality'].append(x_p)
-                    source_data[sign]['y_normality'].append(y_p)
+                    source_data['corr']['x_normality'].append(x_p)
+                    source_data['corr']['y_normality'].append(y_p)
 
         return source_data, x_factors, y_factors
 

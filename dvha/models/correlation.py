@@ -43,11 +43,13 @@ class CorrelationFrame:
     def __define_gui_objects(self):
         self.button_var_select = wx.Button(self.parent, wx.ID_ANY, 'Select Variables')
         self.button_var_default = wx.Button(self.parent, wx.ID_ANY, 'Default Variables')
+        self.button_export_csv = wx.Button(self.parent, wx.ID_ANY, 'Export')
         self.plot = PlotCorrelation(self.parent, self.options)
 
     def __do_bind(self):
         self.parent.Bind(wx.EVT_BUTTON, self.on_var_select, id=self.button_var_select.GetId())
         self.parent.Bind(wx.EVT_BUTTON, self.on_var_default, id=self.button_var_default.GetId())
+        self.parent.Bind(wx.EVT_BUTTON, self.export_csv, id=self.button_export_csv.GetId())
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -56,6 +58,7 @@ class CorrelationFrame:
 
         sizer_buttons.Add(self.button_var_select, 0, wx.RIGHT, 5)
         sizer_buttons.Add(self.button_var_default, 0, wx.RIGHT, 5)
+        sizer_buttons.Add(self.button_export_csv, 0, wx.RIGHT, 5)
 
         sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
 
