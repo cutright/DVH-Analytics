@@ -14,7 +14,7 @@ import wx.html2
 from bokeh.plotting import figure
 from bokeh.io.export import get_layout_html
 from bokeh.models import Legend, HoverTool, ColumnDataSource, DataTable, TableColumn,\
-    NumberFormatter, Div, Range1d, LabelSet
+    NumberFormatter, Div, Range1d, LabelSet, FactorRange
 from bokeh.layouts import column, row
 from bokeh.palettes import Colorblind8 as palette
 import itertools
@@ -25,6 +25,7 @@ from dvha.tools.errors import PlottingMemoryError
 from dvha.tools.utilities import collapse_into_single_dates, moving_avg, is_windows
 from dvha.tools.stats import MultiVariableRegression, get_control_limits
 from dvha.paths import TEMP_DIR
+from math import pi
 
 
 DEFAULT_TOOLS = "pan,box_zoom,crosshair,reset"
@@ -482,6 +483,120 @@ class PlotTimeSeries(Plot):
         self.histogram.plot_width = int(self.size_factor['hist'][0] * float(panel_width))
         self.histogram.plot_height = int(self.size_factor['hist'][1] * float(panel_height))
         self.div.width = int(self.size_factor['plot'][0] * float(panel_width))
+
+
+class PlotCorrelation(Plot):
+    """
+    Generate plot for Correlation tab
+    """
+    def __init__(self, parent, options):
+        """
+        :param parent: the wx UI object where the plot will be displayed
+        :param options: user preferences
+        :type options: Options
+        """
+        Plot.__init__(self, parent, options)
+
+        self.type = 'correlation'
+        self.parent = parent
+        self.options = options
+        self.size_factor = (2, 2)
+
+        self.source = {'pos': ColumnDataSource(data=dict(x=[], y=[], color=[], alpha=[], size=[])),
+                       'neg': ColumnDataSource(data=dict(x=[], y=[], color=[], alpha=[], size=[])),
+                       'line': ColumnDataSource(data=dict(x=[], y=[]))}
+
+        self.__add_figure()
+        self.__set_fig_attr()
+        self.__add_plot_data()
+        self.__add_legend()
+        self.__add_hover()
+        self.__do_layout()
+
+    def __add_figure(self):
+        self.fig = figure(plot_width=900, plot_height=700, x_axis_location="above", x_range=[''], y_range=[''],
+                          tools="pan, box_zoom, wheel_zoom, reset, save")
+
+    def __set_fig_attr(self):
+        self.fig.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.fig.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.fig.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.fig.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.fig.min_border_left = 175
+        self.fig.min_border_top = 130
+        self.fig.xaxis.major_label_orientation = pi / 4
+        self.fig.toolbar.active_scroll = "auto"
+        self.fig.title.align = 'center'
+        self.fig.title.text_font_style = "italic"
+        self.fig.xaxis.axis_line_color = None
+        self.fig.xaxis.major_tick_line_color = None
+        self.fig.xaxis.minor_tick_line_color = None
+        self.fig.xgrid.grid_line_color = None
+        self.fig.ygrid.grid_line_color = None
+        self.fig.yaxis.axis_line_color = None
+        self.fig.yaxis.major_tick_line_color = None
+        self.fig.yaxis.minor_tick_line_color = None
+        self.fig.outline_line_color = None
+
+    def __add_plot_data(self):
+        self.pos = self.fig.circle(x='x', y='y', color='color', alpha='alpha', size='size', source=self.source['pos'])
+        self.neg = self.fig.circle(x='x', y='y', color='color', alpha='alpha', size='size', source=self.source['neg'])
+        self.line = self.fig.line(x='x', y='y', source=self.source['line'])
+
+    def __add_legend(self):
+        # Set the legend
+        legend_corr = Legend(items=[("+r", [self.pos]),
+                                    ("-r", [self.neg])],
+                             location=(0, -575))
+
+        # Add the layout outside the plot, clicking legend item hides the line
+        self.fig.add_layout(legend_corr, 'right')
+        self.fig.legend.click_policy = "hide"
+
+    def __add_hover(self):
+        self.fig.add_tools(HoverTool(show_arrow=True, line_policy='next',
+                                     tooltips=[('x', '@x_name'),
+                                               ('y', '@y_name'),
+                                               ('r', '@r'),
+                                               ('p', '@p'),
+                                               ('Norm p-value x', '@x_normality{0.4f}'),
+                                               ('Norm p-value y', '@y_normality{0.4f}')], ))
+
+    def __do_layout(self):
+        self.bokeh_layout = column(self.fig)
+
+    def update_plot_data(self, stats_data):
+        source_data, x_factors, y_factors = stats_data.get_corr_matrix_data(self.options)
+        self.fig = figure(x_axis_location="above", x_range=x_factors, y_range=y_factors,
+                          tools="pan, box_zoom, wheel_zoom, reset, save")
+        self.__set_fig_attr()
+        self.__add_plot_data()
+        self.__add_legend()
+        self.__add_hover()
+        self.__do_layout()
+        self.set_figure_dimensions()
+        # for key in list(source_data['pos']):
+        #     print(key, len(source_data['pos'][key]))
+        self.source['pos'].data = source_data['pos']
+        self.source['neg'].data = source_data['neg']
+        self.source['line'].data = source_data['line']
+
+        # self.figure.x_range.factors = FactorRange(factors=x_factors)
+        # self.figure.y_range.factors = FactorRange(factors=y_factors)
+
+        self.update_bokeh_layout_in_wx_python()
+
+    def get_csv(self):
+        data = self.source['plot'].data
+        csv_data = ['MRN,Study Instance UID,Date,%s' % self.y_axis_label]
+        for i in range(len(data['mrn'])):
+            csv_data.append(','.join(str(data[key][i]).replace(',', '^') for key in ['mrn', 'uid', 'x', 'y']))
+        return '\n'.join(csv_data)
+
+    def set_figure_dimensions(self):
+        panel_width, panel_height = self.parent.GetSize()
+        self.fig.plot_width = int(self.size_factor[0] * float(panel_width))
+        self.fig.plot_height = int(self.size_factor[1] * float(panel_height))
 
 
 class PlotRegression(Plot):

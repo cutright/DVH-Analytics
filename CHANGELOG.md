@@ -9,6 +9,7 @@ v0.6.4 (TBD)
  - [Regressions] MS Windows only, if multiple dependent variables were defined, each new view displayed the same bokeh 
     layout. The following Machine Learning windows had the correct data. Fixed by including dependent variable name 
     html file name for multi-variable_regression. Did not affect other OSs because html files are stored only for MSW.
+ - [Correlation] New tab added showing a correlation matrix
 
 
 v0.6.3 (2019.12.15)

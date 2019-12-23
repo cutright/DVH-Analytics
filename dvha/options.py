@@ -62,6 +62,10 @@ class DefaultOptions:
         self.STATS_MIN_ALPHA = 1
 
         # Options for the time-series plot
+        self.CORRELATION_POS_COLOR = 'blue'
+        self.CORRELATION_NEG_COLOR = 'green'
+
+        # Options for the time-series plot
         self.TIME_SERIES_CIRCLE_SIZE = 10
         self.TIME_SERIES_CIRCLE_ALPHA = 0.3
         self.TIME_SERIES_TREND_LINE_WIDTH = 1

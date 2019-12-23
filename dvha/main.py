@@ -28,6 +28,7 @@ from dvha.models.endpoint import EndpointFrame
 from dvha.models.queried_data import QueriedDataFrame
 from dvha.models.rad_bio import RadBioFrame
 from dvha.models.time_series import TimeSeriesFrame
+from dvha.models.correlation import CorrelationFrame
 from dvha.models.regression import RegressionFrame
 from dvha.models.control_chart import ControlChartFrame
 from dvha.models.roi_map import ROIMapFrame
@@ -213,7 +214,8 @@ class DVHAMainFrame(wx.Frame):
         self.button_query_execute = wx.Button(self, wx.ID_ANY, "Query and Retrieve")
 
         self.notebook_main_view = wx.Notebook(self, wx.ID_ANY)
-        self.tab_keys = ['Welcome', 'DVHs', 'Endpoints', 'Rad Bio', 'Time Series', 'Regression', 'Control Chart']
+        self.tab_keys = ['Welcome', 'DVHs', 'Endpoints', 'Rad Bio', 'Time Series',
+                         'Correlation', 'Regression', 'Control Chart']
         self.notebook_tab = {key: wx.Panel(self.notebook_main_view, wx.ID_ANY) for key in self.tab_keys}
 
         self.text_summary = wx.StaticText(self, wx.ID_ANY, "", style=wx.ALIGN_LEFT)
@@ -262,6 +264,7 @@ class DVHAMainFrame(wx.Frame):
     def __add_notebook_frames(self):
         self.plot = PlotStatDVH(self.notebook_tab['DVHs'], self.dvh, self.options)
         self.time_series = TimeSeriesFrame(self.notebook_tab['Time Series'], self.dvh, self.data, self.options)
+        self.correlation = CorrelationFrame(self.notebook_tab['Correlation'], self.stats_data, self.options)
         self.regression = RegressionFrame(self.notebook_tab['Regression'], self.stats_data, self.options)
         self.control_chart = ControlChartFrame(self.notebook_tab['Control Chart'], self.dvh, self.stats_data,
                                                self.options)
@@ -336,6 +339,10 @@ class DVHAMainFrame(wx.Frame):
         sizer_time_series = wx.BoxSizer(wx.VERTICAL)
         sizer_time_series.Add(self.time_series.layout, 1, wx.EXPAND | wx.ALL, 25)
         self.notebook_tab['Time Series'].SetSizer(sizer_time_series)
+
+        sizer_correlation = wx.BoxSizer(wx.VERTICAL)
+        sizer_correlation.Add(self.correlation.layout, 1, wx.EXPAND | wx.ALL, 25)
+        self.notebook_tab['Correlation'].SetSizer(sizer_correlation)
 
         sizer_regression = wx.BoxSizer(wx.VERTICAL)
         sizer_regression.Add(self.regression.layout, 1, wx.EXPAND | wx.ALL, 25)
@@ -593,6 +600,7 @@ class DVHAMainFrame(wx.Frame):
                 self.time_series.update_data(self.dvh, self.data)
                 if self.dvh.count > 1:
                     self.control_chart.update_data(self.dvh, self.stats_data)
+                    self.correlation.update_data(self.stats_data)
 
                 self.radbio.update_dvh_data(self.dvh)
 

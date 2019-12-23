@@ -135,10 +135,11 @@ class StatsSpreadsheet(Spreadsheet):
             label = self.GetCellValue(0, col+2)
             if label:
                 if label not in list(self.stats_data.data):
-                    self.stats_data.data[label] = {'units': 'Unknown', 'values': ['None'] * (self.GetNumberRows()-1)}
+                    values = ['None'] * (self.GetNumberRows()-1)
+                    self.stats_data.add_variable(label, values)
                     self.parent.time_series.add_custom_data(label, self.get_custom_time_series_data(col+2))
-                for row in range(self.GetNumberRows()-1):
-                    self.stats_data.data[label]['values'][row] = self.convert_value(row+1, col+2)
+                data = [self.convert_value(row+1, col+2) for row in range(self.GetNumberRows()-1)]
+                self.stats_data.set_variable_data(label, data)
         self.parent.update_chart_models()
 
     def get_column_data(self, column):

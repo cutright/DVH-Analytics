@@ -13,7 +13,7 @@ in Regression and Control Chart tabs
 #    available at https://github.com/cutright/DVH-Analytics
 
 import numpy as np
-from scipy import stats
+from scipy import stats as scipy_stats
 from sklearn import linear_model
 from sklearn.metrics import mean_squared_error, r2_score
 from regressors import stats as regressors_stats
@@ -232,6 +232,89 @@ class StatsData:
             return X, y
         return X, y, mrn, uid, dates
 
+    def add_variable(self, variable, values, units='Unknown'):
+        if variable not in list(self.data):
+            self.data[variable] = {'units': units, 'values': values}
+        if variable not in self.correlation_variables:
+            self.correlation_variables.append(variable)
+            self.correlation_variables.sort()
+
+    def del_variable(self, variable):
+        if variable in list(self.data):
+            self.data.pop(variable)
+        if variable in self.correlation_variables:
+            index = self.correlation_variables.index(variable)
+            self.correlation_variables.pop(index)
+
+    def set_variable_data(self, variable, data, units=None):
+        self.data[variable]['values'] = data
+        if units is not None:
+            self.data[variable]['units'] = units
+
+    def set_variable_units(self, variable, units):
+        self.data[variable]['units'] = units
+
+    def get_corr_matrix_data(self, options):
+        categories = [c for c in list(self.data) if 'date' not in c.lower()]
+        categories.sort()
+        var_count = len(categories)
+        categories_for_label = [category.replace("Control Point", "CP") for category in categories]
+        categories_for_label = [category.replace("control point", "CP") for category in categories_for_label]
+        categories_for_label = [category.replace("Distance", "Dist") for category in categories_for_label]
+
+        for i, category in enumerate(categories_for_label):
+            if category.startswith('DVH'):
+                categories_for_label[i] = category.split("DVH Endpoint: ")[1]
+
+        x_factors = categories_for_label
+        y_factors = categories_for_label[::-1]
+
+        s_keys = ['x', 'y', 'x_name', 'y_name', 'color', 'alpha', 'r', 'p', 'size', 'x_normality', 'y_normality']
+        source_data = {sign: {sk: [] for sk in s_keys} for sign in ['pos', 'neg']}
+        source_data['line'] = {'x': [0.5, var_count - 0.5], 'y': [var_count - 0.5, 0.5]}
+
+        max_size = 45
+        for x in range(var_count):
+            for y in range(var_count):
+                if x > y:
+
+                    bad_indices = [i for i, v in enumerate(self.data[categories[x]]['values']) if type(v) is str]
+                    bad_indices.extend([i for i, v in enumerate(self.data[categories[y]]['values']) if type(v) is str])
+                    bad_indices = list(set(bad_indices))
+
+                    x_data = [v for i, v in enumerate(self.data[categories[x]]['values']) if i not in bad_indices]
+                    y_data = [v for i, v in enumerate(self.data[categories[y]]['values']) if i not in bad_indices]
+
+                    if x_data and len(x_data) == len(y_data):
+                        r, p_value = scipy_stats.pearsonr(x_data, y_data)
+                    else:
+                        r, p_value = 0, 0
+
+                    sign = ['neg', 'pos'][r >= 0]
+
+                    color = getattr(options, 'CORRELATION_%s_COLOR' % sign.upper())
+                    source_data[sign]['color'].append(color)
+
+                    if np.isnan(r):
+                        r = 0
+
+                    source_data[sign]['r'].append(r)
+                    source_data[sign]['p'].append(p_value)
+                    source_data[sign]['alpha'].append(abs(r))
+                    source_data[sign]['size'].append(max_size * abs(r))
+                    source_data[sign]['x'].append(x + 0.5)  # 0.5 offset due to bokeh 0.12.9 bug
+                    source_data[sign]['y'].append(var_count - y - 0.5)  # 0.5 offset due to bokeh 0.12.9 bug
+                    source_data[sign]['x_name'].append(categories_for_label[x])
+                    source_data[sign]['y_name'].append(categories_for_label[y])
+
+                    x_norm, x_p = scipy_stats.normaltest(x_data)
+                    y_norm, y_p = scipy_stats.normaltest(y_data)
+
+                    source_data[sign]['x_normality'].append(x_p)
+                    source_data[sign]['y_normality'].append(y_p)
+
+        return source_data, x_factors, y_factors
+
 
 def get_index_of_nan(numpy_array):
     bad_indices = []
@@ -276,7 +359,7 @@ def get_p_values(X, y, predictions, params):
     sd_b = np.sqrt(var_b)
     ts_b = params / sd_b
 
-    return [2 * (1 - stats.t.cdf(np.abs(i), (len(newX) - 1))) for i in ts_b], sd_b, ts_b
+    return [2 * (1 - scipy_stats.t.cdf(np.abs(i), (len(newX) - 1))) for i in ts_b], sd_b, ts_b
 
 
 class MultiVariableRegression:
@@ -306,7 +389,7 @@ class MultiVariableRegression:
 
         self.residuals = np.subtract(y, self.predictions)
 
-        self.norm_prob_plot = stats.probplot(self.residuals, dist='norm', fit=False, plot=None, rvalue=False)
+        self.norm_prob_plot = scipy_stats.probplot(self.residuals, dist='norm', fit=False, plot=None, rvalue=False)
 
         reg_prob = linear_model.LinearRegression()
         reg_prob.fit([[val] for val in self.norm_prob_plot[0]], self.norm_prob_plot[1])
@@ -320,14 +403,18 @@ class MultiVariableRegression:
         self.df_error = len(X[:, 0]) - len(X[0, :]) - 1
         self.df_model = len(X[0, :])
 
-        self.f_p_value = stats.f.cdf(self.f_stat, self.df_model, self.df_error)
+        self.f_p_value = scipy_stats.f.cdf(self.f_stat, self.df_model, self.df_error)
 
 
-def get_control_limits(y):
+def get_control_limits(y, scalar_d=1.128, std_devs=3):
     """
     Calculate control limits for Control Chart
     :param y: data
     :type y: list
+    :param scalar_d: ask Arka
+    :type scalar_d: float
+    :param std_devs: values greater than std_devs away are out-of-control
+    :type std_devs: int or float
     :return: center line, upper control limit, and lower control limit
     """
     y = np.array(y)
@@ -335,9 +422,7 @@ def get_control_limits(y):
     center_line = np.mean(y)
     avg_moving_range = np.mean(np.absolute(np.diff(y)))
 
-    scalar_d = 1.128
-
-    ucl = center_line + 3 * avg_moving_range / scalar_d
-    lcl = center_line - 3 * avg_moving_range / scalar_d
+    ucl = center_line + std_devs * avg_moving_range / scalar_d
+    lcl = center_line - std_devs * avg_moving_range / scalar_d
 
     return center_line, ucl, lcl
