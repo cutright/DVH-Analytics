@@ -165,13 +165,19 @@ class PlotStatDVH(Plot):
 
         self.options = options
         self.dvh = dvh
-        self.source = {'dvh': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], roi_name=[], roi_type=[],
+        self.dvh_2 = None
+        self.source = {'dvh': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], roi_name=[], roi_type=[], group=[],
                                                          x_dose=[], volume=[], min_dose=[], mean_dose=[], max_dose=[])),
                        'stats': ColumnDataSource(data=dict(x=[], min=[], mean=[], median=[], max=[], mrn=[])),
-                       'patch': ColumnDataSource(data=dict(x=[], y1=[], y2=[]))}
+                       'patch': ColumnDataSource(data=dict(x=[], y1=[], y2=[])),
+                       'stats_2': ColumnDataSource(data=dict(x=[], min=[], mean=[], median=[], max=[], mrn=[])),
+                       'patch_2': ColumnDataSource(data=dict(x=[], y1=[], y2=[]))
+                       }
         self.layout_done = False
         self.stat_dvhs = {key: np.array(0) for key in ['min', 'q1', 'mean', 'median', 'q3', 'max']}
+        self.stat_dvhs_2 = {key: np.array(0) for key in ['min', 'q1', 'mean', 'median', 'q3', 'max']}
         self.x = []
+        self.x_2 = []
 
         self.__add_plot_data()
         self.__add_hover()
@@ -201,6 +207,10 @@ class PlotStatDVH(Plot):
                                                     line_width=self.options.DVH_LINE_WIDTH, alpha=0,
                                                     line_dash=self.options.DVH_LINE_DASH,
                                                     nonselection_alpha=0, selection_alpha=1)
+        # self.dvhs_renderer_2 = self.figure.multi_line('x', 'y', source=self.source['dvh'], selection_color='color',
+        #                                               line_width=self.options.DVH_LINE_WIDTH, alpha=0,
+        #                                               line_dash=self.options.DVH_LINE_DASH,
+        #                                               nonselection_alpha=0, selection_alpha=1)
 
         # Add statistical plots to figure
         self.stats_max = self.figure.line('x', 'max', source=self.source['stats'],
@@ -218,9 +228,29 @@ class PlotStatDVH(Plot):
                                           line_width=self.options.STATS_MIN_LINE_WIDTH, color=self.options.PLOT_COLOR,
                                           line_dash=self.options.STATS_MIN_LINE_DASH, alpha=self.options.STATS_MIN_ALPHA)
 
+        self.stats_max_2 = self.figure.line('x', 'max', source=self.source['stats_2'],
+                                            line_width=self.options.STATS_MAX_LINE_WIDTH, color=self.options.PLOT_COLOR_2,
+                                            line_dash=self.options.STATS_MAX_LINE_DASH,
+                                            alpha=self.options.STATS_MAX_ALPHA)
+        self.stats_median_2 = self.figure.line('x', 'median', source=self.source['stats_2'],
+                                               line_width=self.options.STATS_MEDIAN_LINE_WIDTH,
+                                               color=self.options.PLOT_COLOR_2,
+                                               line_dash=self.options.STATS_MEDIAN_LINE_DASH,
+                                               alpha=self.options.STATS_MEDIAN_ALPHA)
+        self.stats_mean_2 = self.figure.line('x', 'mean', source=self.source['stats_2'],
+                                             line_width=self.options.STATS_MEAN_LINE_WIDTH,
+                                             color=self.options.PLOT_COLOR_2, line_dash=self.options.STATS_MEAN_LINE_DASH,
+                                             alpha=self.options.STATS_MEAN_ALPHA)
+        self.stats_min_2 = self.figure.line('x', 'min', source=self.source['stats_2'],
+                                            line_width=self.options.STATS_MIN_LINE_WIDTH, color=self.options.PLOT_COLOR_2,
+                                            line_dash=self.options.STATS_MIN_LINE_DASH,
+                                            alpha=self.options.STATS_MIN_ALPHA)
+
         # Shaded region between Q1 and Q3
         self.iqr = self.figure.varea('x', 'y1', 'y2', source=self.source['patch'], alpha=self.options.IQR_ALPHA,
                                      color=self.options.PLOT_COLOR)
+        self.iqr_2 = self.figure.varea('x', 'y1', 'y2', source=self.source['patch_2'], alpha=self.options.IQR_ALPHA,
+                                       color=self.options.PLOT_COLOR_2)
 
     def __add_legend(self):
         # Set the legend (for stat dvhs only)
@@ -228,7 +258,13 @@ class PlotStatDVH(Plot):
                                      ("Median  ", [self.stats_median]),
                                      ("Mean  ", [self.stats_mean]),
                                      ("Min  ", [self.stats_min]),
-                                     ("IQR  ", [self.iqr])],
+                                     ("IQR  ", [self.iqr]),
+                                     ("Max 2 ", [self.stats_max_2]),
+                                     ("Median 2 ", [self.stats_median_2]),
+                                     ("Mean 2 ", [self.stats_mean_2]),
+                                     ("Min 2 ", [self.stats_min_2]),
+                                     ("IQR 2 ", [self.iqr_2])
+                                     ],
                               orientation='horizontal')
 
         # Add the layout outside the plot, clicking legend item hides the line
@@ -272,9 +308,10 @@ class PlotStatDVH(Plot):
         # Add additional data to dvh data
         data['dvh']['x'] = dvh.x_data
         data['dvh']['y'] = dvh.y_data
-        data['dvh']['mrn'] = dvh.mrn
-        data['dvh']['roi_name'] = dvh.roi_name
+        # data['dvh']['mrn'] = dvh.mrn
+        # data['dvh']['roi_name'] = dvh.roi_name
         data['dvh']['color'] = [color for j, color in zip(range(dvh.count), itertools.cycle(palette))]
+        data['dvh']['group'] = [1] * len(dvh.x_data)
 
         # Add x-axis to stats dvhs
         data['stats']['x'] = self.x
@@ -285,6 +322,44 @@ class PlotStatDVH(Plot):
 
         self.figure.xaxis.axis_label = 'Dose (cGy)'
         self.figure.yaxis.axis_label = 'Relative Volume'
+
+        self.update_bokeh_layout_in_wx_python()
+
+    def update_plot_2(self, dvh_2):
+
+        # self.set_figure_dimensions()
+
+        # self.clear_sources()
+        self.dvh_2 = dvh_2
+        self.x_2 = list(range(dvh_2.bin_count))
+        self.stat_dvhs_2 = dvh_2.get_standard_stat_dvh()
+
+        data = {'dvh': self.source['dvh'].data,
+                'dvh_2': dvh_2.get_cds_data(),
+                'stats_2': {key: self.stat_dvhs_2[key] for key in ['max', 'median', 'mean', 'min']},
+                'patch_2': {'x': self.x_2, 'y1': self.stat_dvhs_2['q3'], 'y2': self.stat_dvhs_2['q1']}}
+
+        # Add additional data to dvh data
+        for key, value in data['dvh_2'].items():
+            data['dvh'][key].extend(value)
+
+        data['dvh']['x'].extend(dvh_2.x_data)
+        data['dvh']['y'].extend(dvh_2.y_data)
+        # data['dvh']['mrn'].extend(dvh_2.mrn)
+        # data['dvh']['roi_name'].extend(dvh_2.roi_name)
+        data['dvh']['color'].extend([color for j, color in zip(range(dvh_2.count), itertools.cycle(palette))])
+        data['dvh']['group'].extend([2] * len(dvh_2.x_data))
+
+        # Add x-axis to stats dvhs
+        data['stats_2']['x'] = self.x_2
+
+        # update bokeh CDS
+        for key, obj in data.items():
+            if key != 'dvh_2':
+                self.source[key].data = obj
+
+        # self.figure.xaxis.axis_label = 'Dose (cGy)'
+        # self.figure.yaxis.axis_label = 'Relative Volume'
 
         self.update_bokeh_layout_in_wx_python()
 

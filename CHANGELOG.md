@@ -10,6 +10,8 @@ v0.6.4 (TBD)
     layout. The following Machine Learning windows had the correct data. Fixed by including dependent variable name 
     html file name for multi-variable_regression. Did not affect other OSs because html files are stored only for MSW.
  - [Correlation] New tab added showing a correlation matrix
+ - [Database Editor] Fix for GH Issue 19
+ - [Query] Query Groups are back! (IN PROGRESS: only DVHs update currently, must have group 1 queried)
 
 
 v0.6.3 (2019.12.15)

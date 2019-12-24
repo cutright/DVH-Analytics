@@ -31,6 +31,7 @@ class DefaultOptions:
 
         # These colors propagate to all tabs that visualize your two groups
         self.PLOT_COLOR = 'blue'
+        self.PLOT_COLOR_2 = 'red'
 
         # The line width and style of selected DVHs in the DVH plot
         self.DVH_LINE_WIDTH = 2

@@ -61,6 +61,10 @@ class DVHAMainFrame(wx.Frame):
         self.stats_data = None
         self.save_data = {}
 
+        self.dvh_2 = None
+        self.data_2 = {key: None for key in ['Plans', 'Beams', 'Rxs']}
+        self.stats_data_2 = None
+
         self.toolbar_keys = ['Open', 'Close', 'Save', 'Export', 'Import', 'Database', 'ROI Map', 'Settings']
         self.toolbar_ids = {key: i + 1000 for i, key in enumerate(self.toolbar_keys)}
 
@@ -77,10 +81,18 @@ class DVHAMainFrame(wx.Frame):
         # TODO: Need a method to address multiple users editing roi_map at the same time
         self.roi_map = DatabaseROIs()
 
+        self.query_filters = {key: None for key in [0, 1]}
+
         self.__add_menubar()
         self.__add_tool_bar()
         self.__add_layout_objects()
         self.__bind_layout_objects()
+
+        columns = {'categorical': ['category_1', 'category_2', 'Filter Type'],
+                   'numerical': ['category', 'min', 'max', 'Filter Type']}
+        self.data_table_categorical = DataTable(self.table_categorical, columns=columns['categorical'])
+        self.data_table_numerical = DataTable(self.table_numerical, columns=columns['numerical'])
+
         self.__set_properties()
         self.__set_tooltips()
         self.__add_notebook_frames()
@@ -90,11 +102,6 @@ class DVHAMainFrame(wx.Frame):
         self.disable_query_buttons('numerical')
         self.button_query_execute.Disable()
         self.__disable_notebook_tabs()
-
-        columns = {'categorical': ['category_1', 'category_2', 'Filter Type'],
-                   'numerical': ['category', 'min', 'max', 'Filter Type']}
-        self.data_table_categorical = DataTable(self.table_categorical, columns=columns['categorical'])
-        self.data_table_numerical = DataTable(self.table_numerical, columns=columns['numerical'])
 
         self.Bind(wx.EVT_CLOSE, self.on_quit)
 
@@ -213,6 +220,7 @@ class DVHAMainFrame(wx.Frame):
         self.table_categorical = wx.ListCtrl(self, wx.ID_ANY, style=wx.BORDER_SUNKEN | wx.LC_REPORT)
         self.table_numerical = wx.ListCtrl(self, wx.ID_ANY, style=wx.BORDER_SUNKEN | wx.LC_REPORT)
 
+        self.radio_button_query_group = wx.RadioBox(self, wx.ID_ANY, 'Query Group', choices=['1', '2'])
         self.button_query_execute = wx.Button(self, wx.ID_ANY, "Query and Retrieve")
 
         self.notebook_main_view = wx.Notebook(self, wx.ID_ANY)
@@ -235,6 +243,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.edit_row_numerical, id=self.button_numerical['edit'].GetId())
         self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.doubleclick_numerical, self.table_numerical)
 
+        self.Bind(wx.EVT_RADIOBOX, self.on_group_select, id=self.radio_button_query_group.GetId())
         self.Bind(wx.EVT_BUTTON, self.exec_query_button, id=self.button_query_execute.GetId())
 
         self.Bind(wx.EVT_SIZE, self.on_resize)
@@ -244,14 +253,18 @@ class DVHAMainFrame(wx.Frame):
 
         self.frame_toolbar.Realize()
 
-        self.table_categorical.AppendColumn("Category1", format=wx.LIST_FORMAT_LEFT, width=180)
-        self.table_categorical.AppendColumn("Category2", format=wx.LIST_FORMAT_LEFT, width=150)
-        self.table_categorical.AppendColumn("Filter Type", format=wx.LIST_FORMAT_LEFT, width=80)
+        widths = [180, 150, 80]
+        self.table_categorical.AppendColumn("Category1", format=wx.LIST_FORMAT_LEFT, width=widths[0])
+        self.table_categorical.AppendColumn("Category2", format=wx.LIST_FORMAT_LEFT, width=widths[1])
+        self.table_categorical.AppendColumn("Filter Type", format=wx.LIST_FORMAT_LEFT, width=widths[2])
+        self.data_table_categorical.widths = widths
 
-        self.table_numerical.AppendColumn("Category", format=wx.LIST_FORMAT_LEFT, width=150)
-        self.table_numerical.AppendColumn("Min", format=wx.LIST_FORMAT_LEFT, width=90)
-        self.table_numerical.AppendColumn("Max", format=wx.LIST_FORMAT_LEFT, width=90)
-        self.table_numerical.AppendColumn("Filter Type", format=wx.LIST_FORMAT_LEFT, width=80)
+        widths = [150, 90, 90, 80]
+        self.table_numerical.AppendColumn("Category", format=wx.LIST_FORMAT_LEFT, width=widths[0])
+        self.table_numerical.AppendColumn("Min", format=wx.LIST_FORMAT_LEFT, width=widths[1])
+        self.table_numerical.AppendColumn("Max", format=wx.LIST_FORMAT_LEFT, width=widths[2])
+        self.table_numerical.AppendColumn("Filter Type", format=wx.LIST_FORMAT_LEFT, width=widths[3])
+        self.data_table_numerical.widths = widths
 
     def __set_tooltips(self):
         self.button_categorical['add'].SetToolTip("Add a categorical data filter.")
@@ -285,6 +298,7 @@ class DVHAMainFrame(wx.Frame):
 
         sizer_categorical_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_numerical_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_query_exec_buttons = wx.BoxSizer(wx.HORIZONTAL)
 
         for key in ['add', 'del', 'edit']:
             sizer_categorical_buttons.Add(self.button_categorical[key], 0, wx.ALL, 5)
@@ -294,14 +308,16 @@ class DVHAMainFrame(wx.Frame):
         sizer_query_categorical.Add(self.table_categorical, 1, wx.ALL | wx.EXPAND, 10)
 
         sizer_query_numerical.Add(sizer_numerical_buttons, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_query_numerical.Add(self.table_numerical, 1, wx.ALL | wx.EXPAND, 10)
+        sizer_query_numerical.Add(self.table_numerical, 1, wx.TOP | wx.LEFT | wx.RIGHT | wx.EXPAND, 10)
 
         sizer_summary.Add(self.text_summary)
 
         panel_left = wx.BoxSizer(wx.VERTICAL)
         panel_left.Add(sizer_query_categorical, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.SHAPED | wx.TOP, 5)
         panel_left.Add(sizer_query_numerical, 0, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT | wx.SHAPED, 5)
-        panel_left.Add(self.button_query_execute, 0, wx.ALIGN_CENTER | wx.LEFT | wx.RIGHT, 15)
+        sizer_query_exec_buttons.Add(self.radio_button_query_group, 0, 0, 0)
+        sizer_query_exec_buttons.Add(self.button_query_execute, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER, 10)
+        panel_left.Add(sizer_query_exec_buttons, 0, wx.EXPAND | wx.ALIGN_CENTER | wx.RIGHT | wx.LEFT, 5)
         panel_left.Add(sizer_summary, 1, wx.ALL | wx.EXPAND, 5)
 
         bitmap_logo = wx.StaticBitmap(self.notebook_tab['Welcome'], wx.ID_ANY,
@@ -564,7 +580,7 @@ class DVHAMainFrame(wx.Frame):
 
     def exec_query_button(self, evt):
         # TODO: Thread this process
-        self.exec_query()
+        [self.exec_query, self.exec_query_2][self.radio_button_query_group.GetSelection()]()
 
     def exec_query(self, load_saved_dvh_data=False):
         wait = wx.BusyCursor()
@@ -618,6 +634,59 @@ class DVHAMainFrame(wx.Frame):
             wx.MessageBox('No DVHs returned. Please modify query or import more data.', 'Query Error',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
             self.dvh = None
+
+    def exec_query_2(self, load_saved_dvh_data=False):
+        wait = wx.BusyCursor()
+
+        # self.dvh = None
+        # self.plot.clear_plot()
+        # self.endpoint.clear_data()
+        # self.time_series.clear_data()
+        # self.time_series.initialize_y_axis_options()
+        # self.regression.clear()
+        # self.control_chart.clear_data()
+        # self.control_chart.initialize_y_axis_options()
+        # self.radbio.clear_data()
+
+        if not load_saved_dvh_data:
+            try:
+                uids, dvh_str = self.get_query()
+            except MemoryError:
+                msg = "Querying memory error. Try querying less data. At least %s DVHs returned.\n"\
+                      "NOTE: Threshold of this error is dependent on your computer." % self.dvh.count
+                MemoryErrorDialog(self, msg)
+                self.close()
+                return
+            self.dvh_2 = DVH(dvh_condition=dvh_str, uid=uids)
+
+        if self.dvh_2.count:
+            try:
+                # self.endpoint.update_dvh(self.dvh)
+                # self.text_summary.SetLabelText(self.dvh.get_summary())
+
+                self.plot.update_plot_2(self.dvh_2)
+                del wait
+                # self.notebook_main_view.SetSelection(1)
+                # self.update_data(load_saved_dvh_data=load_saved_dvh_data)
+                # self.time_series.update_data(self.dvh, self.data)
+                # if self.dvh.count > 1:
+                #     self.control_chart.update_data(self.dvh, self.stats_data)
+                #     self.correlation.update_data()
+                #
+                # self.radbio.update_dvh_data(self.dvh)
+                #
+                # self.__enable_notebook_tabs()
+                #
+                # self.save_data['main_categorical'] = self.data_table_categorical.get_save_data()
+                # self.save_data['main_numerical'] = self.data_table_numerical.get_save_data()
+            except PlottingMemoryError as e:
+                del wait
+                self.on_plotting_memory_error(str(e))
+        else:
+            del wait
+            wx.MessageBox('No DVHs returned. Please modify query or import more data.', 'Query Error',
+                          wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+            self.dvh_2 = None
 
     def get_query(self):
 
@@ -844,6 +913,19 @@ class DVHAMainFrame(wx.Frame):
               "NOTE: Threshold of this error is dependent on your computer." % (plot_type, self.dvh.count)
         MemoryErrorDialog(self, msg)
         self.close()
+
+    def on_group_select(self, evt):
+        key = self.radio_button_query_group.GetSelection()
+        self.query_filters[1-key] = {'main_categorical': self.data_table_categorical.get_save_data(),
+                                     'main_numerical': self.data_table_numerical.get_save_data()}
+        if self.query_filters[key] is not None:
+            self.data_table_categorical.load_save_data(self.query_filters[key]['main_categorical'])
+            self.data_table_numerical.load_save_data(self.query_filters[key]['main_numerical'])
+        else:
+            self.data_table_categorical.delete_all_rows()
+            self.data_table_numerical.delete_all_rows()
+
+        self.update_all_query_buttons()
 
 
 class MainApp(wx.App):
