@@ -81,7 +81,8 @@ class DVHAMainFrame(wx.Frame):
         # TODO: Need a method to address multiple users editing roi_map at the same time
         self.roi_map = DatabaseROIs()
 
-        self.query_filters = {key: None for key in [0, 1]}
+        self.query_filters = None
+        self.reset_query_filters()
 
         self.__add_menubar()
         self.__add_tool_bar()
@@ -221,7 +222,7 @@ class DVHAMainFrame(wx.Frame):
         self.table_numerical = wx.ListCtrl(self, wx.ID_ANY, style=wx.BORDER_SUNKEN | wx.LC_REPORT)
 
         self.radio_button_query_group = wx.RadioBox(self, wx.ID_ANY, 'Query Group', choices=['1', '2'])
-        self.button_query_execute = wx.Button(self, wx.ID_ANY, "Query and Retrieve")
+        self.button_query_execute = wx.Button(self, wx.ID_ANY, "Query and Retrieve Group 1")
 
         self.notebook_main_view = wx.Notebook(self, wx.ID_ANY)
         self.tab_keys = ['Welcome', 'DVHs', 'Endpoints', 'Rad Bio', 'Time Series',
@@ -435,6 +436,10 @@ class DVHAMainFrame(wx.Frame):
         if self.data_table_numerical.row_count + self.data_table_categorical.row_count > 0:
             self.button_query_execute.Enable()
         else:
+            self.button_query_execute.Disable()
+
+        # Force use to populate group 1 first
+        if self.radio_button_query_group.GetSelection() == 1 and self.dvh is None:
             self.button_query_execute.Disable()
 
     def __catch_failed_sql_connection_on_app_launch(self):
@@ -825,6 +830,7 @@ class DVHAMainFrame(wx.Frame):
         self.control_chart.initialize_y_axis_options()
         self.control_chart.plot.clear_plot()
         self.close_windows()
+        self.reset_query_filters()
 
     def on_export(self, evt):
         if self.dvh is not None:
@@ -935,8 +941,14 @@ class DVHAMainFrame(wx.Frame):
         MemoryErrorDialog(self, msg)
         self.close()
 
+    def reset_query_filters(self):
+        self.query_filters = {key: None for key in [0, 1]}
+
     def on_group_select(self, evt):
         key = self.radio_button_query_group.GetSelection()
+
+        self.button_query_execute.SetLabelText('Query and Retrieve Group %s' % (key+1))
+
         self.query_filters[1-key] = {'main_categorical': self.data_table_categorical.get_save_data(),
                                      'main_numerical': self.data_table_numerical.get_save_data()}
         if self.query_filters[key] is not None:
