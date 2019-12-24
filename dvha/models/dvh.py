@@ -14,6 +14,7 @@ import numpy as np
 from dvha.db.sql_connector import DVH_SQL
 from dvha.db.sql_to_python import QuerySQL
 from dvha.tools.utilities import convert_value_to_str
+from copy import deepcopy
 
 
 # This class retrieves DVH data from the SQL database and calculates statistical DVHs (min, max, quartiles)
@@ -162,7 +163,7 @@ class DVH:
         if not keys:
             keys = self.keys
 
-        return {key: getattr(self, key) for key in keys}
+        return deepcopy({key: getattr(self, key) for key in keys})
 
     def get_percentile_dvh(self, percentile):
         """

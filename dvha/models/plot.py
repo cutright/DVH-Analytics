@@ -14,7 +14,7 @@ import wx.html2
 from bokeh.plotting import figure
 from bokeh.io.export import get_layout_html
 from bokeh.models import Legend, HoverTool, ColumnDataSource, DataTable, TableColumn,\
-    NumberFormatter, Div, Range1d, LabelSet, FactorRange
+    NumberFormatter, Div, Range1d, LabelSet
 from bokeh.layouts import column, row
 from bokeh.palettes import Colorblind8 as palette
 import itertools
@@ -327,14 +327,19 @@ class PlotStatDVH(Plot):
 
     def update_plot_2(self, dvh_2):
 
-        # self.set_figure_dimensions()
-
-        # self.clear_sources()
         self.dvh_2 = dvh_2
         self.x_2 = list(range(dvh_2.bin_count))
         self.stat_dvhs_2 = dvh_2.get_standard_stat_dvh()
 
-        data = {'dvh': self.source['dvh'].data,
+        dvh = self.source['dvh'].data
+        if 2 in dvh['group']:
+            for row in range(len(dvh['x']))[::-1]:
+                group = dvh['group'][row]
+                if group == 2:
+                    for key in list(dvh):
+                        dvh[key].pop(row)
+
+        data = {'dvh': dvh,
                 'dvh_2': dvh_2.get_cds_data(),
                 'stats_2': {key: self.stat_dvhs_2[key] for key in ['max', 'median', 'mean', 'min']},
                 'patch_2': {'x': self.x_2, 'y1': self.stat_dvhs_2['q3'], 'y2': self.stat_dvhs_2['q1']}}
@@ -345,8 +350,6 @@ class PlotStatDVH(Plot):
 
         data['dvh']['x'].extend(dvh_2.x_data)
         data['dvh']['y'].extend(dvh_2.y_data)
-        # data['dvh']['mrn'].extend(dvh_2.mrn)
-        # data['dvh']['roi_name'].extend(dvh_2.roi_name)
         data['dvh']['color'].extend([color for j, color in zip(range(dvh_2.count), itertools.cycle(palette))])
         data['dvh']['group'].extend([2] * len(dvh_2.x_data))
 
@@ -357,9 +360,6 @@ class PlotStatDVH(Plot):
         for key, obj in data.items():
             if key != 'dvh_2':
                 self.source[key].data = obj
-
-        # self.figure.xaxis.axis_label = 'Dose (cGy)'
-        # self.figure.yaxis.axis_label = 'Relative Volume'
 
         self.update_bokeh_layout_in_wx_python()
 
@@ -415,7 +415,7 @@ class PlotTimeSeries(Plot):
                             'hist': (0.885, 0.359)}
 
         self.options = options
-        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[])),
+        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], group=[])),
                        'hist': ColumnDataSource(data=dict(x=[], top=[], width=[])),
                        'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'bound': ColumnDataSource(data=dict(x=[], mrn=[], upper=[], avg=[], lower=[])),
@@ -473,7 +473,8 @@ class PlotTimeSeries(Plot):
         self.figure.add_tools(HoverTool(show_arrow=True,
                                         tooltips=[('ID', '@mrn'),
                                                   ('Date', '@x{%F}'),
-                                                  ('Value', '@y{0.2f}')],
+                                                  ('Value', '@y{0.2f}'),
+                                                  ('Group', '@group')],
                                         formatters={'x': 'datetime'},
                                         renderers=[self.plot_data]))
 
@@ -623,7 +624,8 @@ class PlotCorrelation(Plot):
                                                ('p', '@p'),
                                                ('Norm p-value x', '@x_normality{0.4f}'),
                                                ('Norm p-value y', '@y_normality{0.4f}'),
-                                               ('Group', '@group')]))
+                                               ('Group', '@group')],
+                                     renderers=[self.corr]))
 
     def __do_layout(self):
         self.bokeh_layout = column(self.fig)
