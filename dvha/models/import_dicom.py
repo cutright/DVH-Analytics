@@ -38,7 +38,7 @@ class ImportDicomFrame(wx.Frame):
     """
     Class used to generate the DICOM import GUI
     """
-    def __init__(self, roi_map, options, inbox=None):
+    def __init__(self, roi_map, options, inbox=None, auto_parse=False):
         """
         :param roi_map: roi_map object
         :type roi_map: DatabaseROIs
@@ -53,6 +53,7 @@ class ImportDicomFrame(wx.Frame):
 
         self.initial_inbox = inbox
         self.options = options
+        self.auto_parse = auto_parse
 
         with DVH_SQL() as cnx:
             cnx.initialize_database()
@@ -384,6 +385,9 @@ class ImportDicomFrame(wx.Frame):
             self.initial_inbox = ''
         self.text_ctrl_directory.SetValue(self.initial_inbox)
 
+        if self.auto_parse:
+            self.dicom_importer = self.get_importer()
+
     def on_cancel(self, evt):
         self.roi_map.import_from_file()  # reload from file, ignore changes
         self.Destroy()
@@ -410,9 +414,12 @@ class ImportDicomFrame(wx.Frame):
         dlg = wx.DirDialog(self, "Select inbox directory", starting_dir, wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:
             self.text_ctrl_directory.SetValue(dlg.GetPath())
-            self.dicom_importer = DicomImporter(self.text_ctrl_directory.GetValue(), self.tree_ctrl_import,
-                                                self.tree_ctrl_roi, self.tree_ctrl_roi_root, self.tree_ctrl_images,
-                                                self.roi_map, search_subfolders=self.checkbox_subfolders.GetValue())
+            self.dicom_importer = self.get_importer()
+
+    def get_importer(self):
+        return DicomImporter(self.text_ctrl_directory.GetValue(), self.tree_ctrl_import,
+                             self.tree_ctrl_roi, self.tree_ctrl_roi_root, self.tree_ctrl_images,
+                             self.roi_map, search_subfolders=self.checkbox_subfolders.GetValue())
 
     def on_file_tree_select(self, evt):
         """

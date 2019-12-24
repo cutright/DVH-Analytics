@@ -503,7 +503,7 @@ class DVHAMainFrame(wx.Frame):
         self.check_db_then_call(ImportDicomFrame, self.roi_map, self.options)
 
     def on_toolbar_database(self, evt):
-        self.check_db_then_call(DatabaseEditorFrame, self.roi_map)
+        self.check_db_then_call(DatabaseEditorFrame, self.roi_map, self.options)
 
     def on_toolbar_roi_map(self, evt):
         self.check_db_then_call(ROIMapFrame, self.roi_map)
