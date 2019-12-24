@@ -235,7 +235,7 @@ class RadBioFrame:
 
         # update data in regression
         self.regression.stats_data.update_endpoints_and_radbio()
-        self.regression.update_combo_box_y_choices()
+        self.regression.update_combo_box_choices()
 
         # update data in control chart
         self.control_chart.update_combo_box_y_choices()
