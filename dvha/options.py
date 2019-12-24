@@ -63,8 +63,10 @@ class DefaultOptions:
         self.STATS_MIN_ALPHA = 1
 
         # Options for the time-series plot
-        self.CORRELATION_POS_COLOR = 'blue'
-        self.CORRELATION_NEG_COLOR = 'green'
+        self.CORRELATION_POS_COLOR_1 = 'blue'
+        self.CORRELATION_NEG_COLOR_1 = 'green'
+        self.CORRELATION_POS_COLOR_2 = 'red'
+        self.CORRELATION_NEG_COLOR_2 = 'purple'
         self.CORRELATION_MATRIX_VARS = ['Beam Area (Mean)', 'Beam Dose (Mean)', 'Beam MU (Mean)',
                                         'Beam Perimeter (Mean)', 'PTV Cross-Section Median', 'PTV Distance (Centroids)',
                                         'PTV Distance (Max)', 'PTV Distance (Mean)', 'PTV Distance (Median)',

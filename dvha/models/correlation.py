@@ -33,6 +33,7 @@ class CorrelationFrame:
         self.parent = parent
         self.options = options
         self.stats_data = stats_data
+        self.stats_data_2 = None
 
         self.selections = options.CORRELATION_MATRIX_VARS
 
@@ -84,7 +85,7 @@ class CorrelationFrame:
         self.update_data()
 
     def update_data(self):
-        self.plot.update_plot_data(self.stats_data, included_vars=self.selections)
+        self.plot.update_plot_data(self.stats_data, stats_data_2=self.stats_data_2, included_vars=self.selections)
 
     def clear_data(self):
         pass

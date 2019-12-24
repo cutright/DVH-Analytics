@@ -638,7 +638,7 @@ class DVHAMainFrame(wx.Frame):
     def exec_query_2(self, load_saved_dvh_data=False):
         wait = wx.BusyCursor()
 
-        # self.dvh = None
+        self.dvh_2 = None
         # self.plot.clear_plot()
         # self.endpoint.clear_data()
         # self.time_series.clear_data()
@@ -667,11 +667,11 @@ class DVHAMainFrame(wx.Frame):
                 self.plot.update_plot_2(self.dvh_2)
                 del wait
                 # self.notebook_main_view.SetSelection(1)
-                # self.update_data(load_saved_dvh_data=load_saved_dvh_data)
+                self.update_data()
                 # self.time_series.update_data(self.dvh, self.data)
-                # if self.dvh.count > 1:
-                #     self.control_chart.update_data(self.dvh, self.stats_data)
-                #     self.correlation.update_data()
+                if self.dvh_2.count > 1:
+                    # self.control_chart.update_data(self.dvh, self.stats_data)
+                    self.correlation.update_data()
                 #
                 # self.radbio.update_dvh_data(self.dvh)
                 #
@@ -743,6 +743,14 @@ class DVHAMainFrame(wx.Frame):
                 self.data = {key: QuerySQL(key, condition_str) for key in tables}
         else:
             self.data = {key: None for key in tables}
+
+        if hasattr(self.dvh_2, 'study_instance_uid'):
+            if not load_saved_dvh_data:
+                condition_str = "study_instance_uid in ('%s')" % "','".join(self.dvh.study_instance_uid)
+                self.data_2 = {key: QuerySQL(key, condition_str) for key in tables}
+        else:
+            self.data_2 = {key: None for key in tables}
+
         del wait
 
         if hasattr(self.dvh, 'study_instance_uid'):
@@ -757,6 +765,19 @@ class DVHAMainFrame(wx.Frame):
                 # TODO: Print error in GUI
                 pass
             self.control_chart.update_combo_box_y_choices()
+            del wait
+
+        if hasattr(self.dvh_2, 'study_instance_uid'):
+            wait = wx.BusyCursor()
+            self.stats_data_2 = StatsData(self.dvh_2, self.data_2, group=2)
+            # self.regression.stats_data = self.stats_data
+            # self.control_chart.stats_data = self.stats_data
+            self.correlation.stats_data_2 = self.stats_data_2
+            # try:
+            #     self.regression.update_combo_box_choices()
+            # except ValueError:
+            #     pass
+            # self.control_chart.update_combo_box_y_choices()
             del wait
 
     # --------------------------------------------------------------------------------------------------------------

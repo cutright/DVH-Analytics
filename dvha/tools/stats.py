@@ -21,7 +21,7 @@ from dvha.db import sql_columns
 
 
 class StatsData:
-    def __init__(self, dvhs, table_data):
+    def __init__(self, dvhs, table_data, group=1):
         """
         Class used to to collect data for Regression and Control Chart
         This process is different than for Time Series since regressions require all variables to be the same length
@@ -32,6 +32,7 @@ class StatsData:
         """
         self.dvhs = dvhs
         self.table_data = table_data
+        self.group = group
 
         self.column_info = sql_columns.numerical
         self.correlation_variables = list(self.column_info)
@@ -271,14 +272,15 @@ class StatsData:
         x_factors = categories_for_label
         y_factors = categories_for_label[::-1]
 
-        s_keys = ['x', 'y', 'x_name', 'y_name', 'color', 'alpha', 'r', 'p', 'size', 'x_normality', 'y_normality']
+        s_keys = ['x', 'y', 'x_name', 'y_name', 'color', 'alpha', 'r', 'p', 'size',
+                  'x_normality', 'y_normality', 'group']
         source_data = {'corr': {sk: [] for sk in s_keys},
                        'line': {'x': [0.5, var_count - 0.5], 'y': [var_count - 0.5, 0.5]}}
 
         max_size = 20
         for x in range(var_count):
             for y in range(var_count):
-                if x > y:
+                if x > y and self.group == 1 or x < y and self.group == 2:
 
                     bad_indices = [i for i, v in enumerate(self.data[categories[x]]['values']) if type(v) is str]
                     bad_indices.extend([i for i, v in enumerate(self.data[categories[y]]['values']) if type(v) is str])
@@ -295,7 +297,7 @@ class StatsData:
                         r = 0
 
                     sign = ['neg', 'pos'][r >= 0]
-                    color = getattr(options, 'CORRELATION_%s_COLOR' % sign.upper())
+                    color = getattr(options, 'CORRELATION_%s_COLOR_%s' % (sign.upper(), self.group))
                     source_data['corr']['color'].append(color)
                     source_data['corr']['r'].append(r)
                     source_data['corr']['p'].append(p_value)
@@ -305,6 +307,7 @@ class StatsData:
                     source_data['corr']['y'].append(var_count - y - 0.5)  # 0.5 offset due to bokeh 0.12.9 bug
                     source_data['corr']['x_name'].append(categories_for_label[x])
                     source_data['corr']['y_name'].append(categories_for_label[y])
+                    source_data['corr']['group'].append(self.group)
 
                     x_norm, x_p = scipy_stats.normaltest(x_data)
                     y_norm, y_p = scipy_stats.normaltest(y_data)

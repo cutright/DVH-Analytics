@@ -622,13 +622,18 @@ class PlotCorrelation(Plot):
                                                ('r', '@r'),
                                                ('p', '@p'),
                                                ('Norm p-value x', '@x_normality{0.4f}'),
-                                               ('Norm p-value y', '@y_normality{0.4f}')], ))
+                                               ('Norm p-value y', '@y_normality{0.4f}'),
+                                               ('Group', '@group')]))
 
     def __do_layout(self):
         self.bokeh_layout = column(self.fig)
 
-    def update_plot_data(self, stats_data, included_vars=None):
+    def update_plot_data(self, stats_data, stats_data_2=None, included_vars=None):
         source_data, x_factors, y_factors = stats_data.get_corr_matrix_data(self.options, included_vars=included_vars)
+        if stats_data_2 is not None:
+            source_data_2, _, _ = stats_data_2.get_corr_matrix_data(self.options, included_vars=included_vars)
+            for key in list(source_data_2['corr']):
+                source_data['corr'][key].extend(source_data_2['corr'][key])
         self.fig = figure(x_axis_location="above", x_range=x_factors, y_range=y_factors,
                           tools="pan, box_zoom, wheel_zoom, reset")
         self.__set_fig_attr()
@@ -644,7 +649,7 @@ class PlotCorrelation(Plot):
 
     def get_csv(self):
         data = self.source['corr'].data
-        keys = ['x_name', 'y_name', 'r', 'p', 'x_normality', 'y_normality']
+        keys = ['x_name', 'y_name', 'r', 'p', 'x_normality', 'y_normality', 'group']
         csv_data = [','.join(keys)]
         for i in range(len(data['x'])):
             csv_data.append(','.join(str(data[key][i]).replace(',', '^') for key in keys))
