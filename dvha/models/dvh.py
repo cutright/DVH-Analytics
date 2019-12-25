@@ -13,22 +13,24 @@ Class to retrieve DVH data from SQL, calculate parameters dependent on DVHs, and
 import numpy as np
 from dvha.db.sql_connector import DVH_SQL
 from dvha.db.sql_to_python import QuerySQL
-from dvha.tools.utilities import convert_value_to_str
 from copy import deepcopy
 
 
 # This class retrieves DVH data from the SQL database and calculates statistical DVHs (min, max, quartiles)
 # It also provides some inspection tools of the retrieved data
 class DVH:
-    def __init__(self, uid=None, dvh_condition=None):
+    def __init__(self, uid=None, dvh_condition=None, dvh_bin_width=5):
         """
         This class will retrieve DVHs and other data in the DVH SQL table meeting the given constraints,
         it will also parse the DVH_string into python lists and retrieve the associated Rx dose
         :param uid: a list of allowed study_instance_uids in data set
         :param dvh_condition: a string in SQL syntax applied to a DVH Table query
+        :param dvh_bin_width: retrieve every nth value from dvh_string in SQL
+        :type dvh_bin_width: int
         """
 
         self.uid = uid
+        self.dvh_bin_width = dvh_bin_width
 
         if uid:
             constraints_str = "study_instance_uid in ('%s')" % "', '".join(uid)
@@ -44,6 +46,8 @@ class DVH:
             self.keys = []
             for key, value in dvh_data.__dict__.items():
                 if not key.startswith("__") and key not in ignored_keys:
+                    if key == 'dvh_string':
+                        dvh_split = [dvh.split(',')[::self.dvh_bin_width] for i, dvh in enumerate(value)]
                     setattr(self, key, value)
                     if '_string' not in key:
                         self.keys.append(key)
@@ -64,7 +68,7 @@ class DVH:
             self.eud = None
             self.ntcp_or_tcp = None
 
-            self.bin_count = max([value.count(',') + 1 for value in self.dvh_string])
+            self.bin_count = max([len(dvh) for dvh in dvh_split])
 
             self.dvh = np.zeros([self.bin_count, self.count])
 
@@ -72,7 +76,7 @@ class DVH:
             for i in range(self.count):
                 # Process dvh_string to numpy array, and pad with zeros at the end
                 # so that all dvhs are the same length
-                current_dvh = np.array(self.dvh_string[i].split(','), dtype='|S4').astype(np.float)
+                current_dvh = np.array(dvh_split[i], dtype='|S4').astype(np.float)
                 current_dvh_max = np.max(current_dvh)
                 if current_dvh_max > 0:
                     current_dvh = np.divide(current_dvh, current_dvh_max)

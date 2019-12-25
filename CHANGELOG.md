@@ -11,6 +11,8 @@ v0.6.4 (TBD)
     html file name for multi-variable_regression. Did not affect other OSs because html files are stored only for MSW.
  - [Correlation] New tab added showing a correlation matrix
  - [Database Editor] Fix for GH Issue 19
+ - [Query] DVH bin width may be set. SQL still stores 1cGy bin widths, but query will keep dvh data
+    using specified bin width.  This results in faster bokeh plot generation. 
  - [Query] Query Groups are back! (IN PROGRESS: only DVHs update currently, must have group 1 queried)
 
 

@@ -48,6 +48,10 @@ class DefaultOptions:
         # This is only applied to the DVH plot since it has a large amount of data
         self.LOD_FACTOR = 100
 
+        # All DVHs in SQL DB have 1cGy bin widths regardless of this value.  However, the queried DVHs will be
+        # down-sampled using this bin_width
+        self.dvh_bin_width = 5
+
         # Options for the group statistical DVHs in the DVHs tab
         self.STATS_MEDIAN_LINE_WIDTH = 1
         self.STATS_MEDIAN_LINE_DASH = 'solid'

@@ -26,6 +26,7 @@ from dvha.tools.utilities import collapse_into_single_dates, moving_avg, is_wind
 from dvha.tools.stats import MultiVariableRegression, get_control_limits
 from dvha.paths import TEMP_DIR
 from math import pi
+from copy import deepcopy
 
 
 DEFAULT_TOOLS = "pan,box_zoom,crosshair,reset"
@@ -292,7 +293,7 @@ class PlotStatDVH(Plot):
         self.table.width = int(self.size_factor['table'][0] * float(panel_width))
         self.table.height = int(self.size_factor['table'][1] * float(panel_height))
 
-    def update_plot(self, dvh):
+    def update_plot(self, dvh, dvh_2=None):
 
         self.set_figure_dimensions()
 
@@ -301,7 +302,7 @@ class PlotStatDVH(Plot):
         self.x = list(range(dvh.bin_count))
         self.stat_dvhs = dvh.get_standard_stat_dvh()
 
-        data = {'dvh': dvh.get_cds_data(),
+        data = {'dvh': deepcopy(dvh.get_cds_data()),
                 'stats': {key: self.stat_dvhs[key] for key in ['max', 'median', 'mean', 'min']},
                 'patch': {'x': self.x, 'y1': self.stat_dvhs['q3'], 'y2': self.stat_dvhs['q1']}}
 
@@ -323,7 +324,10 @@ class PlotStatDVH(Plot):
         self.figure.xaxis.axis_label = 'Dose (cGy)'
         self.figure.yaxis.axis_label = 'Relative Volume'
 
-        self.update_bokeh_layout_in_wx_python()
+        if dvh_2 is None:
+            self.update_bokeh_layout_in_wx_python()
+        else:
+            self.update_plot_2(dvh_2)
 
     def update_plot_2(self, dvh_2):
 
@@ -340,7 +344,7 @@ class PlotStatDVH(Plot):
                         dvh[key].pop(row)
 
         data = {'dvh': dvh,
-                'dvh_2': dvh_2.get_cds_data(),
+                'dvh_2': deepcopy(dvh_2.get_cds_data()),
                 'stats_2': {key: self.stat_dvhs_2[key] for key in ['max', 'median', 'mean', 'min']},
                 'patch_2': {'x': self.x_2, 'y1': self.stat_dvhs_2['q3'], 'y2': self.stat_dvhs_2['q1']}}
 

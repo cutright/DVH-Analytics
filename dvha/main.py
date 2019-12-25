@@ -609,7 +609,7 @@ class DVHAMainFrame(wx.Frame):
                 MemoryErrorDialog(self, msg)
                 self.close()
                 return
-            self.dvh = DVH(dvh_condition=dvh_str, uid=uids)
+            self.dvh = DVH(dvh_condition=dvh_str, uid=uids, dvh_bin_width=self.options.dvh_bin_width)
 
         if self.dvh.count:
             try:
@@ -662,14 +662,14 @@ class DVHAMainFrame(wx.Frame):
                 MemoryErrorDialog(self, msg)
                 self.close()
                 return
-            self.dvh_2 = DVH(dvh_condition=dvh_str, uid=uids)
+            self.dvh_2 = DVH(dvh_condition=dvh_str, uid=uids, dvh_bin_width=self.options.dvh_bin_width)
 
         if self.dvh_2.count:
             try:
                 # self.endpoint.update_dvh(self.dvh)
                 # self.text_summary.SetLabelText(self.dvh.get_summary())
-
-                self.plot.update_plot_2(self.dvh_2)
+                # self.dvh.add_group_2(self.dvh_2)
+                self.plot.update_plot(self.dvh, dvh_2=self.dvh_2)
                 del wait
                 # self.notebook_main_view.SetSelection(1)
                 self.update_data()
