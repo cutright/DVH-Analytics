@@ -56,14 +56,13 @@ class DVHAMainFrame(wx.Frame):
         self.options = Options()
 
         # Initial DVH object and data
-        self.dvh = None
-        self.data = {key: None for key in ['Plans', 'Beams', 'Rxs']}
-        self.stats_data = None
         self.save_data = {}
-
-        self.dvh_2 = None
-        self.data_2 = {key: None for key in ['Plans', 'Beams', 'Rxs']}
-        self.stats_data_2 = None
+        self.group_data = {1: {'dvh': None,
+                               'data': {key: None for key in ['Plans', 'Beams', 'Rxs']},
+                               'stats_data': None},
+                           2: {'dvh': None,
+                               'data': {key: None for key in ['Plans', 'Beams', 'Rxs']},
+                               'stats_data': None}}
 
         self.toolbar_keys = ['Open', 'Close', 'Save', 'Export', 'Import', 'Database', 'ROI Map', 'Settings']
         self.toolbar_ids = {key: i + 1000 for i, key in enumerate(self.toolbar_keys)}
@@ -278,15 +277,14 @@ class DVHAMainFrame(wx.Frame):
                                              "filter must be added.")
 
     def __add_notebook_frames(self):
-        self.plot = PlotStatDVH(self.notebook_tab['DVHs'], self.dvh, self.options)
-        self.time_series = TimeSeriesFrame(self.notebook_tab['Time Series'], self.dvh, self.data, self.options)
-        self.correlation = CorrelationFrame(self.notebook_tab['Correlation'], self.stats_data, self.options)
-        self.regression = RegressionFrame(self.notebook_tab['Regression'], self.stats_data, self.options)
-        self.control_chart = ControlChartFrame(self.notebook_tab['Control Chart'], self.dvh, self.stats_data,
-                                               self.options)
-        self.radbio = RadBioFrame(self.notebook_tab['Rad Bio'], self.dvh, self.time_series, self.regression,
+        self.plot = PlotStatDVH(self.notebook_tab['DVHs'], self.group_data, self.options)
+        self.time_series = TimeSeriesFrame(self.notebook_tab['Time Series'], self.group_data, self.options)
+        self.correlation = CorrelationFrame(self.notebook_tab['Correlation'], self.group_data, self.options)
+        self.regression = RegressionFrame(self.notebook_tab['Regression'], self.group_data, self.options)
+        self.control_chart = ControlChartFrame(self.notebook_tab['Control Chart'], self.group_data, self.options)
+        self.radbio = RadBioFrame(self.notebook_tab['Rad Bio'], self.group_data, self.time_series, self.regression,
                                   self.control_chart)
-        self.endpoint = EndpointFrame(self.notebook_tab['Endpoints'], self.dvh, self.time_series, self.regression,
+        self.endpoint = EndpointFrame(self.notebook_tab['Endpoints'], self.group_data, self.time_series, self.regression,
                                       self.control_chart)
 
     def __do_layout(self):
@@ -392,7 +390,7 @@ class DVHAMainFrame(wx.Frame):
     def __enable_notebook_tabs(self):
         for key in self.tab_keys:
             if key in {'Regression', 'Control Chart'}:
-                self.notebook_tab[key].Enable(self.dvh.count > 1)
+                self.notebook_tab[key].Enable(self.group_data[1]['dvh'].count > 1)
             else:
                 self.notebook_tab[key].Enable()
         self.__enable_initial_buttons_in_tabs()
@@ -439,7 +437,7 @@ class DVHAMainFrame(wx.Frame):
             self.button_query_execute.Disable()
 
         # Force use to populate group 1 first
-        if self.radio_button_query_group.GetSelection() == 1 and self.dvh is None:
+        if self.radio_button_query_group.GetSelection() == 1 and self.group_data[1]['dvh'] is None:
             self.button_query_execute.Disable()
 
     def __catch_failed_sql_connection_on_app_launch(self):
@@ -473,8 +471,7 @@ class DVHAMainFrame(wx.Frame):
         dlg.Destroy()
 
     def save_data_obj(self):
-        self.save_data['dvh'] = self.dvh
-        self.save_data['main_data'] = self.data
+        self.save_data['group_data'] = self.group_data
         self.save_data['time_stamp'] = datetime.now()
         self.save_data['version'] = self.options.VERSION
         # data_table_categorical and data_table_numerical saved after query to ensure these data reflect
@@ -486,8 +483,7 @@ class DVHAMainFrame(wx.Frame):
 
     def load_data_obj(self, abs_file_path):
         self.save_data = load_object_from_file(abs_file_path)
-        self.dvh = self.save_data['dvh']
-        self.data = self.save_data['main_data']
+        self.group_data = self.save_data['group_data']
 
         # .load_save_data loses column widths?
         self.data_table_categorical.data = deepcopy(self.save_data['main_categorical']['data'])
@@ -510,7 +506,7 @@ class DVHAMainFrame(wx.Frame):
         self.time_series.load_save_data(self.save_data['time_series'])
         self.time_series.update_plot()
 
-        if self.dvh.count > 1:
+        if self.group_data[1]['dvh'].count > 1:
             self.regression.stats_data.update_endpoints_and_radbio()
             self.regression.update_combo_box_choices()
             self.regression.load_save_data(self.save_data['regression'])
@@ -605,27 +601,27 @@ class DVHAMainFrame(wx.Frame):
                 uids, dvh_str = self.get_query()
             except MemoryError:
                 msg = "Querying memory error. Try querying less data. At least %s DVHs returned.\n"\
-                      "NOTE: Threshold of this error is dependent on your computer." % self.dvh.count
+                      "NOTE: Threshold of this error is dependent on your computer." % self.group_data[1]['dvh'].count
                 MemoryErrorDialog(self, msg)
                 self.close()
                 return
-            self.dvh = DVH(dvh_condition=dvh_str, uid=uids, dvh_bin_width=self.options.dvh_bin_width)
+            self.group_data[1]['dvh'] = DVH(dvh_condition=dvh_str, uid=uids, dvh_bin_width=self.options.dvh_bin_width)
 
-        if self.dvh.count:
+        if self.group_data[1]['dvh'].count:
             try:
-                self.endpoint.update_dvh(self.dvh)
-                self.text_summary.SetLabelText(self.dvh.get_summary())
+                self.endpoint.update_dvh(self.group_data)
+                self.text_summary.SetLabelText(self.group_data[1]['dvh'].get_summary())
 
-                self.plot.update_plot(self.dvh)
+                self.plot.update_plot(self.group_data[1]['dvh'])
                 del wait
                 self.notebook_main_view.SetSelection(1)
                 self.update_data(load_saved_dvh_data=load_saved_dvh_data)
-                self.time_series.update_data(self.dvh, self.data)
-                if self.dvh.count > 1:
-                    self.control_chart.update_data(self.dvh, self.stats_data)
+                self.time_series.update_data(self.group_data[1]['dvh'], self.group_data[1]['data'])
+                if self.group_data[1]['dvh'].count > 1:
+                    self.control_chart.update_data(self.group_data[1]['dvh'], self.group_data[1]['stats_data'])
                     self.correlation.update_data()
 
-                self.radbio.update_dvh_data(self.dvh)
+                self.radbio.update_dvh_data(self.group_data[1]['dvh'])
 
                 self.__enable_notebook_tabs()
 
@@ -638,14 +634,14 @@ class DVHAMainFrame(wx.Frame):
             del wait
             wx.MessageBox('No DVHs returned. Please modify query or import more data.', 'Query Error',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
-            self.dvh = None
+            self.group_data[1]['dvh'] = None
 
     def exec_query_2(self, load_saved_dvh_data=False):
         wait = wx.BusyCursor()
 
-        self.dvh_2 = None
+        self.group_data[2]['dvh'] = None
         # self.plot.clear_plot()
-        # self.endpoint.clear_data()
+        self.endpoint.clear_data()
         # self.time_series.clear_data()
         # self.time_series.initialize_y_axis_options()
         # self.regression.clear()
@@ -658,23 +654,23 @@ class DVHAMainFrame(wx.Frame):
                 uids, dvh_str = self.get_query()
             except MemoryError:
                 msg = "Querying memory error. Try querying less data. At least %s DVHs returned.\n"\
-                      "NOTE: Threshold of this error is dependent on your computer." % self.dvh.count
+                      "NOTE: Threshold of this error is dependent on your computer." % self.group_data[2]['dvh'].count
                 MemoryErrorDialog(self, msg)
                 self.close()
                 return
-            self.dvh_2 = DVH(dvh_condition=dvh_str, uid=uids, dvh_bin_width=self.options.dvh_bin_width)
+            self.group_data[2]['dvh'] = DVH(dvh_condition=dvh_str, uid=uids, dvh_bin_width=self.options.dvh_bin_width)
 
-        if self.dvh_2.count:
+        if self.group_data[2]['dvh'].count:
             try:
-                # self.endpoint.update_dvh(self.dvh)
+                self.endpoint.update_dvh(self.group_data)
                 # self.text_summary.SetLabelText(self.dvh.get_summary())
                 # self.dvh.add_group_2(self.dvh_2)
-                self.plot.update_plot(self.dvh, dvh_2=self.dvh_2)
+                self.plot.update_plot(self.group_data[1]['dvh'], dvh_2=self.group_data[2]['dvh'])
                 del wait
                 # self.notebook_main_view.SetSelection(1)
                 self.update_data()
                 # self.time_series.update_data(self.dvh, self.data)
-                if self.dvh_2.count > 1:
+                if self.group_data[2]['dvh'].count > 1:
                     # self.control_chart.update_data(self.dvh, self.stats_data)
                     self.correlation.update_data()
                 #
@@ -691,7 +687,7 @@ class DVHAMainFrame(wx.Frame):
             del wait
             wx.MessageBox('No DVHs returned. Please modify query or import more data.', 'Query Error',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
-            self.dvh_2 = None
+            self.group_data[2]['dvh'] = None
 
     def get_query(self):
 
@@ -742,28 +738,28 @@ class DVHAMainFrame(wx.Frame):
     def update_data(self, load_saved_dvh_data=False):
         wait = wx.BusyCursor()
         tables = ['Plans', 'Rxs', 'Beams']
-        if hasattr(self.dvh, 'study_instance_uid'):
+        if hasattr(self.group_data[1]['dvh'], 'study_instance_uid'):
             if not load_saved_dvh_data:
-                condition_str = "study_instance_uid in ('%s')" % "','".join(self.dvh.study_instance_uid)
-                self.data = {key: QuerySQL(key, condition_str) for key in tables}
+                condition_str = "study_instance_uid in ('%s')" % "','".join(self.group_data[1]['dvh'].study_instance_uid)
+                self.group_data[1]['data'] = {key: QuerySQL(key, condition_str) for key in tables}
         else:
-            self.data = {key: None for key in tables}
+            self.group_data[1]['data'] = {key: None for key in tables}
 
-        if hasattr(self.dvh_2, 'study_instance_uid'):
+        if hasattr(self.group_data[2]['dvh'], 'study_instance_uid'):
             if not load_saved_dvh_data:
-                condition_str = "study_instance_uid in ('%s')" % "','".join(self.dvh.study_instance_uid)
-                self.data_2 = {key: QuerySQL(key, condition_str) for key in tables}
+                condition_str = "study_instance_uid in ('%s')" % "','".join(self.group_data[2]['dvh'].study_instance_uid)
+                self.group_data[2]['data'] = {key: QuerySQL(key, condition_str) for key in tables}
         else:
-            self.data_2 = {key: None for key in tables}
+            self.group_data[2]['data'] = {key: None for key in tables}
 
         del wait
 
-        if hasattr(self.dvh, 'study_instance_uid'):
+        if hasattr(self.group_data[1]['dvh'], 'study_instance_uid'):
             wait = wx.BusyCursor()
-            self.stats_data = StatsData(self.dvh, self.data)
-            self.regression.stats_data = self.stats_data
-            self.control_chart.stats_data = self.stats_data
-            self.correlation.stats_data = self.stats_data
+            self.group_data[1]['stats_data'] = StatsData(self.group_data[1]['dvh'], self.group_data[1]['data'])
+            self.regression.stats_data = self.group_data[1]['stats_data']
+            self.control_chart.stats_data = self.group_data[1]['stats_data']
+            self.correlation.stats_data = self.group_data[1]['stats_data']
             try:
                 self.regression.update_combo_box_choices()
             except ValueError:
@@ -772,12 +768,12 @@ class DVHAMainFrame(wx.Frame):
             self.control_chart.update_combo_box_y_choices()
             del wait
 
-        if hasattr(self.dvh_2, 'study_instance_uid'):
+        if hasattr(self.group_data[2]['dvh'], 'study_instance_uid'):
             wait = wx.BusyCursor()
-            self.stats_data_2 = StatsData(self.dvh_2, self.data_2, group=2)
-            # self.regression.stats_data = self.stats_data
-            # self.control_chart.stats_data = self.stats_data
-            self.correlation.stats_data_2 = self.stats_data_2
+            self.group_data[2]['stats_data'] = StatsData(self.group_data[2]['dvh'], self.group_data[2]['data'], group=2)
+            # self.regression.stats_data = self.group_data[2]['stats_data']
+            # self.control_chart.stats_data = self.group_data[2]['stats_data']
+            self.correlation.stats_data_2 = self.group_data[2]['stats_data']
             # try:
             #     self.regression.update_combo_box_choices()
             # except ValueError:
@@ -802,7 +798,7 @@ class DVHAMainFrame(wx.Frame):
         self.Destroy()
 
     def on_close(self, *evt):
-        if self.dvh:
+        if self.group_data[1]['dvh']:
             dlg = wx.MessageDialog(self, "Clear all data and plots?", caption='Close',
                                    style=wx.YES | wx.NO | wx.NO_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
             dlg.Center()
@@ -812,7 +808,12 @@ class DVHAMainFrame(wx.Frame):
             dlg.Destroy()
 
     def close(self):
-        self.dvh = None
+        self.group_data = {1: {'dvh': None,
+                               'data': {key: None for key in ['Plans', 'Beams', 'Rxs']},
+                               'stats_data': None},
+                           2: {'dvh': None,
+                               'data': {key: None for key in ['Plans', 'Beams', 'Rxs']},
+                               'stats_data': None}}
         self.data_table_categorical.delete_all_rows()
         self.data_table_numerical.delete_all_rows()
         self.plot.clear_plot()
@@ -833,7 +834,7 @@ class DVHAMainFrame(wx.Frame):
         self.reset_query_filters()
 
     def on_export(self, evt):
-        if self.dvh is not None:
+        if self.group_data[1]['dvh'] is not None:
             ExportCSVDialog(self)
         else:
             wx.MessageBox('There is no data to export! Please query some data first.', 'Export Error',
@@ -886,11 +887,11 @@ class DVHAMainFrame(wx.Frame):
 
     def view_table_data(self, key):
         if key == 'DVHs':
-            data = self.dvh
+            data = self.group_data[1]['dvh']
         elif key == 'StatsData':
-            data = self.stats_data
+            data = self.group_data[1]['stats_data']
         else:
-            data = self.data[key]
+            data = self.group_data[1]['data'][key]
 
         if data:
             if self.get_menu_item_status(key) == 'Show':
@@ -912,7 +913,7 @@ class DVHAMainFrame(wx.Frame):
         return show_hide
 
     def redraw_plots(self):
-        if self.dvh:
+        if self.group_data[1]['dvh']:
             self.plot.redraw_plot()
             self.time_series.plot.redraw_plot()
             self.correlation.plot.redraw_plot()
@@ -920,7 +921,7 @@ class DVHAMainFrame(wx.Frame):
             self.control_chart.plot.redraw_plot()
 
     def update_stats_data_plots(self):
-        if self.dvh:
+        if self.group_data[1]['dvh']:
             self.time_series.update_plot()
             self.time_series.update_y_axis_options()
             self.regression.update_plot()
@@ -937,7 +938,7 @@ class DVHAMainFrame(wx.Frame):
     def on_plotting_memory_error(self, plot_type):
         plot_type = [' (Plot type: %s)' % plot_type, ''][plot_type is None]
         msg = "Plotting memory error%s. Try querying less data. At least %s DVHs returned.\n" \
-              "NOTE: Threshold of this error is dependent on your computer." % (plot_type, self.dvh.count)
+              "NOTE: Threshold of this error is dependent on your computer." % (plot_type, self.group_data[1]['dvh'].count)
         MemoryErrorDialog(self, msg)
         self.close()
 

@@ -21,7 +21,7 @@ class CorrelationFrame:
     """
     Object to be passed into notebook panel for the Time Series tab
     """
-    def __init__(self, parent, stats_data, options):
+    def __init__(self, parent, group_data, options):
         """
         :param parent:  notebook panel in main view
         :type parent: Panel
@@ -32,8 +32,8 @@ class CorrelationFrame:
         """
         self.parent = parent
         self.options = options
-        self.stats_data = stats_data
-        self.stats_data_2 = None
+        self.stats_data = group_data[1]['stats_data']
+        self.stats_data_2 = group_data[2]['stats_data']
 
         self.selections = options.CORRELATION_MATRIX_VARS
 

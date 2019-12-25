@@ -22,7 +22,7 @@ class RadBioFrame:
     """
     Object to be passed into notebook panel for the Rad Bio tab
     """
-    def __init__(self, parent, dvh, time_series, regression, control_chart):
+    def __init__(self, parent, group_data, time_series, regression, control_chart):
         """
         :param parent:  notebook panel in main view
         :type parent: Panel
@@ -37,7 +37,8 @@ class RadBioFrame:
         """
 
         self.parent = parent
-        self.dvh = dvh
+        self.dvh = group_data[1]['dvh']
+        self.dvh_2 = group_data[2]['dvh']
         self.time_series = time_series
         self.regression = regression
         self.control_chart = control_chart

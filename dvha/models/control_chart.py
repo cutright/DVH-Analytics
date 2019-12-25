@@ -21,7 +21,7 @@ class ControlChartFrame:
     """
     Object to be passed into notebook panel for the Control Chart tab
     """
-    def __init__(self, parent, dvh, stats_data, options):
+    def __init__(self, parent, group_data, options):
         """
         :param parent:  notebook panel in main view
         :type parent: Panel
@@ -33,8 +33,10 @@ class ControlChartFrame:
         :type options: Options
         """
         self.parent = parent
-        self.dvhs = dvh
-        self.stats_data = stats_data
+        self.dvhs = group_data[1]['dvh']
+        self.dvhs_2 = group_data[2]['dvh']
+        self.stats_data = group_data[1]['stats_data']
+        self.stats_data_2 = group_data[2]['stats_data']
         self.choices = []
         self.models = {}
 

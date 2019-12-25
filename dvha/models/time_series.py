@@ -22,7 +22,7 @@ class TimeSeriesFrame:
     """
     Object to be passed into notebook panel for the Time Series tab
     """
-    def __init__(self, parent, dvh, data, options):
+    def __init__(self, parent, group_data, options):
         """
         :param parent:  notebook panel in main view
         :type parent: Panel
@@ -35,8 +35,10 @@ class TimeSeriesFrame:
         """
         self.parent = parent
         self.options = options
-        self.dvh = dvh
-        self.data = data
+        self.dvh = group_data[1]['dvh']
+        self.dvh_2 = group_data[2]['dvh']
+        self.data = group_data[1]['data']
+        self.data_2 = group_data[2]['data']
         self.custom_data = {}
 
         self.y_axis_options = sql_columns.numerical

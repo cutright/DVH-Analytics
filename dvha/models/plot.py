@@ -149,7 +149,7 @@ class PlotStatDVH(Plot):
     """
     Generate plot for DVHs tab
     """
-    def __init__(self, parent, dvh, options):
+    def __init__(self, parent, group_data, options):
         """
         :param parent: the wx UI object where the plot will be displayed
         :param dvh: dvh data object
@@ -165,8 +165,8 @@ class PlotStatDVH(Plot):
                             'table': (0.885, 0.359)}
 
         self.options = options
-        self.dvh = dvh
-        self.dvh_2 = None
+        self.dvh = group_data[1]['dvh']
+        self.dvh_2 = group_data[2]['dvh']
         self.source = {'dvh': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], roi_name=[], roi_type=[], group=[],
                                                          x_dose=[], volume=[], min_dose=[], mean_dose=[], max_dose=[])),
                        'stats': ColumnDataSource(data=dict(x=[], min=[], mean=[], median=[], max=[], mrn=[])),
