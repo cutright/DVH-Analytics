@@ -419,11 +419,11 @@ class PlotTimeSeries(Plot):
                             'hist': (0.885, 0.359)}
 
         self.options = options
-        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], group=[])),
-                       'hist': ColumnDataSource(data=dict(x=[], top=[], width=[])),
-                       'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
-                       'bound': ColumnDataSource(data=dict(x=[], mrn=[], upper=[], avg=[], lower=[])),
-                       'patch': ColumnDataSource(data=dict(x=[], y=[]))}
+        self.source = {key: {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], group=[])),
+                             'hist': ColumnDataSource(data=dict(x=[], top=[], width=[])),
+                             'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                             'bound': ColumnDataSource(data=dict(x=[], mrn=[], upper=[], avg=[], lower=[])),
+                             'patch': ColumnDataSource(data=dict(x=[], y=[]))} for key in [1, 2]}
         self.y_axis_label = ''
 
         self.div = Div(text='<hr>')
@@ -435,17 +435,31 @@ class PlotTimeSeries(Plot):
         self.__do_layout()
 
     def __add_plot_data(self):
-        self.plot_data = self.figure.circle('x', 'y', source=self.source['plot'], size=self.options.TIME_SERIES_CIRCLE_SIZE,
+        self.plot_data = self.figure.circle('x', 'y', source=self.source[1]['plot'], size=self.options.TIME_SERIES_CIRCLE_SIZE,
                                             alpha=self.options.TIME_SERIES_CIRCLE_ALPHA, color=self.options.PLOT_COLOR)
 
-        self.plot_trend = self.figure.line('x', 'y', color=self.options.PLOT_COLOR, source=self.source['trend'],
+        self.plot_trend = self.figure.line('x', 'y', color=self.options.PLOT_COLOR, source=self.source[1]['trend'],
                                            line_width=self.options.TIME_SERIES_TREND_LINE_WIDTH,
                                            line_dash=self.options.TIME_SERIES_TREND_LINE_DASH)
-        self.plot_avg = self.figure.line('x', 'avg', color=self.options.PLOT_COLOR, source=self.source['bound'],
+        self.plot_avg = self.figure.line('x', 'avg', color=self.options.PLOT_COLOR, source=self.source[1]['bound'],
                                          line_width=self.options.TIME_SERIES_AVG_LINE_WIDTH,
                                          line_dash=self.options.TIME_SERIES_AVG_LINE_DASH)
-        self.plot_patch = self.figure.patch('x', 'y', color=self.options.PLOT_COLOR, source=self.source['patch'],
+        self.plot_patch = self.figure.patch('x', 'y', color=self.options.PLOT_COLOR, source=self.source[1]['patch'],
                                             alpha=self.options.TIME_SERIES_PATCH_ALPHA)
+
+        self.plot_data_2 = self.figure.circle('x', 'y', source=self.source[2]['plot'],
+                                              size=self.options.TIME_SERIES_CIRCLE_SIZE,
+                                              alpha=self.options.TIME_SERIES_CIRCLE_ALPHA,
+                                              color=self.options.PLOT_COLOR_2)
+
+        self.plot_trend_2 = self.figure.line('x', 'y', color=self.options.PLOT_COLOR_2, source=self.source[2]['trend'],
+                                             line_width=self.options.TIME_SERIES_TREND_LINE_WIDTH,
+                                             line_dash=self.options.TIME_SERIES_TREND_LINE_DASH)
+        self.plot_avg_2 = self.figure.line('x', 'avg', color=self.options.PLOT_COLOR_2, source=self.source[2]['bound'],
+                                           line_width=self.options.TIME_SERIES_AVG_LINE_WIDTH,
+                                           line_dash=self.options.TIME_SERIES_AVG_LINE_DASH)
+        self.plot_patch_2 = self.figure.patch('x', 'y', color=self.options.PLOT_COLOR_2, source=self.source[2]['patch'],
+                                              alpha=self.options.TIME_SERIES_PATCH_ALPHA)
 
     def __add_histogram_data(self):
         self.histogram = figure(tools="")
@@ -455,18 +469,25 @@ class PlotTimeSeries(Plot):
         self.histogram.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
         self.histogram.min_border_left = self.options.MIN_BORDER
         self.histogram.min_border_bottom = self.options.MIN_BORDER
-        self.vbar = self.histogram.vbar(x='x', width='width', bottom=0, top='top', source=self.source['hist'],
+        self.vbar = self.histogram.vbar(x='x', width='width', bottom=0, top='top', source=self.source[1]['hist'],
                                         color=self.options.PLOT_COLOR, alpha=self.options.HISTOGRAM_ALPHA)
+        self.vbar_2 = self.histogram.vbar(x='x', width='width', bottom=0, top='top', source=self.source[2]['hist'],
+                                          color=self.options.PLOT_COLOR_2, alpha=self.options.HISTOGRAM_ALPHA)
 
         self.histogram.xaxis.axis_label = ""
         self.histogram.yaxis.axis_label = "Frequency"
 
     def __add_legend(self):
         # Set the legend
-        legend_plot = Legend(items=[("Data  ", [self.plot_data]),
-                                    ("Series Average  ", [self.plot_avg]),
-                                    ("Rolling Average  ", [self.plot_trend]),
-                                    ("Percentile Region  ", [self.plot_patch])],
+        legend_plot = Legend(items=[("Data 1 ", [self.plot_data]),
+                                    ("Avg 1 ", [self.plot_avg]),
+                                    ("Rolling Avg 1 ", [self.plot_trend]),
+                                    ("Perc. Region 1 ", [self.plot_patch]),
+                                    ("Data 2 ", [self.plot_data_2]),
+                                    ("Avg 2 ", [self.plot_avg_2]),
+                                    ("Rolling Avg 2 ", [self.plot_trend_2]),
+                                    ("Perc. Region 2 ", [self.plot_patch_2])
+                                    ],
                              orientation='horizontal')
 
         # Add the layout outside the plot, clicking legend item hides the line
@@ -480,7 +501,7 @@ class PlotTimeSeries(Plot):
                                                   ('Value', '@y{0.2f}'),
                                                   ('Group', '@group')],
                                         formatters={'x': 'datetime'},
-                                        renderers=[self.plot_data]))
+                                        renderers=[self.plot_data, self.plot_data_2]))
 
         self.histogram.add_tools(HoverTool(show_arrow=True, line_policy='next', mode='vline',
                                            tooltips=[('Bin Center', '@x{0.2f}'),
@@ -492,62 +513,71 @@ class PlotTimeSeries(Plot):
                                    self.div,
                                    self.histogram)
 
-    def update_plot(self, x, y, mrn, uid, y_axis_label='Y Axis', avg_len=1, percentile=90., bin_size=10):
+    def clear_source(self, source_key):
+        for grp in [1, 2]:
+            data = {data_key: [] for data_key in list(self.source[grp][source_key].data)}
+            self.source[grp][source_key].data = data
+
+    def clear_sources(self):
+        for key in list(self.source[1]):
+            self.clear_source(key)
+
+    def update_plot(self, data):
 
         self.set_figure_dimensions()
 
-        self.y_axis_label = y_axis_label
+        self.y_axis_label = data[1]['y_axis_label']
         self.clear_sources()
-        self.figure.yaxis.axis_label = y_axis_label
+        self.figure.yaxis.axis_label = data[1]['y_axis_label']
         self.figure.xaxis.axis_label = 'Simulation Date'
-        self.histogram.xaxis.axis_label = y_axis_label
+        self.histogram.xaxis.axis_label = data[1]['y_axis_label']
 
-        self.update_plot_data(x, y, mrn, uid)
-        self.update_histogram(bin_size=bin_size)
-        self.update_trend(avg_len, percentile)
+        self.update_plot_data(data)
+        self.update_histogram(data[1]['bin_size'])
+        self.update_trend(data[1]['avg_len'], data[1]['percentile'])
 
         self.update_bokeh_layout_in_wx_python()
 
-    def update_plot_data(self, x, y, mrn, uid):
-        valid_indices = [i for i, value in enumerate(y) if value != 'None']
-        self.source['plot'].data = {'x': [value for i, value in enumerate(x) if i in valid_indices],
-                                    'y': [value for i, value in enumerate(y) if i in valid_indices],
-                                    'mrn': [value for i, value in enumerate(mrn) if i in valid_indices],
-                                    'uid': [value for i, value in enumerate(uid) if i in valid_indices]}
+    def update_plot_data(self, data):
+        for grp, grp_data in data.items():
+            valid_indices = [i for i, value in enumerate(grp_data['y']) if value != 'None']
+            self.source[grp]['plot'].data = {key: [value for i, value in enumerate(grp_data[key]) if i in valid_indices]
+                                             for key in ['x', 'y', 'mrn', 'uid']}
 
     def update_histogram(self, bin_size=10):
         width_fraction = 0.9
-        hist, bins = np.histogram(self.source['plot'].data['y'], bins=bin_size)
-        width = [width_fraction * (bins[1] - bins[0])] * bin_size
-        center = (bins[:-1] + bins[1:]) / 2.
-        self.source['hist'].data = {'x': center, 'top': hist, 'width': width}
+        for grp in [1, 2]:
+            hist, bins = np.histogram(self.source[grp]['plot'].data['y'], bins=bin_size)
+            width = [width_fraction * (bins[1] - bins[0])] * bin_size
+            center = (bins[:-1] + bins[1:]) / 2.
+            self.source[grp]['hist'].data = {'x': center, 'top': hist, 'width': width}
 
     def update_trend(self, avg_len, percentile):
 
-        x = self.source['plot'].data['x']
-        y = self.source['plot'].data['y']
-        if x and y:
-            x_len = len(x)
+        for grp in [1, 2]:
+            x = self.source[grp]['plot'].data['x']
+            y = self.source[grp]['plot'].data['y']
+            if x and y:
 
-            data_collapsed = collapse_into_single_dates(x, y)
-            x_trend, y_trend = moving_avg(data_collapsed, avg_len)
+                data_collapsed = collapse_into_single_dates(x, y)
+                x_trend, y_trend = moving_avg(data_collapsed, avg_len)
 
-            y_np = np.array(self.source['plot'].data['y'])
-            upper_bound = float(np.percentile(y_np, 50. + percentile / 2.))
-            average = float(np.percentile(y_np, 50))
-            lower_bound = float(np.percentile(y_np, 50. - percentile / 2.))
+                y_np = np.array(self.source[grp]['plot'].data['y'])
+                upper_bound = float(np.percentile(y_np, 50. + percentile / 2.))
+                average = float(np.percentile(y_np, 50))
+                lower_bound = float(np.percentile(y_np, 50. - percentile / 2.))
 
-            self.source['trend'].data = {'x': x_trend,
-                                         'y': y_trend,
-                                         'mrn': ['Avg'] * len(x_trend)}
-            self.source['bound'].data = {'x': [x[0], x[-1]],
-                                         'mrn': ['Series Avg'] * 2,
-                                         'upper': [upper_bound] * 2,
-                                         'avg': [average] * 2,
-                                         'lower': [lower_bound] * 2,
-                                         'y': [average] * 2}
-            self.source['patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
-                                         'y': [upper_bound, upper_bound, lower_bound, lower_bound]}
+                self.source[grp]['trend'].data = {'x': x_trend,
+                                                  'y': y_trend,
+                                                  'mrn': ['Avg'] * len(x_trend)}
+                self.source[grp]['bound'].data = {'x': [x[0], x[-1]],
+                                                  'mrn': ['Series Avg'] * 2,
+                                                  'upper': [upper_bound] * 2,
+                                                  'avg': [average] * 2,
+                                                  'lower': [lower_bound] * 2,
+                                                  'y': [average] * 2}
+                self.source[grp]['patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
+                                                  'y': [upper_bound, upper_bound, lower_bound, lower_bound]}
 
     def get_csv(self):
         data = self.source['plot'].data

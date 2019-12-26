@@ -35,10 +35,7 @@ class TimeSeriesFrame:
         """
         self.parent = parent
         self.options = options
-        self.dvh = group_data[1]['dvh']
-        self.dvh_2 = group_data[2]['dvh']
-        self.data = group_data[1]['data']
-        self.data_2 = group_data[2]['data']
+        self.group_data = group_data
         self.custom_data = {}
 
         self.y_axis_options = sql_columns.numerical
@@ -111,97 +108,104 @@ class TimeSeriesFrame:
         self.layout = sizer_wrapper
 
     def combo_box_y_axis_ticker(self, evt):
-        if self.dvh and self.data['Plans']:
+        if self.group_data[1]['dvh'] and self.group_data[1]['data']['Plans']:
             self.update_plot()
 
     def update_plot(self):
         data = self.get_plot_data()
-        self.plot.update_plot(**data)
+        self.plot.update_plot(data)
 
     def get_plot_data(self, y_axis_selection=None):
         if y_axis_selection is None:
             y_axis_selection = self.combo_box_y_axis.GetValue()
-        uids = self.dvh.study_instance_uid
-        mrn_data = self.dvh.mrn
-        if y_axis_selection.split('_')[0] in {'D', 'V'}:
-            y_data = self.dvh.endpoints['data'][y_axis_selection]
-        elif y_axis_selection in ['EUD', 'NTCP or TCP']:
-            y_data = getattr(self.dvh, y_axis_selection.lower().replace(' ', '_'))
-        elif y_axis_selection in self.custom_data.keys():
-            y_data = self.custom_data[y_axis_selection]['y']
-            uids = self.custom_data[y_axis_selection]['uid']
-            mrn_data = self.custom_data[y_axis_selection]['mrn']
-        else:
-            data_info = self.y_axis_options[y_axis_selection]
-            table = data_info['table']
-            var_name = data_info['var_name']
-
-            if table == 'DVHs':
-                y_data = getattr(self.dvh, var_name)
-            else:
-                y_data = getattr(self.data[table], var_name)
-                uids = getattr(self.data[table], 'study_instance_uid')
-                mrn_data = getattr(self.data[table], 'mrn')
-
-        x_data = []
-        for uid in uids:
-            if uid in self.data['Plans'].study_instance_uid:
-                index = self.data['Plans'].study_instance_uid.index(uid)
-                x = self.data['Plans'].sim_study_date[index]
-                if x and x != 'None':
-                    x_data.append(x)
+        data = {}
+        for key in [1,2]:
+            if self.group_data[key]['dvh']:
+                uids = self.group_data[key]['dvh'].study_instance_uid
+                mrn_data = self.group_data[key]['dvh'].mrn
+                if y_axis_selection.split('_')[0] in {'D', 'V'}:
+                    y_data = self.group_data[key]['dvh'].endpoints['data'][y_axis_selection]
+                elif y_axis_selection in ['EUD', 'NTCP or TCP']:
+                    y_data = getattr(self.group_data[key]['dvh'], y_axis_selection.lower().replace(' ', '_'))
+                elif y_axis_selection in self.custom_data.keys():
+                    y_data = self.custom_data[y_axis_selection]['y']
+                    uids = self.custom_data[y_axis_selection]['uid']
+                    mrn_data = self.custom_data[y_axis_selection]['mrn']
                 else:
-                    x_data.append(str(datetime.now()))
+                    data_info = self.y_axis_options[y_axis_selection]
+                    table = data_info['table']
+                    var_name = data_info['var_name']
+
+                    if table == 'DVHs':
+                        y_data = getattr(self.group_data[key]['dvh'], var_name)
+                    else:
+                        y_data = getattr(self.group_data[key]['data'][table], var_name)
+                        uids = getattr(self.group_data[key]['data'][table], 'study_instance_uid')
+                        mrn_data = getattr(self.group_data[key]['data'][table], 'mrn')
+
+                x_data = []
+                for uid in uids:
+                    if uid in self.group_data[key]['data']['Plans'].study_instance_uid:
+                        index = self.group_data[key]['data']['Plans'].study_instance_uid.index(uid)
+                        x = self.group_data[key]['data']['Plans'].sim_study_date[index]
+                        if x and x != 'None':
+                            x_data.append(x)
+                        else:
+                            x_data.append(str(datetime.now()))
+                    else:
+                        x_data.append(str(datetime.now()))
+
+                sort_index = sorted(range(len(x_data)), key=lambda k: x_data[k])
+                x_values_sorted, y_values_sorted, mrn_sorted, uid_sorted = [], [], [], []
+
+                for s in range(len(x_data)):
+                    x_values_sorted.append(parser.parse(x_data[sort_index[s]]))
+                    y_values_sorted.append(y_data[sort_index[s]])
+                    mrn_sorted.append(mrn_data[sort_index[s]])
+                    uid_sorted.append(uids[sort_index[s]])
+
+                try:
+                    hist_bins = int(self.text_input_bin_size.GetValue())
+                except ValueError:
+                    self.text_input_bin_size.SetValue('10')
+                    hist_bins = 10
+
+                try:
+                    avg_len = int(self.text_input_lookback_distance.GetValue())
+                except ValueError:
+                    self.text_input_lookback_distance.SetValue('1')
+                    avg_len = 1
+
+                try:
+                    percentile = float(self.text_inputs_percentile.GetValue())
+                except ValueError:
+                    self.text_inputs_percentile.SetValue('90')
+                    percentile = 90.
+
+                y_axis = self.combo_box_y_axis.GetValue()
+                try:
+                    units = self.y_axis_options[y_axis]['units']
+                except:
+                    units = ''
+                if units:
+                    y_axis = "%s (%s)" % (y_axis, units)
+
+                data[key] = {'x': x_values_sorted,
+                             'y': y_values_sorted,
+                             'mrn': mrn_sorted,
+                             'uid': uid_sorted,
+                             'y_axis_label': y_axis,
+                             'avg_len': avg_len,
+                             'percentile': percentile,
+                             'bin_size': hist_bins,
+                             'group': [key] * len(x_values_sorted)}
             else:
-                x_data.append(str(datetime.now()))
+                data[key] = {'x': [], 'y': [], 'mrn': [], 'uid': [], 'y_axis_label': [], 'avg_len': [],
+                             'percentile': [], 'bin_size': [], 'group': []}
+        return data
 
-        sort_index = sorted(range(len(x_data)), key=lambda k: x_data[k])
-        x_values_sorted, y_values_sorted, mrn_sorted, uid_sorted = [], [], [], []
-
-        for s in range(len(x_data)):
-            x_values_sorted.append(parser.parse(x_data[sort_index[s]]))
-            y_values_sorted.append(y_data[sort_index[s]])
-            mrn_sorted.append(mrn_data[sort_index[s]])
-            uid_sorted.append(uids[sort_index[s]])
-
-        try:
-            hist_bins = int(self.text_input_bin_size.GetValue())
-        except ValueError:
-            self.text_input_bin_size.SetValue('10')
-            hist_bins = 10
-
-        try:
-            avg_len = int(self.text_input_lookback_distance.GetValue())
-        except ValueError:
-            self.text_input_lookback_distance.SetValue('1')
-            avg_len = 1
-
-        try:
-            percentile = float(self.text_inputs_percentile.GetValue())
-        except ValueError:
-            self.text_inputs_percentile.SetValue('90')
-            percentile = 90.
-
-        y_axis = self.combo_box_y_axis.GetValue()
-        try:
-            units = self.y_axis_options[y_axis]['units']
-        except:
-            units = ''
-        if units:
-            y_axis = "%s (%s)" % (y_axis, units)
-
-        return {'x': x_values_sorted,
-                'y': y_values_sorted,
-                'mrn': mrn_sorted,
-                'uid': uid_sorted,
-                'y_axis_label': y_axis,
-                'avg_len': avg_len,
-                'percentile': percentile,
-                'bin_size': hist_bins}
-
-    def update_data(self, dvh, data):
-        self.dvh = dvh
-        self.data = data
+    def update_data(self, group_data):
+        self.group_data = group_data
         self.update_plot()
 
     def clear_data(self):
@@ -222,20 +226,20 @@ class TimeSeriesFrame:
 
     def update_y_axis_options(self):
         current_choice = self.combo_box_y_axis.GetValue()
-        if self.dvh:
-            if self.dvh.endpoints['defs']:
-                for choice in self.dvh.endpoints['defs']['label']:
+        if self.group_data[1]['dvh']:
+            if self.group_data[1]['dvh'].endpoints['defs']:
+                for choice in self.group_data[1]['dvh'].endpoints['defs']['label']:
                     if choice not in self.choices:
                         self.choices.append(choice)
 
                 for i in range(len(self.choices))[::-1]:
                     if self.choices[i][0:2] in {'D_', 'V_'}:
-                        if self.choices[i] not in self.dvh.endpoints['defs']['label']:
+                        if self.choices[i] not in self.group_data[1]['dvh'].endpoints['defs']['label']:
                             self.choices.pop(i)
 
-            if self.dvh.eud and 'EUD' not in self.choices:
+            if self.group_data[1]['dvh'].eud and 'EUD' not in self.choices:
                 self.choices.append('EUD')
-            if self.dvh.ntcp_or_tcp and 'NTCP or TCP' not in self.choices:
+            if self.group_data[1]['dvh'].ntcp_or_tcp and 'NTCP or TCP' not in self.choices:
                 self.choices.append('NTCP or TCP')
 
             self.choices.sort()
@@ -276,9 +280,9 @@ class TimeSeriesFrame:
 
         # if selection is not None, export being called from DVHA app menu or tool bar
 
-        uids = self.dvh.study_instance_uid
-        mrns = self.dvh.mrn
-        dates = self.dvh.sim_study_date
+        uids = self.group_data[1]['dvh'].study_instance_uid
+        mrns = self.group_data[1]['dvh'].mrn
+        dates = self.group_data[1]['dvh'].sim_study_date
 
         # Collect y-data (as in y-axis data from time series), organize into dict for printing to rows
         y_data = {}

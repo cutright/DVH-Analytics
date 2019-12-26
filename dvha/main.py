@@ -616,7 +616,7 @@ class DVHAMainFrame(wx.Frame):
                 del wait
                 self.notebook_main_view.SetSelection(1)
                 self.update_data(load_saved_dvh_data=load_saved_dvh_data)
-                self.time_series.update_data(self.group_data[1]['dvh'], self.group_data[1]['data'])
+                self.time_series.update_data(self.group_data)
                 if self.group_data[1]['dvh'].count > 1:
                     self.control_chart.update_data(self.group_data[1]['dvh'], self.group_data[1]['stats_data'])
                     self.correlation.update_data()
@@ -642,8 +642,8 @@ class DVHAMainFrame(wx.Frame):
         self.group_data[2]['dvh'] = None
         # self.plot.clear_plot()
         self.endpoint.clear_data()
-        # self.time_series.clear_data()
-        # self.time_series.initialize_y_axis_options()
+        self.time_series.clear_data()
+        self.time_series.initialize_y_axis_options()
         # self.regression.clear()
         # self.control_chart.clear_data()
         # self.control_chart.initialize_y_axis_options()
@@ -669,7 +669,7 @@ class DVHAMainFrame(wx.Frame):
                 del wait
                 # self.notebook_main_view.SetSelection(1)
                 self.update_data()
-                # self.time_series.update_data(self.dvh, self.data)
+                self.time_series.update_data(self.group_data)
                 if self.group_data[2]['dvh'].count > 1:
                     # self.control_chart.update_data(self.dvh, self.stats_data)
                     self.correlation.update_data()
