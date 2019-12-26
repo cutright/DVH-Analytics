@@ -26,8 +26,8 @@ class EndpointFrame:
         """
         :param parent:  notebook panel in main view
         :type parent: Panel
-        :param dvh: dvh data object
-        :type dvh: DVH
+        :param group_data: dvh, table_data, and stats_data
+        :type group_data: dict
         :param time_series: Time Series object in notebook
         :type time_series: TimeSeriesFrame
         :param regression: Regression frame object in notebook
@@ -53,7 +53,7 @@ class EndpointFrame:
                                        style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
                       for key in [1, 2]}
         for table in self.table.values():
-            table.SetMinSize(get_window_size(0.623, 0.353))
+            table.SetMinSize(get_window_size(0.623, 0.28))
         self.data_table = {key: DataTable(self.table[key]) for key in [1, 2]}
 
         self.endpoint_defs = DataTable(None, columns=['label', 'output_type', 'input_type',
@@ -87,10 +87,10 @@ class EndpointFrame:
         for key in list(self.button):
             hbox.Add(self.button[key], 0, wx.ALL, 5)
         vbox.Add(hbox, 0, wx.ALL | wx.EXPAND, 5)
-        vbox.Add(wx.StaticText(self.parent, wx.ID_ANY, "Query Group 1:"), 0, wx.BOTTOM, 5)
-        vbox.Add(self.table[1], 0, wx.EXPAND, 0)
-        vbox.Add(wx.StaticText(self.parent, wx.ID_ANY, "Query Group 2:"), 0, wx.BOTTOM, 5)
-        vbox.Add(self.table[2], 0, wx.EXPAND, 0)
+        for grp in [1, 2]:
+            vbox.Add(wx.StaticText(self.parent, wx.ID_ANY, "Query Group %s:" % grp), 0, wx.EXPAND | wx.BOTTOM, 5)
+            vbox.Add(self.table[grp], 1, wx.EXPAND, 0)
+            vbox.Add((10, 10), 0, 0, 0)
         sizer_wrapper.Add(vbox, 1, wx.ALL | wx.EXPAND, 20)
         self.layout = sizer_wrapper
 

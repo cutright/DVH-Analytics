@@ -26,8 +26,8 @@ class RadBioFrame:
         """
         :param parent:  notebook panel in main view
         :type parent: Panel
-        :param dvh: dvh data object
-        :type dvh: DVH
+        :param group_data: dvh, table_data, and stats_data
+        :type group_data: dict
         :param time_series: Time Series object in notebook
         :type time_series: TimeSeriesFrame
         :param regression: Regression frame object in notebook
@@ -47,6 +47,7 @@ class RadBioFrame:
         self.text_input_eud_a = wx.TextCtrl(self.parent, wx.ID_ANY, "")
         self.text_input_gamma_50 = wx.TextCtrl(self.parent, wx.ID_ANY, "")
         self.text_input_td_50 = wx.TextCtrl(self.parent, wx.ID_ANY, "")
+        self.radio_box_query_group = wx.RadioBox(self.parent, wx.ID_ANY, 'Query Group', choices=['1', '2', 'Both'])
         self.button_apply_parameters = wx.Button(self.parent, wx.ID_ANY, "Apply Parameters")
         self.button_export = wx.Button(self.parent, wx.ID_ANY, "Export")
         self.table_rad_bio = {grp: wx.ListCtrl(self.parent, wx.ID_ANY,
@@ -102,6 +103,8 @@ class RadBioFrame:
             for i in [1, 2, 3, 4]:
                 self.table_published_values.SetItem(index, i, str(row[i]))
 
+        self.radio_box_query_group.SetSelection(2)
+
     def __do_layout(self):
         sizer_main = wx.BoxSizer(wx.VERTICAL)
         sizer_parameters = wx.BoxSizer(wx.VERTICAL)
@@ -120,8 +123,8 @@ class RadBioFrame:
                                                wx.FONTWEIGHT_BOLD, 0, ""))
         sizer_published_values.Add(label_published_values, 0, wx.ALL, 5)
         sizer_published_values.Add(self.table_published_values, 1, wx.ALL, 10)
-        sizer_published_values.SetMinSize(get_window_size(0.298, 0.15))
-        sizer_main.Add(sizer_published_values, 1, wx.ALL | wx.EXPAND, 10)
+        sizer_published_values.SetMinSize(get_window_size(0.298, 0.08))
+        sizer_main.Add(sizer_published_values, 0, wx.ALL | wx.EXPAND, 10)
 
         label_parameters = wx.StaticText(self.parent, wx.ID_ANY, "Parameters:")
         label_parameters.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
@@ -142,8 +145,10 @@ class RadBioFrame:
         sizer_td_50.Add(self.text_input_td_50, 0, wx.ALL | wx.EXPAND, 5)
         sizer_parameters_input.Add(sizer_td_50, 1, wx.EXPAND, 0)
 
-        sizer_button.Add(self.button_apply_parameters, 1, wx.ALL | wx.EXPAND, 15)
-        sizer_button_2.Add(self.button_export, 1, wx.ALL | wx.EXPAND, 15)
+        sizer_parameters_input.Add(self.radio_box_query_group, 0, 0, 0)
+
+        sizer_button.Add(self.button_apply_parameters, 0, wx.ALL, 10)
+        sizer_button_2.Add(self.button_export, 0, wx.ALL, 10)
         sizer_parameters_input.Add(sizer_button, 1, wx.EXPAND, 0)
         sizer_parameters_input.Add(sizer_button_2, 1, wx.EXPAND, 0)
         sizer_parameters.Add(sizer_parameters_input, 1, wx.ALL | wx.EXPAND, 5)
@@ -214,7 +219,10 @@ class RadBioFrame:
         gamma_50 = float_or_none(self.text_input_gamma_50.GetValue())
         td_50 = float_or_none(self.text_input_td_50.GetValue())
 
-        for grp, data in self.group_data.items():
+        groups = [[1], [2], [1, 2]][self.radio_box_query_group.GetSelection()]
+
+        for grp in groups:
+            data = self.group_data[grp]
             if data['dvh']:
                 # Get the indices of the selected rows, or assume all should be updated
                 selected_indices = get_selected_listctrl_items(self.table_rad_bio[grp])
