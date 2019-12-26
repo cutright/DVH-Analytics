@@ -586,7 +586,6 @@ class DVHAMainFrame(wx.Frame):
     def exec_query(self, load_saved_dvh_data=False):
         wait = wx.BusyCursor()
 
-        # self.dvh = None
         self.plot.clear_plot()
         self.endpoint.clear_data()
         self.time_series.clear_data()
@@ -610,7 +609,7 @@ class DVHAMainFrame(wx.Frame):
         if self.group_data[1]['dvh'].count:
             try:
                 self.endpoint.update_dvh(self.group_data)
-                self.text_summary.SetLabelText(self.group_data[1]['dvh'].get_summary())
+                self.set_summary_text(1)
 
                 self.plot.update_plot(self.group_data[1]['dvh'])
                 del wait
@@ -663,21 +662,17 @@ class DVHAMainFrame(wx.Frame):
         if self.group_data[2]['dvh'].count:
             try:
                 self.endpoint.update_dvh(self.group_data)
-                # self.text_summary.SetLabelText(self.dvh.get_summary())
-                # self.dvh.add_group_2(self.dvh_2)
+                self.set_summary_text(2)
                 self.plot.update_plot(self.group_data[1]['dvh'], dvh_2=self.group_data[2]['dvh'])
                 del wait
-                # self.notebook_main_view.SetSelection(1)
                 self.update_data()
                 self.time_series.update_data(self.group_data)
                 if self.group_data[2]['dvh'].count > 1:
                     # self.control_chart.update_data(self.dvh, self.stats_data)
                     self.correlation.update_data()
-                #
+
                 self.radbio.update_dvh_data(self.group_data)
-                #
-                # self.__enable_notebook_tabs()
-                #
+
                 # self.save_data['main_categorical'] = self.data_table_categorical.get_save_data()
                 # self.save_data['main_numerical'] = self.data_table_numerical.get_save_data()
             except PlottingMemoryError as e:
@@ -943,23 +938,33 @@ class DVHAMainFrame(wx.Frame):
         self.close()
 
     def reset_query_filters(self):
-        self.query_filters = {key: None for key in [0, 1]}
+        self.query_filters = {key: None for key in [1, 2]}
 
     def on_group_select(self, evt):
-        key = self.radio_button_query_group.GetSelection()
+        group = self.radio_button_query_group.GetSelection() + 1
+        other = 3 - group
 
-        self.button_query_execute.SetLabelText('Query and Retrieve Group %s' % (key+1))
+        self.button_query_execute.SetLabelText('Query and Retrieve Group %s' % group)
 
-        self.query_filters[1-key] = {'main_categorical': self.data_table_categorical.get_save_data(),
+        self.query_filters[other] = {'main_categorical': self.data_table_categorical.get_save_data(),
                                      'main_numerical': self.data_table_numerical.get_save_data()}
-        if self.query_filters[key] is not None:
-            self.data_table_categorical.load_save_data(self.query_filters[key]['main_categorical'])
-            self.data_table_numerical.load_save_data(self.query_filters[key]['main_numerical'])
+        if self.query_filters[group] is not None:
+            self.data_table_categorical.load_save_data(self.query_filters[group]['main_categorical'])
+            self.data_table_numerical.load_save_data(self.query_filters[group]['main_numerical'])
         else:
             self.data_table_categorical.delete_all_rows()
             self.data_table_numerical.delete_all_rows()
 
         self.update_all_query_buttons()
+
+        self.set_summary_text(group)
+
+    def set_summary_text(self, group):
+        if self.group_data[group]['dvh']:
+            text = self.group_data[group]['dvh'].get_summary()
+        else:
+            text = ''
+        self.text_summary.SetLabelText(text)
 
 
 class MainApp(wx.App):
