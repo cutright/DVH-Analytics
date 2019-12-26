@@ -70,6 +70,7 @@ class CorrelationFrame:
 
     def on_var_select(self, evt):
         categories = [c for c in list(self.stats_data.data) if 'date' not in c.lower()]
+        categories.sort()
         size = get_window_size(1, 0.8)
         dlg = SelectFromListDialog("Correlation Matrix", "Variables", categories,
                                    size=(350, size[1]), column_width=300, selections=self.selections)

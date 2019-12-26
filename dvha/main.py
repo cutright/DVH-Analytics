@@ -621,7 +621,7 @@ class DVHAMainFrame(wx.Frame):
                     self.control_chart.update_data(self.group_data[1]['dvh'], self.group_data[1]['stats_data'])
                     self.correlation.update_data()
 
-                self.radbio.update_dvh_data(self.group_data[1]['dvh'])
+                self.radbio.update_dvh_data(self.group_data)
 
                 self.__enable_notebook_tabs()
 
@@ -647,7 +647,7 @@ class DVHAMainFrame(wx.Frame):
         # self.regression.clear()
         # self.control_chart.clear_data()
         # self.control_chart.initialize_y_axis_options()
-        # self.radbio.clear_data()
+        self.radbio.clear_data()
 
         if not load_saved_dvh_data:
             try:
@@ -674,7 +674,7 @@ class DVHAMainFrame(wx.Frame):
                     # self.control_chart.update_data(self.dvh, self.stats_data)
                     self.correlation.update_data()
                 #
-                # self.radbio.update_dvh_data(self.dvh)
+                self.radbio.update_dvh_data(self.group_data)
                 #
                 # self.__enable_notebook_tabs()
                 #
