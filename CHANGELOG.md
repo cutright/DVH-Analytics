@@ -12,8 +12,8 @@ v0.6.4 (TBD)
  - [Correlation] New tab added showing a correlation matrix
  - [Database Editor] Fix for GH Issue 19
  - [Query] DVH bin width may be set. SQL still stores 1cGy bin widths, but query will keep dvh data
-    using specified bin width.  This results in faster bokeh plot generation. 
- - [Query] Query Groups are back! (IN PROGRESS: only DVHs update currently, must have group 1 queried)
+    using specified bin width.  This results in faster bokeh plot generation. (in progress)
+ - [Query] Query Groups are back! (IN PROGRESS: save, load, export, custom data, regression, and control chart features not updated)
 
 
 v0.6.3 (2019.12.15)
