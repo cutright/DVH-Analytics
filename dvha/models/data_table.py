@@ -322,7 +322,7 @@ class DataTable:
         :rtype: str
         """
 
-        data = self.data_for_csv
+        data = deepcopy(self.data_for_csv)
         if extra_column_data:
             self.insert_columns_into_data_for_csv(data, extra_column_data)
         csv_data = []
