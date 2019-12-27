@@ -299,7 +299,7 @@ class PlotStatDVH(Plot):
 
         self.clear_sources()
         self.dvh = dvh
-        self.x = list(range(dvh.bin_count))
+        self.x = dvh.x_data[0]
         self.stat_dvhs = dvh.get_standard_stat_dvh()
 
         data = {'dvh': deepcopy(dvh.get_cds_data()),

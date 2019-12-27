@@ -118,7 +118,9 @@ class DataTable:
 
     @property
     def column_count(self):
-        return len(self.columns)
+        if self.columns:
+            return len(self.columns)
+        return 0
 
     @property
     def row_count(self):

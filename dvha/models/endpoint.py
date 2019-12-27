@@ -121,7 +121,7 @@ class EndpointFrame:
                         columns[group].append(ep_name)
 
                         if ep_name in current_labels:
-                            ep[ep_name] = deepcopy(self.table[group].data[ep_name])
+                            ep[ep_name] = deepcopy(self.data_table[group].data[ep_name])
 
                         else:
                             endpoint_input = ep_defs['input_type'][i]
@@ -167,7 +167,8 @@ class EndpointFrame:
         if res == wx.ID_OK:
             for value in dlg.selected_values:
                 for data_table in self.data_table.values():
-                    data_table.delete_column(value)
+                    if data_table.columns and value in data_table.columns:
+                        data_table.delete_column(value)
                 endpoint_def_row = self.endpoint_defs.data['label'].index(value)
                 self.update_endpoints_in_dvh()
                 self.endpoint_defs.delete_row(endpoint_def_row)

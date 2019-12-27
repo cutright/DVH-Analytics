@@ -50,7 +50,7 @@ class DefaultOptions:
 
         # All DVHs in SQL DB have 1cGy bin widths regardless of this value.  However, the queried DVHs will be
         # down-sampled using this bin_width
-        self.dvh_bin_width = 1  # Not fully implemented yet, x-axis not updated based on this value if != 1
+        self.dvh_bin_width = 5
 
         # Options for the group statistical DVHs in the DVHs tab
         self.STATS_MEDIAN_LINE_WIDTH = 1

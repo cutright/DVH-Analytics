@@ -146,7 +146,7 @@ class DVH:
         :return: x data for plotting
         :rtype: list
         """
-        return [list(range(self.bin_count))] * self.count
+        return [np.multiply(np.array(range(self.bin_count)), self.dvh_bin_width).tolist()] * self.count
 
     @property
     def y_data(self):
@@ -191,10 +191,10 @@ class DVH:
             for y in range(len(self.dvh)):
                 dvh[y] = self.dvh[y][x]
             if volume_scale == 'relative':
-                doses[x] = dose_to_volume(dvh, volume)
+                doses[x] = dose_to_volume(dvh, volume, dvh_bin_width=self.dvh_bin_width)
             else:
                 if self.volume[x]:
-                    doses[x] = dose_to_volume(dvh, volume/self.volume[x])
+                    doses[x] = dose_to_volume(dvh, volume/self.volume[x], dvh_bin_width=self.dvh_bin_width)
                 else:
                     doses[x] = 0
         if dose_scale == 'relative':
@@ -226,9 +226,9 @@ class DVH:
                 if isinstance(self.rx_dose[x], str):
                     volumes[x] = 0
                 else:
-                    volumes[x] = volume_of_dose(dvh, dose * self.rx_dose[x])
+                    volumes[x] = volume_of_dose(dvh, dose * self.rx_dose[x], dvh_bin_width=self.dvh_bin_width)
             else:
-                volumes[x] = volume_of_dose(dvh, dose)
+                volumes[x] = volume_of_dose(dvh, dose, dvh_bin_width=self.dvh_bin_width)
 
         if volume_scale == 'absolute':
             volumes = np.multiply(volumes, self.volume[0:self.count])
@@ -362,7 +362,7 @@ class DVH:
 
 
 # Returns the isodose level outlining the given volume
-def dose_to_volume(dvh, rel_volume):
+def dose_to_volume(dvh, rel_volume, dvh_bin_width=1):
     """
     :param dvh: a single dvh
     :param rel_volume: fractional volume
@@ -371,34 +371,34 @@ def dose_to_volume(dvh, rel_volume):
 
     # Return the maximum dose instead of extrapolating
     if rel_volume < dvh[-1]:
-        return len(dvh) * 0.01
+        return len(dvh) * dvh_bin_width * 0.01
 
     dose_high = np.argmax(dvh < rel_volume)
     y = rel_volume
     x_range = [dose_high - 1, dose_high]
     y_range = [dvh[dose_high - 1], dvh[dose_high]]
-    dose = np.interp(y, y_range, x_range) * 0.01
+    dose = np.interp(y, y_range, x_range) * dvh_bin_width * 0.01
 
     return dose
 
 
-def volume_of_dose(dvh, dose):
+def volume_of_dose(dvh, dose, dvh_bin_width=1):
     """
     :param dvh: a single dvh
     :param dose: dose in cGy
     :return: volume in cm^3 of roi receiving at least the specified dose
     """
 
-    x = [int(np.floor(dose * 100)), int(np.ceil(dose * 100))]
+    x = [int(np.floor(dose / dvh_bin_width * 100)), int(np.ceil(dose / dvh_bin_width * 100))]
     if len(dvh) < x[1]:
         return dvh[-1]
     y = [dvh[x[0]], dvh[x[1]]]
-    roi_volume = np.interp(float(dose), x, y)
+    roi_volume = np.interp(float(dose) / dvh_bin_width, x, y)
 
     return roi_volume
 
 
-def calc_eud(dvh, a):
+def calc_eud(dvh, a, dvh_bin_width=1):
     """
     EUD = sum[ v(i) * D(i)^a ] ^ [1/a]
     :param dvh: a single DVH as a list of numpy 1D array with 1cGy bins
