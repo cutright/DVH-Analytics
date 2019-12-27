@@ -1321,9 +1321,12 @@ class RxParser:
     @property
     def fx_count(self):
         fx_count = self.fx_grp_data.NumberOfFractionsPlanned
-        if type(fx_count) is str:
+        print(type(fx_count), 'NumberOfFractionsPlanned: %s' % fx_count)
+        try:
             return int(float(fx_count))
-        return fx_count
+        except:
+            print('WARNING: NumberOfFractionsPlanned could not be converted to an integer.')
+            return fx_count
 
     @property
     def fx_dose(self):
