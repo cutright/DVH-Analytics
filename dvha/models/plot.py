@@ -332,7 +332,7 @@ class PlotStatDVH(Plot):
     def update_plot_2(self, dvh_2):
 
         self.dvh_2 = dvh_2
-        self.x_2 = list(range(dvh_2.bin_count))
+        self.x_2 = dvh_2.x_data[0]
         self.stat_dvhs_2 = dvh_2.get_standard_stat_dvh()
 
         dvh = self.source['dvh'].data
