@@ -218,10 +218,10 @@ class EndpointFrame:
     def enable_initial_buttons(self):
         self.button['add'].Enable()
 
-    def get_csv(self, selection=None):
+    def get_csv(self, group=1, selection=None):
         uid = {1: {'title': 'Study Instance UID',
                    'data': self.group_data[1]['dvh'].uid}}
-        return self.data_table.get_csv(extra_column_data=uid)
+        return self.data_table[group].get_csv(extra_column_data=uid)
 
     def on_export_csv(self, evt):
         save_data_to_file(self.parent, "Export Endpoints to CSV", self.get_csv())
