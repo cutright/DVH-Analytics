@@ -1029,12 +1029,16 @@ class BeamParser:
         if point:
             return ','.join([str(round(dim_value, 3)) for dim_value in point])
 
-    def get_cp_attributes(self, pydicom_attr):
+    def get_cp_attributes(self, pydicom_attr, force_float=False, force_int=False):
         """
         Generic method to get the values of a pydicom attribute for self.cp_seqeunce
         This is used anytime you need to retrieve values that are specified for every control point
         :param pydicom_attr: the attribute of interest
         :type pydicom_attr: str
+        :param force_float: force values to be of type float
+        :type force_float: bool
+        :param force_int: force values to eb of type int
+        :type force_int: bool
         :return: the values of the specified attribute across all control points
         :rtype: list
         """
@@ -1045,7 +1049,13 @@ class BeamParser:
                     if getattr(cp, pydicom_attr).upper() in {'CC', 'CW'}:
                         values.append(getattr(cp, pydicom_attr).upper())
                 else:
-                    values.append(getattr(cp, pydicom_attr))
+                    value = getattr(cp, pydicom_attr)
+                    if force_float:
+                        value = float(value)
+                    if force_int:
+                        value = int(float(value))
+                    values.append(value)
+
         if pydicom_attr[-5:] == 'Angle':
             values = change_angle_origin(values, 180)  # if angle is greater than 180, convert to negative value
         return values
@@ -1085,7 +1095,7 @@ class BeamParser:
     ################################################################################
     @property
     def beam_number(self):
-        return self.beam_data.BeamNumber
+        return int(self.beam_data.BeamNumber)
 
     @property
     def beam_name(self):
@@ -1146,19 +1156,19 @@ class BeamParser:
 
     @property
     def gantry_angles(self):
-        return self.get_cp_attributes('GantryAngle')
+        return self.get_cp_attributes('GantryAngle', force_float=True)
 
     @property
     def collimator_angles(self):
-        return self.get_cp_attributes('BeamLimitingDeviceAngle')
+        return self.get_cp_attributes('BeamLimitingDeviceAngle', force_float=True)
 
     @property
     def couch_angles(self):
-        return self.get_cp_attributes('PatientSupportAngle')
+        return self.get_cp_attributes('PatientSupportAngle', force_float=True)
 
     @property
     def gantry_rot_dirs(self):
-        return self.get_cp_attributes('GantryRotationDirection')
+        return self.get_cp_attributes('GantryRotationDirection', force_float=True)
 
     @property
     def collimator_rot_dirs(self):
@@ -1195,11 +1205,11 @@ class BeamParser:
 
     @property
     def control_point_count(self):
-        return self.get_data_attribute(self.beam_data, 'NumberOfControlPoints')
+        return int(self.get_data_attribute(self.beam_data, 'NumberOfControlPoints'))
 
     @property
     def ssd(self):
-        ssds = self.get_cp_attributes('SourceToSurfaceDistance')
+        ssds = self.get_cp_attributes('SourceToSurfaceDistance', force_float=True)
         if ssds:
             return round(float(np.average(ssds))/10., 2)
 
@@ -1224,7 +1234,8 @@ class BeamParser:
             mlc_summary_data = mlca(self.beam_data, self.beam_mu, ignore_zero_mu_cp=True).summary
             mlca_stat_data = {key: calc_stats(mlc_summary_data[key]) for key in mlc_keys}
             mlca_stat_data['complexity'] = np.sum(mlc_summary_data['cmp_score'])
-        except:
+        except Exception as e:
+            print('WARNING: Skipping mlc_stat_data calculation because ', str(e))
             mlca_stat_data = {key: [None] * 6 for key in mlc_keys}
             mlca_stat_data['complexity'] = None
         return mlca_stat_data
@@ -1320,7 +1331,7 @@ class RxParser:
 
     @property
     def fx_count(self):
-        return self.fx_grp_data.NumberOfFractionsPlanned
+        return int(self.fx_grp_data.NumberOfFractionsPlanned)
 
     @property
     def fx_dose(self):
@@ -1351,7 +1362,7 @@ class RxParser:
     @property
     def beam_count(self):
         if hasattr(self.fx_grp_data, 'NumberOfBeams'):
-            return self.fx_grp_data.NumberOfBeams
+            return int(self.fx_grp_data.NumberOfBeams)
 
     @property
     def beam_numbers(self):
