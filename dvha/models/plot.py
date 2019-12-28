@@ -389,14 +389,19 @@ class PlotStatDVH(Plot):
             summary.append('')
 
         if include_dvhs:
-            max_x = max([len(x) for x in data['x']])
-            dvh_data = ['MRN,Study Instance UID,ROI Name,Dose bins (cGy) ->,%s' % ','.join([str(x) for x in range(max_x)])]
+            max_x = [self.x, self.x_2][len(self.x_2) > len(self.x)]
+            dose_bins = ','.join([str(x) for x in max_x])
+            dose_bin_count = len(max_x)
+            bin_difference = abs(len(self.x) - len(self.x_2)) + 1
+            dvh_data = ['MRN,Study Instance UID,ROI Name,Dose bins (cGy) ->,%s' % dose_bins]
             for i, mrn in enumerate(data['mrn']):
                 clean_mrn = mrn.replace(',', '^')
                 clean_uid = data['study_instance_uid'][i].replace(',', '^')
                 clean_roi = data['roi_name'][i].replace(',', '^')
                 dvh_data.append("%s,%s,%s,,%s" %
                                 (clean_mrn, clean_uid, clean_roi, ','.join(str(y) for y in data['y'][i])))
+                if len(data['y'][i]) < dose_bin_count:
+                    dvh_data[-1] = dvh_data[-1] + ','.join(['0'] * bin_difference)
 
         return '\n'.join(summary + dvh_data)
 
@@ -580,10 +585,21 @@ class PlotTimeSeries(Plot):
                                                   'y': [upper_bound, upper_bound, lower_bound, lower_bound]}
 
     def get_csv(self):
-        data = self.source['plot'].data
+        data = self.source[1]['plot'].data
         csv_data = ['MRN,Study Instance UID,Date,%s' % self.y_axis_label]
         for i in range(len(data['mrn'])):
             csv_data.append(','.join(str(data[key][i]).replace(',', '^') for key in ['mrn', 'uid', 'x', 'y']))
+
+        data2 = self.source[2]['plot'].data
+        if data2['mrn']:
+            csv_data2 = ['MRN,Study Instance UID,Date,%s' % self.y_axis_label]
+            for i in range(len(data['mrn'])):
+                csv_data2.append(','.join(str(data[key][i]).replace(',', '^') for key in ['mrn', 'uid', 'x', 'y']))
+
+            csv_data.insert(0, 'Group 1')
+            csv_data.append('\nGroup 2')
+            csv_data.extend(csv_data2)
+
         return '\n'.join(csv_data)
 
     def set_figure_dimensions(self):

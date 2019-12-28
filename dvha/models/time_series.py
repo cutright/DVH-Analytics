@@ -280,30 +280,37 @@ class TimeSeriesFrame:
 
         # if selection is not None, export being called from DVHA app menu or tool bar
 
-        uids = self.group_data[1]['dvh'].study_instance_uid
-        mrns = self.group_data[1]['dvh'].mrn
-        dates = self.group_data[1]['dvh'].sim_study_date
+        csv = []
+        for grp in [1, 2]:
+            if self.group_data[grp]['dvh']:
+                uids = self.group_data[grp]['dvh'].study_instance_uid
+                mrns = self.group_data[grp]['dvh'].mrn
+                dates = self.group_data[grp]['dvh'].sim_study_date
 
-        # Collect y-data (as in y-axis data from time series), organize into dict for printing to rows
-        y_data = {}
-        for y_axis in selection:
-            data = self.get_plot_data(y_axis_selection=y_axis)
-            column = []
-            for uid in uids:
-                if uid in data['uid']:
-                    index = data['uid'].index(uid)
-                    column.append(data['y'][index])
-                else:
-                    column.append('None')
-            y_data[y_axis] = column
+                # Collect y-data (as in y-axis data from time series), organize into dict for printing to rows
+                y_data = {}
+                for y_axis in selection:
+                    data = self.get_plot_data(y_axis_selection=y_axis)[grp]
+                    column = []
+                    for uid in uids:
+                        if uid in data['uid']:
+                            index = data['uid'].index(uid)
+                            column.append(data['y'][index])
+                        else:
+                            column.append('None')
+                    y_data[y_axis] = column
 
-        # Collect data into a list of row data
-        csv = ['MRN,Study Instance UID,Date,%s' % ','.join(selection)]
-        for i, uid in enumerate(uids):
-            row = [mrns[i], uid, str(dates[i])]
-            for y_axis in selection:
-                row.append(str(y_data[y_axis][i]))
-            csv.append(','.join(row))
+                if grp == 2:
+                    csv.insert(0, 'Group 1')
+                    csv.append('\nGroup 2')
+
+                # Collect data into a list of row data
+                csv.append('MRN,Study Instance UID,Date,%s' % ','.join(selection))
+                for i, uid in enumerate(uids):
+                    row = [mrns[i], uid, str(dates[i])]
+                    for y_axis in selection:
+                        row.append(str(y_data[y_axis][i]))
+                    csv.append(','.join(row))
 
         return '\n'.join(csv)
 

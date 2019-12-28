@@ -218,20 +218,26 @@ class EndpointFrame:
     def enable_initial_buttons(self):
         self.button['add'].Enable()
 
-    def get_csv(self, group=1, selection=None):
+    def get_csv(self, selection=None):
         uid = {1: {'title': 'Study Instance UID',
                    'data': self.group_data[1]['dvh'].uid}}
-        return self.data_table[group].get_csv(extra_column_data=uid)
+        csv = self.data_table[1].get_csv(extra_column_data=uid)
+        if self.group_data[2]['dvh']:
+            uid = {1: {'title': 'Study Instance UID',
+                       'data': self.group_data[2]['dvh'].uid}}
+            csv = 'Group 1\n%s\n\nGroup 2\n%s' % (csv, self.data_table[2].get_csv(extra_column_data=uid))
+
+        return csv
 
     def on_export_csv(self, evt):
         save_data_to_file(self.parent, "Export Endpoints to CSV", self.get_csv())
 
-    def get_save_data(self):
-        return deepcopy({'data_table': self.data_table.get_save_data(),
+    def get_save_data(self, group=1):
+        return deepcopy({'data_table': self.data_table[group].get_save_data(),
                          'endpoint_defs': self.endpoint_defs.get_save_data()})
 
-    def load_save_data(self, save_data):
-        self.data_table.load_save_data(save_data['data_table'], ignore_layout=True)
+    def load_save_data(self, save_data, group=1):
+        self.data_table[group].load_save_data(save_data['data_table'], ignore_layout=True)
         self.endpoint_defs.load_save_data(save_data['endpoint_defs'], ignore_layout=True)
         self.calculate_endpoints()
 

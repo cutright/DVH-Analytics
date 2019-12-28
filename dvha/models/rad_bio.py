@@ -273,7 +273,11 @@ class RadBioFrame:
             table.delete_all_rows()
 
     def get_csv(self, selection=None):
-        return self.data_table_rad_bio[1].get_csv()
+        csv = self.data_table_rad_bio[1].get_csv()
+        if self.data_table_rad_bio[2].row_count:
+            csv = 'Group 1\n%s\n\nGroup 2\n%s' % (csv, self.data_table_rad_bio[2].get_csv())
+
+        return csv
 
     def on_export_csv(self, evt):
         save_data_to_file(self.parent, "Export RadBio table to CSV", self.get_csv())
