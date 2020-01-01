@@ -113,32 +113,34 @@ class StatsSpreadsheet(Spreadsheet):
         column_labels = [label for label in self.stats_data.data.keys() if 'date' not in label.lower()]
         column_labels.sort()
 
-        self.CreateGrid(len(self.stats_data.mrns)+1, len(column_labels)+2)
+        self.CreateGrid(len(self.stats_data.mrns)+1, len(column_labels)+3)
 
         self.SetCellValue(0, 0, 'MRN')
         self.SetCellValue(0, 1, 'Study Instance UID')
+        self.SetCellValue(0, 2, 'Sim Study Date')
 
         for row, mrn in enumerate(self.stats_data.mrns):
             self.SetCellValue(row+1, 0, mrn)
             self.SetCellValue(row+1, 1, self.stats_data.uids[row])
+            self.SetCellValue(row+1, 2, self.stats_data.sim_study_dates[row])
 
         # self.SetColMinimalAcceptableWidth(1000)
         for col, label in enumerate(column_labels):
             # self.SetColMinimalWidth(col+2, 1000)
-            self.SetCellValue(0, col+2, label)
+            self.SetCellValue(0, col+3, label)
             for row, value in enumerate(self.stats_data.data[label]['values']):
-                self.SetCellValue(row+1, col+2, str(value))
+                self.SetCellValue(row+1, col+3, str(value))
 
     def update_stats_data(self):
 
-        for col in range(self.GetNumberCols()-2):
-            label = self.GetCellValue(0, col+2)
-            if label:
+        for col in range(self.GetNumberCols()):
+            label = self.GetCellValue(0, col)
+            if label.lower() not in ['mrn', 'study instance uid', 'sim study date']:
                 if label not in list(self.stats_data.data):
                     values = ['None'] * (self.GetNumberRows()-1)
                     self.stats_data.add_variable(label, values)
-                    self.parent.time_series.add_custom_data(label, self.get_custom_time_series_data(col+2))
-                data = [self.convert_value(row+1, col+2) for row in range(self.GetNumberRows()-1)]
+                    self.parent.time_series.add_custom_data(label, self.get_custom_time_series_data(col))
+                data = [self.convert_value(row+1, col) for row in range(self.GetNumberRows()-1)]
                 self.stats_data.set_variable_data(label, data)
         self.parent.update_chart_models()
 
