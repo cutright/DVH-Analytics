@@ -282,11 +282,12 @@ class RadBioFrame:
     def on_export_csv(self, evt):
         save_data_to_file(self.parent, "Export RadBio table to CSV", self.get_csv())
 
-    def get_save_data(self, group=1):
-        return self.data_table_rad_bio[group].get_save_data()
+    def get_save_data(self):
+        return {group: data_table.get_save_data() for group, data_table in self.data_table_rad_bio.items()}
 
-    def load_save_data(self, save_data, group=1):
-        self.data_table_rad_bio[group].load_save_data(save_data)
+    def load_save_data(self, save_data):
+        for grp in [1, 2]:
+            self.data_table_rad_bio[grp].load_save_data(save_data[grp])
 
     @property
     def has_data(self):

@@ -232,12 +232,14 @@ class EndpointFrame:
     def on_export_csv(self, evt):
         save_data_to_file(self.parent, "Export Endpoints to CSV", self.get_csv())
 
-    def get_save_data(self, group=1):
-        return deepcopy({'data_table': self.data_table[group].get_save_data(),
-                         'endpoint_defs': self.endpoint_defs.get_save_data()})
+    def get_save_data(self):
+        return {'data_table_1': self.data_table[1].get_save_data(),
+                'data_table_2': self.data_table[2].get_save_data(),
+                'endpoint_defs': self.endpoint_defs.get_save_data()}
 
-    def load_save_data(self, save_data, group=1):
-        self.data_table[group].load_save_data(save_data['data_table'], ignore_layout=True)
+    def load_save_data(self, save_data):
+        self.data_table[1].load_save_data(save_data['data_table_1'], ignore_layout=True)
+        self.data_table[2].load_save_data(save_data['data_table_2'], ignore_layout=True)
         self.endpoint_defs.load_save_data(save_data['endpoint_defs'], ignore_layout=True)
         self.calculate_endpoints()
 

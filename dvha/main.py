@@ -450,7 +450,7 @@ class DVHAMainFrame(wx.Frame):
     # --------------------------------------------------------------------------------------------------------------
     def on_save(self, evt):
         if self.save_data:
-            dlg = wx.FileDialog(self, "Save your downloaded data to file", "", wildcard='*.dvha',
+            dlg = wx.FileDialog(self, "Save your session data to file", "", wildcard='*.dvha',
                                 style=wx.FD_SAVE)
             dlg.SetDirectory(DATA_DIR)
             if dlg.ShowModal() == wx.ID_OK:
@@ -472,6 +472,7 @@ class DVHAMainFrame(wx.Frame):
 
     def save_data_obj(self):
         self.save_data['group_data'] = self.group_data
+        self.save_data['query_filters'] = self.query_filters
         self.save_data['time_stamp'] = datetime.now()
         self.save_data['version'] = self.options.VERSION
         # data_table_categorical and data_table_numerical saved after query to ensure these data reflect
@@ -486,13 +487,22 @@ class DVHAMainFrame(wx.Frame):
         self.group_data = self.save_data['group_data']
 
         # .load_save_data loses column widths?
-        self.data_table_categorical.data = deepcopy(self.save_data['main_categorical']['data'])
-        self.data_table_numerical.data = deepcopy(self.save_data['main_numerical']['data'])
-        self.data_table_categorical.set_data_in_layout()
-        self.data_table_numerical.set_data_in_layout()
-        self.update_all_query_buttons()
+        self.radio_button_query_group.SetSelection(0)
+        self.data_table_categorical.load_save_data(self.save_data['main_categorical_1'])
+        self.data_table_numerical.load_save_data(self.save_data['main_numerical_1'])
 
         self.exec_query(load_saved_dvh_data=True)
+
+        if 'main_categorical_2' in self.save_data.keys():
+            self.radio_button_query_group.SetSelection(1)
+            self.on_group_select()
+            self.data_table_categorical.load_save_data(self.save_data['main_categorical_2'])
+            self.data_table_numerical.load_save_data(self.save_data['main_numerical_2'])
+            self.update_all_query_buttons()
+
+            self.exec_query_2(load_saved_dvh_data=True)
+
+        self.update_all_query_buttons()
 
         self.endpoint.load_save_data(self.save_data['endpoint'])
         if self.endpoint.has_data:
@@ -501,6 +511,10 @@ class DVHAMainFrame(wx.Frame):
         self.radbio.load_save_data(self.save_data['radbio'])
 
         self.endpoint.update_endpoints_in_dvh()
+
+        self.group_data[1]['stats_data'].update_endpoints_and_radbio()
+        if self.group_data[2]['stats_data']:
+            self.group_data[2]['stats_data'].update_endpoints_and_radbio()
 
         self.time_series.update_y_axis_options()
         self.time_series.load_save_data(self.save_data['time_series'])
@@ -624,8 +638,8 @@ class DVHAMainFrame(wx.Frame):
 
                 self.__enable_notebook_tabs()
 
-                self.save_data['main_categorical'] = self.data_table_categorical.get_save_data()
-                self.save_data['main_numerical'] = self.data_table_numerical.get_save_data()
+                self.save_data['main_categorical_1'] = self.data_table_categorical.get_save_data()
+                self.save_data['main_numerical_1'] = self.data_table_numerical.get_save_data()
             except PlottingMemoryError as e:
                 del wait
                 self.on_plotting_memory_error(str(e))
@@ -638,7 +652,8 @@ class DVHAMainFrame(wx.Frame):
     def exec_query_2(self, load_saved_dvh_data=False):
         wait = wx.BusyCursor()
 
-        self.group_data[2]['dvh'] = None
+        if not load_saved_dvh_data:
+            self.group_data[2]['dvh'] = None
         # self.plot.clear_plot()
         self.endpoint.clear_data()
         self.time_series.clear_data()
@@ -659,30 +674,31 @@ class DVHAMainFrame(wx.Frame):
                 return
             self.group_data[2]['dvh'] = DVH(dvh_condition=dvh_str, uid=uids, dvh_bin_width=self.options.dvh_bin_width)
 
-        if self.group_data[2]['dvh'].count:
-            try:
-                self.endpoint.update_dvh(self.group_data)
-                self.set_summary_text(2)
-                self.plot.update_plot(self.group_data[1]['dvh'], dvh_2=self.group_data[2]['dvh'])
-                del wait
-                self.update_data()
-                self.time_series.update_data(self.group_data)
-                if self.group_data[2]['dvh'].count > 1:
-                    # self.control_chart.update_data(self.dvh, self.stats_data)
-                    self.correlation.update_data()
+        if self.group_data[2]['dvh']:
+            if self.group_data[2]['dvh'].count:
+                try:
+                    self.endpoint.update_dvh(self.group_data)
+                    self.set_summary_text(2)
+                    self.plot.update_plot(self.group_data[1]['dvh'], dvh_2=self.group_data[2]['dvh'])
+                    del wait
+                    self.update_data()
+                    self.time_series.update_data(self.group_data)
+                    if self.group_data[2]['dvh'].count > 1:
+                        # self.control_chart.update_data(self.dvh, self.stats_data)
+                        self.correlation.update_data()
 
-                self.radbio.update_dvh_data(self.group_data)
+                    self.radbio.update_dvh_data(self.group_data)
 
-                # self.save_data['main_categorical'] = self.data_table_categorical.get_save_data()
-                # self.save_data['main_numerical'] = self.data_table_numerical.get_save_data()
-            except PlottingMemoryError as e:
+                    self.save_data['main_categorical_2'] = self.data_table_categorical.get_save_data()
+                    self.save_data['main_numerical_2'] = self.data_table_numerical.get_save_data()
+                except PlottingMemoryError as e:
+                    del wait
+                    self.on_plotting_memory_error(str(e))
+            else:
                 del wait
-                self.on_plotting_memory_error(str(e))
-        else:
-            del wait
-            wx.MessageBox('No DVHs returned. Please modify query or import more data.', 'Query Error',
-                          wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
-            self.group_data[2]['dvh'] = None
+                wx.MessageBox('No DVHs returned. Please modify query or import more data.', 'Query Error',
+                              wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+                self.group_data[2]['dvh'] = None
 
     def get_query(self):
 
@@ -800,6 +816,7 @@ class DVHAMainFrame(wx.Frame):
             res = dlg.ShowModal()
             if res == wx.ID_YES:
                 self.close()
+                self.radio_button_query_group.SetSelection(0)
             dlg.Destroy()
 
     def close(self):
@@ -940,7 +957,7 @@ class DVHAMainFrame(wx.Frame):
     def reset_query_filters(self):
         self.query_filters = {key: None for key in [1, 2]}
 
-    def on_group_select(self, evt):
+    def on_group_select(self, *evt):
         group = self.radio_button_query_group.GetSelection() + 1
         other = 3 - group
 
