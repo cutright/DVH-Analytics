@@ -11,7 +11,6 @@ The main file DVH Analytics
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx
-from copy import deepcopy
 from datetime import datetime
 from dvha.db import sql_columns
 from dvha.db.sql_to_python import QuerySQL
@@ -40,6 +39,7 @@ from dvha.tools.roi_name_manager import DatabaseROIs
 from dvha.tools.stats import StatsData
 from dvha.tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux, get_window_size, \
     save_object_to_file, load_object_from_file, set_msw_background_color, initialize_directories_and_settings
+from dvha.db.sql_columns import all_columns as sql_column_info
 
 
 class DVHAMainFrame(wx.Frame):
@@ -899,19 +899,35 @@ class DVHAMainFrame(wx.Frame):
 
     def view_table_data(self, key):
         if key == 'DVHs':
-            data = self.group_data[1]['dvh']
+            data = {grp: self.group_data[grp]['dvh'] for grp in [1, 2]}
         elif key == 'StatsData':
-            data = self.group_data[1]['stats_data']
+            data = {grp: self.group_data[grp]['stats_data'] for grp in [1, 2]}
         else:
-            data = self.group_data[1]['data'][key]
+            data = {grp: self.group_data[grp]['data'][key] for grp in [1, 2]}
 
         if data:
+
             if self.get_menu_item_status(key) == 'Show':
                 if key == 'StatsData':
-                    self.data_views[key] = StatsDataEditor(data, self.data_menu, self.data_menu_items[key].GetId(),
+                    self.data_views[key] = StatsDataEditor(data[1], self.data_menu, self.data_menu_items[key].GetId(),
                                                            self.time_series, self.regression, self.control_chart)
                 else:
-                    self.data_views[key] = QueriedDataFrame(data, key, self.data_menu, self.data_menu_items[key].GetId())
+                    if key == 'DVHs':
+                        columns = [c for c in data[1].keys]
+                    elif key == 'Rxs':
+                        columns = ['plan_name', 'fx_dose', 'rx_percent', 'fxs', 'rx_dose', 'fx_grp_number',
+                                   'fx_grp_count',
+                                   'fx_grp_name', 'normalization_method', 'normalization_object']
+                    else:
+                        columns = [obj['var_name'] for obj in sql_column_info.values() if obj['table'] == key]
+
+                    for starter_column in ['study_instance_uid', 'mrn']:
+                        if starter_column in columns:
+                            columns.pop(columns.index(starter_column))
+                        columns.insert(0, starter_column)
+
+                    self.data_views[key] = QueriedDataFrame(data, columns, key,
+                                                            self.data_menu, self.data_menu_items[key].GetId())
             else:
                 self.data_views[key].on_close()
                 self.data_views[key] = None
