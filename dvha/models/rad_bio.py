@@ -65,10 +65,7 @@ class RadBioFrame:
 
         self.__set_properties()
         self.__do_layout()
-
-        parent.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_parameter_select, self.table_published_values)
-        parent.Bind(wx.EVT_BUTTON, self.apply_parameters, id=self.button_apply_parameters.GetId())
-        parent.Bind(wx.EVT_BUTTON, self.on_export_csv, id=self.button_export.GetId())
+        self.__do_bind()
 
         self.disable_buttons()
 
@@ -161,6 +158,11 @@ class RadBioFrame:
 
         self.layout = sizer_main
 
+    def __do_bind(self):
+        self.parent.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_parameter_select, self.table_published_values)
+        self.parent.Bind(wx.EVT_BUTTON, self.apply_parameters, id=self.button_apply_parameters.GetId())
+        self.parent.Bind(wx.EVT_BUTTON, self.on_export_csv, id=self.button_export.GetId())
+
     def __set_tooltips(self):
         self.button_apply_parameters.SetToolTip("Shift or Ctrl click for targeted application.")
 
@@ -183,8 +185,8 @@ class RadBioFrame:
     def update_dvh_data(self, group_data):
         """
         Import dvh data, store into self.dvh and set data in data_table
-        :param dvh: dvh object from main frame
-        :type dvh: DVH
+        :param group_data: group_data object from main frame
+        :type group_data: dict
         """
         self.group_data = group_data
         for grp, data in group_data.items():
@@ -203,9 +205,7 @@ class RadBioFrame:
                         'Total Fxs': dvh.total_fxs,
                         'Fx Dose': dvh.fx_dose}
             else:
-                data = {'MRN': [], 'ROI Name': [], 'a': [], u'\u03b3_50': [], 'TD or TCD': [], 'EUD': [],
-                        'NTCP or TCP': [], 'PTV Overlap': [], 'ROI Type': [], 'Rx Dose': [], 'Total Fxs': [],
-                        'Fx Dose': []}
+                data = {column: [] for column in self.columns}
 
             self.data_table_rad_bio[grp].set_data(data, self.columns)
 
