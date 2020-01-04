@@ -15,6 +15,7 @@ v0.6.4 (TBD)
     using specified bin width.  This results in faster bokeh plot generation.
  - [Query] Query Groups are back! (IN PROGRESS: custom data, regression, and control chart features not updated)
  - [Export] Fixed a bug that would not export DVHs Summary without also exporting DVHs
+ - [User Options] Fixed bug that did not restore saved options after clicking cancel
 
 
 v0.6.3 (2019.12.15)
@@ -149,7 +150,7 @@ v0.4.8 (2018.12.27)
 * Data directory defaults to ~/Apps/dvh_analytics/data but can still be customized
 * All sql/preference backups stored in ~/Apps/dvh_analytics/data/backup now (can't customize)
 * options.py now contains imports (os and paths.py)
-    * This broke load_options, code added to ignore ModuleType
+    * This broke refresh_options, code added to ignore ModuleType
 * Automatically update uncategorized variations in ROI Manager after importing data, updating database, deleting data, 
 or reimporting database
 

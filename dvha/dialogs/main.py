@@ -619,7 +619,7 @@ class UserSettings(wx.Dialog):
         self.__do_layout()
         self.__do_bind()
 
-        self.load_options()
+        self.refresh_options()
         self.load_paths()
 
         self.run()
@@ -754,7 +754,7 @@ class UserSettings(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self.inbox_dir_dlg, id=self.button_inbox.GetId())
         self.Bind(wx.EVT_BUTTON, self.imported_dir_dlg, id=self.button_imported.GetId())
 
-        self.Bind(wx.EVT_TEXT, self.update_dvh_bin_width, id=self.dvh_bin_width_input.GetId())
+        self.Bind(wx.EVT_TEXT, self.update_dvh_bin_width_val, id=self.dvh_bin_width_input.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.update_input_colors_var, id=self.combo_box_colors_category.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.update_size_var, id=self.combo_box_sizes_category.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.update_line_width_var, id=self.combo_box_line_widths_category.GetId())
@@ -772,7 +772,9 @@ class UserSettings(wx.Dialog):
     def run(self):
         res = self.ShowModal()
         if res == wx.ID_OK:
-            self.save_options()
+            self.options.save()
+        else:
+            self.options.load()
         self.Destroy()
 
     def inbox_dir_dlg(self, evt):
@@ -825,12 +827,6 @@ class UserSettings(wx.Dialog):
             return option_variable.upper().replace(' ', '_')
         else:
             return option_variable.replace('_', ' ').title().replace('Dvh', 'DVH').replace('Iqr', 'IQR')
-
-    def save_options(self):
-        """
-        Write the Options object to file
-        """
-        self.options.save()
 
     def update_input_colors_var(self, *args):
         var = self.clean_option_variable(self.combo_box_colors_category.GetValue(), inverse=True)
@@ -910,7 +906,7 @@ class UserSettings(wx.Dialog):
         var = self.clean_option_variable(self.combo_box_alpha_category.GetValue(), inverse=True)
         self.options.set_option(var, val)
 
-    def update_dvh_bin_width(self, *args):
+    def update_dvh_bin_width_val(self, *args):
         new = self.dvh_bin_width_input.GetValue()
         try:
             val = int(new)
@@ -918,7 +914,11 @@ class UserSettings(wx.Dialog):
         except ValueError:
             self.dvh_bin_width_input.SetValue(str(self.options.dvh_bin_width))
 
-    def load_options(self):
+    def update_dvh_bin_width_var(self, *args):
+        self.dvh_bin_width_input.SetValue(str(self.options.dvh_bin_width))
+
+    def refresh_options(self):
+        self.update_dvh_bin_width_var()
         self.update_alpha_var()
         self.update_input_colors_var()
         self.update_line_style_var()
@@ -933,7 +933,7 @@ class UserSettings(wx.Dialog):
     def restore_defaults(self, *args):
         MessageDialog(self, "Restore default preferences?", action_yes_func=self.options.restore_defaults)
         self.update_size_val()
-        self.load_options()
+        self.refresh_options()
 
 
 class About(wx.Dialog):
