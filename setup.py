@@ -31,6 +31,7 @@ requires = [
 
 setup(
     name='dvha',
+    python_requires='>3.5',
     include_package_data=True,
     packages=find_packages(),
     version=DefaultOptions().VERSION,
