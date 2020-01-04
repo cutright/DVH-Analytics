@@ -8,6 +8,8 @@ previous web-based version can be found [here](https://github.com/cutright/DVH-A
 developed.
 
 ### How to Run
+If you have macOS Mojave or later, we have a beta compiled execuatable.  See [this](https://github.com/cutright/DVH-Analytics/issues/23) post for information.
+
 Install via pip:
 ~~~
 $ pip install dvha
