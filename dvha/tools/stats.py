@@ -407,13 +407,11 @@ class MultiVariableRegression:
         self.f_p_value = scipy_stats.f.cdf(self.f_stat, self.df_model, self.df_error)
 
 
-def get_control_limits(y, scalar_d=1.128, std_devs=3):
+def get_control_limits(y, std_devs=3):
     """
     Calculate control limits for Control Chart
     :param y: data
     :type y: list
-    :param scalar_d: ask Arka
-    :type scalar_d: float
     :param std_devs: values greater than std_devs away are out-of-control
     :type std_devs: int or float
     :return: center line, upper control limit, and lower control limit
@@ -422,6 +420,8 @@ def get_control_limits(y, scalar_d=1.128, std_devs=3):
 
     center_line = np.mean(y)
     avg_moving_range = np.mean(np.absolute(np.diff(y)))
+
+    scalar_d = 1.128  # since moving range is calculated based on 2 consecutive points
 
     ucl = center_line + std_devs * avg_moving_range / scalar_d
     lcl = center_line - std_devs * avg_moving_range / scalar_d

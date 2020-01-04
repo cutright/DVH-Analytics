@@ -141,8 +141,6 @@ class DefaultOptions:
         self.COMPLEXITY_SCORE_X_WEIGHT = 1.
         self.COMPLEXITY_SCORE_Y_WEIGHT = 1.
 
-        self.SCALAR_D = 1.128
-
         self.ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV', 'EXTERNAL',
                           'FIDUCIAL', 'IMPLANT', 'OPTIMIZATION', 'PRV', 'SUPPORT', 'NONE']
 
