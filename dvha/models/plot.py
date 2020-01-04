@@ -425,7 +425,7 @@ class PlotTimeSeries(Plot):
 
         self.options = options
         self.source = {key: {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], group=[])),
-                             'hist': ColumnDataSource(data=dict(x=[], top=[], width=[])),
+                             'hist': ColumnDataSource(data=dict(x=[], top=[], width=[], group=[])),
                              'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                              'bound': ColumnDataSource(data=dict(x=[], mrn=[], upper=[], avg=[], lower=[])),
                              'patch': ColumnDataSource(data=dict(x=[], y=[]))} for key in [1, 2]}
@@ -499,6 +499,15 @@ class PlotTimeSeries(Plot):
         self.figure.add_layout(legend_plot, 'above')
         self.figure.legend.click_policy = "hide"
 
+        legend_hist = Legend(items=[("Group 1 ", [self.vbar]),
+                                    ("Group 2 ", [self.vbar_2])
+                                    ],
+                             orientation='horizontal')
+
+        # Add the layout outside the plot, clicking legend item hides the line
+        self.histogram.add_layout(legend_hist, 'above')
+        self.histogram.legend.click_policy = "hide"
+
     def __add_hover(self):
         self.figure.add_tools(HoverTool(show_arrow=True,
                                         tooltips=[('ID', '@mrn'),
@@ -510,8 +519,9 @@ class PlotTimeSeries(Plot):
 
         self.histogram.add_tools(HoverTool(show_arrow=True, line_policy='next', mode='vline',
                                            tooltips=[('Bin Center', '@x{0.2f}'),
-                                                     ('Counts', '@top')],
-                                           renderers=[self.vbar]))
+                                                     ('Counts', '@top'),
+                                                     ('Group', '@group')],
+                                           renderers=[self.vbar, self.vbar_2]))
 
     def __do_layout(self):
         self.bokeh_layout = column(self.figure,
@@ -546,8 +556,10 @@ class PlotTimeSeries(Plot):
     def update_plot_data(self, data):
         for grp, grp_data in data.items():
             valid_indices = [i for i, value in enumerate(grp_data['y']) if value != 'None']
-            self.source[grp]['plot'].data = {key: [value for i, value in enumerate(grp_data[key]) if i in valid_indices]
-                                             for key in ['x', 'y', 'mrn', 'uid']}
+            new_data = {key: [value for i, value in enumerate(grp_data[key]) if i in valid_indices]
+                        for key in ['x', 'y', 'mrn', 'uid']}
+            new_data['group'] = [grp] * len(new_data['x'])
+            self.source[grp]['plot'].data = new_data
 
     def update_histogram(self, bin_size=10):
         width_fraction = 0.9
@@ -555,7 +567,7 @@ class PlotTimeSeries(Plot):
             hist, bins = np.histogram(self.source[grp]['plot'].data['y'], bins=bin_size)
             width = [width_fraction * (bins[1] - bins[0])] * bin_size
             center = (bins[:-1] + bins[1:]) / 2.
-            self.source[grp]['hist'].data = {'x': center, 'top': hist, 'width': width}
+            self.source[grp]['hist'].data = {'x': center, 'top': hist, 'width': width, 'group': [grp] * len(hist)}
 
     def update_trend(self, avg_len, percentile):
 

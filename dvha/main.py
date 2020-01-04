@@ -919,6 +919,8 @@ class DVHAMainFrame(wx.Frame):
                         self.data_views[key] = StatsDataEditor(self.group_data, group, self.data_menu,
                                                                self.data_menu_items[key].GetId(), self.time_series,
                                                                self.regression, self.control_chart)
+                    else:
+                        self.no_queried_data_dlg()
                 else:
                     if key == 'DVHs':
                         columns = [c for c in data[1].keys]
@@ -940,9 +942,12 @@ class DVHAMainFrame(wx.Frame):
                 self.data_views[key].on_close()
                 self.data_views[key] = None
         else:
-            dlg = wx.MessageDialog(self, 'Please query/open some data first.', 'ERROR!', wx.ICON_ERROR | wx.OK_DEFAULT)
-            dlg.ShowModal()
-            dlg.Destroy()
+            self.no_queried_data_dlg()
+
+    def no_queried_data_dlg(self):
+        dlg = wx.MessageDialog(self, 'Please query/open some data first.', 'ERROR!', wx.ICON_ERROR | wx.OK_DEFAULT)
+        dlg.ShowModal()
+        dlg.Destroy()
 
     def get_menu_item_status(self, key):
         show_hide = ['Hide', 'Show']['Show' in self.data_menu.GetLabel(self.data_menu_items[key].GetId())]
