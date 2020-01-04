@@ -255,10 +255,17 @@ class StatsData:
     def set_variable_units(self, variable, units):
         self.data[variable]['units'] = units
 
-    def get_corr_matrix_data(self, options, included_vars=None):
+    def get_corr_matrix_data(self, options, included_vars=None, extra_vars=None):
         if included_vars is None:
             included_vars = list(self.data)
+        if extra_vars is not None:
+            included_vars = included_vars + extra_vars
+        else:
+            extra_vars = []
+
         categories = [c for c in list(self.data) if 'date' not in c.lower() and c in included_vars]
+        categories.extend(extra_vars)
+        categories = list(set(categories))
         categories.sort()
         var_count = len(categories)
         categories_for_label = [category.replace("Control Point", "CP") for category in categories]
@@ -281,47 +288,48 @@ class StatsData:
         for x in range(var_count):
             for y in range(var_count):
                 if x > y and self.group == 1 or x < y and self.group == 2:
+                    if categories[x] not in extra_vars and categories[y] not in extra_vars:
 
-                    bad_indices = [i for i, v in enumerate(self.data[categories[x]]['values']) if type(v) is str]
-                    bad_indices.extend([i for i, v in enumerate(self.data[categories[y]]['values']) if type(v) is str])
-                    bad_indices = list(set(bad_indices))
+                        bad_indices = [i for i, v in enumerate(self.data[categories[x]]['values']) if type(v) is str]
+                        bad_indices.extend([i for i, v in enumerate(self.data[categories[y]]['values']) if type(v) is str])
+                        bad_indices = list(set(bad_indices))
 
-                    x_data = [v for i, v in enumerate(self.data[categories[x]]['values']) if i not in bad_indices]
-                    y_data = [v for i, v in enumerate(self.data[categories[y]]['values']) if i not in bad_indices]
+                        x_data = [v for i, v in enumerate(self.data[categories[x]]['values']) if i not in bad_indices]
+                        y_data = [v for i, v in enumerate(self.data[categories[y]]['values']) if i not in bad_indices]
 
-                    if x_data and len(x_data) == len(y_data):
-                        r, p_value = scipy_stats.pearsonr(x_data, y_data)
-                    else:
-                        r, p_value = 0, 0
-                    if np.isnan(r):
-                        r = 0
+                        if x_data and len(x_data) == len(y_data):
+                            r, p_value = scipy_stats.pearsonr(x_data, y_data)
+                        else:
+                            r, p_value = 0, 0
+                        if np.isnan(r):
+                            r = 0
 
-                    sign = ['neg', 'pos'][r >= 0]
-                    color = getattr(options, 'CORRELATION_%s_COLOR_%s' % (sign.upper(), self.group))
-                    source_data['corr']['color'].append(color)
-                    source_data['corr']['r'].append(r)
-                    source_data['corr']['p'].append(p_value)
-                    source_data['corr']['alpha'].append(abs(r))
-                    source_data['corr']['size'].append(max_size * abs(r))
-                    source_data['corr']['x'].append(x + 0.5)  # 0.5 offset due to bokeh 0.12.9 bug
-                    source_data['corr']['y'].append(var_count - y - 0.5)  # 0.5 offset due to bokeh 0.12.9 bug
-                    source_data['corr']['x_name'].append(categories_for_label[x])
-                    source_data['corr']['y_name'].append(categories_for_label[y])
-                    source_data['corr']['group'].append(self.group)
+                        sign = ['neg', 'pos'][r >= 0]
+                        color = getattr(options, 'CORRELATION_%s_COLOR_%s' % (sign.upper(), self.group))
+                        source_data['corr']['color'].append(color)
+                        source_data['corr']['r'].append(r)
+                        source_data['corr']['p'].append(p_value)
+                        source_data['corr']['alpha'].append(abs(r))
+                        source_data['corr']['size'].append(max_size * abs(r))
+                        source_data['corr']['x'].append(x + 0.5)  # 0.5 offset due to bokeh 0.12.9 bug
+                        source_data['corr']['y'].append(var_count - y - 0.5)  # 0.5 offset due to bokeh 0.12.9 bug
+                        source_data['corr']['x_name'].append(categories_for_label[x])
+                        source_data['corr']['y_name'].append(categories_for_label[y])
+                        source_data['corr']['group'].append(self.group)
 
-                    try:
-                        x_norm, x_p = scipy_stats.normaltest(x_data)
-                    except ValueError:
-                        x_p = 'N/A'
-                    try:
-                        y_norm, y_p = scipy_stats.normaltest(y_data)
-                    except ValueError:
-                        y_p = 'N/A'
+                        try:
+                            x_norm, x_p = scipy_stats.normaltest(x_data)
+                        except ValueError:
+                            x_p = 'N/A'
+                        try:
+                            y_norm, y_p = scipy_stats.normaltest(y_data)
+                        except ValueError:
+                            y_p = 'N/A'
 
-                    source_data['corr']['x_normality'].append(x_p)
-                    source_data['corr']['y_normality'].append(y_p)
+                        source_data['corr']['x_normality'].append(x_p)
+                        source_data['corr']['y_normality'].append(y_p)
 
-        return source_data, x_factors, y_factors
+        return {'source_data': source_data, 'x_factors': x_factors, 'y_factors': y_factors}
 
 
 def get_index_of_nan(numpy_array):

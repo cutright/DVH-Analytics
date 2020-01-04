@@ -693,12 +693,24 @@ class PlotCorrelation(Plot):
         self.bokeh_layout = column(self.fig)
 
     def update_plot_data(self, stats_data, stats_data_2=None, included_vars=None):
-        source_data, x_factors, y_factors = stats_data.get_corr_matrix_data(self.options, included_vars=included_vars)
         if stats_data_2 is not None:
-            source_data_2, _, _ = stats_data_2.get_corr_matrix_data(self.options, included_vars=included_vars)
-            for key in list(source_data_2['corr']):
-                source_data['corr'][key].extend(source_data_2['corr'][key])
-        self.fig = figure(x_axis_location="above", x_range=x_factors, y_range=y_factors,
+            # TODO: Alert user when group is missing data, include which patient
+            categories = {1: list(stats_data.data), 2: list(stats_data_2.data)}
+            extra_vars = {grp: [x for x in categories[3-grp]
+                                if x not in categories[grp] and (included_vars is None or x in included_vars)]
+                          for grp in [1, 2]}
+        else:
+            extra_vars = {grp: None for grp in [1, 2]}
+
+        data = stats_data.get_corr_matrix_data(self.options,
+                                               included_vars=included_vars, extra_vars=extra_vars[1])
+        if stats_data_2 is not None:
+            data_2 = stats_data_2.get_corr_matrix_data(self.options,
+                                                       included_vars=included_vars, extra_vars=extra_vars[2])
+            for key in list(data_2['source_data']['corr']):
+                data['source_data']['corr'][key].extend(data_2['source_data']['corr'][key])
+
+        self.fig = figure(x_axis_location="above", x_range=data['x_factors'], y_range=data['y_factors'],
                           tools="pan, box_zoom, wheel_zoom, reset")
         self.__set_fig_attr()
         self.__add_plot_data()
@@ -706,8 +718,8 @@ class PlotCorrelation(Plot):
         self.__do_layout()
         self.set_figure_dimensions()
 
-        self.source['corr'].data = source_data['corr']
-        self.source['line'].data = source_data['line']
+        self.source['corr'].data = data['source_data']['corr']
+        self.source['line'].data = data['source_data']['line']
 
         self.update_bokeh_layout_in_wx_python()
 
