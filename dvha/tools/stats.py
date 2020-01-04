@@ -284,7 +284,7 @@ class StatsData:
         source_data = {'corr': {sk: [] for sk in s_keys},
                        'line': {'x': [0.5, var_count - 0.5], 'y': [var_count - 0.5, 0.5]}}
 
-        max_size = 20
+        min_size, max_size = 3, 20
         for x in range(var_count):
             for y in range(var_count):
                 if x > y and self.group == 1 or x < y and self.group == 2:
@@ -310,7 +310,7 @@ class StatsData:
                         source_data['corr']['r'].append(r)
                         source_data['corr']['p'].append(p_value)
                         source_data['corr']['alpha'].append(abs(r))
-                        source_data['corr']['size'].append(max_size * abs(r))
+                        source_data['corr']['size'].append(((max_size - min_size) * abs(r)) + min_size)
                         source_data['corr']['x'].append(x + 0.5)  # 0.5 offset due to bokeh 0.12.9 bug
                         source_data['corr']['y'].append(var_count - y - 0.5)  # 0.5 offset due to bokeh 0.12.9 bug
                         source_data['corr']['x_name'].append(categories_for_label[x])
