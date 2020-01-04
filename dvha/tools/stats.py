@@ -309,8 +309,15 @@ class StatsData:
                     source_data['corr']['y_name'].append(categories_for_label[y])
                     source_data['corr']['group'].append(self.group)
 
-                    x_norm, x_p = scipy_stats.normaltest(x_data)
-                    y_norm, y_p = scipy_stats.normaltest(y_data)
+                    try:
+                        x_norm, x_p = scipy_stats.normaltest(x_data)
+                    except ValueError:
+                        x_p = 'N/A'
+                    try:
+                        y_norm, y_p = scipy_stats.normaltest(y_data)
+                    except ValueError:
+                        y_p = 'N/A'
+
                     source_data['corr']['x_normality'].append(x_p)
                     source_data['corr']['y_normality'].append(y_p)
 
