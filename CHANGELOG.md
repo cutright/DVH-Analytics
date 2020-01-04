@@ -13,7 +13,7 @@ v0.6.4 (TBD)
  - [Database Editor] Fix for GH Issue 19
  - [Query] DVH bin width may be set. SQL still stores 1cGy bin widths, but query will keep dvh data
     using specified bin width.  This results in faster bokeh plot generation.
- - [Query] Query Groups are back! (IN PROGRESS: save, load, custom data, regression, and control chart features not updated)
+ - [Query] Query Groups are back! (IN PROGRESS: custom data, regression, and control chart features not updated)
  - [Export] Fixed a bug that would not export DVHs Summary without also exporting DVHs
 
 

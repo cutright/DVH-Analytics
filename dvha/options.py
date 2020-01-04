@@ -38,7 +38,7 @@ class DefaultOptions:
         self.DVH_LINE_DASH = 'solid'
 
         # Adjusts the opacity of the inner-quartile ranges
-        self.IQR_ALPHA = 0.075
+        self.IQR_ALPHA = 0.1
 
         # Adjust the plot font sizes
         self.PLOT_AXIS_LABEL_FONT_SIZE = "12pt"

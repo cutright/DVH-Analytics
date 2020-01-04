@@ -593,6 +593,7 @@ class UserSettings(wx.Dialog):
         self.button_inbox = wx.Button(self, wx.ID_ANY, u"…")
         self.text_ctrl_imported = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_DONTWRAP)
         self.button_imported = wx.Button(self, wx.ID_ANY, u"…")
+        self.dvh_bin_width_input = wx.TextCtrl(self, wx.ID_ANY, str(self.options.dvh_bin_width), style=wx.TE_DONTWRAP)
         self.combo_box_colors_category = wx.ComboBox(self, wx.ID_ANY, choices=color_variables,
                                                      style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_colors_selection = wx.ComboBox(self, wx.ID_ANY, choices=colors,
@@ -630,16 +631,17 @@ class UserSettings(wx.Dialog):
         self.text_ctrl_imported.SetToolTip("Directory for post-processed DICOM files")
         self.text_ctrl_imported.SetMinSize((100, 21))
         self.button_imported.SetMinSize((40, 21))
-        self.combo_box_colors_category.SetMinSize((250, 25))
-        self.combo_box_colors_selection.SetMinSize((145, 25))
-        self.combo_box_sizes_category.SetMinSize((250, 25))
+        self.dvh_bin_width_input.SetToolTip("Value must be an integer.")
+        self.combo_box_colors_category.SetMinSize((250, self.combo_box_colors_category.GetSize()[1]))
+        self.combo_box_colors_selection.SetMinSize((145, self.combo_box_colors_selection.GetSize()[1]))
+        self.combo_box_sizes_category.SetMinSize((250, self.combo_box_sizes_category.GetSize()[1]))
         self.spin_ctrl_sizes_input.SetMinSize((50, 22))
-        self.combo_box_line_widths_category.SetMinSize((250, 25))
+        self.combo_box_line_widths_category.SetMinSize((250, self.combo_box_line_widths_category.GetSize()[1]))
         self.spin_ctrl_line_widths_input.SetMinSize((50, 22))
-        self.combo_box_line_styles_category.SetMinSize((250, 25))
-        self.combo_box_line_styles_selection.SetMinSize((145, 25))
-        self.combo_box_alpha_category.SetMinSize((250, 25))
-        self.spin_ctrl_alpha_input.SetMinSize((50, 22))
+        self.combo_box_line_styles_category.SetMinSize((250, self.combo_box_line_styles_category.GetSize()[1]))
+        self.combo_box_line_styles_selection.SetMinSize((145, self.combo_box_line_styles_selection.GetSize()[1]))
+        self.combo_box_alpha_category.SetMinSize((250, self.combo_box_alpha_category.GetSize()[1]))
+        self.spin_ctrl_alpha_input.SetMinSize((70, 22))
 
         self.spin_ctrl_alpha_input.SetIncrement(0.1)
 
@@ -654,6 +656,7 @@ class UserSettings(wx.Dialog):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_ok_cancel = wx.BoxSizer(wx.HORIZONTAL)
         sizer_plot_options = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Plot Options"), wx.VERTICAL)
+        sizer_dvh_bin_width = wx.BoxSizer(wx.HORIZONTAL)
         sizer_alpha = wx.BoxSizer(wx.VERTICAL)
         sizer_alpha_input = wx.BoxSizer(wx.HORIZONTAL)
         sizer_line_styles = wx.BoxSizer(wx.VERTICAL)
@@ -690,6 +693,12 @@ class UserSettings(wx.Dialog):
         sizer_imported_wrapper.Add(sizer_imported, 1, wx.EXPAND, 0)
         sizer_dicom_directories.Add(sizer_imported_wrapper, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_dicom_directories, 0, wx.ALL | wx.EXPAND, 10)
+
+        label_dvh_bin_width = wx.StaticText(self, wx.ID_ANY, "DVH Bin Width (cGy):")
+        label_dvh_bin_width.SetToolTip("Value must be an integer")
+        sizer_dvh_bin_width.Add(label_dvh_bin_width, 0, wx.EXPAND | wx.RIGHT, 10)
+        sizer_dvh_bin_width.Add(self.dvh_bin_width_input, 0, 0, 0)
+        sizer_plot_options.Add(sizer_dvh_bin_width, 0, wx.BOTTOM, 10)
 
         label_colors = wx.StaticText(self, wx.ID_ANY, "Colors:")
         sizer_colors.Add(label_colors, 0, 0, 0)
@@ -745,6 +754,7 @@ class UserSettings(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self.inbox_dir_dlg, id=self.button_inbox.GetId())
         self.Bind(wx.EVT_BUTTON, self.imported_dir_dlg, id=self.button_imported.GetId())
 
+        self.Bind(wx.EVT_TEXT, self.update_dvh_bin_width, id=self.dvh_bin_width_input.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.update_input_colors_var, id=self.combo_box_colors_category.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.update_size_var, id=self.combo_box_sizes_category.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.update_line_width_var, id=self.combo_box_line_widths_category.GetId())
@@ -899,6 +909,14 @@ class UserSettings(wx.Dialog):
             val = 1.
         var = self.clean_option_variable(self.combo_box_alpha_category.GetValue(), inverse=True)
         self.options.set_option(var, val)
+
+    def update_dvh_bin_width(self, *args):
+        new = self.dvh_bin_width_input.GetValue()
+        try:
+            val = int(new)
+            self.options.set_option('dvh_bin_width', val)
+        except ValueError:
+            self.dvh_bin_width_input.SetValue(str(self.options.dvh_bin_width))
 
     def load_options(self):
         self.update_alpha_var()
