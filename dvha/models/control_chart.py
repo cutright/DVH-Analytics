@@ -25,10 +25,8 @@ class ControlChartFrame:
         """
         :param parent:  notebook panel in main view
         :type parent: Panel
-        :param dvh: dvh data object from query
-        :type dvh: DVH
-        :param stats_data: object containing queried data applicable/parsed for statistical analysis
-        :type stats_data: StatsData
+        :param group_data: dvh, table, and stats data
+        :type group_data: dict
         :param options: user options containing visual preferences
         :type options: Options
         """
@@ -59,7 +57,7 @@ class ControlChartFrame:
         self.parent.Bind(wx.EVT_BUTTON, self.export_csv, id=self.button_export.GetId())
 
     def __set_properties(self):
-        self.combo_box_y_axis.SetMinSize((300, 25))
+        self.combo_box_y_axis.SetMinSize((300, self.combo_box_y_axis.GetSize()[1]))
 
     def __do_subscribe(self):
         pub.subscribe(self.set_model, "control_chart_set_model")

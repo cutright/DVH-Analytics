@@ -172,7 +172,8 @@ class DVHAMainFrame(wx.Frame):
                                 'Plans': self.data_menu.Append(wx.ID_ANY, 'Show Plans\tCtrl+2'),
                                 'Rxs': self.data_menu.Append(wx.ID_ANY, 'Show Rxs\tCtrl+3'),
                                 'Beams': self.data_menu.Append(wx.ID_ANY, 'Show Beams\tCtrl+4'),
-                                'StatsData': self.data_menu.Append(wx.ID_ANY, 'Show Stats Data\tCtrl+5')}
+                                'StatsData1': self.data_menu.Append(wx.ID_ANY, 'Show Stats Data: Group 1\tCtrl+5'),
+                                'StatsData2': self.data_menu.Append(wx.ID_ANY, 'Show Stats Data: Group 2\tCtrl+6')}
 
         settings_menu = wx.Menu()
         menu_pref = settings_menu.Append(wx.ID_PREFERENCES)
@@ -201,7 +202,8 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_view_plans, self.data_menu_items['Plans'])
         self.Bind(wx.EVT_MENU, self.on_view_rxs, self.data_menu_items['Rxs'])
         self.Bind(wx.EVT_MENU, self.on_view_beams, self.data_menu_items['Beams'])
-        self.Bind(wx.EVT_MENU, self.on_view_stats_data, self.data_menu_items['StatsData'])
+        self.Bind(wx.EVT_MENU, self.on_view_stats_data_1, self.data_menu_items['StatsData1'])
+        self.Bind(wx.EVT_MENU, self.on_view_stats_data_2, self.data_menu_items['StatsData2'])
 
         self.frame_menubar.Append(file_menu, '&File')
         self.frame_menubar.Append(self.data_menu, '&Data')
@@ -894,23 +896,29 @@ class DVHAMainFrame(wx.Frame):
     def on_view_beams(self, evt):
         self.view_table_data('Beams')
 
-    def on_view_stats_data(self, evt):
-        self.view_table_data('StatsData')
+    def on_view_stats_data_1(self, evt):
+        self.view_table_data('StatsData1')
+
+    def on_view_stats_data_2(self, evt):
+        self.view_table_data('StatsData2')
 
     def view_table_data(self, key):
         if key == 'DVHs':
             data = {grp: self.group_data[grp]['dvh'] for grp in [1, 2]}
-        elif key == 'StatsData':
+        elif 'StatsData' in key:
             data = {grp: self.group_data[grp]['stats_data'] for grp in [1, 2]}
         else:
             data = {grp: self.group_data[grp]['data'][key] for grp in [1, 2]}
 
-        if data:
+        if data[1]:
 
             if self.get_menu_item_status(key) == 'Show':
-                if key == 'StatsData':
-                    self.data_views[key] = StatsDataEditor(data[1], self.data_menu, self.data_menu_items[key].GetId(),
-                                                           self.time_series, self.regression, self.control_chart)
+                if 'StatsData' in key:
+                    group = int(key[-1])
+                    if group == 1 or data[2] is not None:
+                        self.data_views[key] = StatsDataEditor(self.group_data, group, self.data_menu,
+                                                               self.data_menu_items[key].GetId(), self.time_series,
+                                                               self.regression, self.control_chart)
                 else:
                     if key == 'DVHs':
                         columns = [c for c in data[1].keys]
