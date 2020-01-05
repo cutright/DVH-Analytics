@@ -160,11 +160,13 @@ class StatsData:
         :return: x and y data
         :rtype: dict
         """
-        return {'uid': self.uids,
-                'mrn': self.mrns,
-                'date': self.sim_study_dates,
-                'x': self.data[x]['values'],
-                'y': self.data[y]['values']}
+        if x in list(self.data) and y in list(self.data):
+            return {'uid': self.uids,
+                    'mrn': self.mrns,
+                    'date': self.sim_study_dates,
+                    'x': self.data[x]['values'],
+                    'y': self.data[y]['values']}
+        return {key: [] for key in ['uid', 'mrn', 'date', 'x', 'y']}
 
     @property
     def uids(self):

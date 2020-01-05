@@ -123,7 +123,7 @@ class DefaultOptions:
         self.REGRESSION_RESIDUAL_ALPHA = 0.5
         self.REGRESSION_RESIDUAL_LINE_WIDTH = 2
         self.REGRESSION_RESIDUAL_LINE_DASH = 'solid'
-        self.REGRESSION_RESIDUAL_LINE_COLOR = 'red'
+        self.REGRESSION_RESIDUAL_LINE_COLOR = 'black'
 
         # Random forest
         self.MACHINE_LEARNING_ALPHA = 0.5

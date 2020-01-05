@@ -10,7 +10,7 @@ v0.6.4 (TBD)
  - [Machine Learning] Mean-square error prints in scientific notation if not between 1 and 1000
  - [Query] DVH bin width may be set. SQL still stores 1cGy bin widths, but query will keep dvh data
     using specified bin width.  This results in faster bokeh plot generation.
- - [Query] Query Groups are back! (IN PROGRESS: custom data, regression, and control chart features not updated)
+ - [Query] Query Groups are back! (IN PROGRESS: custom data and control chart features not updated)
  - [Regressions] Bug fix when removing None and NaN data
  - [Regressions] MS Windows only, if multiple dependent variables were defined, each new view displayed the same bokeh 
     layout. The following Machine Learning windows had the correct data. Fixed by including dependent variable name 

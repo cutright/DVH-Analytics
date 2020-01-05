@@ -606,7 +606,7 @@ class DVHAMainFrame(wx.Frame):
         self.endpoint.clear_data()
         self.time_series.clear_data()
         self.time_series.initialize_y_axis_options()
-        self.regression.clear()
+        self.regression.clear(self.group_data)
         self.control_chart.clear_data()
         self.control_chart.initialize_y_axis_options()
         self.radbio.clear_data()
@@ -693,6 +693,9 @@ class DVHAMainFrame(wx.Frame):
 
                     self.save_data['main_categorical_2'] = self.data_table_categorical.get_save_data()
                     self.save_data['main_numerical_2'] = self.data_table_numerical.get_save_data()
+
+                    self.regression.group = 2
+                    self.update_stats_data_plots()
                 except PlottingMemoryError as e:
                     del wait
                     self.on_plotting_memory_error(str(e))
@@ -841,7 +844,7 @@ class DVHAMainFrame(wx.Frame):
         self.disable_query_buttons('numerical')
         self.button_query_execute.Disable()
         self.time_series.initialize_y_axis_options()
-        self.regression.clear()
+        self.regression.clear(self.group_data)
         self.control_chart.initialize_y_axis_options()
         self.control_chart.plot.clear_plot()
         self.close_windows()
@@ -1004,6 +1007,10 @@ class DVHAMainFrame(wx.Frame):
         self.update_all_query_buttons()
 
         self.set_summary_text(group)
+
+        if self.group_data[2]['stats_data']:
+            self.regression.group = group
+            self.regression.update_plot()
 
     def set_summary_text(self, group):
         if self.group_data[group]['dvh']:

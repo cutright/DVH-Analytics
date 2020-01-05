@@ -564,10 +564,13 @@ class PlotTimeSeries(Plot):
     def update_histogram(self, bin_size=10):
         width_fraction = 0.9
         for grp in [1, 2]:
-            hist, bins = np.histogram(self.source[grp]['plot'].data['y'], bins=bin_size)
-            width = [width_fraction * (bins[1] - bins[0])] * bin_size
-            center = (bins[:-1] + bins[1:]) / 2.
-            self.source[grp]['hist'].data = {'x': center, 'top': hist, 'width': width, 'group': [grp] * len(hist)}
+            if self.source[grp]['plot'].data['y']:
+                hist, bins = np.histogram(self.source[grp]['plot'].data['y'], bins=bin_size)
+                width = [width_fraction * (bins[1] - bins[0])] * bin_size
+                center = (bins[:-1] + bins[1:]) / 2.
+                self.source[grp]['hist'].data = {'x': center, 'top': hist, 'width': width, 'group': [grp] * len(hist)}
+            else:
+                self.source[grp]['hist'].data = {'x': [], 'top': [], 'width': [], 'group': []}
 
     def update_trend(self, avg_len, percentile):
 
@@ -585,8 +588,7 @@ class PlotTimeSeries(Plot):
                 lower_bound = float(np.percentile(y_np, 50. - percentile / 2.))
 
                 self.source[grp]['trend'].data = {'x': x_trend,
-                                                  'y': y_trend,
-                                                  'mrn': ['Avg'] * len(x_trend)}
+                                                  'y': y_trend}
                 self.source[grp]['bound'].data = {'x': [x[0], x[-1]],
                                                   'mrn': ['Series Avg'] * 2,
                                                   'upper': [upper_bound] * 2,
@@ -755,15 +757,17 @@ class PlotRegression(Plot):
                             'table': (0.927, 0.140),
                             'resid': (0.464, 0.281),
                             'prob': (0.464, 0.281)}
+        self.group = 1
+        self.color = {1: self.options.PLOT_COLOR, 2: self.options.PLOT_COLOR_2}
 
         self.x_axis_title, self.y_axis_title = '', ''
-        self.reg = None
+        self.reg = {grp: None for grp in [1, 2]}
         self.options = options
-        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], dates=[])),
-                       'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
-                       'residuals': ColumnDataSource(data=dict(x=[], y=[], mrn=[], date=[])),
+        self.source = {'plot': {grp: ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], dates=[])) for grp in [1, 2]},
+                       'trend': {grp: ColumnDataSource(data=dict(x=[], y=[], mrn=[])) for grp in [1, 2]},
+                       'residuals': ColumnDataSource(data=dict(x=[], y=[], mrn=[], date=[], color=[])),
                        'residuals_zero': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
-                       'prob': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'prob': ColumnDataSource(data=dict(x=[], y=[], mrn=[], color=[])),
                        'prob_45': ColumnDataSource(data=dict(x=[], y=[])),
                        'table': ColumnDataSource(data=dict(var=[], coef=[], std_err=[], t_value=[], p_value=[],
                                                            spacer=[], fit_param=[]))}
@@ -783,25 +787,31 @@ class PlotRegression(Plot):
         self.figure_prob_plot.yaxis.axis_label = 'Ordered Values'
 
     def __create_table(self):
-        columns = [TableColumn(field="var", title="", width=100),
-                   TableColumn(field="coef", title="Coef", formatter=NumberFormatter(format="0.000"), width=50),
-                   TableColumn(field="std_err", title="Std. Err.", formatter=NumberFormatter(format="0.000"), width=50),
-                   TableColumn(field="t_value", title="t-value", formatter=NumberFormatter(format="0.000"), width=50),
-                   TableColumn(field="p_value", title="p-value", formatter=NumberFormatter(format="0.000"), width=50),
-                   TableColumn(field="spacer", title="", width=2),
-                   TableColumn(field="fit_param", title="", width=75)]
-        self.regression_table = DataTable(source=self.source['table'], columns=columns, index_position=None)
+        self.regression_table = DataTable(source=self.source['table'], columns=self.table_columns, index_position=None)
+
+    @property
+    def table_columns(self):
+        return [TableColumn(field="var", title="Group %s" % self.group, width=100),
+                TableColumn(field="coef", title="Coef", formatter=NumberFormatter(format="0.000"), width=50),
+                TableColumn(field="std_err", title="Std. Err.", formatter=NumberFormatter(format="0.000"), width=50),
+                TableColumn(field="t_value", title="t-value", formatter=NumberFormatter(format="0.000"), width=50),
+                TableColumn(field="p_value", title="p-value", formatter=NumberFormatter(format="0.000"), width=50),
+                TableColumn(field="spacer", title="", width=2),
+                TableColumn(field="fit_param", title="", width=75)]
 
     def __add_plot_data(self):
-        self.plot_data = self.figure.circle('x', 'y', source=self.source['plot'], size=self.options.REGRESSION_CIRCLE_SIZE,
-                                            alpha=self.options.REGRESSION_ALPHA, color=self.options.PLOT_COLOR)
-        self.plot_trend = self.figure.line('x', 'y', color=self.options.PLOT_COLOR, source=self.source['trend'],
-                                           line_width=self.options.REGRESSION_LINE_WIDTH,
-                                           line_dash=self.options.REGRESSION_LINE_DASH)
+        self.plot_data = {grp: self.figure.circle('x', 'y', source=self.source['plot'][grp],
+                                                  size=self.options.REGRESSION_CIRCLE_SIZE,
+                                                  alpha=self.options.REGRESSION_ALPHA, color=self.color[grp])
+                          for grp in [1, 2]}
+        self.plot_trend = {grp: self.figure.line('x', 'y', source=self.source['trend'][grp],
+                                                 line_width=self.options.REGRESSION_LINE_WIDTH,
+                                                 line_dash=self.options.REGRESSION_LINE_DASH, color=self.color[grp])
+                           for grp in [1, 2]}
         self.plot_residuals = self.figure_residual_fits.circle('x', 'y', source=self.source['residuals'],
                                                                size=self.options.REGRESSION_RESIDUAL_CIRCLE_SIZE,
                                                                alpha=self.options.REGRESSION_RESIDUAL_ALPHA,
-                                                               color=self.options.PLOT_COLOR)
+                                                               color='color')
         self.plot_residuals_zero = self.figure_residual_fits.line('x', 'y', source=self.source['residuals_zero'],
                                                                   line_width=self.options.REGRESSION_RESIDUAL_LINE_WIDTH,
                                                                   line_dash=self.options.REGRESSION_RESIDUAL_LINE_DASH,
@@ -810,7 +820,7 @@ class PlotRegression(Plot):
         self.plot_prob = self.figure_prob_plot.circle('x', 'y', source=self.source['prob'],
                                                       size=self.options.REGRESSION_RESIDUAL_CIRCLE_SIZE,
                                                       alpha=self.options.REGRESSION_RESIDUAL_ALPHA,
-                                                      color=self.options.PLOT_COLOR)
+                                                      color='color')
         self.plot_prob_45 = self.figure_prob_plot.line('x', 'y', source=self.source['prob_45'],
                                                        line_width=self.options.REGRESSION_RESIDUAL_LINE_WIDTH,
                                                        line_dash=self.options.REGRESSION_RESIDUAL_LINE_DASH,
@@ -822,7 +832,7 @@ class PlotRegression(Plot):
                                         tooltips=[('ID', '@mrn'),
                                                   ('x', '@x{0.2f}'),
                                                   ('y', '@y{0.2f}')],
-                                        renderers=[self.plot_data]))
+                                        renderers=[self.plot_data[1], self.plot_data[2]]))
 
         self.figure_residual_fits.add_tools(HoverTool(show_arrow=True,
                                                       tooltips=[('ID', '@mrn'),
@@ -842,11 +852,18 @@ class PlotRegression(Plot):
                                    self.regression_table,
                                    row(self.figure_residual_fits, self.figure_prob_plot))
 
-    def update_plot(self, plot_data, x_var, x_axis_title, y_axis_title):
+    def update_plot(self, plot_data, group, x_var, x_axis_title, y_axis_title):
+        self.group = group
+        self.regression_table.columns = self.table_columns
         self.set_figure_dimensions()
         self.x_axis_title, self.y_axis_title = x_axis_title, y_axis_title
         self.clear_sources()
-        self.source['plot'].data = plot_data
+        for grp in [1, 2]:
+            if plot_data[grp] is None:
+                self.source['plot'][grp].data = {key: [] for key in ['x', 'y', 'mrn', 'uid', 'dates']}
+            else:
+                self.source['plot'][grp].data = plot_data[grp]
+
         self.update_trend(x_var)
         self.figure.xaxis.axis_label = x_axis_title
         self.figure.yaxis.axis_label = y_axis_title
@@ -864,50 +881,65 @@ class PlotRegression(Plot):
         self.regression_table.height = int(self.size_factor['table'][1] * float(panel_height))
 
     def update_trend(self, x_var):
-        x, y, mrn, date = self.clean_data(self.source['plot'].data['x'],
-                                          self.source['plot'].data['y'],
-                                          mrn=self.source['plot'].data['mrn'],
-                                          dates=self.source['plot'].data['date'])
 
-        data = np.array([y, x])
-        clean_data = data[:, ~np.any(np.isnan(data), axis=0)]
-        X = np.transpose(clean_data[1:])
-        y = clean_data[0]
+        mrn, date, x_trend, y_trend = {}, {}, {}, {}
+        for grp in [1, 2]:
+            if self.source['plot'][grp].data['x']:
+                x, y, mrn[grp], date[grp] = self.clean_data(self.source['plot'][grp].data['x'],
+                                                            self.source['plot'][grp].data['y'],
+                                                            mrn=self.source['plot'][grp].data['mrn'],
+                                                            dates=self.source['plot'][grp].data['date'])
 
-        self.reg = MultiVariableRegression(X, y)
+                data = np.array([y, x])
+                clean_data = data[:, ~np.any(np.isnan(data), axis=0)]
+                X = np.transpose(clean_data[1:])
+                y = clean_data[0]
 
-        x_trend = [min(x), max(x)]
-        y_trend = np.add(np.multiply(x_trend, self.reg.slope), self.reg.y_intercept)
+                self.reg[grp] = MultiVariableRegression(X, y)
 
-        self.source['residuals'].data = {'x': self.reg.predictions,
-                                         'y': self.reg.residuals,
-                                         'mrn': mrn,
-                                         'date': date}
+                x_trend[grp] = [min(x), max(x)]
+                y_trend[grp] = np.add(np.multiply(x_trend[grp], self.reg[grp].slope), self.reg[grp].y_intercept)
+            else:
+                self.reg[grp] = None
+                x_trend[grp] = None
+                y_trend[grp] = None
 
-        self.source['residuals_zero'].data = {'x': [min(self.reg.predictions), max(self.reg.predictions)],
+        self.source['residuals'].data = {'x': self.reg[self.group].predictions,
+                                         'y': self.reg[self.group].residuals,
+                                         'mrn': mrn[self.group],
+                                         'date': date[self.group],
+                                         'color': [self.color[self.group]] * len(mrn[self.group])}
+
+        self.source['residuals_zero'].data = {'x': [min(self.reg[self.group].predictions),
+                                                    max(self.reg[self.group].predictions)],
                                               'y': [0, 0],
                                               'mrn': [None, None]}
 
-        self.source['prob'].data = {'x': self.reg.norm_prob_plot[0],
-                                    'y': self.reg.norm_prob_plot[1]}
+        self.source['prob'].data = {'x': self.reg[self.group].norm_prob_plot[0],
+                                    'y': self.reg[self.group].norm_prob_plot[1],
+                                    'color': [self.color[self.group]] * len(self.reg[self.group].norm_prob_plot[0])}
 
-        self.source['prob_45'].data = {'x': self.reg.x_trend_prob,
-                                       'y': self.reg.y_trend_prob}
+        self.source['prob_45'].data = {'x': self.reg[self.group].x_trend_prob,
+                                       'y': self.reg[self.group].y_trend_prob}
 
         self.source['table'].data = {'var': ['y-int', x_var],
-                                     'coef': [self.reg.y_intercept, self.reg.slope],
-                                     'std_err': self.reg.sd_b,
-                                     't_value': self.reg.ts_b,
-                                     'p_value': self.reg.p_values,
+                                     'coef': [self.reg[self.group].y_intercept, self.reg[self.group].slope],
+                                     'std_err': self.reg[self.group].sd_b,
+                                     't_value': self.reg[self.group].ts_b,
+                                     'p_value': self.reg[self.group].p_values,
                                      'spacer': ['', ''],
-                                     'fit_param': ["R²: %0.3f" % self.reg.r_sq, "MSE: %0.3f" % self.reg.mse]}
+                                     'fit_param': ["R²: %0.3f" % self.reg[self.group].r_sq,
+                                                   "MSE: %0.3f" % self.reg[self.group].mse]}
 
-        self.source['trend'].data = {'x': x_trend,
-                                     'y': y_trend,
-                                     'mrn': ['Trend'] * 2}
+        for grp in [1, 2]:
+            if x_trend[grp]:
+                self.source['trend'][grp].data = {'x': x_trend[grp],
+                                                  'y': y_trend[grp]}
+            else:
+                self.source['trend'][grp].data = {'x': [], 'y': [], 'mrn': []}
 
     def get_csv_data(self):
-        plot_data = self.source['plot'].data
+        plot_data = self.source['plot'][self.group].data
         csv_data = ['Linear Regression',
                     'Data',
                     ',MRN,%s' % ','.join(plot_data['mrn']),
@@ -929,30 +961,43 @@ class PlotRegression(Plot):
         for i in range(len(data['var'])):
             csv_model.append(self.get_csv_model_row(i))
 
-        csv_model.extend(["R^2,%s" % self.reg.r_sq,
-                          "MSE,%s" % self.reg.mse])
+        csv_model.extend(["R^2,%s" % self.reg[self.group].r_sq,
+                          "MSE,%s" % self.reg[self.group].mse])
 
         return '\n'.join(csv_model)
 
     def get_csv_analysis(self):
         return '\n'.join(['Analysis',
-                          'Quantiles,%s' % ','.join(str(v) for v in self.reg.norm_prob_plot[0]),
-                          'Ordered Values,%s' % ','.join(str(v) for v in self.reg.norm_prob_plot[1]),
+                          'Quantiles,%s' % ','.join(str(v) for v in self.reg[self.group].norm_prob_plot[0]),
+                          'Ordered Values,%s' % ','.join(str(v) for v in self.reg[self.group].norm_prob_plot[1]),
                           '',
-                          'Residuals,%s' % ','.join(str(v) for v in self.reg.residuals),
-                          'Fitted Values,%s' % ','.join(str(v) for v in self.reg.predictions)])
+                          'Residuals,%s' % ','.join(str(v) for v in self.reg[self.group].residuals),
+                          'Fitted Values,%s' % ','.join(str(v) for v in self.reg[self.group].predictions)])
 
     def get_csv_model_row(self, index):
         data = self.source['table'].data
         variables = ['var', 'coef', 'std_err', 't_value', 'p_value']
         return ','.join([str(data[var][index]) for var in variables])
 
+    def clear_source(self, source_key):
+        if type(self.source[source_key]) is dict:
+            for grp in [1, 2]:
+                data = {data_key: [] for data_key in list(self.source[source_key][grp].data)}
+                self.source[source_key][grp].data = data
+        else:
+            data = {data_key: [] for data_key in list(self.source[source_key].data)}
+            self.source[source_key].data = data
+
+    def clear_sources(self):
+        for key in list(self.source):
+            self.clear_source(key)
+
 
 class PlotMultiVarRegression(Plot):
     """
     Class to generate plot for MultiVariable Frame created from Regression tab
     """
-    def __init__(self, parent, options):
+    def __init__(self, parent, options, group):
         """
         :param parent: the wx UI object where the plot will be displayed
         :param options: user preferences
@@ -962,6 +1007,7 @@ class PlotMultiVarRegression(Plot):
 
         self.type = 'multi-variable_regression'
         self.parent = parent
+        self.group = group
 
         self.size_factor = {'resid': (0.475, 0.45),
                             'prob': (0.475, 0.45),
@@ -998,10 +1044,11 @@ class PlotMultiVarRegression(Plot):
         self.figure_prob_plot.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
 
     def __add_plot_data(self):
+        plot_color = [self.options.PLOT_COLOR_2, self.options.PLOT_COLOR][self.group == 1]
         self.plot_residuals = self.figure.circle('x', 'y', source=self.source['residuals'],
                                                  size=self.options.REGRESSION_RESIDUAL_CIRCLE_SIZE,
                                                  alpha=self.options.REGRESSION_RESIDUAL_ALPHA,
-                                                 color=self.options.PLOT_COLOR)
+                                                 color=plot_color)
         self.plot_residuals_zero = self.figure.line('x', 'y', source=self.source['residuals_zero'],
                                                     line_width=self.options.REGRESSION_RESIDUAL_LINE_WIDTH,
                                                     line_dash=self.options.REGRESSION_RESIDUAL_LINE_DASH,
@@ -1010,7 +1057,7 @@ class PlotMultiVarRegression(Plot):
         self.plot_prob = self.figure_prob_plot.circle('x', 'y', source=self.source['prob'],
                                                       size=self.options.REGRESSION_RESIDUAL_CIRCLE_SIZE,
                                                       alpha=self.options.REGRESSION_RESIDUAL_ALPHA,
-                                                      color=self.options.PLOT_COLOR)
+                                                      color=plot_color)
         self.plot_prob_45 = self.figure_prob_plot.line('x', 'y', source=self.source['prob_45'],
                                                        line_width=self.options.REGRESSION_RESIDUAL_LINE_WIDTH,
                                                        line_dash=self.options.REGRESSION_RESIDUAL_LINE_DASH,
