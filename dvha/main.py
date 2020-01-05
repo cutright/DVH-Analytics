@@ -627,7 +627,7 @@ class DVHAMainFrame(wx.Frame):
                 self.endpoint.update_dvh(self.group_data)
                 self.set_summary_text(1)
 
-                self.plot.update_plot(self.group_data[1]['dvh'])
+                self.plot.update_plot(self.group_data[1]['dvh'], dvh_2=self.group_data[2]['dvh'])
                 del wait
                 self.notebook_main_view.SetSelection(1)
                 self.update_data(load_saved_dvh_data=load_saved_dvh_data)
