@@ -43,7 +43,7 @@ exe = EXE(pyz,
           console=False)
 app = BUNDLE(exe,
              name='DVH Analytics',
-             icon='./dvha/icon.jpg',
+             icon='./dvha.icns',
              bundle_identifier=None,
              info_plist={'NSHighResolutionCapable': 'True'}
              )
