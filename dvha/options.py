@@ -93,7 +93,7 @@ class DefaultOptions:
         self.CONTROL_CHART_CIRCLE_ALPHA = 0.3
         self.CONTROL_CHART_LINE_WIDTH = 1
         self.CONTROL_CHART_LINE_DASH = 'solid'
-        self.CONTROL_CHART_LINE_COLOR = 'blue'
+        self.CONTROL_CHART_LINE_COLOR = 'black'
         self.CONTROL_CHART_CENTER_LINE_WIDTH = 2
         self.CONTROL_CHART_CENTER_LINE_DASH = 'solid'
         self.CONTROL_CHART_CENTER_LINE_COLOR = 'black'
@@ -107,7 +107,9 @@ class DefaultOptions:
         self.CONTROL_CHART_LCL_LINE_COLOR = 'red'
         self.CONTROL_CHART_LCL_LINE_ALPHA = 1
         self.CONTROL_CHART_PATCH_ALPHA = 0.1
-        self.CONTROL_CHART_OUT_OF_CONTROL_COLOR = 'red'
+        self.CONTROL_CHART_PATCH_COLOR = 'grey'
+        self.CONTROL_CHART_OUT_OF_CONTROL_COLOR = 'green'
+        self.CONTROL_CHART_OUT_OF_CONTROL_COLOR_2 = 'purple'
         self.CONTROL_CHART_OUT_OF_CONTROL_ALPHA = 1
 
         # Adjust the opacity of the histograms

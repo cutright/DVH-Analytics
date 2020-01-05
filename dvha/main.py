@@ -633,7 +633,8 @@ class DVHAMainFrame(wx.Frame):
                 self.update_data(load_saved_dvh_data=load_saved_dvh_data)
                 self.time_series.update_data(self.group_data)
                 if self.group_data[1]['dvh'].count > 1:
-                    self.control_chart.update_data(self.group_data[1]['dvh'], self.group_data[1]['stats_data'])
+                    self.control_chart.group_data = self.group_data
+                    self.control_chart.update_plot()
                     self.correlation.update_data()
 
                 self.radbio.update_dvh_data(self.group_data)
@@ -686,7 +687,7 @@ class DVHAMainFrame(wx.Frame):
                     self.update_data()
                     self.time_series.update_data(self.group_data)
                     if self.group_data[2]['dvh'].count > 1:
-                        # self.control_chart.update_data(self.dvh, self.stats_data)
+                        self.control_chart.group_data = self.group_data
                         self.correlation.update_data()
 
                     self.radbio.update_dvh_data(self.group_data)
@@ -695,7 +696,9 @@ class DVHAMainFrame(wx.Frame):
                     self.save_data['main_numerical_2'] = self.data_table_numerical.get_save_data()
 
                     self.regression.group = 2
+                    self.control_chart.group = 2
                     self.update_stats_data_plots()
+
                 except PlottingMemoryError as e:
                     del wait
                     self.on_plotting_memory_error(str(e))
@@ -847,6 +850,7 @@ class DVHAMainFrame(wx.Frame):
         self.regression.clear(self.group_data)
         self.control_chart.initialize_y_axis_options()
         self.control_chart.plot.clear_plot()
+        self.control_chart.group = 1
         self.close_windows()
         self.reset_query_filters()
 
@@ -1011,6 +1015,8 @@ class DVHAMainFrame(wx.Frame):
         if self.group_data[2]['stats_data']:
             self.regression.group = group
             self.regression.update_plot()
+            self.control_chart.group = group
+            self.control_chart.update_plot()
 
     def set_summary_text(self, group):
         if self.group_data[group]['dvh']:

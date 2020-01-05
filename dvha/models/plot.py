@@ -1222,6 +1222,7 @@ class PlotControlChart(Plot):
         self.type = 'control_chart'
         self.parent = parent
         self.size_factor = {'plot': (0.940, 0.359)}
+        self.group = 1
 
         self.y_axis_label = ''
         self.options = options
@@ -1259,14 +1260,15 @@ class PlotControlChart(Plot):
     def __add_plot_data(self):
         self.plot_data = self.figure.circle('x', 'y', source=self.source['plot'],
                                             size=self.options.CONTROL_CHART_CIRCLE_SIZE,
-                                            alpha='alpha',
-                                            color='color')
+                                            alpha='alpha', color='color')
         self.plot_data_line = self.figure.line('x', 'y', source=self.source['plot'],
                                                line_width=self.options.CONTROL_CHART_LINE_WIDTH,
                                                color=self.options.CONTROL_CHART_LINE_COLOR,
                                                line_dash=self.options.CONTROL_CHART_LINE_DASH)
-        self.plot_patch = self.figure.patch('x', 'y', color=self.options.PLOT_COLOR, source=self.source['patch'],
+        self.plot_patch = self.figure.patch('x', 'y', color=self.options.CONTROL_CHART_PATCH_COLOR,
+                                            source=self.source['patch'],
                                             alpha=self.options.CONTROL_CHART_PATCH_ALPHA)
+
         self.plot_center_line = self.figure.line('x', 'y', source=self.source['center_line'],
                                                  line_width=self.options.CONTROL_CHART_CENTER_LINE_WIDTH,
                                                  alpha=self.options.CONTROL_CHART_CENTER_LINE_ALPHA,
@@ -1285,13 +1287,13 @@ class PlotControlChart(Plot):
 
         self.adj_plot_data = self.adj_figure.circle('x', 'y', source=self.source['adj_plot'],
                                                     size=self.options.CONTROL_CHART_CIRCLE_SIZE,
-                                                    alpha='alpha',
-                                                    color='color')
+                                                    alpha='alpha', color='color')
         self.adj_plot_data_line = self.adj_figure.line('x', 'y', source=self.source['adj_plot'],
                                                        line_width=self.options.CONTROL_CHART_LINE_WIDTH,
                                                        color=self.options.CONTROL_CHART_LINE_COLOR,
                                                        line_dash=self.options.CONTROL_CHART_LINE_DASH)
-        self.adj_plot_patch = self.adj_figure.patch('x', 'y', color=self.options.PLOT_COLOR, source=self.source['adj_patch'],
+        self.adj_plot_patch = self.adj_figure.patch('x', 'y', color=self.options.CONTROL_CHART_PATCH_COLOR,
+                                                    source=self.source['adj_patch'],
                                                     alpha=self.options.CONTROL_CHART_PATCH_ALPHA)
         self.adj_plot_center_line = self.adj_figure.line('x', 'y', source=self.source['adj_center_line'],
                                                          line_width=self.options.CONTROL_CHART_CENTER_LINE_WIDTH,
@@ -1380,7 +1382,10 @@ class PlotControlChart(Plot):
 
         center_line, ucl, lcl = get_control_limits(y)
 
-        colors = [self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR, self.options.PLOT_COLOR]
+        plot_color = [self.options.PLOT_COLOR_2, self.options.PLOT_COLOR][self.group == 1]
+        ooc_color = [self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR_2,
+                     self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR][self.group == 1]
+        colors = [ooc_color, plot_color]
         alphas = [self.options.CONTROL_CHART_OUT_OF_CONTROL_ALPHA, self.options.CONTROL_CHART_CIRCLE_ALPHA]
         color = [colors[ucl > value > lcl] for value in y]
         alpha = [alphas[ucl > value > lcl] for value in y]
@@ -1389,7 +1394,7 @@ class PlotControlChart(Plot):
                                     'color': color, 'alpha': alpha, 'dates': dates}
 
         self.source['patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
-                                     'y': [ucl, ucl, lcl, lcl]}
+                                     'y': [ucl, ucl, lcl, lcl], 'color': [plot_color] * 4}
         self.source['center_line'].data = {'x': [min(x), max(x)],
                                            'y': [center_line] * 2,
                                            'mrn': ['center line'] * 2}

@@ -31,12 +31,11 @@ class ControlChartFrame:
         :type options: Options
         """
         self.parent = parent
-        self.dvhs = group_data[1]['dvh']
-        self.dvhs_2 = group_data[2]['dvh']
-        self.stats_data = group_data[1]['stats_data']
-        self.stats_data_2 = group_data[2]['stats_data']
+        self.group_data = group_data
         self.choices = []
         self.models = {}
+
+        self.group = 1
 
         self.y_axis_options = sql_columns.numerical
 
@@ -82,8 +81,9 @@ class ControlChartFrame:
         self.layout = sizer_wrapper
 
     def update_combo_box_y_choices(self):
-        if self.stats_data:
-            self.choices = self.stats_data.control_chart_variables
+        stats_data = self.group_data[self.group]['stats_data']
+        if stats_data:
+            self.choices = stats_data.control_chart_variables
             self.choices.sort()
             self.combo_box_y_axis.SetItems(self.choices)
             self.combo_box_y_axis.SetValue('ROI Max Dose')
@@ -99,51 +99,48 @@ class ControlChartFrame:
         self.update_plot()
 
     def update_plot(self):
-
-        dates = self.stats_data.sim_study_dates
+        stats_data = self.group_data[self.group]['stats_data']
+        dates = stats_data.sim_study_dates
         sort_index = sorted(range(len(dates)), key=lambda k: dates[k])
         dates_sorted = [dates[i] for i in sort_index]
-        y_values_sorted = [self.stats_data.data[self.y_axis]['values'][i] for i in sort_index]
-        mrn_sorted = [self.stats_data.mrns[i] for i in sort_index]
-        uid_sorted = [self.stats_data.uids[i] for i in sort_index]
+        y_values_sorted = [stats_data.data[self.y_axis]['values'][i] for i in sort_index]
+        mrn_sorted = [stats_data.mrns[i] for i in sort_index]
+        uid_sorted = [stats_data.uids[i] for i in sort_index]
 
         x = list(range(1, len(dates)+1))
 
+        self.plot.group = self.group
         self.plot.update_plot(x, y_values_sorted, mrn_sorted, uid_sorted, dates_sorted, y_axis_label=self.y_axis)
 
         if self.models and self.y_axis in self.models.keys():
             model_data = self.models[self.y_axis]
-            adj_data = self.plot.get_adjusted_control_chart(stats_data=self.stats_data, **model_data)
+            adj_data = self.plot.get_adjusted_control_chart(stats_data=stats_data, **model_data)
             self.plot.update_adjusted_control_chart(**adj_data)
-
-    def update_data(self, dvh, stats_data):
-        self.dvhs = dvh
-        self.stats_data = stats_data
-        self.update_plot()
 
     @property
     def variables(self):
-        return list(self.stats_data)
+        stats_data = self.group_data[self.group]['stats_data']
+        return list(stats_data)
 
-    def update_endpoints_and_radbio(self):
-        if self.dvhs:
-            if self.dvhs.endpoints['defs']:
-                for var in self.dvhs.endpoints['defs']['label']:
-                    if var not in self.variables:
-                        self.stats_data[var] = {'units': '',
-                                                'values': self.dvhs.endpoints['data'][var]}
-
-                for var in self.variables:
-                    if var[0:2] in {'D_', 'V_'}:
-                        if var not in self.dvhs.endpoints['defs']['label']:
-                            self.stats_data.pop(var)
-
-            if self.dvhs.eud:
-                self.stats_data['EUD'] = {'units': 'Gy',
-                                          'values': self.dvhs.eud}
-            if self.dvhs.ntcp_or_tcp:
-                self.stats_data['NTCP or TCP'] = {'units': '',
-                                                  'values': self.dvhs.ntcp_or_tcp}
+    # def update_endpoints_and_radbio(self):
+    #     if self.dvhs:
+    #         if self.dvhs.endpoints['defs']:
+    #             for var in self.dvhs.endpoints['defs']['label']:
+    #                 if var not in self.variables:
+    #                     self.stats_data[var] = {'units': '',
+    #                                             'values': self.dvhs.endpoints['data'][var]}
+    #
+    #             for var in self.variables:
+    #                 if var[0:2] in {'D_', 'V_'}:
+    #                     if var not in self.dvhs.endpoints['defs']['label']:
+    #                         self.stats_data.pop(var)
+    #
+    #         if self.dvhs.eud:
+    #             self.stats_data['EUD'] = {'units': 'Gy',
+    #                                       'values': self.dvhs.eud}
+    #         if self.dvhs.ntcp_or_tcp:
+    #             self.stats_data['NTCP or TCP'] = {'units': '',
+    #                                               'values': self.dvhs.ntcp_or_tcp}
 
     def initialize_y_axis_options(self):
         for i in range(len(self.choices))[::-1]:
