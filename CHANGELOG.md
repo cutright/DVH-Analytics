@@ -2,30 +2,30 @@
 
 v0.6.4 (TBD)
 --------------------
- - [Machine Learning] Mean-square error prints in scientific notation if not between 1 and 1000
- - [DICOM Import] Ensure RxParser.fx_count is an integer (GH Issue 18)
- - [Regressions] Bug fix when removing None and NaN data
- - [DICOM Importer] Added Save ROI Map button, Importing actually saves ROI map now
- - [Regressions] MS Windows only, if multiple dependent variables were defined, each new view displayed the same bokeh 
-    layout. The following Machine Learning windows had the correct data. Fixed by including dependent variable name 
-    html file name for multi-variable_regression. Did not affect other OSs because html files are stored only for MSW.
  - [Correlation] New tab added showing a correlation matrix
  - [Database Editor] Fix for GH Issue 19
+ - [DICOM Importer] Fix for GH Issue 18
+ - [DICOM Importer] Added Save ROI Map button, Importing actually saves ROI map now
+ - [Export] Fixed a bug that would not export DVHs Summary without also exporting DVHs
+ - [Machine Learning] Mean-square error prints in scientific notation if not between 1 and 1000
  - [Query] DVH bin width may be set. SQL still stores 1cGy bin widths, but query will keep dvh data
     using specified bin width.  This results in faster bokeh plot generation.
  - [Query] Query Groups are back! (IN PROGRESS: custom data, regression, and control chart features not updated)
- - [Export] Fixed a bug that would not export DVHs Summary without also exporting DVHs
+ - [Regressions] Bug fix when removing None and NaN data
+ - [Regressions] MS Windows only, if multiple dependent variables were defined, each new view displayed the same bokeh 
+    layout. The following Machine Learning windows had the correct data. Fixed by including dependent variable name 
+    html file name for multi-variable_regression. Did not affect other OSs because html files are stored only for MSW.
  - [User Options] Fixed bug that did not restore saved options after clicking cancel
 
 
 v0.6.3 (2019.12.15)
 --------------------
- - [DICOM Importer] Display PTV ROI type in RT Structure tree.  Helpful for multi- PTV plans.
- - [DICOM Importer] Set force=True with pydicom.read_file() for XiO support  [issue #15](https://github.com/cutright/DVH-Analytics/issues/15)
- - [Query] Added a catch and error dialog for a MemoryError when querying if users queries more data than their system can handle
  - [Database Connection] Initialize SQL tables upon successful new database connection
  - [Database Connection] Catch invalid SQL credentials at launch, automatically open connection settings dialog
+ - [DICOM Importer] Display PTV ROI type in RT Structure tree.  Helpful for multi- PTV plans.
+ - [DICOM Importer] Set force=True with pydicom.read_file() for XiO support  [issue #15](https://github.com/cutright/DVH-Analytics/issues/15)
  - [DICOM Importer] Apply fix for TransferSyntaxUID error [issue #16](https://github.com/cutright/DVH-Analytics/issues/16)
+ - [Query] Added a catch and error dialog for a MemoryError when querying if users queries more data than their system can handle
 
 v0.6.2 (2019.12.08)
 --------------------
@@ -38,12 +38,12 @@ v0.6.2 (2019.12.08)
 v0.6.1 (2019.7.10)
 --------------------
  - [Control Chart] Adjusted Control Charts automatically populated from Regressions tab after running model
- - [Regression] Run all regressions on run
  - [Machine Learning] Redesigned PlotRandomForest class to PlotMachineLearning to support Random Forest, Decision Tree, 
  Gradient Boost, and Support Vector Machine
  - [Machine Learning] Modules redesigned to allow for complete input parameter customization
  - [Machine Learning] Modules allow for data splitting (training and testing)
  - [Machine Learning] Models can be saved to a pickle file, their use not yet implemented
+ - [Regression] Run all regressions on run
 
 v0.6.0 (2019.7.6)
 --------------------
