@@ -15,6 +15,7 @@ v0.6.4 (TBD)
  - [Regressions] MS Windows only, if multiple dependent variables were defined, each new view displayed the same bokeh 
     layout. The following Machine Learning windows had the correct data. Fixed by including dependent variable name 
     html file name for multi-variable_regression. Did not affect other OSs because html files are stored only for MSW.
+ - [Time Series] IN PROGRESS: Should implement stats_data objects to Time Series
  - [User Options] Fixed bug that did not restore saved options after clicking cancel
 
 

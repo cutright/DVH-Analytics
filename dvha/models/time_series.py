@@ -11,6 +11,7 @@ Class for viewing and editing the roi map, and updating the database with change
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx
+from copy import deepcopy
 from datetime import datetime
 from dateutil import parser
 from dvha.db import sql_columns
@@ -26,17 +27,15 @@ class TimeSeriesFrame:
         """
         :param parent:  notebook panel in main view
         :type parent: Panel
-        :param dvh: dvh data object
-        :type dvh: DVH
-        :param data: data object containing Plans, Beams, and Rxs data
-        :type data: dict
+        :param group_data: dvh data object
+        :type group_data: DVH
         :param options: user options containing visual preferences
         :type options: Options
         """
         self.parent = parent
         self.options = options
         self.group_data = group_data
-        self.custom_data = {}
+        self.custom_data = {grp: {} for grp in [1, 2]}
 
         self.y_axis_options = sql_columns.numerical
 
@@ -60,8 +59,8 @@ class TimeSeriesFrame:
 
         self.disable_buttons()
 
-        self.save_attr = ['combo_box_y_axis', 'text_input_lookback_distance',
-                          'text_inputs_percentile', 'text_input_bin_size']
+        self.layout_save_attr = ['combo_box_y_axis', 'text_input_lookback_distance',
+                                 'text_inputs_percentile', 'text_input_bin_size']
 
     def __set_properties(self):
         self.choices = list(self.y_axis_options)
@@ -119,35 +118,35 @@ class TimeSeriesFrame:
         if y_axis_selection is None:
             y_axis_selection = self.combo_box_y_axis.GetValue()
         data = {}
-        for key in [1,2]:
-            if self.group_data[key]['dvh']:
-                uids = self.group_data[key]['dvh'].study_instance_uid
-                mrn_data = self.group_data[key]['dvh'].mrn
+        for grp in [1,2]:
+            if self.group_data[grp]['dvh']:
+                uids = self.group_data[grp]['dvh'].study_instance_uid
+                mrn_data = self.group_data[grp]['dvh'].mrn
                 if y_axis_selection.split('_')[0] in {'D', 'V'}:
-                    y_data = self.group_data[key]['dvh'].endpoints['data'][y_axis_selection]
+                    y_data = self.group_data[grp]['dvh'].endpoints['data'][y_axis_selection]
                 elif y_axis_selection in ['EUD', 'NTCP or TCP']:
-                    y_data = getattr(self.group_data[key]['dvh'], y_axis_selection.lower().replace(' ', '_'))
-                elif y_axis_selection in self.custom_data.keys():
-                    y_data = self.custom_data[y_axis_selection]['y']
-                    uids = self.custom_data[y_axis_selection]['uid']
-                    mrn_data = self.custom_data[y_axis_selection]['mrn']
+                    y_data = getattr(self.group_data[grp]['dvh'], y_axis_selection.lower().replace(' ', '_'))
+                elif y_axis_selection in self.custom_data[grp].keys():
+                    y_data = self.custom_data[grp][y_axis_selection]['y']
+                    uids = self.custom_data[grp][y_axis_selection]['uid']
+                    mrn_data = self.custom_data[grp][y_axis_selection]['mrn']
                 else:
                     data_info = self.y_axis_options[y_axis_selection]
                     table = data_info['table']
                     var_name = data_info['var_name']
 
                     if table == 'DVHs':
-                        y_data = getattr(self.group_data[key]['dvh'], var_name)
+                        y_data = getattr(self.group_data[grp]['dvh'], var_name)
                     else:
-                        y_data = getattr(self.group_data[key]['data'][table], var_name)
-                        uids = getattr(self.group_data[key]['data'][table], 'study_instance_uid')
-                        mrn_data = getattr(self.group_data[key]['data'][table], 'mrn')
+                        y_data = getattr(self.group_data[grp]['data'][table], var_name)
+                        uids = getattr(self.group_data[grp]['data'][table], 'study_instance_uid')
+                        mrn_data = getattr(self.group_data[grp]['data'][table], 'mrn')
 
                 x_data = []
                 for uid in uids:
-                    if uid in self.group_data[key]['data']['Plans'].study_instance_uid:
-                        index = self.group_data[key]['data']['Plans'].study_instance_uid.index(uid)
-                        x = self.group_data[key]['data']['Plans'].sim_study_date[index]
+                    if uid in self.group_data[grp]['data']['Plans'].study_instance_uid:
+                        index = self.group_data[grp]['data']['Plans'].study_instance_uid.index(uid)
+                        x = self.group_data[grp]['data']['Plans'].sim_study_date[index]
                         if x and x != 'None':
                             x_data.append(x)
                         else:
@@ -190,7 +189,7 @@ class TimeSeriesFrame:
                 if units:
                     y_axis = "%s (%s)" % (y_axis, units)
 
-                data[key] = {'x': x_values_sorted,
+                data[grp] = {'x': x_values_sorted,
                              'y': y_values_sorted,
                              'mrn': mrn_sorted,
                              'uid': uid_sorted,
@@ -198,9 +197,9 @@ class TimeSeriesFrame:
                              'avg_len': avg_len,
                              'percentile': percentile,
                              'bin_size': hist_bins,
-                             'group': [key] * len(x_values_sorted)}
+                             'group': [grp] * len(x_values_sorted)}
             else:
-                data[key] = {'x': [], 'y': [], 'mrn': [], 'uid': [], 'y_axis_label': [], 'avg_len': [],
+                data[grp] = {'x': [], 'y': [], 'mrn': [], 'uid': [], 'y_axis_label': [], 'avg_len': [],
                              'percentile': [], 'bin_size': [], 'group': []}
         return data
 
@@ -226,28 +225,33 @@ class TimeSeriesFrame:
 
     def update_y_axis_options(self):
         current_choice = self.combo_box_y_axis.GetValue()
-        if self.group_data[1]['dvh']:
-            if self.group_data[1]['dvh'].endpoints['defs']:
-                for choice in self.group_data[1]['dvh'].endpoints['defs']['label']:
-                    if choice not in self.choices:
-                        self.choices.append(choice)
+        for grp in [1, 2]:
+            if self.group_data[grp]['dvh']:
+                if self.group_data[grp]['dvh'].endpoints['defs']:
+                    for choice in self.group_data[grp]['dvh'].endpoints['defs']['label']:
+                        if choice not in self.choices:
+                            self.choices.append(choice)
 
-                for i in range(len(self.choices))[::-1]:
-                    if self.choices[i][0:2] in {'D_', 'V_'}:
-                        if self.choices[i] not in self.group_data[1]['dvh'].endpoints['defs']['label']:
-                            self.choices.pop(i)
+                    for i in range(len(self.choices))[::-1]:
+                        if self.choices[i][0:2] in {'D_', 'V_'}:
+                            if self.choices[i] not in self.group_data[grp]['dvh'].endpoints['defs']['label']:
+                                self.choices.pop(i)
 
-            if self.group_data[1]['dvh'].eud and 'EUD' not in self.choices:
-                self.choices.append('EUD')
-            if self.group_data[1]['dvh'].ntcp_or_tcp and 'NTCP or TCP' not in self.choices:
-                self.choices.append('NTCP or TCP')
+                if self.group_data[grp]['dvh'].eud and 'EUD' not in self.choices:
+                    self.choices.append('EUD')
+                if self.group_data[grp]['dvh'].ntcp_or_tcp and 'NTCP or TCP' not in self.choices:
+                    self.choices.append('NTCP or TCP')
 
-            self.choices.sort()
+                for option in list(self.custom_data[grp]):
+                    if option not in self.choices:
+                        self.choices.append(option)
 
-            self.combo_box_y_axis.SetItems(self.choices)
-            if current_choice not in self.choices:
-                current_choice = 'ROI Max Dose'
-            self.combo_box_y_axis.SetValue(current_choice)
+                self.choices.sort()
+
+                self.combo_box_y_axis.SetItems(self.choices)
+                if current_choice not in self.choices:
+                    current_choice = 'ROI Max Dose'
+        self.combo_box_y_axis.SetValue(current_choice)
 
     def initialize_y_axis_options(self):
         for i in range(len(self.choices))[::-1]:
@@ -259,11 +263,14 @@ class TimeSeriesFrame:
         self.combo_box_y_axis.SetValue('ROI Max Dose')
 
     def get_save_data(self):
-        return {attr: getattr(self, attr).GetValue() for attr in self.save_attr}
+        return {'layout': {attr: getattr(self, attr).GetValue() for attr in self.layout_save_attr},
+                'custom_data': self.custom_data}
 
     def load_save_data(self, save_data):
-        for attr in self.save_attr:
-            getattr(self, attr).SetValue(save_data[attr])
+        for attr in list(save_data['layout']):
+            getattr(self, attr).SetValue(save_data['layout'][attr])
+        self.custom_data = deepcopy(save_data['custom_data'])
+        self.update_y_axis_options()
 
     def get_csv(self, selection=None):
         """
@@ -321,6 +328,7 @@ class TimeSeriesFrame:
     def has_data(self):
         return self.button_export_csv.IsEnabled()
 
-    def add_custom_data(self, option, data):
+    def add_custom_data(self, option, data, group):
         self.combo_box_y_axis.AppendItems([option])
-        self.custom_data[option] = data
+        self.custom_data[group][option] = data
+        self.custom_data[3-group][option] = {'y': [], 'mrn': [], 'uid': []}

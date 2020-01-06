@@ -521,7 +521,6 @@ class DVHAMainFrame(wx.Frame):
         if self.group_data[2]['stats_data']:
             self.group_data[2]['stats_data'].update_endpoints_and_radbio()
 
-        self.time_series.update_y_axis_options()
         self.time_series.load_save_data(self.save_data['time_series'])
         self.time_series.update_plot()
 

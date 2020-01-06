@@ -25,8 +25,8 @@ class CorrelationFrame:
         """
         :param parent:  notebook panel in main view
         :type parent: Panel
-        :param stats_data: object containing queried data applicable/parsed for statistical analysis
-        :type stats_data: StatsData
+        :param group_data: dvh, table, and stats_data
+        :type group_data: dict
         :param options: user options containing visual preferences
         :type options: Options
         """

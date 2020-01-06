@@ -142,7 +142,7 @@ class StatsSpreadsheet(Spreadsheet):
                 if label not in list(self.stats_data[self.group].data):
                     values = ['None'] * (self.GetNumberRows()-1)
                     self.stats_data[self.group].add_variable(label, values)
-                    self.parent.time_series.add_custom_data(label, self.get_custom_time_series_data(col))
+                    self.parent.time_series.add_custom_data(label, self.get_custom_time_series_data(col), self.group)
 
                     # Add column to other stats data object
                     other = 3 - self.group
