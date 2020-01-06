@@ -314,8 +314,9 @@ class SelectFromListDialog(wx.Dialog):
 
     def set_selection(self, selections):
         for selection in selections:
-            index = self.choices.index(selection)
-            self.list_ctrl.Select(index, on=True)
+            if selection in self.choices:
+                index = self.choices.index(selection)
+                self.list_ctrl.Select(index, on=True)
 
 
 class DelEndpointDialog(SelectFromListDialog):
