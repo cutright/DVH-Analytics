@@ -483,6 +483,7 @@ class DVHAMainFrame(wx.Frame):
         self.save_data['time_series'] = self.time_series.get_save_data()
         self.save_data['radbio'] = self.radbio.get_save_data()
         self.save_data['regression'] = self.regression.get_save_data()
+        self.save_data['control_chart'] = self.control_chart.get_save_data()
 
     def load_data_obj(self, abs_file_path):
         self.save_data = load_object_from_file(abs_file_path)
@@ -492,6 +493,8 @@ class DVHAMainFrame(wx.Frame):
         self.radio_button_query_group.SetSelection(0)
         self.data_table_categorical.load_save_data(self.save_data['main_categorical_1'])
         self.data_table_numerical.load_save_data(self.save_data['main_numerical_1'])
+
+        self.control_chart.load_save_data(self.save_data['control_chart'])
 
         self.exec_query(load_saved_dvh_data=True)
 
@@ -632,9 +635,8 @@ class DVHAMainFrame(wx.Frame):
                 self.notebook_main_view.SetSelection(1)
                 self.update_data(load_saved_dvh_data=load_saved_dvh_data)
                 self.time_series.update_data(self.group_data)
+                self.control_chart.update_data(self.group_data)
                 if self.group_data[1]['dvh'].count > 1:
-                    self.control_chart.group_data = self.group_data
-                    self.control_chart.update_plot()
                     self.correlation.update_data()
 
                 self.radbio.update_dvh_data(self.group_data)

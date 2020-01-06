@@ -12,6 +12,7 @@ Class for the Control Chart frame in the main view
 
 import wx
 from pubsub import pub
+from copy import deepcopy
 from dvha.models.plot import PlotControlChart
 from dvha.db import sql_columns
 from dvha.dialogs.export import save_data_to_file
@@ -33,7 +34,7 @@ class ControlChartFrame:
         self.parent = parent
         self.group_data = group_data
         self.choices = []
-        self.models = {}
+        self.models = {grp: {} for grp in [1, 2]}
 
         self.group = 1
 
@@ -112,10 +113,15 @@ class ControlChartFrame:
         self.plot.group = self.group
         self.plot.update_plot(x, y_values_sorted, mrn_sorted, uid_sorted, dates_sorted, y_axis_label=self.y_axis)
 
-        if self.models and self.y_axis in self.models.keys():
-            model_data = self.models[self.y_axis]
+        if self.models[self.group] and self.y_axis in self.models[self.group].keys():
+            model_data = self.models[self.group][self.y_axis]
             adj_data = self.plot.get_adjusted_control_chart(stats_data=stats_data, **model_data)
             self.plot.update_adjusted_control_chart(**adj_data)
+
+    def update_data(self, group_data):
+        self.group_data = group_data
+        self.update_combo_box_y_choices()
+        self.update_plot()
 
     @property
     def variables(self):
@@ -168,13 +174,19 @@ class ControlChartFrame:
     def has_data(self):
         return self.combo_box_y_axis.IsEnabled()
 
-    def set_model(self, y_variable, x_variables, regression):
-        self.models[y_variable] = {'y_variable': y_variable,
-                                   'x_variables': x_variables,
-                                   'regression': regression}
+    def set_model(self, y_variable, x_variables, regression, group):
+        self.models[group][y_variable] = {'y_variable': y_variable,
+                                          'x_variables': x_variables,
+                                          'regression': regression}
         if self.y_axis == y_variable:
             wx.CallAfter(self.update_plot)
 
     def delete_model(self, y_variable):
         if y_variable in list(self.models):
             self.models.pop(y_variable)
+
+    def get_save_data(self):
+        return {'models': self.models}
+
+    def load_save_data(self, saved_data):
+        self.models = deepcopy(saved_data['models'])

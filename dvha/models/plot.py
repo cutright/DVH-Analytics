@@ -1417,7 +1417,10 @@ class PlotControlChart(Plot):
 
         center_line, ucl, lcl = get_control_limits(residuals)
 
-        colors = [self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR, self.options.PLOT_COLOR]
+        plot_color = [self.options.PLOT_COLOR_2, self.options.PLOT_COLOR][self.group == 1]
+        ooc_color = [self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR_2,
+                     self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR][self.group == 1]
+        colors = [ooc_color, plot_color]
         alphas = [self.options.CONTROL_CHART_OUT_OF_CONTROL_ALPHA, self.options.CONTROL_CHART_CIRCLE_ALPHA]
         color = [colors[ucl > value > lcl] for value in residuals]
         alpha = [alphas[ucl > value > lcl] for value in residuals]

@@ -388,8 +388,8 @@ class MultiVarResultsFrame(wx.Frame):
         :type y_variable: str
         :param x_variables: independent variables
         :type x_variables: list
-        :param stats_data: object containing queried data applicable/parsed for statistical analysis
-        :type stats_data: StatsData
+        :param group_data: dvhs, table, and stats_data
+        :type group_data: dict
         :param options: user options containing visual preferences
         :type options: Options
         """
@@ -407,7 +407,8 @@ class MultiVarResultsFrame(wx.Frame):
         self.plot.update_plot(y_variable, x_variables, self.stats_data)
         msg = {'y_variable': y_variable,
                'x_variables': x_variables,
-               'regression': self.plot.reg}
+               'regression': self.plot.reg,
+               'group': group}
         pub.sendMessage('control_chart_set_model', **msg)
 
         algorithms = ['Random Forest', 'Support Vector Machine', 'Decision Tree', 'Gradient Boosting']
