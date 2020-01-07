@@ -116,7 +116,7 @@ class StatsData:
 
     def update_endpoints_and_radbio(self):
         """
-        Update endpoint and radbio data in self.data. This function is needed since all of these values are calcualted
+        Update endpoint and radbio data in self.data. This function is needed since all of these values are calculated
         after a query and user may change these values.
         """
         if self.dvhs:

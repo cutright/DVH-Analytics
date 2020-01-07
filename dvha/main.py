@@ -607,9 +607,11 @@ class DVHAMainFrame(wx.Frame):
             self.radio_button_query_group.SetSelection(group - 1)
         group = self.radio_button_query_group.GetSelection() + 1
 
+        # TODO: retain group 1 endpoint defs after query of group 2
+        self.endpoint.clear_data()
+
         if group == 1:
             self.plot.clear_plot()
-            self.endpoint.clear_data()
             self.time_series.clear_data()
             self.regression.clear(self.group_data)
             self.control_chart.clear_data()

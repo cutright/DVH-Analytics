@@ -102,15 +102,11 @@ class EndpointFrame:
         else:
             current_labels = []
 
-        eps = {1: {'MRN': self.group_data[1]['dvh'].mrn,
-                   'Tx Site': self.group_data[1]['dvh'].get_plan_values('tx_site'),
-                   'ROI Name': self.group_data[1]['dvh'].roi_name,
-                   'Volume (cc)': self.group_data[1]['dvh'].volume}}
-        if self.group_data[2]['dvh']:
-            eps[2] = {'MRN': self.group_data[2]['dvh'].mrn,
-                      'Tx Site': self.group_data[2]['dvh'].get_plan_values('tx_site'),
-                      'ROI Name': self.group_data[2]['dvh'].roi_name,
-                      'Volume (cc)': self.group_data[2]['dvh'].volume}
+        eps = {grp: {'MRN': group_data['dvh'].mrn,
+                     'Tx Site': group_data['dvh'].get_plan_values('tx_site'),
+                     'ROI Name': group_data['dvh'].roi_name,
+                     'Volume (cc)': group_data['dvh'].volume}
+               for grp, group_data in self.group_data.items() if group_data['dvh']}
 
         ep_defs = self.endpoint_defs.data
         for group, ep in eps.items():
@@ -146,6 +142,7 @@ class EndpointFrame:
             self.data_table[group].set_column_width(2, 200)
 
     def add_ep_button_click(self, evt):
+        # TODO: Track down duplicate table refreshes/calculations
         dlg = AddEndpointDialog()
         res = dlg.ShowModal()
         if res == wx.ID_OK and dlg.is_endpoint_valid:
@@ -153,13 +150,11 @@ class EndpointFrame:
             self.calculate_endpoints()
             self.enable_buttons()
             self.update_endpoints_in_dvh()
-            self.time_series.update_y_axis_options()
         dlg.Destroy()
-        for group in self.group_data.values():
-            if group['stats_data']:
-                group['stats_data'].update_endpoints_and_radbio()
+        self.update_endpoints_and_radbio_in_group_data()
         self.regression.update_combo_box_choices()
         self.control_chart.update_combo_box_y_choices()
+        self.time_series.update_y_axis_options()
 
     def del_ep_button_click(self, evt):
         dlg = DelEndpointDialog(self.data_table[1].columns)
@@ -172,6 +167,8 @@ class EndpointFrame:
                 endpoint_def_row = self.endpoint_defs.data['label'].index(value)
                 self.update_endpoints_in_dvh()
                 self.endpoint_defs.delete_row(endpoint_def_row)
+                self.update_endpoints_and_radbio_in_group_data()
+
             self.time_series.update_y_axis_options()
         dlg.Destroy()
 
@@ -189,6 +186,11 @@ class EndpointFrame:
     def update_dvh(self, group_data):
         self.group_data = group_data
         self.update_endpoints_in_dvh()
+
+    def update_endpoints_and_radbio_in_group_data(self):
+        for group in self.group_data.values():
+            if group['stats_data']:
+                group['stats_data'].update_endpoints_and_radbio()
 
     def update_endpoints_in_dvh(self):
         for group in [1, 2]:
