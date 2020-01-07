@@ -11,8 +11,6 @@ Class for viewing and editing the roi map, and updating the database with change
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx
-from copy import deepcopy
-from datetime import datetime
 from dateutil import parser
 from dvha.db import sql_columns
 from dvha.dialogs.export import save_data_to_file
@@ -34,10 +32,7 @@ class TimeSeriesFrame:
         """
         self.parent = parent
         self.options = options
-        self.group_data = group_data
-        self.custom_data = {grp: {} for grp in [1, 2]}
-
-        self.y_axis_options = sql_columns.numerical
+        self.stats_data = {grp: data['stats_data'] for grp, data in group_data.items()}
 
         self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.text_input_bin_size = wx.TextCtrl(self.parent, wx.ID_ANY, "10", style=wx.TE_PROCESS_ENTER)
@@ -63,10 +58,20 @@ class TimeSeriesFrame:
                                  'text_inputs_percentile', 'text_input_bin_size']
 
     def __set_properties(self):
-        self.choices = list(self.y_axis_options)
-        self.choices.sort()
         self.combo_box_y_axis.AppendItems(self.choices)
         self.combo_box_y_axis.SetLabelText('ROI Max Dose')
+
+    @property
+    def choices(self):
+        if self.stats_data[1]:
+            choices = self.stats_data[1].trending_variables
+            if self.stats_data[2]:
+                choices.extend(self.stats_data[2].trending_variables)
+                choices = list(set(choices))
+        else:
+            choices = list(sql_columns.numerical)
+        choices.sort()
+        return choices
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -107,8 +112,7 @@ class TimeSeriesFrame:
         self.layout = sizer_wrapper
 
     def combo_box_y_axis_ticker(self, evt):
-        if self.group_data[1]['dvh'] and self.group_data[1]['data']['Plans']:
-            self.update_plot()
+        self.update_plot()
 
     def update_plot(self):
         data = self.get_plot_data()
@@ -118,41 +122,10 @@ class TimeSeriesFrame:
         if y_axis_selection is None:
             y_axis_selection = self.combo_box_y_axis.GetValue()
         data = {}
-        for grp in [1,2]:
-            if self.group_data[grp]['dvh']:
-                uids = self.group_data[grp]['dvh'].study_instance_uid
-                mrn_data = self.group_data[grp]['dvh'].mrn
-                if y_axis_selection.split('_')[0] in {'D', 'V'}:
-                    y_data = self.group_data[grp]['dvh'].endpoints['data'][y_axis_selection]
-                elif y_axis_selection in ['EUD', 'NTCP or TCP']:
-                    y_data = getattr(self.group_data[grp]['dvh'], y_axis_selection.lower().replace(' ', '_'))
-                elif y_axis_selection in self.custom_data[grp].keys():
-                    y_data = self.custom_data[grp][y_axis_selection]['y']
-                    uids = self.custom_data[grp][y_axis_selection]['uid']
-                    mrn_data = self.custom_data[grp][y_axis_selection]['mrn']
-                else:
-                    data_info = self.y_axis_options[y_axis_selection]
-                    table = data_info['table']
-                    var_name = data_info['var_name']
-
-                    if table == 'DVHs':
-                        y_data = getattr(self.group_data[grp]['dvh'], var_name)
-                    else:
-                        y_data = getattr(self.group_data[grp]['data'][table], var_name)
-                        uids = getattr(self.group_data[grp]['data'][table], 'study_instance_uid')
-                        mrn_data = getattr(self.group_data[grp]['data'][table], 'mrn')
-
-                x_data = []
-                for uid in uids:
-                    if uid in self.group_data[grp]['data']['Plans'].study_instance_uid:
-                        index = self.group_data[grp]['data']['Plans'].study_instance_uid.index(uid)
-                        x = self.group_data[grp]['data']['Plans'].sim_study_date[index]
-                        if x and x != 'None':
-                            x_data.append(x)
-                        else:
-                            x_data.append(str(datetime.now()))
-                    else:
-                        x_data.append(str(datetime.now()))
+        for grp, stats_data in self.stats_data.items():
+            if stats_data:
+                y_data = stats_data.data[y_axis_selection]['values']
+                x_data = stats_data.sim_study_dates
 
                 sort_index = sorted(range(len(x_data)), key=lambda k: x_data[k])
                 x_values_sorted, y_values_sorted, mrn_sorted, uid_sorted = [], [], [], []
@@ -160,51 +133,52 @@ class TimeSeriesFrame:
                 for s in range(len(x_data)):
                     x_values_sorted.append(parser.parse(x_data[sort_index[s]]))
                     y_values_sorted.append(y_data[sort_index[s]])
-                    mrn_sorted.append(mrn_data[sort_index[s]])
-                    uid_sorted.append(uids[sort_index[s]])
-
-                try:
-                    hist_bins = int(self.text_input_bin_size.GetValue())
-                except ValueError:
-                    self.text_input_bin_size.SetValue('10')
-                    hist_bins = 10
-
-                try:
-                    avg_len = int(self.text_input_lookback_distance.GetValue())
-                except ValueError:
-                    self.text_input_lookback_distance.SetValue('1')
-                    avg_len = 1
-
-                try:
-                    percentile = float(self.text_inputs_percentile.GetValue())
-                except ValueError:
-                    self.text_inputs_percentile.SetValue('90')
-                    percentile = 90.
-
-                y_axis = self.combo_box_y_axis.GetValue()
-                try:
-                    units = self.y_axis_options[y_axis]['units']
-                except:
-                    units = ''
-                if units:
-                    y_axis = "%s (%s)" % (y_axis, units)
+                    mrn_sorted.append(stats_data.mrns[sort_index[s]])
+                    uid_sorted.append(stats_data.uids[sort_index[s]])
 
                 data[grp] = {'x': x_values_sorted,
                              'y': y_values_sorted,
                              'mrn': mrn_sorted,
                              'uid': uid_sorted,
-                             'y_axis_label': y_axis,
-                             'avg_len': avg_len,
-                             'percentile': percentile,
-                             'bin_size': hist_bins,
+                             'y_axis_label': stats_data.get_axis_title(y_axis_selection),
+                             'avg_len': self.avg_len,
+                             'percentile': self.percentile,
+                             'bin_size': self.hist_bins,
                              'group': [grp] * len(x_values_sorted)}
             else:
                 data[grp] = {'x': [], 'y': [], 'mrn': [], 'uid': [], 'y_axis_label': [], 'avg_len': [],
                              'percentile': [], 'bin_size': [], 'group': []}
         return data
 
+    @property
+    def hist_bins(self):
+        try:
+            hist_bins = int(self.text_input_bin_size.GetValue())
+        except ValueError:
+            self.text_input_bin_size.SetValue('10')
+            hist_bins = 10
+        return hist_bins
+
+    @property
+    def avg_len(self):
+        try:
+            avg_len = int(self.text_input_lookback_distance.GetValue())
+        except ValueError:
+            self.text_input_lookback_distance.SetValue('1')
+            avg_len = 1
+        return avg_len
+
+    @property
+    def percentile(self):
+        try:
+            percentile = float(self.text_inputs_percentile.GetValue())
+        except ValueError:
+            self.text_inputs_percentile.SetValue('90')
+            percentile = 90.
+        return percentile
+
     def update_data(self, group_data):
-        self.group_data = group_data
+        self.stats_data = {grp: data['stats_data'] for grp, data in group_data.items()}
         self.update_plot()
 
     def clear_data(self):
@@ -225,51 +199,21 @@ class TimeSeriesFrame:
 
     def update_y_axis_options(self):
         current_choice = self.combo_box_y_axis.GetValue()
-        for grp in [1, 2]:
-            if self.group_data[grp]['dvh']:
-                if self.group_data[grp]['dvh'].endpoints['defs']:
-                    for choice in self.group_data[grp]['dvh'].endpoints['defs']['label']:
-                        if choice not in self.choices:
-                            self.choices.append(choice)
-
-                    for i in range(len(self.choices))[::-1]:
-                        if self.choices[i][0:2] in {'D_', 'V_'}:
-                            if self.choices[i] not in self.group_data[grp]['dvh'].endpoints['defs']['label']:
-                                self.choices.pop(i)
-
-                if self.group_data[grp]['dvh'].eud and 'EUD' not in self.choices:
-                    self.choices.append('EUD')
-                if self.group_data[grp]['dvh'].ntcp_or_tcp and 'NTCP or TCP' not in self.choices:
-                    self.choices.append('NTCP or TCP')
-
-                for option in list(self.custom_data[grp]):
-                    if option not in self.choices:
-                        self.choices.append(option)
-
-                self.choices.sort()
-
-                self.combo_box_y_axis.SetItems(self.choices)
-                if current_choice not in self.choices:
-                    current_choice = 'ROI Max Dose'
+        self.combo_box_y_axis.SetItems(self.choices)
+        if current_choice not in self.choices:
+            current_choice = 'ROI Max Dose'
         self.combo_box_y_axis.SetValue(current_choice)
 
     def initialize_y_axis_options(self):
-        for i in range(len(self.choices))[::-1]:
-            c = self.choices[i]
-            if c[0:2] in {'D_', 'V_'} or c in {'EUD', 'NTCP or TCP'} or 'Date' in c:
-                self.choices.pop(i)
-        self.choices.sort()
         self.combo_box_y_axis.SetItems(self.choices)
         self.combo_box_y_axis.SetValue('ROI Max Dose')
 
     def get_save_data(self):
-        return {'layout': {attr: getattr(self, attr).GetValue() for attr in self.layout_save_attr},
-                'custom_data': self.custom_data}
+        return {attr: getattr(self, attr).GetValue() for attr in self.layout_save_attr}
 
     def load_save_data(self, save_data):
-        for attr in list(save_data['layout']):
-            getattr(self, attr).SetValue(save_data['layout'][attr])
-        self.custom_data = deepcopy(save_data['custom_data'])
+        for attr in list(save_data):
+            getattr(self, attr).SetValue(save_data[attr])
         self.update_y_axis_options()
 
     def get_csv(self, selection=None):
@@ -327,8 +271,3 @@ class TimeSeriesFrame:
     @property
     def has_data(self):
         return self.button_export_csv.IsEnabled()
-
-    def add_custom_data(self, option, data, group):
-        self.combo_box_y_axis.AppendItems([option])
-        self.custom_data[group][option] = data
-        self.custom_data[3-group][option] = {'y': [], 'mrn': [], 'uid': []}

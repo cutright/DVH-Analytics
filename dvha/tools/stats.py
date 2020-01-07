@@ -185,7 +185,7 @@ class StatsData:
         return [var for var in list(self.data) if var != 'Simulation Date']
 
     @property
-    def control_chart_variables(self):
+    def trending_variables(self):
         return list(self.data)
 
     def get_axis_title(self, variable):
