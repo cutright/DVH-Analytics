@@ -158,7 +158,7 @@ class ControlChartFrame:
         self.combo_box_y_axis.SetValue('ROI Max Dose')
 
     def clear_data(self):
-        pass
+        self.initialize_y_axis_options()
 
     def get_csv(self, selection=None):
         return self.plot.get_csv()

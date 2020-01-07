@@ -179,10 +179,12 @@ class TimeSeriesFrame:
 
     def update_data(self, group_data):
         self.stats_data = {grp: data['stats_data'] for grp, data in group_data.items()}
+        self.initialize_y_axis_options()
         self.update_plot()
 
     def clear_data(self):
         self.plot.clear_plot()
+        self.initialize_y_axis_options()
         self.combo_box_y_axis.SetLabelText('ROI Max Dose')
 
     def enable_buttons(self):

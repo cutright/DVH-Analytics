@@ -78,14 +78,19 @@ class CorrelationFrame:
 
         if res == wx.ID_OK:
             self.selections = dlg.selected_values
-            self.update_data()
+            self.update_plot_data()
         dlg.Destroy()
 
     def on_var_default(self, evt):
         self.selections = self.options.CORRELATION_MATRIX_VARS
-        self.update_data()
+        self.update_plot_data()
 
-    def update_data(self):
+    def set_data(self, group_data):
+        self.stats_data = group_data[1]['stats_data']
+        self.stats_data_2 = group_data[2]['stats_data']
+        self.update_plot_data()
+
+    def update_plot_data(self):
         self.plot.update_plot_data(self.stats_data, stats_data_2=self.stats_data_2, included_vars=self.selections)
 
     def clear_data(self):
