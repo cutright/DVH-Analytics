@@ -52,6 +52,7 @@ class DICOM_Parser:
         self.structure_file = structure
         self.dose_file = dose
 
+        # TODO: Remove the need for both pydicom and dicompyler DICOM parsers
         self.rt_data = {key: None for key in ['plan', 'structure', 'dose']}
         self.dicompyler_data = {key: None for key in ['plan', 'structure', 'dose']}
         self.dicompyler_rt_plan = None

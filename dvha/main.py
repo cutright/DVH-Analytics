@@ -710,8 +710,7 @@ class DVHAMainFrame(wx.Frame):
                         condition_str = "study_instance_uid in ('%s')" % "','".join(
                            grp_data['dvh'].study_instance_uid)
                         grp_data['data'] = {key: QuerySQL(key, condition_str) for key in tables}
-
-                    grp_data['stats_data'] = StatsData(grp_data['dvh'], grp_data['data'], group=grp)
+                        grp_data['stats_data'] = StatsData(grp_data['dvh'], grp_data['data'], group=grp)
                 else:
                     grp_data['data'] = {key: None for key in tables}
                     grp_data['stats_data'] = None

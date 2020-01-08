@@ -147,7 +147,8 @@ class StatsSpreadsheet(Spreadsheet):
 
                 data = [self.convert_value(row+1, col) for row in range(self.GetNumberRows()-1)]
                 self.stats_data[self.group].set_variable_data(label, data)
-        sync_variables_in_stats_data_objects(self.stats_data[1], self.stats_data[2])
+        if self.stats_data[2]:
+            sync_variables_in_stats_data_objects(self.stats_data[1], self.stats_data[2])
         self.parent.update_chart_models()
 
     def get_column_data(self, column):
