@@ -235,7 +235,7 @@ class StatsData:
             return X, y
         return X, y, mrn, uid, dates
 
-    def add_variable(self, variable, values, units='Unknown'):
+    def add_variable(self, variable, values, units=''):
         if variable not in list(self.data):
             self.data[variable] = {'units': units, 'values': values}
         if variable not in self.correlation_variables:
@@ -444,3 +444,21 @@ def get_control_limits(y, std_devs=3):
     lcl = center_line - std_devs * avg_moving_range / scalar_d
 
     return center_line, ucl, lcl
+
+
+def sync_variables_in_stats_data_objects(stats_data_1, stats_data_2):
+    """
+    Ensure both stats_data objects have the same variables
+    :type stats_data_1: StatsData
+    :type stats_data_2: StatsData
+    """
+
+    stats_data = {1: stats_data_1, 2: stats_data_2}
+    variables = {grp: list(sd.data) for grp, sd in stats_data.items()}
+
+    for grp, sd in stats_data.items():
+        for var in variables[grp]:
+            if var not in variables[3-grp]:
+                values = ['None'] * len(stats_data[3-grp].mrns)
+                units = stats_data[grp].data[var]['units']
+                stats_data[3-grp].add_variable(var, values, units)

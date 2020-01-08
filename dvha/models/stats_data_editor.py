@@ -6,6 +6,7 @@
 
 import wx
 from dvha.models.spreadsheet import Spreadsheet
+from dvha.tools.stats import sync_variables_in_stats_data_objects
 from dvha.tools.utilities import get_window_size
 
 
@@ -144,14 +145,9 @@ class StatsSpreadsheet(Spreadsheet):
                     values = ['None'] * (self.GetNumberRows()-1)
                     self.stats_data[self.group].add_variable(label, values)
 
-                    # Add column to other stats data object
-                    other = 3 - self.group
-                    if self.stats_data[other] and label not in list(self.stats_data[other].data):
-                        values = ['None'] * len(self.stats_data[other].mrns)
-                        self.stats_data[other].add_variable(label, values)
-
                 data = [self.convert_value(row+1, col) for row in range(self.GetNumberRows()-1)]
                 self.stats_data[self.group].set_variable_data(label, data)
+        sync_variables_in_stats_data_objects(self.stats_data[1], self.stats_data[2])
         self.parent.update_chart_models()
 
     def get_column_data(self, column):

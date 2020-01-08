@@ -36,7 +36,7 @@ from dvha.options import Options
 from dvha.paths import LOGO_PATH, DATA_DIR, ICONS
 from dvha.tools.errors import MemoryErrorDialog, PlottingMemoryError
 from dvha.tools.roi_name_manager import DatabaseROIs
-from dvha.tools.stats import StatsData
+from dvha.tools.stats import StatsData, sync_variables_in_stats_data_objects
 from dvha.tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux, get_window_size, \
     save_object_to_file, load_object_from_file, set_msw_background_color, initialize_directories_and_settings
 from dvha.db.sql_columns import all_columns as sql_column_info
@@ -719,6 +719,9 @@ class DVHAMainFrame(wx.Frame):
                     grp_data['data'] = {key: None for key in tables}
                     grp_data['stats_data'] = None
 
+        if self.group_data[2]['stats_data']:
+            sync_variables_in_stats_data_objects(self.group_data[1]['stats_data'],
+                                                 self.group_data[2]['stats_data'])
         self.time_series.update_data(self.group_data)
         self.control_chart.update_data(self.group_data)
         self.correlation.set_data(self.group_data)
