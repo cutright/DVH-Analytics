@@ -15,6 +15,7 @@ from copy import deepcopy
 from dvha.models.data_table import DataTable
 from dvha.dialogs.main import AddEndpointDialog, DelEndpointDialog
 from dvha.dialogs.export import save_data_to_file
+from dvha.tools.stats import sync_variables_in_stats_data_objects
 from dvha.tools.utilities import get_window_size
 
 
@@ -188,9 +189,12 @@ class EndpointFrame:
         self.update_endpoints_in_dvh()
 
     def update_endpoints_and_radbio_in_group_data(self):
-        for group in self.group_data.values():
-            if group['stats_data']:
-                group['stats_data'].update_endpoints_and_radbio()
+        for grp, data in self.group_data.items():
+            if data['stats_data']:
+                data['stats_data'].update_endpoints_and_radbio()
+                if grp == 2:
+                    sync_variables_in_stats_data_objects(self.group_data[1]['stats_data'],
+                                                         self.group_data[2]['stats_data'])
 
     def update_endpoints_in_dvh(self):
         for group in [1, 2]:

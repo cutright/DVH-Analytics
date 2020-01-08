@@ -14,6 +14,7 @@ import wx
 from copy import deepcopy
 from dvha.models.data_table import DataTable
 from dvha.models.dvh import calc_eud, calc_tcp
+from dvha.tools.stats import sync_variables_in_stats_data_objects
 from dvha.tools.utilities import convert_value_to_str, get_selected_listctrl_items, float_or_none, get_window_size
 from dvha.dialogs.export import save_data_to_file
 
@@ -254,6 +255,9 @@ class RadBioFrame:
                     data['dvh'].ntcp_or_tcp.append(float_or_none(self.data_table_rad_bio[grp].data['NTCP or TCP'][i]))
 
                 data['stats_data'].update_endpoints_and_radbio()
+                if grp == 2:
+                    sync_variables_in_stats_data_objects(self.group_data[1]['stats_data'],
+                                                         self.group_data[2]['stats_data'])
 
                 # update data in time series
                 self.time_series.update_y_axis_options()
