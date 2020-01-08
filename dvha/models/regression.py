@@ -12,6 +12,7 @@ Class to view and calculate linear regressions
 
 import wx
 from pubsub import pub
+from dvha.tools.errors import ErrorDialog
 from dvha.models.plot import PlotRegression, PlotMultiVarRegression
 from dvha.models.machine_learning import RandomForestFrame, GradientBoostingFrame, DecisionTreeFrame,\
     SupportVectorRegressionFrame
@@ -281,8 +282,13 @@ class RegressionFrame:
             for y_variable in list(self.x_variable_nodes):
                 x_variables = list(self.x_variable_nodes[y_variable])
 
-                self.mvr_frames.append(MultiVarResultsFrame(y_variable, x_variables, self.group_data, self.group, self.options))
-                self.mvr_frames[-1].Show()
+                try:
+                    self.mvr_frames.append(MultiVarResultsFrame(y_variable, x_variables,
+                                                                self.group_data, self.group, self.options))
+                    self.mvr_frames[-1].Show()
+                except Exception as e:
+                    msg = "Failed on regression for %s\n%s" % (y_variable, str(e))
+                    ErrorDialog(self.parent, msg, "Multi-Variable Regression Error")
 
     def on_tree_select(self, evt):
         selection = evt.GetItem()
