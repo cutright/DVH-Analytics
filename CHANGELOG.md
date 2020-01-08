@@ -7,6 +7,7 @@ v0.6.4 (TBD)
  - [DICOM Importer] Fix for GH Issue 18
  - [DICOM Importer] Added Save ROI Map button, Importing actually saves ROI map now
  - [Export] Fixed a bug that would not export DVHs Summary without also exporting DVHs
+ - [Export] Fixed a bug when exporting RadBio data, could crash when writing gamma ('\u03b3')
  - [Machine Learning] Mean-square error prints in scientific notation if not between 1 and 1000
  - [Query] DVH bin width may be set. SQL still stores 1cGy bin widths, but query will keep dvh data
     using specified bin width.  This results in faster bokeh plot generation.

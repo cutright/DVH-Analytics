@@ -277,6 +277,8 @@ class RadBioFrame:
         if self.data_table_rad_bio[2].row_count:
             csv = 'Group 1\n%s\n\nGroup 2\n%s' % (csv, self.data_table_rad_bio[2].get_csv())
 
+        csv = csv.replace('\u03b3', 'gamma')  # avoid UnicodeEncodeError when writing to file
+
         return csv
 
     def on_export_csv(self, evt):
