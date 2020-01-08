@@ -235,10 +235,10 @@ class TimeSeriesFrame:
 
         csv = []
         for grp in [1, 2]:
-            if self.group_data[grp]['dvh']:
-                uids = self.group_data[grp]['dvh'].study_instance_uid
-                mrns = self.group_data[grp]['dvh'].mrn
-                dates = self.group_data[grp]['dvh'].sim_study_date
+            if self.stats_data[grp]:
+                uids = self.stats_data[grp].uids
+                mrns = self.stats_data[grp].mrns
+                dates = self.stats_data[grp].sim_study_dates
 
                 # Collect y-data (as in y-axis data from time series), organize into dict for printing to rows
                 y_data = {}

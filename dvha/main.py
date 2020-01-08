@@ -450,7 +450,7 @@ class DVHAMainFrame(wx.Frame):
     def on_save(self, evt):
         if self.save_data:
             dlg = wx.FileDialog(self, "Save your session data to file", "", wildcard='*.dvha',
-                                style=wx.FD_SAVE)
+                                style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
             dlg.SetDirectory(DATA_DIR)
             if dlg.ShowModal() == wx.ID_OK:
                 self.save_data_obj()
