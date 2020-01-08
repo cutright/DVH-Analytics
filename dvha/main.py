@@ -526,7 +526,6 @@ class DVHAMainFrame(wx.Frame):
         self.time_series.update_plot()
 
         if self.group_data[1]['dvh'].count > 1:
-            self.regression.stats_data.update_endpoints_and_radbio()
             self.regression.update_combo_box_choices()
             self.regression.load_save_data(self.save_data['regression'])
 
@@ -635,7 +634,7 @@ class DVHAMainFrame(wx.Frame):
                 self.set_summary_text(group)
                 self.plot.update_plot(self.group_data[1]['dvh'], dvh_2=self.group_data[2]['dvh'])
                 del wait
-                self.update_data(load_saved_dvh_data=load_saved_dvh_data)
+                self.update_data(load_saved_dvh_data=load_saved_dvh_data, group_2_only=bool(group-1))
 
                 if group == 1:
                     self.notebook_main_view.SetSelection(1)
