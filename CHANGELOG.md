@@ -1,6 +1,6 @@
 # Change log of DVH Analytics
 
-v0.6.4 (2020.01.08)
+v0.6.5 (2020.01.08)
 --------------------
  - [Correlation] New tab added showing a correlation matrix
  - [Database Editor] Fix for GH Issue 19
@@ -19,6 +19,9 @@ v0.6.4 (2020.01.08)
  - [Regressions] Catch error on multi-variable regression, print error to dialog window
  - [User Options] Fixed bug that did not restore saved options after clicking cancel
 
+v0.6.4 (2020.01.08)
+--------------------
+Skipped due to PyPi / setup tools issues.
 
 v0.6.3 (2019.12.15)
 --------------------
