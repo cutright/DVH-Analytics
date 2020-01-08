@@ -11,7 +11,6 @@ The main file DVH Analytics
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx
-from copy import deepcopy
 from datetime import datetime
 from dvha.db import sql_columns
 from dvha.db.sql_to_python import QuerySQL
@@ -28,6 +27,7 @@ from dvha.models.endpoint import EndpointFrame
 from dvha.models.queried_data import QueriedDataFrame
 from dvha.models.rad_bio import RadBioFrame
 from dvha.models.time_series import TimeSeriesFrame
+from dvha.models.correlation import CorrelationFrame
 from dvha.models.regression import RegressionFrame
 from dvha.models.control_chart import ControlChartFrame
 from dvha.models.roi_map import ROIMapFrame
@@ -36,9 +36,10 @@ from dvha.options import Options
 from dvha.paths import LOGO_PATH, DATA_DIR, ICONS
 from dvha.tools.errors import MemoryErrorDialog, PlottingMemoryError
 from dvha.tools.roi_name_manager import DatabaseROIs
-from dvha.tools.stats import StatsData
+from dvha.tools.stats import StatsData, sync_variables_in_stats_data_objects
 from dvha.tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux, get_window_size, \
     save_object_to_file, load_object_from_file, set_msw_background_color, initialize_directories_and_settings
+from dvha.db.sql_columns import all_columns as sql_column_info
 
 
 class DVHAMainFrame(wx.Frame):
@@ -55,10 +56,13 @@ class DVHAMainFrame(wx.Frame):
         self.options = Options()
 
         # Initial DVH object and data
-        self.dvh = None
-        self.data = {key: None for key in ['Plans', 'Beams', 'Rxs']}
-        self.stats_data = None
         self.save_data = {}
+        self.group_data = {1: {'dvh': None,
+                               'data': {key: None for key in ['Plans', 'Beams', 'Rxs']},
+                               'stats_data': None},
+                           2: {'dvh': None,
+                               'data': {key: None for key in ['Plans', 'Beams', 'Rxs']},
+                               'stats_data': None}}
 
         self.toolbar_keys = ['Open', 'Close', 'Save', 'Export', 'Import', 'Database', 'ROI Map', 'Settings']
         self.toolbar_ids = {key: i + 1000 for i, key in enumerate(self.toolbar_keys)}
@@ -76,10 +80,19 @@ class DVHAMainFrame(wx.Frame):
         # TODO: Need a method to address multiple users editing roi_map at the same time
         self.roi_map = DatabaseROIs()
 
+        self.query_filters = None
+        self.reset_query_filters()
+
         self.__add_menubar()
         self.__add_tool_bar()
         self.__add_layout_objects()
         self.__bind_layout_objects()
+
+        columns = {'categorical': ['category_1', 'category_2', 'Filter Type'],
+                   'numerical': ['category', 'min', 'max', 'Filter Type']}
+        self.data_table_categorical = DataTable(self.table_categorical, columns=columns['categorical'])
+        self.data_table_numerical = DataTable(self.table_numerical, columns=columns['numerical'])
+
         self.__set_properties()
         self.__set_tooltips()
         self.__add_notebook_frames()
@@ -89,11 +102,6 @@ class DVHAMainFrame(wx.Frame):
         self.disable_query_buttons('numerical')
         self.button_query_execute.Disable()
         self.__disable_notebook_tabs()
-
-        columns = {'categorical': ['category_1', 'category_2', 'Filter Type'],
-                   'numerical': ['category', 'min', 'max', 'Filter Type']}
-        self.data_table_categorical = DataTable(self.table_categorical, columns=columns['categorical'])
-        self.data_table_numerical = DataTable(self.table_numerical, columns=columns['numerical'])
 
         self.Bind(wx.EVT_CLOSE, self.on_quit)
 
@@ -145,6 +153,7 @@ class DVHAMainFrame(wx.Frame):
         export_plot = wx.Menu()
         export_dvhs = export_plot.Append(wx.ID_ANY, 'DVHs')
         export_time_series = export_plot.Append(wx.ID_ANY, 'Time Series')
+        export_correlation = export_plot.Append(wx.ID_ANY, 'Correlation')
         export_regression = export_plot.Append(wx.ID_ANY, 'Regression')
         export_control_chart = export_plot.Append(wx.ID_ANY, 'Control Chart')
 
@@ -163,7 +172,8 @@ class DVHAMainFrame(wx.Frame):
                                 'Plans': self.data_menu.Append(wx.ID_ANY, 'Show Plans\tCtrl+2'),
                                 'Rxs': self.data_menu.Append(wx.ID_ANY, 'Show Rxs\tCtrl+3'),
                                 'Beams': self.data_menu.Append(wx.ID_ANY, 'Show Beams\tCtrl+4'),
-                                'StatsData': self.data_menu.Append(wx.ID_ANY, 'Show Stats Data\tCtrl+5')}
+                                'StatsData1': self.data_menu.Append(wx.ID_ANY, 'Show Stats Data: Group 1\tCtrl+5'),
+                                'StatsData2': self.data_menu.Append(wx.ID_ANY, 'Show Stats Data: Group 2\tCtrl+6')}
 
         settings_menu = wx.Menu()
         menu_pref = settings_menu.Append(wx.ID_PREFERENCES)
@@ -185,13 +195,15 @@ class DVHAMainFrame(wx.Frame):
 
         self.Bind(wx.EVT_MENU, self.on_save_plot_dvhs, export_dvhs)
         self.Bind(wx.EVT_MENU, self.on_save_plot_time_series, export_time_series)
+        self.Bind(wx.EVT_MENU, self.on_save_plot_correlation, export_correlation)
         self.Bind(wx.EVT_MENU, self.on_save_plot_regression, export_regression)
         self.Bind(wx.EVT_MENU, self.on_save_plot_control_chart, export_control_chart)
         self.Bind(wx.EVT_MENU, self.on_view_dvhs, self.data_menu_items['DVHs'])
         self.Bind(wx.EVT_MENU, self.on_view_plans, self.data_menu_items['Plans'])
         self.Bind(wx.EVT_MENU, self.on_view_rxs, self.data_menu_items['Rxs'])
         self.Bind(wx.EVT_MENU, self.on_view_beams, self.data_menu_items['Beams'])
-        self.Bind(wx.EVT_MENU, self.on_view_stats_data, self.data_menu_items['StatsData'])
+        self.Bind(wx.EVT_MENU, self.on_view_stats_data_1, self.data_menu_items['StatsData1'])
+        self.Bind(wx.EVT_MENU, self.on_view_stats_data_2, self.data_menu_items['StatsData2'])
 
         self.frame_menubar.Append(file_menu, '&File')
         self.frame_menubar.Append(self.data_menu, '&Data')
@@ -210,10 +222,12 @@ class DVHAMainFrame(wx.Frame):
         self.table_categorical = wx.ListCtrl(self, wx.ID_ANY, style=wx.BORDER_SUNKEN | wx.LC_REPORT)
         self.table_numerical = wx.ListCtrl(self, wx.ID_ANY, style=wx.BORDER_SUNKEN | wx.LC_REPORT)
 
-        self.button_query_execute = wx.Button(self, wx.ID_ANY, "Query and Retrieve")
+        self.radio_button_query_group = wx.RadioBox(self, wx.ID_ANY, 'Query Group', choices=['1', '2'])
+        self.button_query_execute = wx.Button(self, wx.ID_ANY, "Query and Retrieve Group 1")
 
         self.notebook_main_view = wx.Notebook(self, wx.ID_ANY)
-        self.tab_keys = ['Welcome', 'DVHs', 'Endpoints', 'Rad Bio', 'Time Series', 'Regression', 'Control Chart']
+        self.tab_keys = ['Welcome', 'DVHs', 'Endpoints', 'Rad Bio', 'Time Series',
+                         'Correlation', 'Regression', 'Control Chart']
         self.notebook_tab = {key: wx.Panel(self.notebook_main_view, wx.ID_ANY) for key in self.tab_keys}
 
         self.text_summary = wx.StaticText(self, wx.ID_ANY, "", style=wx.ALIGN_LEFT)
@@ -231,6 +245,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.edit_row_numerical, id=self.button_numerical['edit'].GetId())
         self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.doubleclick_numerical, self.table_numerical)
 
+        self.Bind(wx.EVT_RADIOBOX, self.on_group_select, id=self.radio_button_query_group.GetId())
         self.Bind(wx.EVT_BUTTON, self.exec_query_button, id=self.button_query_execute.GetId())
 
         self.Bind(wx.EVT_SIZE, self.on_resize)
@@ -240,14 +255,18 @@ class DVHAMainFrame(wx.Frame):
 
         self.frame_toolbar.Realize()
 
-        self.table_categorical.AppendColumn("Category1", format=wx.LIST_FORMAT_LEFT, width=180)
-        self.table_categorical.AppendColumn("Category2", format=wx.LIST_FORMAT_LEFT, width=150)
-        self.table_categorical.AppendColumn("Filter Type", format=wx.LIST_FORMAT_LEFT, width=80)
+        widths = [180, 150, 80]
+        self.table_categorical.AppendColumn("Category1", format=wx.LIST_FORMAT_LEFT, width=widths[0])
+        self.table_categorical.AppendColumn("Category2", format=wx.LIST_FORMAT_LEFT, width=widths[1])
+        self.table_categorical.AppendColumn("Filter Type", format=wx.LIST_FORMAT_LEFT, width=widths[2])
+        self.data_table_categorical.widths = widths
 
-        self.table_numerical.AppendColumn("Category", format=wx.LIST_FORMAT_LEFT, width=150)
-        self.table_numerical.AppendColumn("Min", format=wx.LIST_FORMAT_LEFT, width=90)
-        self.table_numerical.AppendColumn("Max", format=wx.LIST_FORMAT_LEFT, width=90)
-        self.table_numerical.AppendColumn("Filter Type", format=wx.LIST_FORMAT_LEFT, width=80)
+        widths = [150, 90, 90, 80]
+        self.table_numerical.AppendColumn("Category", format=wx.LIST_FORMAT_LEFT, width=widths[0])
+        self.table_numerical.AppendColumn("Min", format=wx.LIST_FORMAT_LEFT, width=widths[1])
+        self.table_numerical.AppendColumn("Max", format=wx.LIST_FORMAT_LEFT, width=widths[2])
+        self.table_numerical.AppendColumn("Filter Type", format=wx.LIST_FORMAT_LEFT, width=widths[3])
+        self.data_table_numerical.widths = widths
 
     def __set_tooltips(self):
         self.button_categorical['add'].SetToolTip("Add a categorical data filter.")
@@ -260,14 +279,14 @@ class DVHAMainFrame(wx.Frame):
                                              "filter must be added.")
 
     def __add_notebook_frames(self):
-        self.plot = PlotStatDVH(self.notebook_tab['DVHs'], self.dvh, self.options)
-        self.time_series = TimeSeriesFrame(self.notebook_tab['Time Series'], self.dvh, self.data, self.options)
-        self.regression = RegressionFrame(self.notebook_tab['Regression'], self.stats_data, self.options)
-        self.control_chart = ControlChartFrame(self.notebook_tab['Control Chart'], self.dvh, self.stats_data,
-                                               self.options)
-        self.radbio = RadBioFrame(self.notebook_tab['Rad Bio'], self.dvh, self.time_series, self.regression,
+        self.plot = PlotStatDVH(self.notebook_tab['DVHs'], self.group_data, self.options)
+        self.time_series = TimeSeriesFrame(self.notebook_tab['Time Series'], self.group_data, self.options)
+        self.correlation = CorrelationFrame(self.notebook_tab['Correlation'], self.group_data, self.options)
+        self.regression = RegressionFrame(self.notebook_tab['Regression'], self.group_data, self.options)
+        self.control_chart = ControlChartFrame(self.notebook_tab['Control Chart'], self.group_data, self.options)
+        self.radbio = RadBioFrame(self.notebook_tab['Rad Bio'], self.group_data, self.time_series, self.regression,
                                   self.control_chart)
-        self.endpoint = EndpointFrame(self.notebook_tab['Endpoints'], self.dvh, self.time_series, self.regression,
+        self.endpoint = EndpointFrame(self.notebook_tab['Endpoints'], self.group_data, self.time_series, self.regression,
                                       self.control_chart)
 
     def __do_layout(self):
@@ -280,6 +299,7 @@ class DVHAMainFrame(wx.Frame):
 
         sizer_categorical_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_numerical_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_query_exec_buttons = wx.BoxSizer(wx.HORIZONTAL)
 
         for key in ['add', 'del', 'edit']:
             sizer_categorical_buttons.Add(self.button_categorical[key], 0, wx.ALL, 5)
@@ -289,14 +309,16 @@ class DVHAMainFrame(wx.Frame):
         sizer_query_categorical.Add(self.table_categorical, 1, wx.ALL | wx.EXPAND, 10)
 
         sizer_query_numerical.Add(sizer_numerical_buttons, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_query_numerical.Add(self.table_numerical, 1, wx.ALL | wx.EXPAND, 10)
+        sizer_query_numerical.Add(self.table_numerical, 1, wx.TOP | wx.LEFT | wx.RIGHT | wx.EXPAND, 10)
 
         sizer_summary.Add(self.text_summary)
 
         panel_left = wx.BoxSizer(wx.VERTICAL)
         panel_left.Add(sizer_query_categorical, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.SHAPED | wx.TOP, 5)
         panel_left.Add(sizer_query_numerical, 0, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT | wx.SHAPED, 5)
-        panel_left.Add(self.button_query_execute, 0, wx.ALIGN_CENTER | wx.LEFT | wx.RIGHT, 15)
+        sizer_query_exec_buttons.Add(self.radio_button_query_group, 0, 0, 0)
+        sizer_query_exec_buttons.Add(self.button_query_execute, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER, 10)
+        panel_left.Add(sizer_query_exec_buttons, 0, wx.EXPAND | wx.ALIGN_CENTER | wx.RIGHT | wx.LEFT, 5)
         panel_left.Add(sizer_summary, 1, wx.ALL | wx.EXPAND, 5)
 
         bitmap_logo = wx.StaticBitmap(self.notebook_tab['Welcome'], wx.ID_ANY,
@@ -337,6 +359,10 @@ class DVHAMainFrame(wx.Frame):
         sizer_time_series.Add(self.time_series.layout, 1, wx.EXPAND | wx.ALL, 25)
         self.notebook_tab['Time Series'].SetSizer(sizer_time_series)
 
+        sizer_correlation = wx.BoxSizer(wx.VERTICAL)
+        sizer_correlation.Add(self.correlation.layout, 1, wx.EXPAND | wx.ALL, 25)
+        self.notebook_tab['Correlation'].SetSizer(sizer_correlation)
+
         sizer_regression = wx.BoxSizer(wx.VERTICAL)
         sizer_regression.Add(self.regression.layout, 1, wx.EXPAND | wx.ALL, 25)
         self.notebook_tab['Regression'].SetSizer(sizer_regression)
@@ -365,10 +391,7 @@ class DVHAMainFrame(wx.Frame):
 
     def __enable_notebook_tabs(self):
         for key in self.tab_keys:
-            if key in {'Regression', 'Control Chart'}:
-                self.notebook_tab[key].Enable(self.dvh.count > 1)
-            else:
-                self.notebook_tab[key].Enable()
+            self.notebook_tab[key].Enable()
         self.__enable_initial_buttons_in_tabs()
 
     def __disable_notebook_tabs(self):
@@ -412,6 +435,10 @@ class DVHAMainFrame(wx.Frame):
         else:
             self.button_query_execute.Disable()
 
+        # Force use to populate group 1 first
+        if self.radio_button_query_group.GetSelection() == 1 and self.group_data[1]['dvh'] is None:
+            self.button_query_execute.Disable()
+
     def __catch_failed_sql_connection_on_app_launch(self):
         if not echo_sql_db():
             wx.MessageBox('Invalid credentials!', 'Echo SQL Database', wx.OK | wx.ICON_WARNING)
@@ -422,8 +449,8 @@ class DVHAMainFrame(wx.Frame):
     # --------------------------------------------------------------------------------------------------------------
     def on_save(self, evt):
         if self.save_data:
-            dlg = wx.FileDialog(self, "Save your downloaded data to file", "", wildcard='*.dvha',
-                                style=wx.FD_SAVE)
+            dlg = wx.FileDialog(self, "Save your session data to file", "", wildcard='*.dvha',
+                                style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
             dlg.SetDirectory(DATA_DIR)
             if dlg.ShowModal() == wx.ID_OK:
                 self.save_data_obj()
@@ -443,8 +470,8 @@ class DVHAMainFrame(wx.Frame):
         dlg.Destroy()
 
     def save_data_obj(self):
-        self.save_data['dvh'] = self.dvh
-        self.save_data['main_data'] = self.data
+        self.save_data['group_data'] = self.group_data
+        self.save_data['query_filters'] = self.query_filters
         self.save_data['time_stamp'] = datetime.now()
         self.save_data['version'] = self.options.VERSION
         # data_table_categorical and data_table_numerical saved after query to ensure these data reflect
@@ -453,20 +480,32 @@ class DVHAMainFrame(wx.Frame):
         self.save_data['time_series'] = self.time_series.get_save_data()
         self.save_data['radbio'] = self.radbio.get_save_data()
         self.save_data['regression'] = self.regression.get_save_data()
+        self.save_data['control_chart'] = self.control_chart.get_save_data()
 
     def load_data_obj(self, abs_file_path):
         self.save_data = load_object_from_file(abs_file_path)
-        self.dvh = self.save_data['dvh']
-        self.data = self.save_data['main_data']
+        self.group_data = self.save_data['group_data']
 
         # .load_save_data loses column widths?
-        self.data_table_categorical.data = deepcopy(self.save_data['main_categorical']['data'])
-        self.data_table_numerical.data = deepcopy(self.save_data['main_numerical']['data'])
-        self.data_table_categorical.set_data_in_layout()
-        self.data_table_numerical.set_data_in_layout()
-        self.update_all_query_buttons()
+        self.radio_button_query_group.SetSelection(0)
+        self.data_table_categorical.load_save_data(self.save_data['main_categorical_1'])
+        self.data_table_numerical.load_save_data(self.save_data['main_numerical_1'])
 
-        self.exec_query(load_saved_dvh_data=True)
+        self.control_chart.load_save_data(self.save_data['control_chart'])
+
+        self.radio_button_query_group.SetSelection(0)
+        self.exec_query(load_saved_dvh_data=True, group=1)
+
+        if 'main_categorical_2' in self.save_data.keys():
+            self.radio_button_query_group.SetSelection(1)
+            self.on_group_select()
+            self.data_table_categorical.load_save_data(self.save_data['main_categorical_2'])
+            self.data_table_numerical.load_save_data(self.save_data['main_numerical_2'])
+            self.update_all_query_buttons()
+
+            self.exec_query(load_saved_dvh_data=True, group=2)
+
+        self.update_all_query_buttons()
 
         self.endpoint.load_save_data(self.save_data['endpoint'])
         if self.endpoint.has_data:
@@ -476,16 +515,17 @@ class DVHAMainFrame(wx.Frame):
 
         self.endpoint.update_endpoints_in_dvh()
 
-        self.time_series.update_y_axis_options()
+        self.group_data[1]['stats_data'].update_endpoints_and_radbio()
+        if self.group_data[2]['stats_data']:
+            self.group_data[2]['stats_data'].update_endpoints_and_radbio()
+
         self.time_series.load_save_data(self.save_data['time_series'])
         self.time_series.update_plot()
 
-        if self.dvh.count > 1:
-            self.regression.stats_data.update_endpoints_and_radbio()
-            self.regression.update_combo_box_choices()
-            self.regression.load_save_data(self.save_data['regression'])
+        self.regression.update_combo_box_choices()
+        self.regression.load_save_data(self.save_data['regression'])
 
-            self.control_chart.update_combo_box_y_choices()
+        self.control_chart.update_combo_box_y_choices()
 
     def on_toolbar_settings(self, evt):
         self.on_pref()
@@ -494,7 +534,7 @@ class DVHAMainFrame(wx.Frame):
         self.check_db_then_call(ImportDicomFrame, self.roi_map, self.options)
 
     def on_toolbar_database(self, evt):
-        self.check_db_then_call(DatabaseEditorFrame, self.roi_map)
+        self.check_db_then_call(DatabaseEditorFrame, self.roi_map, self.options)
 
     def on_toolbar_roi_map(self, evt):
         self.check_db_then_call(ROIMapFrame, self.roi_map)
@@ -554,60 +594,65 @@ class DVHAMainFrame(wx.Frame):
         self.update_all_query_buttons()
 
     def exec_query_button(self, evt):
-        # TODO: Thread this process
         self.exec_query()
 
-    def exec_query(self, load_saved_dvh_data=False):
+    def exec_query(self, load_saved_dvh_data=False, group=None):
         wait = wx.BusyCursor()
+        if group is not None:
+            self.radio_button_query_group.SetSelection(group - 1)
+        group = self.radio_button_query_group.GetSelection() + 1
 
-        # self.dvh = None
-        self.plot.clear_plot()
+        # TODO: retain group 1 endpoint defs after query of group 2
         self.endpoint.clear_data()
-        self.time_series.clear_data()
-        self.time_series.initialize_y_axis_options()
-        self.regression.clear()
-        self.control_chart.clear_data()
-        self.control_chart.initialize_y_axis_options()
-        self.radbio.clear_data()
+
+        if group == 1:
+            self.plot.clear_plot()
+            self.time_series.clear_data()
+            self.regression.clear(self.group_data)
+            self.control_chart.clear_data()
+            self.radbio.clear_data()
 
         if not load_saved_dvh_data:
             try:
                 uids, dvh_str = self.get_query()
+                self.group_data[group]['dvh'] = \
+                    DVH(dvh_condition=dvh_str, uid=uids, dvh_bin_width=self.options.dvh_bin_width)
             except MemoryError:
                 msg = "Querying memory error. Try querying less data. At least %s DVHs returned.\n"\
-                      "NOTE: Threshold of this error is dependent on your computer." % self.dvh.count
+                      "NOTE: Threshold of this error is dependent on your computer." % self.group_data[group]['dvh'].count
                 MemoryErrorDialog(self, msg)
                 self.close()
                 return
-            self.dvh = DVH(dvh_condition=dvh_str, uid=uids)
 
-        if self.dvh.count:
+        count = self.group_data[group]['dvh'].count
+        if count > 1:
             try:
-                self.endpoint.update_dvh(self.dvh)
-                self.text_summary.SetLabelText(self.dvh.get_summary())
-
-                self.plot.update_plot(self.dvh)
+                self.endpoint.update_dvh(self.group_data)
+                self.set_summary_text(group)
+                self.plot.update_plot(self.group_data[1]['dvh'], dvh_2=self.group_data[2]['dvh'])
                 del wait
-                self.notebook_main_view.SetSelection(1)
-                self.update_data(load_saved_dvh_data=load_saved_dvh_data)
-                self.time_series.update_data(self.dvh, self.data)
-                if self.dvh.count > 1:
-                    self.control_chart.update_data(self.dvh, self.stats_data)
+                self.update_data(load_saved_dvh_data=load_saved_dvh_data, group_2_only=bool(group-1))
 
-                self.radbio.update_dvh_data(self.dvh)
+                if group == 1:
+                    self.notebook_main_view.SetSelection(1)
+                    self.__enable_notebook_tabs()
 
-                self.__enable_notebook_tabs()
+                self.save_data['main_categorical_%s' % group] = self.data_table_categorical.get_save_data()
+                self.save_data['main_numerical_%s' % group] = self.data_table_numerical.get_save_data()
 
-                self.save_data['main_categorical'] = self.data_table_categorical.get_save_data()
-                self.save_data['main_numerical'] = self.data_table_numerical.get_save_data()
+                if group == 2:
+                    self.regression.group = 2
+                    self.control_chart.group = 2
+                    self.update_stats_data_plots()
+
             except PlottingMemoryError as e:
                 del wait
                 self.on_plotting_memory_error(str(e))
         else:
             del wait
-            wx.MessageBox('No DVHs returned. Please modify query or import more data.', 'Query Error',
-                          wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
-            self.dvh = None
+            msg = "%s DVHs returned. Please modify query or import more data." % ['Less than 2', 'No'][count == 0]
+            wx.MessageBox(msg, 'Query Error', wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+            self.group_data[group]['dvh'] = None
 
     def get_query(self):
 
@@ -655,29 +700,31 @@ class DVHAMainFrame(wx.Frame):
 
         return uids, queries['DVHs']
 
-    def update_data(self, load_saved_dvh_data=False):
+    def update_data(self, load_saved_dvh_data=False, group_2_only=False):
         wait = wx.BusyCursor()
         tables = ['Plans', 'Rxs', 'Beams']
-        if hasattr(self.dvh, 'study_instance_uid'):
-            if not load_saved_dvh_data:
-                condition_str = "study_instance_uid in ('%s')" % "','".join(self.dvh.study_instance_uid)
-                self.data = {key: QuerySQL(key, condition_str) for key in tables}
-        else:
-            self.data = {key: None for key in tables}
-        del wait
+        for grp, grp_data in self.group_data.items():
+            if not(grp == 1 and group_2_only) or grp == 2:
+                if hasattr(grp_data['dvh'], 'study_instance_uid'):
+                    if not load_saved_dvh_data:
+                        condition_str = "study_instance_uid in ('%s')" % "','".join(
+                           grp_data['dvh'].study_instance_uid)
+                        grp_data['data'] = {key: QuerySQL(key, condition_str) for key in tables}
+                        grp_data['stats_data'] = StatsData(grp_data['dvh'], grp_data['data'], group=grp)
+                else:
+                    grp_data['data'] = {key: None for key in tables}
+                    grp_data['stats_data'] = None
 
-        if hasattr(self.dvh, 'study_instance_uid'):
-            wait = wx.BusyCursor()
-            self.stats_data = StatsData(self.dvh, self.data)
-            self.regression.stats_data = self.stats_data
-            self.control_chart.stats_data = self.stats_data
-            try:
-                self.regression.update_combo_box_choices()
-            except ValueError:
-                # TODO: Print error in GUI
-                pass
-            self.control_chart.update_combo_box_y_choices()
-            del wait
+        if self.group_data[2]['stats_data']:
+            sync_variables_in_stats_data_objects(self.group_data[1]['stats_data'],
+                                                 self.group_data[2]['stats_data'])
+        self.time_series.update_data(self.group_data)
+        self.control_chart.update_data(self.group_data)
+        self.correlation.set_data(self.group_data)
+        self.regression.update_combo_box_choices()
+        self.radbio.update_dvh_data(self.group_data)
+
+        del wait
 
     # --------------------------------------------------------------------------------------------------------------
     # Menu bar event functions
@@ -696,17 +743,23 @@ class DVHAMainFrame(wx.Frame):
         self.Destroy()
 
     def on_close(self, *evt):
-        if self.dvh:
+        if self.group_data[1]['dvh']:
             dlg = wx.MessageDialog(self, "Clear all data and plots?", caption='Close',
                                    style=wx.YES | wx.NO | wx.NO_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
             dlg.Center()
             res = dlg.ShowModal()
             if res == wx.ID_YES:
                 self.close()
+                self.radio_button_query_group.SetSelection(0)
             dlg.Destroy()
 
     def close(self):
-        self.dvh = None
+        self.group_data = {1: {'dvh': None,
+                               'data': {key: None for key in ['Plans', 'Beams', 'Rxs']},
+                               'stats_data': None},
+                           2: {'dvh': None,
+                               'data': {key: None for key in ['Plans', 'Beams', 'Rxs']},
+                               'stats_data': None}}
         self.data_table_categorical.delete_all_rows()
         self.data_table_numerical.delete_all_rows()
         self.plot.clear_plot()
@@ -720,13 +773,15 @@ class DVHAMainFrame(wx.Frame):
         self.disable_query_buttons('numerical')
         self.button_query_execute.Disable()
         self.time_series.initialize_y_axis_options()
-        self.regression.clear()
+        self.regression.clear(self.group_data)
         self.control_chart.initialize_y_axis_options()
         self.control_chart.plot.clear_plot()
+        self.control_chart.group = 1
         self.close_windows()
+        self.reset_query_filters()
 
     def on_export(self, evt):
-        if self.dvh is not None:
+        if self.group_data[1]['dvh'] is not None:
             ExportCSVDialog(self)
         else:
             wx.MessageBox('There is no data to export! Please query some data first.', 'Export Error',
@@ -750,6 +805,10 @@ class DVHAMainFrame(wx.Frame):
         save_data_to_file(self, 'Save Time Series plot', self.time_series.plot.html_str,
                           wildcard="HTML files (*.html)|*.html")
 
+    def on_save_plot_correlation(self, evt):
+        save_data_to_file(self, 'Save Correlation plot', self.correlation.plot.html_str,
+                          wildcard="HTML files (*.html)|*.html")
+
     def on_save_plot_regression(self, evt):
         save_data_to_file(self, 'Save Regression plot', self.regression.plot.html_str,
                           wildcard="HTML files (*.html)|*.html")
@@ -770,45 +829,73 @@ class DVHAMainFrame(wx.Frame):
     def on_view_beams(self, evt):
         self.view_table_data('Beams')
 
-    def on_view_stats_data(self, evt):
-        self.view_table_data('StatsData')
+    def on_view_stats_data_1(self, evt):
+        self.view_table_data('StatsData1')
+
+    def on_view_stats_data_2(self, evt):
+        self.view_table_data('StatsData2')
 
     def view_table_data(self, key):
         if key == 'DVHs':
-            data = self.dvh
-        elif key == 'StatsData':
-            data = self.stats_data
+            data = {grp: self.group_data[grp]['dvh'] for grp in [1, 2]}
+        elif 'StatsData' in key:
+            data = {grp: self.group_data[grp]['stats_data'] for grp in [1, 2]}
         else:
-            data = self.data[key]
+            data = {grp: self.group_data[grp]['data'][key] for grp in [1, 2]}
 
-        if data:
+        if data[1]:
+
             if self.get_menu_item_status(key) == 'Show':
-                if key == 'StatsData':
-                    self.data_views[key] = StatsDataEditor(data, self.data_menu, self.data_menu_items[key].GetId(),
-                                                           self.time_series, self.regression, self.control_chart)
+                if 'StatsData' in key:
+                    group = int(key[-1])
+                    if group == 1 or data[2] is not None:
+                        self.data_views[key] = StatsDataEditor(self.group_data, group, self.data_menu,
+                                                               self.data_menu_items[key].GetId(), self.time_series,
+                                                               self.regression, self.control_chart)
+                    else:
+                        self.no_queried_data_dlg()
                 else:
-                    self.data_views[key] = QueriedDataFrame(data, key, self.data_menu, self.data_menu_items[key].GetId())
+                    if key == 'DVHs':
+                        columns = [c for c in data[1].keys]
+                    elif key == 'Rxs':
+                        columns = ['plan_name', 'fx_dose', 'rx_percent', 'fxs', 'rx_dose', 'fx_grp_number',
+                                   'fx_grp_count',
+                                   'fx_grp_name', 'normalization_method', 'normalization_object']
+                    else:
+                        columns = [obj['var_name'] for obj in sql_column_info.values() if obj['table'] == key]
+
+                    for starter_column in ['study_instance_uid', 'mrn']:
+                        if starter_column in columns:
+                            columns.pop(columns.index(starter_column))
+                        columns.insert(0, starter_column)
+
+                    self.data_views[key] = QueriedDataFrame(data, columns, key,
+                                                            self.data_menu, self.data_menu_items[key].GetId())
             else:
                 self.data_views[key].on_close()
                 self.data_views[key] = None
         else:
-            dlg = wx.MessageDialog(self, 'Please query/open some data first.', 'ERROR!', wx.ICON_ERROR | wx.OK_DEFAULT)
-            dlg.ShowModal()
-            dlg.Destroy()
+            self.no_queried_data_dlg()
+
+    def no_queried_data_dlg(self):
+        dlg = wx.MessageDialog(self, 'Please query/open some data first.', 'ERROR!', wx.ICON_ERROR | wx.OK_DEFAULT)
+        dlg.ShowModal()
+        dlg.Destroy()
 
     def get_menu_item_status(self, key):
         show_hide = ['Hide', 'Show']['Show' in self.data_menu.GetLabel(self.data_menu_items[key].GetId())]
         return show_hide
 
     def redraw_plots(self):
-        if self.dvh:
+        if self.group_data[1]['dvh']:
             self.plot.redraw_plot()
             self.time_series.plot.redraw_plot()
+            self.correlation.plot.redraw_plot()
             self.regression.plot.redraw_plot()
             self.control_chart.plot.redraw_plot()
 
     def update_stats_data_plots(self):
-        if self.dvh:
+        if self.group_data[1]['dvh']:
             self.time_series.update_plot()
             self.time_series.update_y_axis_options()
             self.regression.update_plot()
@@ -825,9 +912,44 @@ class DVHAMainFrame(wx.Frame):
     def on_plotting_memory_error(self, plot_type):
         plot_type = [' (Plot type: %s)' % plot_type, ''][plot_type is None]
         msg = "Plotting memory error%s. Try querying less data. At least %s DVHs returned.\n" \
-              "NOTE: Threshold of this error is dependent on your computer." % (plot_type, self.dvh.count)
+              "NOTE: Threshold of this error is dependent on your computer." % (plot_type, self.group_data[1]['dvh'].count)
         MemoryErrorDialog(self, msg)
         self.close()
+
+    def reset_query_filters(self):
+        self.query_filters = {key: None for key in [1, 2]}
+
+    def on_group_select(self, *evt):
+        group = self.radio_button_query_group.GetSelection() + 1
+        other = 3 - group
+
+        self.button_query_execute.SetLabelText('Query and Retrieve Group %s' % group)
+
+        self.query_filters[other] = {'main_categorical': self.data_table_categorical.get_save_data(),
+                                     'main_numerical': self.data_table_numerical.get_save_data()}
+        if self.query_filters[group] is not None:
+            self.data_table_categorical.load_save_data(self.query_filters[group]['main_categorical'])
+            self.data_table_numerical.load_save_data(self.query_filters[group]['main_numerical'])
+        else:
+            self.data_table_categorical.delete_all_rows()
+            self.data_table_numerical.delete_all_rows()
+
+        self.update_all_query_buttons()
+
+        self.set_summary_text(group)
+
+        if self.group_data[2]['stats_data']:
+            self.regression.group = group
+            self.regression.update_plot()
+            self.control_chart.group = group
+            self.control_chart.update_plot()
+
+    def set_summary_text(self, group):
+        if self.group_data[group]['dvh']:
+            text = self.group_data[group]['dvh'].get_summary()
+        else:
+            text = ''
+        self.text_summary.SetLabelText(text)
 
 
 class MainApp(wx.App):

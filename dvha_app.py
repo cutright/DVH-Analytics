@@ -13,6 +13,5 @@ Script to start DVH Analytics
 
 import dvha.main
 
-
 if __name__ == "__main__":
     dvha.main.start()

@@ -65,8 +65,8 @@ class ExportCSVDialog(wx.Dialog):
 
         # Each of these objects shoudl have a has_data property, if False, those UI elements in this class will
         # be disabled (i.e., don't allow user to export empty tables
-        self.enabled = {'DVHs': self.app.dvh.has_data,
-                        'DVHs Summary': self.app.dvh.has_data,
+        self.enabled = {'DVHs': self.app.group_data[1]['dvh'].has_data,
+                        'DVHs Summary': self.app.group_data[1]['dvh'].has_data,
                         'Endpoints': self.app.endpoint.has_data,
                         'Radbio': self.app.radbio.has_data,
                         'Charting Variables': self.app.time_series.has_data}
@@ -224,7 +224,7 @@ class ExportCSVDialog(wx.Dialog):
         csv_key = ['DVHs', 'Endpoints', 'Radbio', 'Charting Variables']
         csv_obj = [None, self.app.endpoint, self.app.radbio, self.app.time_series, self.app.control_chart]
         for i, key in enumerate(csv_key):
-            if self.is_checked(key):
+            if self.is_checked(key) or (key == 'DVHs' and self.is_checked('DVHs Summary')):
                 csv_data.append('%s\n' % key)
                 if key == 'DVHs':  # DVHs has a summary and plot data for export
                     csv_data.append(self.app.plot.get_csv(include_summary=self.is_checked('DVHs Summary'),

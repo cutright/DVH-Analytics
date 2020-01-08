@@ -22,7 +22,7 @@ class DefaultOptions:
     Create default options, to be inherited by Options class
     """
     def __init__(self):
-        self.VERSION = '0.6.3'
+        self.VERSION = '0.6.4'
 
         self.MIN_BORDER = 50
 
@@ -31,13 +31,14 @@ class DefaultOptions:
 
         # These colors propagate to all tabs that visualize your two groups
         self.PLOT_COLOR = 'blue'
+        self.PLOT_COLOR_2 = 'red'
 
         # The line width and style of selected DVHs in the DVH plot
         self.DVH_LINE_WIDTH = 2
         self.DVH_LINE_DASH = 'solid'
 
         # Adjusts the opacity of the inner-quartile ranges
-        self.IQR_ALPHA = 0.075
+        self.IQR_ALPHA = 0.1
 
         # Adjust the plot font sizes
         self.PLOT_AXIS_LABEL_FONT_SIZE = "12pt"
@@ -46,6 +47,10 @@ class DefaultOptions:
         # Number of data points are reduced by this factor during dynamic plot interaction to speed-up visualizations
         # This is only applied to the DVH plot since it has a large amount of data
         self.LOD_FACTOR = 100
+
+        # All DVHs in SQL DB have 1cGy bin widths regardless of this value.  However, the queried DVHs will be
+        # down-sampled using this bin_width
+        self.dvh_bin_width = 5
 
         # Options for the group statistical DVHs in the DVHs tab
         self.STATS_MEDIAN_LINE_WIDTH = 1
@@ -62,6 +67,19 @@ class DefaultOptions:
         self.STATS_MIN_ALPHA = 1
 
         # Options for the time-series plot
+        self.CORRELATION_POS_COLOR_1 = 'blue'
+        self.CORRELATION_NEG_COLOR_1 = 'green'
+        self.CORRELATION_POS_COLOR_2 = 'red'
+        self.CORRELATION_NEG_COLOR_2 = 'purple'
+        self.CORRELATION_MATRIX_VARS = ['Beam Area (Mean)', 'Beam Dose (Mean)', 'Beam MU (Mean)',
+                                        'Beam Perimeter (Mean)', 'PTV Cross-Section Median', 'PTV Distance (Centroids)',
+                                        'PTV Distance (Max)', 'PTV Distance (Mean)', 'PTV Distance (Median)',
+                                        'PTV Distance (Min)', 'PTV Max Dose', 'PTV Min Dose', 'PTV Surface Area',
+                                        'PTV Volume', 'Plan Complexity', 'ROI Cross-Section Max',
+                                        'ROI Cross-Section Median', 'ROI Max Dose', 'ROI Mean Dose', 'ROI Min Dose',
+                                        'ROI Surface Area', 'ROI Volume', 'Rx Dose', 'Total Plan MU']
+
+        # Options for the time-series plot
         self.TIME_SERIES_CIRCLE_SIZE = 10
         self.TIME_SERIES_CIRCLE_ALPHA = 0.3
         self.TIME_SERIES_TREND_LINE_WIDTH = 1
@@ -75,7 +93,7 @@ class DefaultOptions:
         self.CONTROL_CHART_CIRCLE_ALPHA = 0.3
         self.CONTROL_CHART_LINE_WIDTH = 1
         self.CONTROL_CHART_LINE_DASH = 'solid'
-        self.CONTROL_CHART_LINE_COLOR = 'blue'
+        self.CONTROL_CHART_LINE_COLOR = 'black'
         self.CONTROL_CHART_CENTER_LINE_WIDTH = 2
         self.CONTROL_CHART_CENTER_LINE_DASH = 'solid'
         self.CONTROL_CHART_CENTER_LINE_COLOR = 'black'
@@ -89,7 +107,9 @@ class DefaultOptions:
         self.CONTROL_CHART_LCL_LINE_COLOR = 'red'
         self.CONTROL_CHART_LCL_LINE_ALPHA = 1
         self.CONTROL_CHART_PATCH_ALPHA = 0.1
-        self.CONTROL_CHART_OUT_OF_CONTROL_COLOR = 'red'
+        self.CONTROL_CHART_PATCH_COLOR = 'grey'
+        self.CONTROL_CHART_OUT_OF_CONTROL_COLOR = 'green'
+        self.CONTROL_CHART_OUT_OF_CONTROL_COLOR_2 = 'purple'
         self.CONTROL_CHART_OUT_OF_CONTROL_ALPHA = 1
 
         # Adjust the opacity of the histograms
@@ -105,7 +125,7 @@ class DefaultOptions:
         self.REGRESSION_RESIDUAL_ALPHA = 0.5
         self.REGRESSION_RESIDUAL_LINE_WIDTH = 2
         self.REGRESSION_RESIDUAL_LINE_DASH = 'solid'
-        self.REGRESSION_RESIDUAL_LINE_COLOR = 'red'
+        self.REGRESSION_RESIDUAL_LINE_COLOR = 'black'
 
         # Random forest
         self.MACHINE_LEARNING_ALPHA = 0.5
@@ -122,8 +142,6 @@ class DefaultOptions:
 
         self.COMPLEXITY_SCORE_X_WEIGHT = 1.
         self.COMPLEXITY_SCORE_Y_WEIGHT = 1.
-
-        self.SCALAR_D = 1.128
 
         self.ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV', 'EXTERNAL',
                           'FIDUCIAL', 'IMPLANT', 'OPTIMIZATION', 'PRV', 'SUPPORT', 'NONE']

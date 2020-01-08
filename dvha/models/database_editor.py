@@ -26,7 +26,7 @@ class DatabaseEditorFrame(wx.Frame):
     """
     Various viewing and editing tools for the SQL database. This object is called on Database toolbar click.
     """
-    def __init__(self, roi_map):
+    def __init__(self, roi_map, options):
         """
         :param roi_map: roi_map object
         :type roi_map: DatabaseROIs
@@ -36,6 +36,7 @@ class DatabaseEditorFrame(wx.Frame):
         set_msw_background_color(self)  # If windows, change the background color
 
         self.roi_map = roi_map
+        self.options = options
         self.db_tree = self.get_db_tree()
 
         self.SetSize(get_window_size(0.792, 0.781))
@@ -233,9 +234,9 @@ class DatabaseEditorFrame(wx.Frame):
     def on_reimport(self, evt):
         selected_data = self.data_query_results.selected_row_data
         if selected_data:
-            ReimportDialog(mrn=selected_data[0][0], study_instance_uid=selected_data[0][1])
+            ReimportDialog(self.roi_map, self.options, mrn=selected_data[0][0], study_instance_uid=selected_data[0][1])
         else:
-            ReimportDialog()
+            ReimportDialog(self.roi_map, self.options)
 
     @staticmethod
     def on_edit_db(evt):
@@ -246,7 +247,7 @@ class DatabaseEditorFrame(wx.Frame):
         CalculationsDialog()
 
     def on_rebuild_db(self, evt):
-        RebuildDB(self)
+        RebuildDB(self, self.roi_map, self.options)
 
     def on_delete_all_data(self, evt):
         DeleteAllData(self)

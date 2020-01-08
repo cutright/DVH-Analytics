@@ -74,6 +74,7 @@ class DataTable:
         :type ignore_layout: bool
         """
         self.widths = deepcopy(save_data['widths'])
+        self.set_column_widths()
         self.set_data(save_data['data'], save_data['columns'], ignore_layout=ignore_layout)
 
     def set_data(self, data, columns, formats=None, ignore_layout=False):
@@ -117,7 +118,9 @@ class DataTable:
 
     @property
     def column_count(self):
-        return len(self.columns)
+        if self.columns:
+            return len(self.columns)
+        return 0
 
     @property
     def row_count(self):
@@ -296,8 +299,9 @@ class DataTable:
         """
         Set all widths in layout based on self.widths
         """
-        for i, width in enumerate(self.widths):
-            self.set_column_width(i, width)
+        if self.widths is not None:
+            for i, width in enumerate(self.widths):
+                self.set_column_width(i, width)
 
     def clear(self):
         """

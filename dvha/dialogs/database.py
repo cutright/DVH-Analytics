@@ -424,7 +424,7 @@ class ReimportDialog(wx.Dialog):
     """
     Reimport data from catalogued DICOM files for a given MRN or study instance uid
     """
-    def __init__(self, mrn=None, study_instance_uid=None):
+    def __init__(self, roi_map, options, mrn=None, study_instance_uid=None):
         """
         :param mrn: optional initial value for mrn
         :type mrn: str
@@ -432,6 +432,8 @@ class ReimportDialog(wx.Dialog):
         :type study_instance_uid: str
         """
         wx.Dialog.__init__(self, None, title="Reimport from DICOM")
+        self.roi_map = roi_map
+        self.options = options
         self.initial_mrn = mrn
         self.initial_uid = study_instance_uid
 
@@ -570,7 +572,7 @@ class ReimportDialog(wx.Dialog):
             if self.delete_from_db:
                 cnx.delete_rows("study_instance_uid = '%s'" % self.uid)
         move_imported_dicom_files(dicom_files, INBOX_DIR)
-        ImportDicomFrame(inbox=INBOX_DIR)
+        ImportDicomFrame(self.roi_map, self.options, inbox=INBOX_DIR, auto_parse=True)
 
 
 class SQLSettingsDialog(wx.Dialog):
@@ -748,11 +750,13 @@ class MoveFilesFromQuery(MessageDialog):
 
 
 class RebuildDB(MessageDialog):
-    def __init__(self, parent):
+    def __init__(self, parent, roi_map, options):
+        self.roi_map = roi_map
+        self.options = options
         MessageDialog.__init__(self, parent, "Rebuild Database from DICOM")
 
     def action_yes(self):
         with DVH_SQL() as cnx:
             cnx.reinitialize_database()
 
-        ImportDicomFrame(inbox=IMPORTED_DIR)
+        ImportDicomFrame(self.roi_map, self.options, inbox=IMPORTED_DIR, auto_parse=True)

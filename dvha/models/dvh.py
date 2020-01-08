@@ -13,21 +13,24 @@ Class to retrieve DVH data from SQL, calculate parameters dependent on DVHs, and
 import numpy as np
 from dvha.db.sql_connector import DVH_SQL
 from dvha.db.sql_to_python import QuerySQL
-from dvha.tools.utilities import convert_value_to_str
+from copy import deepcopy
 
 
 # This class retrieves DVH data from the SQL database and calculates statistical DVHs (min, max, quartiles)
 # It also provides some inspection tools of the retrieved data
 class DVH:
-    def __init__(self, uid=None, dvh_condition=None):
+    def __init__(self, uid=None, dvh_condition=None, dvh_bin_width=5):
         """
         This class will retrieve DVHs and other data in the DVH SQL table meeting the given constraints,
         it will also parse the DVH_string into python lists and retrieve the associated Rx dose
         :param uid: a list of allowed study_instance_uids in data set
         :param dvh_condition: a string in SQL syntax applied to a DVH Table query
+        :param dvh_bin_width: retrieve every nth value from dvh_string in SQL
+        :type dvh_bin_width: int
         """
 
         self.uid = uid
+        self.dvh_bin_width = dvh_bin_width
 
         if uid:
             constraints_str = "study_instance_uid in ('%s')" % "', '".join(uid)
@@ -43,6 +46,8 @@ class DVH:
             self.keys = []
             for key, value in dvh_data.__dict__.items():
                 if not key.startswith("__") and key not in ignored_keys:
+                    if key == 'dvh_string':
+                        dvh_split = [dvh.split(',')[::self.dvh_bin_width] for i, dvh in enumerate(value)]
                     setattr(self, key, value)
                     if '_string' not in key:
                         self.keys.append(key)
@@ -63,7 +68,7 @@ class DVH:
             self.eud = None
             self.ntcp_or_tcp = None
 
-            self.bin_count = max([value.count(',') + 1 for value in self.dvh_string])
+            self.bin_count = max([len(dvh) for dvh in dvh_split])
 
             self.dvh = np.zeros([self.bin_count, self.count])
 
@@ -71,7 +76,7 @@ class DVH:
             for i in range(self.count):
                 # Process dvh_string to numpy array, and pad with zeros at the end
                 # so that all dvhs are the same length
-                current_dvh = np.array(self.dvh_string[i].split(','), dtype='|S4').astype(np.float)
+                current_dvh = np.array(dvh_split[i], dtype='|S4').astype(np.float)
                 current_dvh_max = np.max(current_dvh)
                 if current_dvh_max > 0:
                     current_dvh = np.divide(current_dvh, current_dvh_max)
@@ -141,7 +146,7 @@ class DVH:
         :return: x data for plotting
         :rtype: list
         """
-        return [list(range(self.bin_count))] * self.count
+        return [np.multiply(np.array(range(self.bin_count)), self.dvh_bin_width).tolist()] * self.count
 
     @property
     def y_data(self):
@@ -162,7 +167,7 @@ class DVH:
         if not keys:
             keys = self.keys
 
-        return {key: getattr(self, key) for key in keys}
+        return deepcopy({key: getattr(self, key) for key in keys})
 
     def get_percentile_dvh(self, percentile):
         """
@@ -186,10 +191,10 @@ class DVH:
             for y in range(len(self.dvh)):
                 dvh[y] = self.dvh[y][x]
             if volume_scale == 'relative':
-                doses[x] = dose_to_volume(dvh, volume)
+                doses[x] = dose_to_volume(dvh, volume, dvh_bin_width=self.dvh_bin_width)
             else:
                 if self.volume[x]:
-                    doses[x] = dose_to_volume(dvh, volume/self.volume[x])
+                    doses[x] = dose_to_volume(dvh, volume/self.volume[x], dvh_bin_width=self.dvh_bin_width)
                 else:
                     doses[x] = 0
         if dose_scale == 'relative':
@@ -221,9 +226,9 @@ class DVH:
                 if isinstance(self.rx_dose[x], str):
                     volumes[x] = 0
                 else:
-                    volumes[x] = volume_of_dose(dvh, dose * self.rx_dose[x])
+                    volumes[x] = volume_of_dose(dvh, dose * self.rx_dose[x], dvh_bin_width=self.dvh_bin_width)
             else:
-                volumes[x] = volume_of_dose(dvh, dose)
+                volumes[x] = volume_of_dose(dvh, dose, dvh_bin_width=self.dvh_bin_width)
 
         if volume_scale == 'absolute':
             volumes = np.multiply(volumes, self.volume[0:self.count])
@@ -357,7 +362,7 @@ class DVH:
 
 
 # Returns the isodose level outlining the given volume
-def dose_to_volume(dvh, rel_volume):
+def dose_to_volume(dvh, rel_volume, dvh_bin_width=1):
     """
     :param dvh: a single dvh
     :param rel_volume: fractional volume
@@ -366,34 +371,34 @@ def dose_to_volume(dvh, rel_volume):
 
     # Return the maximum dose instead of extrapolating
     if rel_volume < dvh[-1]:
-        return len(dvh) * 0.01
+        return len(dvh) * dvh_bin_width * 0.01
 
     dose_high = np.argmax(dvh < rel_volume)
     y = rel_volume
     x_range = [dose_high - 1, dose_high]
     y_range = [dvh[dose_high - 1], dvh[dose_high]]
-    dose = np.interp(y, y_range, x_range) * 0.01
+    dose = np.interp(y, y_range, x_range) * dvh_bin_width * 0.01
 
     return dose
 
 
-def volume_of_dose(dvh, dose):
+def volume_of_dose(dvh, dose, dvh_bin_width=1):
     """
     :param dvh: a single dvh
     :param dose: dose in cGy
     :return: volume in cm^3 of roi receiving at least the specified dose
     """
 
-    x = [int(np.floor(dose * 100)), int(np.ceil(dose * 100))]
+    x = [int(np.floor(dose / dvh_bin_width * 100)), int(np.ceil(dose / dvh_bin_width * 100))]
     if len(dvh) < x[1]:
         return dvh[-1]
     y = [dvh[x[0]], dvh[x[1]]]
-    roi_volume = np.interp(float(dose), x, y)
+    roi_volume = np.interp(float(dose) / dvh_bin_width, x, y)
 
     return roi_volume
 
 
-def calc_eud(dvh, a):
+def calc_eud(dvh, a, dvh_bin_width=1):
     """
     EUD = sum[ v(i) * D(i)^a ] ^ [1/a]
     :param dvh: a single DVH as a list of numpy 1D array with 1cGy bins

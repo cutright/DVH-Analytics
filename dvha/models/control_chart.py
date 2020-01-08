@@ -12,6 +12,7 @@ Class for the Control Chart frame in the main view
 
 import wx
 from pubsub import pub
+from copy import deepcopy
 from dvha.models.plot import PlotControlChart
 from dvha.db import sql_columns
 from dvha.dialogs.export import save_data_to_file
@@ -21,22 +22,21 @@ class ControlChartFrame:
     """
     Object to be passed into notebook panel for the Control Chart tab
     """
-    def __init__(self, parent, dvh, stats_data, options):
+    def __init__(self, parent, group_data, options):
         """
         :param parent:  notebook panel in main view
         :type parent: Panel
-        :param dvh: dvh data object from query
-        :type dvh: DVH
-        :param stats_data: object containing queried data applicable/parsed for statistical analysis
-        :type stats_data: StatsData
+        :param group_data: dvh, table, and stats data
+        :type group_data: dict
         :param options: user options containing visual preferences
         :type options: Options
         """
         self.parent = parent
-        self.dvhs = dvh
-        self.stats_data = stats_data
+        self.group_data = group_data
         self.choices = []
-        self.models = {}
+        self.models = {grp: {} for grp in [1, 2]}
+
+        self.group = 1
 
         self.y_axis_options = sql_columns.numerical
 
@@ -57,7 +57,7 @@ class ControlChartFrame:
         self.parent.Bind(wx.EVT_BUTTON, self.export_csv, id=self.button_export.GetId())
 
     def __set_properties(self):
-        self.combo_box_y_axis.SetMinSize((300, 25))
+        self.combo_box_y_axis.SetMinSize((300, self.combo_box_y_axis.GetSize()[1]))
 
     def __do_subscribe(self):
         pub.subscribe(self.set_model, "control_chart_set_model")
@@ -82,8 +82,9 @@ class ControlChartFrame:
         self.layout = sizer_wrapper
 
     def update_combo_box_y_choices(self):
-        if self.stats_data:
-            self.choices = self.stats_data.control_chart_variables
+        stats_data = self.group_data[self.group]['stats_data']
+        if stats_data:
+            self.choices = stats_data.trending_variables
             self.choices.sort()
             self.combo_box_y_axis.SetItems(self.choices)
             self.combo_box_y_axis.SetValue('ROI Max Dose')
@@ -99,51 +100,53 @@ class ControlChartFrame:
         self.update_plot()
 
     def update_plot(self):
-
-        dates = self.stats_data.sim_study_dates
+        stats_data = self.group_data[self.group]['stats_data']
+        dates = stats_data.sim_study_dates
         sort_index = sorted(range(len(dates)), key=lambda k: dates[k])
         dates_sorted = [dates[i] for i in sort_index]
-        y_values_sorted = [self.stats_data.data[self.y_axis]['values'][i] for i in sort_index]
-        mrn_sorted = [self.stats_data.mrns[i] for i in sort_index]
-        uid_sorted = [self.stats_data.uids[i] for i in sort_index]
+        y_values_sorted = [stats_data.data[self.y_axis]['values'][i] for i in sort_index]
+        mrn_sorted = [stats_data.mrns[i] for i in sort_index]
+        uid_sorted = [stats_data.uids[i] for i in sort_index]
 
         x = list(range(1, len(dates)+1))
 
+        self.plot.group = self.group
         self.plot.update_plot(x, y_values_sorted, mrn_sorted, uid_sorted, dates_sorted, y_axis_label=self.y_axis)
 
-        if self.models and self.y_axis in self.models.keys():
-            model_data = self.models[self.y_axis]
-            adj_data = self.plot.get_adjusted_control_chart(stats_data=self.stats_data, **model_data)
+        if self.models[self.group] and self.y_axis in self.models[self.group].keys():
+            model_data = self.models[self.group][self.y_axis]
+            adj_data = self.plot.get_adjusted_control_chart(stats_data=stats_data, **model_data)
             self.plot.update_adjusted_control_chart(**adj_data)
 
-    def update_data(self, dvh, stats_data):
-        self.dvhs = dvh
-        self.stats_data = stats_data
+    def update_data(self, group_data):
+        self.group_data = group_data
+        self.update_combo_box_y_choices()
         self.update_plot()
 
     @property
     def variables(self):
-        return list(self.stats_data)
+        stats_data = self.group_data[self.group]['stats_data']
+        return list(stats_data)
 
-    def update_endpoints_and_radbio(self):
-        if self.dvhs:
-            if self.dvhs.endpoints['defs']:
-                for var in self.dvhs.endpoints['defs']['label']:
-                    if var not in self.variables:
-                        self.stats_data[var] = {'units': '',
-                                                'values': self.dvhs.endpoints['data'][var]}
-
-                for var in self.variables:
-                    if var[0:2] in {'D_', 'V_'}:
-                        if var not in self.dvhs.endpoints['defs']['label']:
-                            self.stats_data.pop(var)
-
-            if self.dvhs.eud:
-                self.stats_data['EUD'] = {'units': 'Gy',
-                                          'values': self.dvhs.eud}
-            if self.dvhs.ntcp_or_tcp:
-                self.stats_data['NTCP or TCP'] = {'units': '',
-                                                  'values': self.dvhs.ntcp_or_tcp}
+    # def update_endpoints_and_radbio(self):
+    #     if self.dvhs:
+    #         if self.dvhs.endpoints['defs']:
+    #             for var in self.dvhs.endpoints['defs']['label']:
+    #                 if var not in self.variables:
+    #                     self.stats_data[var] = {'units': '',
+    #                                             'values': self.dvhs.endpoints['data'][var]}
+    #
+    #             for var in self.variables:
+    #                 if var[0:2] in {'D_', 'V_'}:
+    #                     if var not in self.dvhs.endpoints['defs']['label']:
+    #                         self.stats_data.pop(var)
+    #
+    #         if self.dvhs.eud:
+    #             self.stats_data['EUD'] = {'units': 'Gy',
+    #                                       'values': self.dvhs.eud}
+    #         if self.dvhs.ntcp_or_tcp:
+    #             self.stats_data['NTCP or TCP'] = {'units': '',
+    #                                               'values': self.dvhs.ntcp_or_tcp}
 
     def initialize_y_axis_options(self):
         for i in range(len(self.choices))[::-1]:
@@ -155,7 +158,7 @@ class ControlChartFrame:
         self.combo_box_y_axis.SetValue('ROI Max Dose')
 
     def clear_data(self):
-        pass
+        self.initialize_y_axis_options()
 
     def get_csv(self, selection=None):
         return self.plot.get_csv()
@@ -171,13 +174,19 @@ class ControlChartFrame:
     def has_data(self):
         return self.combo_box_y_axis.IsEnabled()
 
-    def set_model(self, y_variable, x_variables, regression):
-        self.models[y_variable] = {'y_variable': y_variable,
-                                   'x_variables': x_variables,
-                                   'regression': regression}
+    def set_model(self, y_variable, x_variables, regression, group):
+        self.models[group][y_variable] = {'y_variable': y_variable,
+                                          'x_variables': x_variables,
+                                          'regression': regression}
         if self.y_axis == y_variable:
             wx.CallAfter(self.update_plot)
 
     def delete_model(self, y_variable):
         if y_variable in list(self.models):
             self.models.pop(y_variable)
+
+    def get_save_data(self):
+        return {'models': self.models}
+
+    def load_save_data(self, saved_data):
+        self.models = deepcopy(saved_data['models'])

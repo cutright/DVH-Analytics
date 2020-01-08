@@ -12,6 +12,7 @@ Class to view and calculate linear regressions
 
 import wx
 from pubsub import pub
+from dvha.tools.errors import ErrorDialog
 from dvha.models.plot import PlotRegression, PlotMultiVarRegression
 from dvha.models.machine_learning import RandomForestFrame, GradientBoostingFrame, DecisionTreeFrame,\
     SupportVectorRegressionFrame
@@ -25,18 +26,19 @@ class RegressionFrame:
     """
     Object to be passed into notebook panel for the Regression tab
     """
-    def __init__(self, parent, stats_data, options):
+    def __init__(self, parent, group_data, options):
         """
         :param parent:  notebook panel in main view
         :type parent: Panel
-        :param stats_data: object containing queried data applicable/parsed for statistical analysis
-        :type stats_data: StatsData
+        :param group_data: object containing queried data applicable/parsed for statistical analysis
+        :type group_data: dict
         :param options: user options containing visual preferences
         :type options: Options
         """
         self.parent = parent
         self.options = options
-        self.stats_data = stats_data
+        self.group_data = group_data
+        self.group = 1
         self.choices = []
 
         self.y_variable_nodes = {}
@@ -155,8 +157,8 @@ class RegressionFrame:
         return self.combo_box_y_axis.GetValue()
 
     def update_combo_box_choices(self):
-        if self.stats_data:
-            self.choices = self.stats_data.variables
+        if self.group_data[1]['stats_data']:
+            self.choices = self.group_data[1]['stats_data'].variables
             self.choices.sort()
             self.combo_box_x_axis.SetItems(self.choices)
             self.combo_box_y_axis.SetItems(self.choices)
@@ -179,10 +181,16 @@ class RegressionFrame:
         if self.combo_box_x_axis.GetValue() == self.combo_box_y_axis.GetValue():
             self.plot.clear_plot()
         else:
-            self.plot.update_plot(self.stats_data.get_bokeh_data(self.x_axis, self.y_axis),
+            stats_data = {grp: self.group_data[grp]['stats_data'] for grp in [1, 2]}
+            plot_data = {1: stats_data[1].get_bokeh_data(self.x_axis, self.y_axis)}
+            if stats_data[2] is not None:
+                plot_data[2] = stats_data[2].get_bokeh_data(self.x_axis, self.y_axis)
+            else:
+                plot_data[2] = None
+            self.plot.update_plot(plot_data, self.group,
                                   self.combo_box_x_axis.GetValue(),
-                                  self.stats_data.get_axis_title(self.x_axis),
-                                  self.stats_data.get_axis_title(self.y_axis))
+                                  stats_data[1].get_axis_title(self.x_axis),
+                                  stats_data[1].get_axis_title(self.y_axis))
 
         if self.y_axis in list(self.y_variable_nodes) and self.x_axis in list(self.x_variable_nodes[self.y_axis]):
             self.checkbox.SetValue(True)
@@ -274,8 +282,13 @@ class RegressionFrame:
             for y_variable in list(self.x_variable_nodes):
                 x_variables = list(self.x_variable_nodes[y_variable])
 
-                self.mvr_frames.append(MultiVarResultsFrame(y_variable, x_variables, self.stats_data, self.options))
-                self.mvr_frames[-1].Show()
+                try:
+                    self.mvr_frames.append(MultiVarResultsFrame(y_variable, x_variables,
+                                                                self.group_data, self.group, self.options))
+                    self.mvr_frames[-1].Show()
+                except Exception as e:
+                    msg = "Failed on regression for %s\n%s" % (y_variable, str(e))
+                    ErrorDialog(self.parent, msg, "Multi-Variable Regression Error")
 
     def on_tree_select(self, evt):
         selection = evt.GetItem()
@@ -299,7 +312,9 @@ class RegressionFrame:
                     return x_var, y_var
         return None, None
 
-    def clear(self):
+    def clear(self, new_group_data):
+        self.group_data = new_group_data
+        self.group = 1
         self.plot.clear_plot()
         self.x_variable_nodes = {}
         self.y_variable_nodes = {}
@@ -373,37 +388,37 @@ class MultiVarResultsFrame(wx.Frame):
     """
     Class to view multi-variable regression with data passed from RegressionFrame
     """
-    def __init__(self, y_variable, x_variables, stats_data, options):
+    def __init__(self, y_variable, x_variables, group_data, group, options):
         """
         :param y_variable: dependent variable
         :type y_variable: str
         :param x_variables: independent variables
         :type x_variables: list
-        :param stats_data: object containing queried data applicable/parsed for statistical analysis
-        :type stats_data: StatsData
+        :param group_data: dvhs, table, and stats_data
+        :type group_data: dict
         :param options: user options containing visual preferences
         :type options: Options
         """
-        wx.Frame.__init__(self, None, title="Multi-Variable Model for %s" % y_variable)
+        wx.Frame.__init__(self, None, title="Multi-Variable Model for %s: Group %s" % (y_variable, group))
 
         self.y_variable = y_variable
         self.x_variables = x_variables
-        self.stats_data = stats_data
+        self.stats_data = group_data[group]['stats_data']
 
         set_msw_background_color(self)  # If windows, change the background color
 
         self.options = options
 
-        self.plot = PlotMultiVarRegression(self, options)
-        self.plot.update_plot(y_variable, x_variables, stats_data)
+        self.plot = PlotMultiVarRegression(self, options, group)
+        self.plot.update_plot(y_variable, x_variables, self.stats_data)
         msg = {'y_variable': y_variable,
                'x_variables': x_variables,
-               'regression': self.plot.reg}
+               'regression': self.plot.reg,
+               'group': group}
         pub.sendMessage('control_chart_set_model', **msg)
 
         algorithms = ['Random Forest', 'Support Vector Machine', 'Decision Tree', 'Gradient Boosting']
-        self.button = {key: wx.Button(self, wx.ID_ANY, key) for key in algorithms}\
-
+        self.button = {key: wx.Button(self, wx.ID_ANY, key) for key in algorithms}
         self.button_export = wx.Button(self, wx.ID_ANY, 'Export Plot Data')
         self.button_save_plot = wx.Button(self, wx.ID_ANY, 'Save Plot')
         self.button_save_model = wx.Button(self, wx.ID_ANY, 'Save Model')

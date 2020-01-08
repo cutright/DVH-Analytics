@@ -13,7 +13,7 @@ in Regression and Control Chart tabs
 #    available at https://github.com/cutright/DVH-Analytics
 
 import numpy as np
-from scipy import stats
+from scipy import stats as scipy_stats
 from sklearn import linear_model
 from sklearn.metrics import mean_squared_error, r2_score
 from regressors import stats as regressors_stats
@@ -21,7 +21,7 @@ from dvha.db import sql_columns
 
 
 class StatsData:
-    def __init__(self, dvhs, table_data):
+    def __init__(self, dvhs, table_data, group=1):
         """
         Class used to to collect data for Regression and Control Chart
         This process is different than for Time Series since regressions require all variables to be the same length
@@ -32,6 +32,7 @@ class StatsData:
         """
         self.dvhs = dvhs
         self.table_data = table_data
+        self.group = group
 
         self.column_info = sql_columns.numerical
         self.correlation_variables = list(self.column_info)
@@ -115,7 +116,7 @@ class StatsData:
 
     def update_endpoints_and_radbio(self):
         """
-        Update endpoint and radbio data in self.data. This function is needed since all of these values are calcualted
+        Update endpoint and radbio data in self.data. This function is needed since all of these values are calculated
         after a query and user may change these values.
         """
         if self.dvhs:
@@ -159,11 +160,13 @@ class StatsData:
         :return: x and y data
         :rtype: dict
         """
-        return {'uid': self.uids,
-                'mrn': self.mrns,
-                'date': self.sim_study_dates,
-                'x': self.data[x]['values'],
-                'y': self.data[y]['values']}
+        if x in list(self.data) and y in list(self.data):
+            return {'uid': self.uids,
+                    'mrn': self.mrns,
+                    'date': self.sim_study_dates,
+                    'x': self.data[x]['values'],
+                    'y': self.data[y]['values']}
+        return {key: [] for key in ['uid', 'mrn', 'date', 'x', 'y']}
 
     @property
     def uids(self):
@@ -182,7 +185,7 @@ class StatsData:
         return [var for var in list(self.data) if var != 'Simulation Date']
 
     @property
-    def control_chart_variables(self):
+    def trending_variables(self):
         return list(self.data)
 
     def get_axis_title(self, variable):
@@ -205,10 +208,9 @@ class StatsData:
         y_var_data = []
         for i, value in enumerate(self.data[y_variable]['values']):
             y_var_data.append([value, np.nan][value == 'None'])
-            if value != 'None':
-                mrn.append(self.mrns[i])
-                uid.append(self.uids[i])
-                dates.append(self.sim_study_dates[i])
+            mrn.append(self.mrns[i])
+            uid.append(self.uids[i])
+            dates.append(self.sim_study_dates[i])
 
         data.append(y_var_data)
         for var in x_variables:
@@ -232,6 +234,104 @@ class StatsData:
         if not include_patient_info:
             return X, y
         return X, y, mrn, uid, dates
+
+    def add_variable(self, variable, values, units=''):
+        if variable not in list(self.data):
+            self.data[variable] = {'units': units, 'values': values}
+        if variable not in self.correlation_variables:
+            self.correlation_variables.append(variable)
+            self.correlation_variables.sort()
+
+    def del_variable(self, variable):
+        if variable in list(self.data):
+            self.data.pop(variable)
+        if variable in self.correlation_variables:
+            index = self.correlation_variables.index(variable)
+            self.correlation_variables.pop(index)
+
+    def set_variable_data(self, variable, data, units=None):
+        self.data[variable]['values'] = data
+        if units is not None:
+            self.data[variable]['units'] = units
+
+    def set_variable_units(self, variable, units):
+        self.data[variable]['units'] = units
+
+    def get_corr_matrix_data(self, options, included_vars=None, extra_vars=None):
+        if included_vars is None:
+            included_vars = list(self.data)
+        if extra_vars is not None:
+            included_vars = included_vars + extra_vars
+        else:
+            extra_vars = []
+
+        categories = [c for c in list(self.data) if 'date' not in c.lower() and c in included_vars]
+        categories.extend(extra_vars)
+        categories = list(set(categories))
+        categories.sort()
+        var_count = len(categories)
+        categories_for_label = [category.replace("Control Point", "CP") for category in categories]
+        categories_for_label = [category.replace("control point", "CP") for category in categories_for_label]
+        categories_for_label = [category.replace("Distance", "Dist") for category in categories_for_label]
+
+        for i, category in enumerate(categories_for_label):
+            if category.startswith('DVH'):
+                categories_for_label[i] = category.split("DVH Endpoint: ")[1]
+
+        x_factors = categories_for_label
+        y_factors = categories_for_label[::-1]
+
+        s_keys = ['x', 'y', 'x_name', 'y_name', 'color', 'alpha', 'r', 'p', 'size',
+                  'x_normality', 'y_normality', 'group']
+        source_data = {'corr': {sk: [] for sk in s_keys},
+                       'line': {'x': [0.5, var_count - 0.5], 'y': [var_count - 0.5, 0.5]}}
+
+        min_size, max_size = 3, 20
+        for x in range(var_count):
+            for y in range(var_count):
+                if x > y and self.group == 1 or x < y and self.group == 2:
+                    if categories[x] not in extra_vars and categories[y] not in extra_vars:
+
+                        bad_indices = [i for i, v in enumerate(self.data[categories[x]]['values']) if type(v) is str]
+                        bad_indices.extend([i for i, v in enumerate(self.data[categories[y]]['values']) if type(v) is str])
+                        bad_indices = list(set(bad_indices))
+
+                        x_data = [v for i, v in enumerate(self.data[categories[x]]['values']) if i not in bad_indices]
+                        y_data = [v for i, v in enumerate(self.data[categories[y]]['values']) if i not in bad_indices]
+
+                        if x_data and len(x_data) == len(y_data):
+                            r, p_value = scipy_stats.pearsonr(x_data, y_data)
+                        else:
+                            r, p_value = 0, 0
+                        if np.isnan(r):
+                            r = 0
+
+                        sign = ['neg', 'pos'][r >= 0]
+                        color = getattr(options, 'CORRELATION_%s_COLOR_%s' % (sign.upper(), self.group))
+                        source_data['corr']['color'].append(color)
+                        source_data['corr']['r'].append(r)
+                        source_data['corr']['p'].append(p_value)
+                        source_data['corr']['alpha'].append(abs(r))
+                        source_data['corr']['size'].append(((max_size - min_size) * abs(r)) + min_size)
+                        source_data['corr']['x'].append(x + 0.5)  # 0.5 offset due to bokeh 0.12.9 bug
+                        source_data['corr']['y'].append(var_count - y - 0.5)  # 0.5 offset due to bokeh 0.12.9 bug
+                        source_data['corr']['x_name'].append(categories_for_label[x])
+                        source_data['corr']['y_name'].append(categories_for_label[y])
+                        source_data['corr']['group'].append(self.group)
+
+                        try:
+                            x_norm, x_p = scipy_stats.normaltest(x_data)
+                        except ValueError:
+                            x_p = 'N/A'
+                        try:
+                            y_norm, y_p = scipy_stats.normaltest(y_data)
+                        except ValueError:
+                            y_p = 'N/A'
+
+                        source_data['corr']['x_normality'].append(x_p)
+                        source_data['corr']['y_normality'].append(y_p)
+
+        return {'source_data': source_data, 'x_factors': x_factors, 'y_factors': y_factors}
 
 
 def get_index_of_nan(numpy_array):
@@ -277,7 +377,7 @@ def get_p_values(X, y, predictions, params):
     sd_b = np.sqrt(var_b)
     ts_b = params / sd_b
 
-    return [2 * (1 - stats.t.cdf(np.abs(i), (len(newX) - 1))) for i in ts_b], sd_b, ts_b
+    return [2 * (1 - scipy_stats.t.cdf(np.abs(i), (len(newX) - 1))) for i in ts_b], sd_b, ts_b
 
 
 class MultiVariableRegression:
@@ -307,7 +407,7 @@ class MultiVariableRegression:
 
         self.residuals = np.subtract(y, self.predictions)
 
-        self.norm_prob_plot = stats.probplot(self.residuals, dist='norm', fit=False, plot=None, rvalue=False)
+        self.norm_prob_plot = scipy_stats.probplot(self.residuals, dist='norm', fit=False, plot=None, rvalue=False)
 
         reg_prob = linear_model.LinearRegression()
         reg_prob.fit([[val] for val in self.norm_prob_plot[0]], self.norm_prob_plot[1])
@@ -321,14 +421,16 @@ class MultiVariableRegression:
         self.df_error = len(X[:, 0]) - len(X[0, :]) - 1
         self.df_model = len(X[0, :])
 
-        self.f_p_value = stats.f.cdf(self.f_stat, self.df_model, self.df_error)
+        self.f_p_value = scipy_stats.f.cdf(self.f_stat, self.df_model, self.df_error)
 
 
-def get_control_limits(y):
+def get_control_limits(y, std_devs=3):
     """
     Calculate control limits for Control Chart
     :param y: data
     :type y: list
+    :param std_devs: values greater than std_devs away are out-of-control
+    :type std_devs: int or float
     :return: center line, upper control limit, and lower control limit
     """
     y = np.array(y)
@@ -336,9 +438,27 @@ def get_control_limits(y):
     center_line = np.mean(y)
     avg_moving_range = np.mean(np.absolute(np.diff(y)))
 
-    scalar_d = 1.128
+    scalar_d = 1.128  # since moving range is calculated based on 2 consecutive points
 
-    ucl = center_line + 3 * avg_moving_range / scalar_d
-    lcl = center_line - 3 * avg_moving_range / scalar_d
+    ucl = center_line + std_devs * avg_moving_range / scalar_d
+    lcl = center_line - std_devs * avg_moving_range / scalar_d
 
     return center_line, ucl, lcl
+
+
+def sync_variables_in_stats_data_objects(stats_data_1, stats_data_2):
+    """
+    Ensure both stats_data objects have the same variables
+    :type stats_data_1: StatsData
+    :type stats_data_2: StatsData
+    """
+
+    stats_data = {1: stats_data_1, 2: stats_data_2}
+    variables = {grp: list(sd.data) for grp, sd in stats_data.items()}
+
+    for grp, sd in stats_data.items():
+        for var in variables[grp]:
+            if var not in variables[3-grp]:
+                values = ['None'] * len(stats_data[3-grp].mrns)
+                units = stats_data[grp].data[var]['units']
+                stats_data[3-grp].add_variable(var, values, units)
