@@ -653,7 +653,7 @@ class PlotCorrelation(Plot):
 
     def __add_figure(self):
         self.fig = figure(plot_width=900, plot_height=700, x_axis_location="above", x_range=[''], y_range=[''],
-                          tools="pan, box_zoom, wheel_zoom, reset")
+                          tools="pan, crosshair, box_zoom, wheel_zoom, reset")
 
     def __set_fig_attr(self):
         self.fig.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
@@ -713,7 +713,7 @@ class PlotCorrelation(Plot):
                 data['source_data']['corr'][key].extend(data_2['source_data']['corr'][key])
 
         self.fig = figure(x_axis_location="above", x_range=data['x_factors'], y_range=data['y_factors'],
-                          tools="pan, box_zoom, wheel_zoom, reset")
+                          tools="pan, crosshair, box_zoom, wheel_zoom, reset")
         self.__set_fig_attr()
         self.__add_plot_data()
         self.__add_hover()
