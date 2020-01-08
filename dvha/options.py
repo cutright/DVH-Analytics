@@ -22,7 +22,7 @@ class DefaultOptions:
     Create default options, to be inherited by Options class
     """
     def __init__(self):
-        self.VERSION = '0.6.4dev'
+        self.VERSION = '0.6.4'
 
         self.MIN_BORDER = 50
 
