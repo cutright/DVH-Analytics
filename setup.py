@@ -32,6 +32,7 @@ requires = [
 setup(
     name='dvha',
     include_package_data=True,
+    python_requires='>3.5',
     packages=find_packages(),
     version=DefaultOptions().VERSION,
     description='Create a database of DVHs, GUI with wxPython, plots with Bokeh',
