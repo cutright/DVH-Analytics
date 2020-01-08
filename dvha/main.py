@@ -391,10 +391,7 @@ class DVHAMainFrame(wx.Frame):
 
     def __enable_notebook_tabs(self):
         for key in self.tab_keys:
-            if key in {'Regression', 'Control Chart'}:
-                self.notebook_tab[key].Enable(self.group_data[1]['dvh'].count > 1)
-            else:
-                self.notebook_tab[key].Enable()
+            self.notebook_tab[key].Enable()
         self.__enable_initial_buttons_in_tabs()
 
     def __disable_notebook_tabs(self):
@@ -525,11 +522,10 @@ class DVHAMainFrame(wx.Frame):
         self.time_series.load_save_data(self.save_data['time_series'])
         self.time_series.update_plot()
 
-        if self.group_data[1]['dvh'].count > 1:
-            self.regression.update_combo_box_choices()
-            self.regression.load_save_data(self.save_data['regression'])
+        self.regression.update_combo_box_choices()
+        self.regression.load_save_data(self.save_data['regression'])
 
-            self.control_chart.update_combo_box_y_choices()
+        self.control_chart.update_combo_box_y_choices()
 
     def on_toolbar_settings(self, evt):
         self.on_pref()
@@ -628,7 +624,8 @@ class DVHAMainFrame(wx.Frame):
                 self.close()
                 return
 
-        if self.group_data[group]['dvh'].count:
+        count = self.group_data[group]['dvh'].count
+        if count > 1:
             try:
                 self.endpoint.update_dvh(self.group_data)
                 self.set_summary_text(group)
@@ -653,8 +650,8 @@ class DVHAMainFrame(wx.Frame):
                 self.on_plotting_memory_error(str(e))
         else:
             del wait
-            wx.MessageBox('No DVHs returned. Please modify query or import more data.', 'Query Error',
-                          wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+            msg = "%s DVHs returned. Please modify query or import more data." % ['Less than 2', 'No'][count == 0]
+            wx.MessageBox(msg, 'Query Error', wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
             self.group_data[group]['dvh'] = None
 
     def get_query(self):
