@@ -8,12 +8,22 @@ previous web-based version can be found [here](https://github.com/cutright/DVH-A
 developed.
 
 ### How to Run
-Clone this project and install python dependencies.  
-Then call the following from the top-level project directory with python 3:
+If you have macOS Mojave or later, we have a compiled executable beta.  See [this](https://github.com/cutright/DVH-Analytics/issues/23) post for information.
+
+Install via pip:
 ~~~
-python dvha_app.py
+$ pip install dvha
 ~~~
-For installation instructions of the source code, see our [installation notes](https://github.com/cutright/DVH-Analytics/blob/master/install_notes.md). 
+If you've installed via pip or setup.py, launch from your terminal with:
+~~~
+$ dvha
+~~~
+If you've cloned the project, but did not run the setup.py installer, launch DVHA with:
+~~~
+$ python dvha_app.py
+~~~
+See our [installation notes](https://github.com/cutright/DVH-Analytics/blob/master/install_notes.md) for SQL setup and 
+potential Shapely install issues. 
 
 ### About
 DVH Analytics is a software application to help radiation oncology departments build an in-house database of treatment 
@@ -51,7 +61,7 @@ Roy A, Cutright D, Gopalakrishnan M, Yeh AB, and Mittal BB. "A Risk-Adjusted Con
 
 
 ### Dependencies
-* [Python](https://www.python.org) >=3
+* [Python](https://www.python.org) >3.5
 * [wxPython Phoenix](https://github.com/wxWidgets/Phoenix) >= 4.0.4
 * [Pydicom](https://github.com/darcymason/pydicom) >=1.0
 * [dicompyler-core](https://pypi.python.org/pypi/dicompyler-core) 0.5.3

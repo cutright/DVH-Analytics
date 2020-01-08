@@ -7,10 +7,17 @@
  [requirements.txt](https://github.com/cutright/DVH-Analytics-Desktop/blob/master/requirements.txt)
 
 ## Running
-Clone this project to a location of your choice.  In a terminal and from the DVH-Analytics directory (i.e., top-level 
-for the project), run (assuming python points to an instance of python 3):
+Install via pip:
 ~~~
-python dvha_app.py
+$ pip install dvha
+~~~
+If you've installed via pip or setup.py, launch from your terminal with:
+~~~
+$ dvha
+~~~
+If you've cloned the project, but did not run the setup.py installer, launch DVHA with:
+~~~
+$ python dvha_app.py
 ~~~
 
 ## Shapely
