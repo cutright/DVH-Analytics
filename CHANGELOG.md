@@ -1,6 +1,6 @@
 # Change log of DVH Analytics
 
-v0.6.4 (TBD)
+v0.6.4 (2020.01.08)
 --------------------
  - [Correlation] New tab added showing a correlation matrix
  - [Database Editor] Fix for GH Issue 19
