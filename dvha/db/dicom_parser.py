@@ -750,7 +750,9 @@ class DICOM_Parser:
 
         for key, roi_name in roi_names.items():
             roi_name_len = len(roi_name)
-            if (roi_name_len > 2 and roi_name[0:3] in {'gtv', 'ctv', 'itv', 'ptv'}) and \
+            if self.get_physician_roi(key).lower() in {'gtv', 'ctv', 'itv', 'ptv'}:
+                self.roi_type_over_ride[key] = self.get_physician_roi(key).upper()
+            elif (roi_name_len > 2 and roi_name[0:3] in {'gtv', 'ctv', 'itv', 'ptv'}) and \
                     ((roi_name_len == 3) or
                      (roi_name_len == 4 and roi_name[3].isdigit()) or
                      (roi_name_len == 5 and not roi_name[3].isdigit() and roi_name[4].isdigit())):

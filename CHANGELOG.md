@@ -3,6 +3,8 @@
 v0.6.6 (TBD)
 --------------------
  - [About] Fix bug that displayed version of last options save instead of currently installed version
+ - [Database] SQLite3 is now supported
+ - [DICOM Importer] Auto assign ROI type physician_roi name is gtv, ctv, itv, or ptv 
 
 
 v0.6.5 (2020.01.08)
