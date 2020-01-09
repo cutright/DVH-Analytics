@@ -14,6 +14,7 @@ import numpy as np
 from dvha.db.sql_connector import DVH_SQL
 from dvha.db.sql_to_python import QuerySQL
 from copy import deepcopy
+from dateutil.parser import parse as date_parser
 
 
 # This class retrieves DVH data from the SQL database and calculates statistical DVHs (min, max, quartiles)
@@ -112,9 +113,19 @@ class DVH:
         with DVH_SQL() as cnx:
             condition = "study_instance_uid in ('%s')" % "','".join(self.study_instance_uid)
             data = cnx.query('Plans', 'study_instance_uid, %s' % plan_column, condition)
+            force_date = cnx.is_sqlite_column_datetime('Plans', plan_column)  # returns False for pgsql
 
         uids = [row[0] for row in data]
         values = [row[1] for row in data]
+        if force_date:  # sqlite does not have date or time like variables
+            for i, value in enumerate(values):
+                try:
+                    if type(value) is int:
+                        values[i] = str(date_parser(str(value)))
+                    else:
+                        values[i] = str(date_parser(value))
+                except:
+                    values[i] = 'None'
         return [values[uids.index(uid)] for uid in self.study_instance_uid]
 
     def get_rx_values(self, rx_column):

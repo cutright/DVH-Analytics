@@ -462,6 +462,17 @@ class DVH_SQL:
         columns.sort()
         return columns
 
+    def is_sqlite_column_datetime(self, table_name, column):
+        if self.db_type == 'sqlite':
+            query = "PRAGMA table_info(%s);" % table_name.lower()
+            self.cursor.execute(query)
+            cursor_return = self.cursor.fetchall()
+            columns = {str(c[1]): str(c[2]) for c in cursor_return}
+            if column in list(columns):
+                column_type = columns[column]
+                return 'time' in column_type.lower() or 'date' in column_type.lower()
+        return False
+
     def get_min_value(self, table, column, condition=None):
         """
         Get the minimum value in the database for a given table and column
