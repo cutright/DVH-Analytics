@@ -131,7 +131,10 @@ class TimeSeriesFrame:
                 x_values_sorted, y_values_sorted, mrn_sorted, uid_sorted = [], [], [], []
 
                 for s in range(len(x_data)):
-                    x_values_sorted.append(parser.parse(x_data[sort_index[s]]))
+                    try:
+                        x_values_sorted.append(parser.parse(x_data[sort_index[s]]))
+                    except:
+                        continue
                     y_values_sorted.append(y_data[sort_index[s]])
                     mrn_sorted.append(stats_data.mrns[sort_index[s]])
                     uid_sorted.append(stats_data.uids[sort_index[s]])
