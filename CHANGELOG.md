@@ -4,7 +4,7 @@ v0.6.6 (2020.01.09)
 --------------------
  - [About] Fix bug that displayed version of last options save instead of currently installed version
  - [Endpoints] ensure extra_column_data values do not have commas, issue [20](https://github.com/cutright/DVH-Analytics/issues/20)
- - [Time Series] Prevent crash if simulatation date is not able to be parsed by dateutil
+ - [Time Series] Prevent crash if simulation date is not able to be parsed by dateutil
 
 v0.6.5 (2020.01.08)
 --------------------
