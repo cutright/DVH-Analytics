@@ -23,7 +23,7 @@ def is_sql_connection_defined():
     return os.path.isfile(SQL_CNF_PATH)
 
 
-def write_sql_connection_settings(config):
+def write_sql_connection_settings(config, file_path=SQL_CNF_PATH):
     """
     :param config: a dict with keys 'host', 'dbname', 'port' and optionally 'user' and 'password'
     """
@@ -31,7 +31,7 @@ def write_sql_connection_settings(config):
     text = ["%s %s" % (key, value) for key, value in config.items() if value]
     text = '\n'.join(text)
 
-    with open(SQL_CNF_PATH, "w") as text_file:
+    with open(file_path, "w") as text_file:
         text_file.write(text)
 
 

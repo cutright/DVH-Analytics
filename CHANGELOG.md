@@ -3,6 +3,7 @@
 v0.6.7 (TBD)
 --------------------
  - [Database] SQLite3 is now supported
+ - [Database Connection] The last successful SQL CNF file is stored for easy reload (hidden file in preference folder)
  - [DICOM Importer] Auto assign ROI type physician_roi name is gtv, ctv, itv, or ptv 
 
 
