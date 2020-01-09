@@ -7,9 +7,14 @@ only available as source code during the public beta. Compiled versions will be 
 previous web-based version can be found [here](https://github.com/cutright/DVH-Analytics-Bokeh) but is no longer being 
 developed.
 
-### How to Run
-If you have macOS Mojave or later, we have a compiled executable beta.  See [this](https://github.com/cutright/DVH-Analytics/issues/23) post for information.
+### WARNING
+You are viewing a pre-release development branch (v.0.6.7dev)
 
+### NEW!!!
+PostgreSQL is not longer required. DVHA now uses SQLite3 by default. This means no admin rights are needed and users do 
+not need to figure out how to create databases or user accounts in SQL. PostgreSQL is still an option.
+
+### How to Run
 Install via pip:
 ~~~
 $ pip install dvha
@@ -22,8 +27,11 @@ If you've cloned the project, but did not run the setup.py installer, launch DVH
 ~~~
 $ python dvha_app.py
 ~~~
-See our [installation notes](https://github.com/cutright/DVH-Analytics/blob/master/install_notes.md) for SQL setup and 
-potential Shapely install issues. 
+See our [installation notes](https://github.com/cutright/DVH-Analytics/blob/master/install_notes.md) for potential 
+Shapely install issues on MS Windows and help setting up a PostgreSQL database if it is preferred over SQLite3. 
+
+We are working on compiled executables.  See [this](https://github.com/cutright/DVH-Analytics/issues/23) post for information.
+
 
 ### About
 DVH Analytics is a software application to help radiation oncology departments build an in-house database of treatment 
@@ -66,7 +74,8 @@ Roy A, Cutright D, Gopalakrishnan M, Yeh AB, and Mittal BB. "A Risk-Adjusted Con
 * [Pydicom](https://github.com/darcymason/pydicom) >=1.0
 * [dicompyler-core](https://pypi.python.org/pypi/dicompyler-core) 0.5.3
 * [Bokeh](http://bokeh.pydata.org/en/latest/index.html) >= 1.2.0
-* [PostgreSQL](https://www.postgresql.org/) and [psycopg2](http://initd.org/psycopg/)
+* [PostgreSQL](https://www.postgresql.org/) (optional) and [psycopg2](http://initd.org/psycopg/)
+* [SQLite3](https://docs.python.org/2/library/sqlite3.html)
 * [SciPy](https://scipy.org)
 * [NumPy](http://numpy.org)
 * [Shapely](https://github.com/Toblerity/Shapely)
