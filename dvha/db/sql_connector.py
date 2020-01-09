@@ -11,9 +11,12 @@ Tools used to communicate with the SQL database
 #    available at https://github.com/cutright/DVH-Analytics
 
 import psycopg2
+import sqlite3
+from sqlite3 import OperationalError as OperationalErrorSQLite
 from psycopg2 import OperationalError
 from datetime import datetime
-from dvha.paths import SQL_CNF_PATH, CREATE_SQL_TABLES, parse_settings_file
+from os.path import dirname, join
+from dvha.paths import SQL_CNF_PATH, CREATE_SQL_TABLES, parse_settings_file, DATA_DIR
 from dvha.tools.errors import SQLError
 
 
@@ -31,12 +34,21 @@ class DVH_SQL:
             # Read SQL configuration file
             config = parse_settings_file(SQL_CNF_PATH)
 
-        self.dbname = config['dbname']
+        self.db_type = config['dbtype']
 
-        cnx = psycopg2.connect(**config)
+        if self.db_type == 'sqlite':
+            db_file_path = config['host']
+            if not dirname(db_file_path):
+                db_file_path = join(DATA_DIR, db_file_path)
+            self.db_name = None
+            self.cnx = sqlite3.connect(db_file_path)
+        else:
+            if 'dbtype' in list(config):
+                config.pop('dbtype')
+            self.db_name = config['dbname']
+            self.cnx = psycopg2.connect(**config)
 
-        self.cnx = cnx
-        self.cursor = cnx.cursor()
+        self.cursor = self.cnx.cursor()
         self.tables = ['DVHs', 'Plans', 'Rxs', 'Beams', 'DICOM_Files']
 
     def __enter__(self):
@@ -153,7 +165,13 @@ class DVH_SQL:
         :return: The current time as seen by the SQL database
         :rtype: datetime
         """
-        return self.query_generic("Select NOW()")[0][0]
+
+        if self.db_type == 'sqlite':
+            sql_cmd = "SELECT date('now')"
+        else:
+            sql_cmd = "Select NOW()"
+
+        return self.query_generic(sql_cmd)[0][0]
 
     def update(self, table_name, column, value, condition_str):
         """
@@ -349,7 +367,13 @@ class DVH_SQL:
         """
         Ensure that all of the latest SQL columns exist in the user's database
         """
-        self.execute_file(CREATE_SQL_TABLES)
+        if self.db_type == 'sqlite':
+            try:
+                self.execute_file(CREATE_SQL_TABLES.replace('.sql', '_sqlite.sql'))
+            except OperationalErrorSQLite:
+                pass
+        else:
+            self.execute_file(CREATE_SQL_TABLES)
 
     def reinitialize_database(self):
         """
@@ -364,10 +388,13 @@ class DVH_SQL:
         :return: existence of database
         :rtype: bool
         """
-        line = "SELECT datname FROM pg_catalog.pg_database WHERE lower(datname) = lower('%s');" % self.dbname
-        self.cursor.execute(line)
+        if self.db_name:
+            line = "SELECT datname FROM pg_catalog.pg_database WHERE lower(datname) = lower('%s');" % self.db_name
+            self.cursor.execute(line)
 
-        return bool(len(self.cursor.fetchone()))
+            return bool(len(self.cursor.fetchone()))
+        else:
+            return True
 
     def is_sql_table_empty(self, table):
         """

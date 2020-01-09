@@ -22,7 +22,7 @@ from dvha.models.import_dicom import ImportDicomFrame
 from dvha.paths import SQL_CNF_PATH, parse_settings_file, IMPORTED_DIR, INBOX_DIR
 from dvha.tools.errors import SQLError, SQLErrorDialog
 from dvha.tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file,\
-    delete_imported_dicom_files, move_imported_dicom_files, MessageDialog
+    delete_imported_dicom_files, move_imported_dicom_files, MessageDialog, DEFAULT_SQLITE_CNF, DEFAULT_PGSQL_CNF
 
 
 class CalculationsDialog(wx.Dialog):
@@ -590,7 +590,10 @@ class SQLSettingsDialog(wx.Dialog):
                        'cancel': wx.Button(self, wx.ID_CANCEL, "Cancel"),
                        'echo': wx.Button(self, wx.ID_ANY, "Echo")}
 
+        self.db_type_radiobox = wx.RadioBox(self, wx.ID_ANY, 'DB Type', choices=['SQLite', 'Postgres'])
+
         self.Bind(wx.EVT_BUTTON, self.button_echo, id=self.button['echo'].GetId())
+        self.Bind(wx.EVT_RADIOBOX, self.on_db_radio, id=self.db_type_radiobox.GetId())
 
         self.__set_properties()
         self.__do_layout()
@@ -610,13 +613,14 @@ class SQLSettingsDialog(wx.Dialog):
         grid_sizer = wx.GridSizer(5, 2, 5, 10)
 
         label_titles = ['Host:', 'Port:', 'Database Name:', 'User Name:', 'Password:']
-        label = {key: wx.StaticText(self, wx.ID_ANY, label_titles[i]) for i, key in enumerate(self.keys)}
+        self.label = {key: wx.StaticText(self, wx.ID_ANY, label_titles[i]) for i, key in enumerate(self.keys)}
 
         for key in self.keys:
-            grid_sizer.Add(label[key], 0, wx.ALL, 0)
+            grid_sizer.Add(self.label[key], 0, wx.ALL, 0)
             grid_sizer.Add(self.input[key], 0, wx.ALL | wx.EXPAND, 0)
 
         sizer_frame.Add(grid_sizer, 0, wx.ALL, 10)
+        sizer_frame.Add(self.db_type_radiobox, 0, wx.ALL, 5)
         sizer_buttons.Add(self.button['ok'], 1, wx.ALL | wx.EXPAND, 5)
         sizer_buttons.Add(self.button['cancel'], 1, wx.ALL | wx.EXPAND, 5)
         sizer_echo.Add(self.button['echo'], 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
@@ -629,10 +633,20 @@ class SQLSettingsDialog(wx.Dialog):
 
     def load_sql_settings(self):
         config = parse_settings_file(SQL_CNF_PATH)
+        if 'db_type' not in list(config):
+            config['db_type'] = 'pgsql'
 
-        for input_type in self.keys:
-            if input_type in config:
-                self.input[input_type].SetValue(config[input_type])
+        self.clear_input()
+
+        if config['db_type'] != self.selected_db_type:
+            config = self.default_config
+
+        if config['db_type'] == 'sqlite':
+            self.input['host'].SetValue(config['host'])
+        else:
+            for input_type in self.keys:
+                if input_type in config:
+                    self.input[input_type].SetValue(config[input_type])
 
     def button_echo(self, evt):
         if self.valid_sql_settings:
@@ -643,12 +657,14 @@ class SQLSettingsDialog(wx.Dialog):
     @property
     def valid_sql_settings(self):
         config = {key: self.input[key].GetValue() for key in self.keys if self.input[key].GetValue()}
+        config['dbtype'] = self.selected_db_type
         return echo_sql_db(config)
 
     def run(self):
         res = self.ShowModal()
         if res == wx.ID_OK:
             new_config = {key: self.input[key].GetValue() for key in self.keys if self.input[key].GetValue()}
+            new_config['dbtype'] = self.selected_db_type
             write_sql_connection_settings(new_config)
             if validate_sql_connection(new_config):
                 with DVH_SQL() as cnx:
@@ -658,6 +674,24 @@ class SQLSettingsDialog(wx.Dialog):
                                        wx.OK | wx.ICON_ERROR)
                 dlg.ShowModal()
         self.Destroy()
+
+    def on_db_radio(self, *evt):
+        self.load_sql_settings()
+
+    @property
+    def selected_db_type(self):
+        return ['sqlite', 'pgsql'][self.db_type_radiobox.GetSelection()]
+
+    @property
+    def default_config(self):
+        return [DEFAULT_SQLITE_CNF, DEFAULT_PGSQL_CNF][self.db_type_radiobox.GetSelection()]
+
+    def clear_input(self):
+        for input_type in self.keys:
+            self.input[input_type].SetValue('')
+            if input_type != 'host':
+                self.input[input_type].Enable(self.selected_db_type == 'pgsql')
+                self.label[input_type].Enable(self.selected_db_type == 'pgsql')
 
 
 # ------------------------------------------------------

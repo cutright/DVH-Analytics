@@ -112,9 +112,7 @@ def initialize_default_sql_connection_config_file():
     Create default postgres sql connection config file
     """
     if not isfile(SQL_CNF_PATH):
-        write_sql_connection_settings({'host': 'localhost',
-                                       'dbname': 'dvh',
-                                       'port': '5432'})
+        write_sql_connection_settings(DEFAULT_SQLITE_CNF)
 
 
 def scale_bitmap(bitmap, width, height):
@@ -706,3 +704,12 @@ def get_window_size(width, height):
     if user_width / user_height < 1.5:  # catch 4:3 or non-widescreen
         user_height = user_width / 1.6
     return tuple([int(width * user_width), int(height * user_height)])
+
+
+DEFAULT_PGSQL_CNF = {'host': 'localhost',
+                     'dbname': 'dvh',
+                     'port': '5432',
+                     'db_type': 'pgsql'}
+
+DEFAULT_SQLITE_CNF = {'host': 'dvha.db',
+                      'db_type': 'sqlite'}
