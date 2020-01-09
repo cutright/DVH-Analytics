@@ -364,7 +364,7 @@ class DataTable:
         """
         columns_dict_value['data'].insert(0, columns_dict_value['title'])
         for i, row in enumerate(data_for_csv):
-            row.insert(index, columns_dict_value['data'][i])
+            row.insert(index, str(columns_dict_value['data'][i]).replace(',', ';'))
 
     def insert_columns_into_data_for_csv(self, data_for_csv, columns_dict):
         """
