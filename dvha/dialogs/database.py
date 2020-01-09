@@ -590,7 +590,8 @@ class SQLSettingsDialog(wx.Dialog):
                        'cancel': wx.Button(self, wx.ID_CANCEL, "Cancel"),
                        'echo': wx.Button(self, wx.ID_ANY, "Echo")}
 
-        self.db_type_radiobox = wx.RadioBox(self, wx.ID_ANY, 'DB Type', choices=['SQLite', 'Postgres'])
+        self.db_type_radiobox = wx.RadioBox(self, wx.ID_ANY, 'Database Type', choices=['SQLite', 'Postgres'])
+        self.db_types = ['sqlite', 'pgsql']
 
         self.Bind(wx.EVT_BUTTON, self.button_echo, id=self.button['echo'].GetId())
         self.Bind(wx.EVT_RADIOBOX, self.on_db_radio, id=self.db_type_radiobox.GetId())
@@ -605,6 +606,12 @@ class SQLSettingsDialog(wx.Dialog):
 
     def __set_properties(self):
         self.SetTitle("SQL Connection Settings")
+
+        # Set initial db_type_radiobox to loaded settings or pgsql if none found
+        config = parse_settings_file(SQL_CNF_PATH)
+        if 'dbtype' not in list(config) or config['dbtype'] not in self.db_types:
+            config['dbtype'] = 'pgsql'
+        self.set_selected_db_type(config['dbtype'])
 
     def __do_layout(self):
         sizer_frame = wx.BoxSizer(wx.VERTICAL)
@@ -633,15 +640,16 @@ class SQLSettingsDialog(wx.Dialog):
 
     def load_sql_settings(self):
         config = parse_settings_file(SQL_CNF_PATH)
-        if 'db_type' not in list(config):
-            config['db_type'] = 'pgsql'
+
+        if 'dbtype' not in list(config) or config['dbtype'] not in self.db_types:
+            config['dbtype'] = 'pgsql'
 
         self.clear_input()
 
-        if config['db_type'] != self.selected_db_type:
+        if config['dbtype'] != self.selected_db_type:
             config = self.default_config
 
-        if config['db_type'] == 'sqlite':
+        if config['dbtype'] == 'sqlite':
             self.input['host'].SetValue(config['host'])
         else:
             for input_type in self.keys:
@@ -681,6 +689,9 @@ class SQLSettingsDialog(wx.Dialog):
     @property
     def selected_db_type(self):
         return ['sqlite', 'pgsql'][self.db_type_radiobox.GetSelection()]
+
+    def set_selected_db_type(self, db_type):
+        self.db_type_radiobox.SetSelection({'sqlite': 0, 'pgsql': 1}[db_type])
 
     @property
     def default_config(self):

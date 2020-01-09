@@ -709,7 +709,7 @@ def get_window_size(width, height):
 DEFAULT_PGSQL_CNF = {'host': 'localhost',
                      'dbname': 'dvh',
                      'port': '5432',
-                     'db_type': 'pgsql'}
+                     'dbtype': 'pgsql'}
 
 DEFAULT_SQLITE_CNF = {'host': 'dvha.db',
-                      'db_type': 'sqlite'}
+                      'dbtype': 'sqlite'}

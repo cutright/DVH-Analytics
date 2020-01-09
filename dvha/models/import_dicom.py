@@ -736,6 +736,9 @@ class ImportDicomFrame(wx.Frame):
         remove_empty_folders(self.start_path)
 
     def parse_dicom_data(self):
+        self.button_cancel.Disable()
+        self.button_save_roi_map.Disable()
+        self.button_import.Disable()
         wait = wx.BusyInfo("Parsing DICOM data\nPlease wait...")
         parsed_uids = list(self.parsed_dicom_data)
         plan_total = len(list(self.dicom_importer.plan_nodes))
@@ -760,6 +763,10 @@ class ImportDicomFrame(wx.Frame):
         self.label_progress.SetLabelText("All %s plans parsed" % plan_total)
 
         del wait
+
+        self.button_cancel.Enable()
+        self.button_save_roi_map.Enable()
+        self.button_import.Enable()
 
         self.is_all_data_parsed = True
         self.validate()
@@ -1054,7 +1061,7 @@ class ImportWorker(Thread):
         self.other_dicom_files = other_dicom_files
 
         with DVH_SQL() as cnx:
-            self.last_import_time = cnx.now  # use psql time rather than CPU since time stamps in DB are based on psql
+            self.last_import_time = cnx.now  # use pgsql time rather than CPU since time stamps in DB are based on psql
 
         self.start()  # start the thread
 

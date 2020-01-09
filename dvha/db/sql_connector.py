@@ -16,7 +16,7 @@ from sqlite3 import OperationalError as OperationalErrorSQLite
 from psycopg2 import OperationalError
 from datetime import datetime
 from os.path import dirname, join
-from dvha.paths import SQL_CNF_PATH, CREATE_SQL_TABLES, parse_settings_file, DATA_DIR
+from dvha.paths import SQL_CNF_PATH, CREATE_PGSQL_TABLES, CREATE_SQLITE_TABLES, parse_settings_file, DATA_DIR
 from dvha.tools.errors import SQLError
 
 
@@ -34,7 +34,10 @@ class DVH_SQL:
             # Read SQL configuration file
             config = parse_settings_file(SQL_CNF_PATH)
 
-        self.db_type = config['dbtype']
+        if 'dbtype' in list(config):
+            self.db_type = config['dbtype']
+        else:
+            self.db_type = 'pgsql'
 
         if self.db_type == 'sqlite':
             db_file_path = config['host']
@@ -166,12 +169,15 @@ class DVH_SQL:
         :rtype: datetime
         """
 
-        if self.db_type == 'sqlite':
-            sql_cmd = "SELECT date('now')"
-        else:
-            sql_cmd = "Select NOW()"
+        return self.query_generic("SELECT %s" % self.sql_cmd_now)[0][0]
 
-        return self.query_generic(sql_cmd)[0][0]
+    @property
+    def sql_cmd_now(self):
+        if self.db_type == 'sqlite':
+            sql_cmd = "date('now')"
+        else:
+            sql_cmd = "NOW()"
+        return sql_cmd
 
     def update(self, table_name, column, value, condition_str):
         """
@@ -234,14 +240,14 @@ class DVH_SQL:
         for column in columns:
             if row[column] is None or row[column][0] is None or row[column][0] == '':
                 if column == 'import_time_stamp':
-                    values.append("NOW()")
+                    values.append(self.sql_cmd_now)
                 else:
                     values.append("NULL")
             else:
                 if 'varchar' in row[column][1]:
                     max_length = int(row[column][1].replace('varchar(', '').replace(')', ''))
                     values.append("'%s'" % truncate_string(row[column][0], max_length))
-                elif 'time_stamp' in row[column][1]:
+                elif 'time_stamp' in row[column][1] and self.db_type != 'sqlite':
                     values.append("'%s'::date" % row[column][0])
                 else:
                     values.append("'%s'" % row[column][0])
@@ -369,11 +375,11 @@ class DVH_SQL:
         """
         if self.db_type == 'sqlite':
             try:
-                self.execute_file(CREATE_SQL_TABLES.replace('.sql', '_sqlite.sql'))
-            except OperationalErrorSQLite:
-                pass
+                self.execute_file(CREATE_SQLITE_TABLES)
+            except OperationalErrorSQLite as e:
+                print(str(e))
         else:
-            self.execute_file(CREATE_SQL_TABLES)
+            self.execute_file(CREATE_PGSQL_TABLES)
 
     def reinitialize_database(self):
         """
@@ -444,10 +450,15 @@ class DVH_SQL:
         :return: column names of specified table, sorted alphabetically
         :rtype: list
         """
-        query = "select column_name from information_schema.columns where table_name = '%s';" % table_name.lower()
+        if self.db_type == 'sqlite':
+            query = "PRAGMA table_info(%s);" % table_name.lower()
+            index = 1
+        else:
+            query = "select column_name from information_schema.columns where table_name = '%s';" % table_name.lower()
+            index = 0
         self.cursor.execute(query)
         cursor_return = self.cursor.fetchall()
-        columns = [str(c[0]) for c in cursor_return]
+        columns = [str(c[index]) for c in cursor_return]
         columns.sort()
         return columns
 
