@@ -26,6 +26,9 @@ from dvha.paths import IMPORT_SETTINGS_PATH, SQL_CNF_PATH, INBOX_DIR, IMPORTED_D
     APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR, MODELS_DIR
 
 
+IGNORED_FILES = ['.ds_store']
+
+
 def is_windows():
     return wx.Platform == '__WXMSW__'
 
@@ -166,14 +169,16 @@ def get_file_paths(start_path, search_subfolders=False, extension=None):
             for root, dirs, files in walk(start_path, topdown=False):
                 for name in files:
                     if extension is None or name.endswith(extension):
-                        file_paths.append(join(root, name))
+                        if name.lower() not in IGNORED_FILES:
+                            file_paths.append(join(root, name))
             return file_paths
 
         file_paths = []
         for f in listdir(start_path):
             if isfile(join(start_path, f)):
                 if extension is None or f.endswith(extension):
-                    file_paths.append(join(start_path, f))
+                    if f.lower() not in IGNORED_FILES:
+                        file_paths.append(join(start_path, f))
         return file_paths
     return []
 

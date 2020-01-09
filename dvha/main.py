@@ -14,7 +14,7 @@ import wx
 from datetime import datetime
 from dvha.db import sql_columns
 from dvha.db.sql_to_python import QuerySQL
-from dvha.db.sql_connector import echo_sql_db
+from dvha.db.sql_connector import echo_sql_db, get_current_db_type, initialize_db
 from dvha.dialogs.main import query_dlg, UserSettings, About
 from dvha.dialogs.database import SQLSettingsDialog
 from dvha.dialogs.export import ExportCSVDialog, save_data_to_file
@@ -435,7 +435,7 @@ class DVHAMainFrame(wx.Frame):
         else:
             self.button_query_execute.Disable()
 
-        # Force use to populate group 1 first
+        # Force user to populate group 1 first
         if self.radio_button_query_group.GetSelection() == 1 and self.group_data[1]['dvh'] is None:
             self.button_query_execute.Disable()
 
@@ -443,6 +443,8 @@ class DVHAMainFrame(wx.Frame):
         if not echo_sql_db():
             wx.MessageBox('Invalid credentials!', 'Echo SQL Database', wx.OK | wx.ICON_WARNING)
             self.on_sql()
+        elif get_current_db_type() == 'sqlite':
+            initialize_db()
 
     # --------------------------------------------------------------------------------------------------------------
     # Menu bar event functions

@@ -15,7 +15,7 @@ import sqlite3
 from sqlite3 import OperationalError as OperationalErrorSQLite
 from psycopg2 import OperationalError
 from datetime import datetime
-from os.path import dirname, join
+from os.path import dirname, join, isfile
 from dvha.paths import SQL_CNF_PATH, CREATE_PGSQL_TABLES, CREATE_SQLITE_TABLES, parse_settings_file, DATA_DIR
 from dvha.tools.errors import SQLError
 
@@ -618,3 +618,22 @@ def echo_sql_db(config=None):
         return True
     except OperationalError:
         return False
+
+
+def get_current_db_type():
+    """
+    Get db_type of current cnf
+    :return: sql db_type
+    :rtype: str
+    """
+
+    if isfile(SQL_CNF_PATH):
+        config = parse_settings_file(SQL_CNF_PATH)
+        if 'dbtype' in list(config):
+            return config['dbtype']
+    return None
+
+
+def initialize_db():
+    with DVH_SQL() as cnx:
+        cnx.initialize_database()

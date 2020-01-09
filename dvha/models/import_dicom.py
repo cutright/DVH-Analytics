@@ -1080,7 +1080,6 @@ class ImportWorker(Thread):
             print('\tIf a study was partially imported, all data has been removed from the database '
                   'and its DICOM files remain in your inbox.')
             self.delete_partially_updated_plan()
-            return
 
         wx.CallAfter(pub.sendMessage, "close")
 
@@ -1328,4 +1327,7 @@ class ImportWorker(Thread):
         If import process fails, call this function to remove the partially imported data into SQL
         """
         with DVH_SQL() as cnx:
-            cnx.delete_rows("import_time_stamp > '%s'::date" % self.last_import_time)
+            if cnx.db_type == 'sqlite':
+                cnx.delete_rows("import_time_stamp > date(%s)" % self.last_import_time)
+            else:
+                cnx.delete_rows("import_time_stamp > '%s'::date" % self.last_import_time)
