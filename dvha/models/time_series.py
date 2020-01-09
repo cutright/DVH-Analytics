@@ -11,7 +11,7 @@ Class for viewing and editing the roi map, and updating the database with change
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx
-from dateutil import parser
+from dateutil.parser import parse as date_parser
 from dvha.db import sql_columns
 from dvha.dialogs.export import save_data_to_file
 from dvha.models.plot import PlotTimeSeries
@@ -132,9 +132,10 @@ class TimeSeriesFrame:
 
                 for s in range(len(x_data)):
                     try:
-                        x_values_sorted.append(parser.parse(x_data[sort_index[s]]))
+                        x = date_parser(x_data[sort_index[s]])
                     except:
                         continue
+                    x_values_sorted.append(x)
                     y_values_sorted.append(y_data[sort_index[s]])
                     mrn_sorted.append(stats_data.mrns[sort_index[s]])
                     uid_sorted.append(stats_data.uids[sort_index[s]])

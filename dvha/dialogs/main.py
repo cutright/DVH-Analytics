@@ -19,7 +19,7 @@ from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get
 from dvha.db import sql_columns
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, LICENSE_PATH
-from dvha.options import Options
+from dvha.options import Options, DefaultOptions
 
 
 class DatePicker(wx.Dialog):
@@ -949,7 +949,7 @@ class About(wx.Dialog):
         with open(LICENSE_PATH, 'r') as license_file:
             license_text = ''.join([line for line in license_file])
 
-        license_text = "DVH Analytics v%s\ndvhanalytics.com\n\n%s" % (Options().VERSION, license_text)
+        license_text = "DVH Analytics v%s\ndvhanalytics.com\n\n%s" % (DefaultOptions().VERSION, license_text)
 
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_text = wx.BoxSizer(wx.VERTICAL)
