@@ -16,7 +16,7 @@ from datetime import datetime
 from dateutil.parser import parse as parse_date
 import numpy as np
 from os import walk, listdir, unlink
-from os.path import join, isfile, isdir
+from os.path import join, isfile, isdir, splitext
 import os
 import shutil
 import pydicom as dicom
@@ -168,7 +168,7 @@ def get_file_paths(start_path, search_subfolders=False, extension=None):
             file_paths = []
             for root, dirs, files in walk(start_path, topdown=False):
                 for name in files:
-                    if extension is None or name.endswith(extension):
+                    if extension is None or splitext(name)[1].lower() == extension.lower():
                         if name.lower() not in IGNORED_FILES:
                             file_paths.append(join(root, name))
             return file_paths
@@ -176,7 +176,7 @@ def get_file_paths(start_path, search_subfolders=False, extension=None):
         file_paths = []
         for f in listdir(start_path):
             if isfile(join(start_path, f)):
-                if extension is None or f.endswith(extension):
+                if extension is None or splitext(f)[1].lower() == extension.lower():
                     if f.lower() not in IGNORED_FILES:
                         file_paths.append(join(start_path, f))
         return file_paths

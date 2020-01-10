@@ -15,14 +15,14 @@ action which will be executed on a dialog resolution of wx.ID_OK
 import wx
 from datetime import datetime
 from os import mkdir, rename
-from os.path import join, isfile
+from os.path import join, isfile, basename
 from dvha.db.sql_connector import DVH_SQL, echo_sql_db
 from dvha.db.sql_settings import write_sql_connection_settings, validate_sql_connection
 from dvha.models.import_dicom import ImportDicomFrame
-from dvha.paths import SQL_CNF_PATH, parse_settings_file, IMPORTED_DIR, INBOX_DIR,\
+from dvha.paths import SQL_CNF_PATH, parse_settings_file, IMPORTED_DIR, INBOX_DIR, DATA_DIR,\
     SQL_CNF_PATH_LAST_PGSQL, SQL_CNF_PATH_LAST_SQLITE
 from dvha.tools.errors import SQLError, SQLErrorDialog
-from dvha.tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file,\
+from dvha.tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file, get_file_paths,\
     delete_imported_dicom_files, move_imported_dicom_files, MessageDialog, DEFAULT_SQLITE_CNF, DEFAULT_PGSQL_CNF
 
 
@@ -587,7 +587,8 @@ class SQLSettingsDialog(wx.Dialog):
 
         self.keys = ['host', 'port', 'dbname', 'user', 'password']
 
-        self.input = {key: wx.TextCtrl(self, wx.ID_ANY, "") for key in self.keys if key != 'password'}
+        self.input = {key: wx.TextCtrl(self, wx.ID_ANY, "") for key in self.keys if key not in {'password', 'host'}}
+        self.input['host'] = wx.ComboBox(self, wx.ID_ANY, "")
         self.input['password'] = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_PASSWORD)
         self.button = {'ok': wx.Button(self, wx.ID_OK, "OK"),
                        'cancel': wx.Button(self, wx.ID_CANCEL, "Cancel"),
@@ -620,6 +621,14 @@ class SQLSettingsDialog(wx.Dialog):
 
         self.button['reload'].Enable(isfile(self.last_config_file_path))
 
+    def set_db_files_in_host_input(self):
+        if self.selected_db_type == 'sqlite':
+            db_files = get_file_paths(DATA_DIR, extension='.db')
+            db_files = [basename(db_file) for db_file in db_files]
+            self.input['host'].SetItems(db_files)
+        else:
+            self.input['host'].Clear()
+
     def __do_layout(self):
         sizer_frame = wx.BoxSizer(wx.VERTICAL)
         sizer_echo = wx.BoxSizer(wx.HORIZONTAL)
@@ -649,6 +658,8 @@ class SQLSettingsDialog(wx.Dialog):
         self.Layout()
 
     def load_sql_settings(self, file_path=SQL_CNF_PATH):
+        self.set_db_files_in_host_input()
+
         config = parse_settings_file(file_path)
 
         if 'dbtype' not in list(config) or config['dbtype'] not in self.db_types:
