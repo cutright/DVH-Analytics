@@ -608,6 +608,9 @@ class MessageDialog:
     """
     def __init__(self, parent, caption, message="Are you sure?", action_yes_func=None, action_no_func=None,
                  flags=wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT):
+        if is_windows():
+            message = '\n'.join([caption, message])
+            caption = ' '
         self.dlg = wx.MessageDialog(parent, message, caption, flags)
         self.parent = parent
         self.action_yes_func = action_yes_func
