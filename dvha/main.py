@@ -37,7 +37,7 @@ from dvha.paths import LOGO_PATH, DATA_DIR, ICONS
 from dvha.tools.errors import MemoryErrorDialog, PlottingMemoryError
 from dvha.tools.roi_name_manager import DatabaseROIs
 from dvha.tools.stats import StatsData, sync_variables_in_stats_data_objects
-from dvha.tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux, get_window_size, \
+from dvha.tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux, is_mac, get_window_size, \
     save_object_to_file, load_object_from_file, set_msw_background_color, initialize_directories_and_settings
 from dvha.db.sql_columns import all_columns as sql_column_info
 
@@ -178,7 +178,8 @@ class DVHAMainFrame(wx.Frame):
         settings_menu = wx.Menu()
         menu_pref = settings_menu.Append(wx.ID_PREFERENCES)
         menu_sql = settings_menu.Append(wx.ID_ANY, '&Database Connection\tCtrl+D')
-        menu_user_settings = settings_menu.Append(wx.ID_ANY, '&User Settings\tCtrl+,')
+        if is_mac():
+            menu_user_settings = settings_menu.Append(wx.ID_ANY, '&Preferences\tCtrl+,')
 
         help_menu = wx.Menu()
         menu_about = help_menu.Append(wx.ID_ANY, '&About')
@@ -189,9 +190,10 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_export, export_csv)
         self.Bind(wx.EVT_MENU, self.on_save, menu_save)
         self.Bind(wx.EVT_MENU, self.on_pref, menu_pref)
-        self.Bind(wx.EVT_MENU, self.on_pref, menu_user_settings)
         self.Bind(wx.EVT_MENU, self.on_about, menu_about)
         self.Bind(wx.EVT_MENU, self.on_sql, menu_sql)
+        if is_mac():
+            self.Bind(wx.EVT_MENU, self.on_pref, menu_user_settings)
 
         self.Bind(wx.EVT_MENU, self.on_save_plot_dvhs, export_dvhs)
         self.Bind(wx.EVT_MENU, self.on_save_plot_time_series, export_time_series)
