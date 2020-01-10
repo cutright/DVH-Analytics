@@ -11,6 +11,7 @@
 from dicompylercore import dicomparser, dvhcalc
 from datetime import datetime
 from dateutil.relativedelta import relativedelta  # python-dateutil
+from dateutil.parser import parse as date_parser
 import numpy as np
 import pydicom as dicom
 from os.path import basename, join
@@ -557,7 +558,14 @@ class DICOM_Parser:
     def age(self):
         if self.sim_study_date and self.birth_date:
             try:
-                age = relativedelta(self.sim_study_date, self.birth_date).years
+                dates = {'sim_study_date': None, 'birth_date': None}
+                for date_type in list(dates):
+                    dates[date_type] = getattr(self, date_type)
+                    if type(dates[date_type]) is int or float:
+                        dates[date_type] = str(dates[date_type])
+                    if type(dates[date_type]) is str:
+                        dates[date_type] = date_parser(dates[date_type]).date()
+                age = relativedelta(dates['sim_study_date'], dates['birth_date']).years
                 if age >= 0:
                     return age
             except:
