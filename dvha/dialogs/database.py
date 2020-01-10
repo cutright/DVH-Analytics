@@ -541,8 +541,10 @@ class ReimportDialog(wx.Dialog):
     def update_uids(self):
 
         date = ['is NULL', "= '%s'::date" % self.sim_study_date][self.sim_study_date != 'None']
-        condition = "mrn = '%s' and sim_study_date %s" % (self.mrn, date)
         with DVH_SQL() as cnx:
+            if cnx.db_type == 'sqlite':
+                date = date.replace('::date', '')
+            condition = "mrn = '%s' and sim_study_date %s" % (self.mrn, date)
             choices = cnx.get_unique_values('Plans', 'study_instance_uid', condition)
         self.combo_box_uid.SetItems(choices)
         if choices:
