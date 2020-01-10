@@ -20,10 +20,11 @@ from dvha.db.sql_connector import DVH_SQL, echo_sql_db
 from dvha.db.sql_settings import write_sql_connection_settings, validate_sql_connection
 from dvha.models.import_dicom import ImportDicomFrame
 from dvha.paths import SQL_CNF_PATH, parse_settings_file, IMPORTED_DIR, INBOX_DIR, DATA_DIR,\
-    SQL_CNF_PATH_LAST_PGSQL, SQL_CNF_PATH_LAST_SQLITE
+    SQL_CNF_PATH_LAST_PGSQL, SQL_CNF_PATH_LAST_SQLITE, SQL_CNF_PATH_PGSQL_HIST
 from dvha.tools.errors import SQLError, SQLErrorDialog
 from dvha.tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file, get_file_paths,\
-    delete_imported_dicom_files, move_imported_dicom_files, MessageDialog, DEFAULT_SQLITE_CNF, DEFAULT_PGSQL_CNF
+    delete_imported_dicom_files, move_imported_dicom_files, MessageDialog, DEFAULT_SQLITE_CNF, DEFAULT_PGSQL_CNF,\
+    save_object_to_file, load_object_from_file
 
 
 class CalculationsDialog(wx.Dialog):
@@ -598,6 +599,11 @@ class SQLSettingsDialog(wx.Dialog):
         self.db_type_radiobox = wx.RadioBox(self, wx.ID_ANY, 'Database Type', choices=['SQLite', 'Postgres'])
         self.db_types = ['sqlite', 'pgsql']
 
+        if isfile(SQL_CNF_PATH_PGSQL_HIST):
+            self.ip_history = load_object_from_file(SQL_CNF_PATH_PGSQL_HIST)
+        else:
+            self.ip_history = []
+
         self.Bind(wx.EVT_BUTTON, self.button_echo, id=self.button['echo'].GetId())
         self.Bind(wx.EVT_BUTTON, self.button_reload, id=self.button['reload'].GetId())
         self.Bind(wx.EVT_RADIOBOX, self.on_db_radio, id=self.db_type_radiobox.GetId())
@@ -627,7 +633,7 @@ class SQLSettingsDialog(wx.Dialog):
             db_files = [basename(db_file) for db_file in db_files]
             self.input['host'].SetItems(db_files)
         else:
-            self.input['host'].Clear()
+            self.input['host'].SetItems(self.ip_history)
 
     def __do_layout(self):
         sizer_frame = wx.BoxSizer(wx.VERTICAL)
@@ -694,6 +700,13 @@ class SQLSettingsDialog(wx.Dialog):
         new_config['dbtype'] = self.selected_db_type
         config_file_path = [SQL_CNF_PATH_LAST_SQLITE, SQL_CNF_PATH_LAST_PGSQL][self.db_type_radiobox.GetSelection()]
         write_sql_connection_settings(new_config, file_path=config_file_path)
+
+        if self.selected_db_type == 'pgsql':
+            new_host = self.input['host'].GetValue()
+            if new_host in self.ip_history:
+                self.ip_history.pop(new_host)
+            self.ip_history.insert(0, new_host)
+            save_object_to_file(self.ip_history, SQL_CNF_PATH_PGSQL_HIST)
 
     @property
     def last_config_file_path(self):
