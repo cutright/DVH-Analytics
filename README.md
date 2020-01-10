@@ -11,7 +11,7 @@ developed.
 You are viewing a pre-release development branch (v.0.6.7dev)
 
 ### NEW!!!
-PostgreSQL is not longer required. DVHA now uses SQLite3 by default. This means no admin rights are needed and users do 
+PostgreSQL is no longer required. DVHA now uses SQLite3 by default. This means no admin rights are needed and users do 
 not need to figure out how to create databases or user accounts in SQL. PostgreSQL is still an option.
 
 ### How to Run
