@@ -199,7 +199,8 @@ class DVH_SQL:
             value_is_numeric = False
 
         if '::date' in str(value):
-            value = "'%s'::date" % value.strip('::date')  # augment value string for postgresql date formatting
+            amend_type = ['', '::date'][self.db_type == 'pgsql']  # sqlite3 does not support ::date
+            value = "'%s'%s" % (value.strip('::date'), amend_type)  # augment value for postgresql date formatting
         elif value_is_numeric:
             value = str(value)
         elif 'null' == str(value.lower()):
@@ -248,7 +249,7 @@ class DVH_SQL:
                     max_length = int(row[column][1].replace('varchar(', '').replace(')', ''))
                     values.append("'%s'" % truncate_string(row[column][0], max_length))
                 elif 'time_stamp' in row[column][1] and self.db_type != 'sqlite':
-                    values.append("'%s'::date" % row[column][0])
+                    values.append("'%s'::date" % row[column][0])  # sqlite3 does not support ::date
                 else:
                     values.append("'%s'" % row[column][0])
 
@@ -373,13 +374,8 @@ class DVH_SQL:
         """
         Ensure that all of the latest SQL columns exist in the user's database
         """
-        if self.db_type == 'sqlite':
-            try:
-                self.execute_file(CREATE_SQLITE_TABLES)
-            except OperationalErrorSQLite as e:
-                print(str(e))
-        else:
-            self.execute_file(CREATE_PGSQL_TABLES)
+        create_tables_file = [CREATE_PGSQL_TABLES, CREATE_SQLITE_TABLES][self.db_type == 'sqlite']
+        self.execute_file(create_tables_file)
 
     def reinitialize_database(self):
         """
