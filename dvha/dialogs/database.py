@@ -650,7 +650,7 @@ class SQLSettingsDialog(wx.Dialog):
             grid_sizer.Add(self.input[key], 0, wx.ALL | wx.EXPAND, 0)
 
         sizer_frame.Add(grid_sizer, 0, wx.ALL, 10)
-        sizer_frame.Add(self.db_type_radiobox, 0, wx.ALL, 5)
+        sizer_frame.Add(self.db_type_radiobox, 0, wx.EXPAND | wx.ALL, 5)
         sizer_buttons.Add(self.button['ok'], 1, wx.ALL | wx.EXPAND, 5)
         sizer_buttons.Add(self.button['cancel'], 1, wx.ALL | wx.EXPAND, 5)
         sizer_echo.Add(self.button['echo'], 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
@@ -704,7 +704,7 @@ class SQLSettingsDialog(wx.Dialog):
         if self.selected_db_type == 'pgsql':
             new_host = self.input['host'].GetValue()
             if new_host in self.ip_history:
-                self.ip_history.pop(new_host)
+                self.ip_history.pop(self.ip_history.index(new_host))
             self.ip_history.insert(0, new_host)
             save_object_to_file(self.ip_history, SQL_CNF_PATH_PGSQL_HIST)
 
