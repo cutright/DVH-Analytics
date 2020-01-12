@@ -15,8 +15,8 @@ action which will be executed on a dialog resolution of wx.ID_OK
 import wx
 from datetime import datetime
 from os import mkdir, rename
-from os.path import join
-from dvha.db.sql_connector import DVH_SQL, echo_sql_db
+from os.path import join, basename
+from dvha.db.sql_connector import DVH_SQL, echo_sql_db, is_file_sqlite_db
 from dvha.models.import_dicom import ImportDicomFrame
 from dvha.paths import IMPORTED_DIR, INBOX_DIR, DATA_DIR
 from dvha.tools.errors import SQLError, SQLErrorDialog
@@ -622,7 +622,7 @@ class SQLSettingsDialog(wx.Dialog):
 
     def set_host_items(self):
         if self.selected_db_type == 'sqlite':
-            db_files = get_file_paths(DATA_DIR, extension='.db')
+            db_files = [basename(f) for f in get_file_paths(DATA_DIR, extension='.db') if is_file_sqlite_db(f)]
             db_files.sort()
             self.input['host'].SetItems(db_files)
         else:

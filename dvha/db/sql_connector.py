@@ -13,7 +13,7 @@ Tools used to communicate with the SQL database
 import psycopg2
 import sqlite3
 from datetime import datetime
-from os.path import dirname, join
+from os.path import dirname, join, isfile
 from dvha.options import Options
 from dvha.paths import CREATE_PGSQL_TABLES, CREATE_SQLITE_TABLES, DATA_DIR
 from dvha.tools.errors import SQLError
@@ -624,3 +624,15 @@ def echo_sql_db(config=None, db_type='pgsql'):
 def initialize_db():
     with DVH_SQL() as cnx:
         cnx.initialize_database()
+
+
+def is_file_sqlite_db(sqlite_db_file):
+    if isfile(sqlite_db_file):
+        try:
+            cnx = sqlite3.connect(sqlite_db_file)
+            cnx.close()
+            return True
+        except sqlite3.OperationalError:
+            pass
+
+    return False
