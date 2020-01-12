@@ -32,6 +32,7 @@ class DefaultOptions:
                                       'port': '5432'},
                             'sqlite': {'host': 'dvha.db'}}
         self.SQL_LAST_CNX = deepcopy(self.DEFAULT_CNF)
+        self._sql_vars = ['DB_TYPE', 'SQL_PGSQL_IP_HIST', 'DEFAULT_CNF', 'SQL_LAST_CNX']
 
         self.MIN_BORDER = 50
 
@@ -237,9 +238,6 @@ class Options(DefaultOptions):
         default_options = DefaultOptions()
 
         for attr in default_options.__dict__:
-            if not attr.startswith('_'):
+            if not attr.startswith('_') and attr not in self._sql_vars:
                 setattr(self, attr, getattr(default_options, attr))
 
-
-def get_db_type():
-    return Options().DB_TYPE
