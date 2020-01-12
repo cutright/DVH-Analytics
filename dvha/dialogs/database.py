@@ -15,16 +15,13 @@ action which will be executed on a dialog resolution of wx.ID_OK
 import wx
 from datetime import datetime
 from os import mkdir, rename
-from os.path import join, isfile, basename
+from os.path import join, basename, dirname
 from dvha.db.sql_connector import DVH_SQL, echo_sql_db
-from dvha.db.sql_settings import write_sql_connection_settings, validate_sql_connection
 from dvha.models.import_dicom import ImportDicomFrame
-from dvha.paths import SQL_CNF_PATH, parse_settings_file, IMPORTED_DIR, INBOX_DIR, DATA_DIR,\
-    SQL_CNF_PATH_LAST_PGSQL, SQL_CNF_PATH_LAST_SQLITE, SQL_CNF_PATH_PGSQL_HIST
+from dvha.paths import IMPORTED_DIR, INBOX_DIR, DATA_DIR
 from dvha.tools.errors import SQLError, SQLErrorDialog
 from dvha.tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file, get_file_paths,\
-    delete_imported_dicom_files, move_imported_dicom_files, MessageDialog, DEFAULT_SQLITE_CNF, DEFAULT_PGSQL_CNF,\
-    save_object_to_file, load_object_from_file
+    delete_imported_dicom_files, move_imported_dicom_files, MessageDialog
 
 
 class CalculationsDialog(wx.Dialog):
@@ -583,8 +580,10 @@ class SQLSettingsDialog(wx.Dialog):
     """
     Edit and validate SQL connection settings
     """
-    def __init__(self):
+    def __init__(self, options):
         wx.Dialog.__init__(self, None, title="Database Connection Settings")
+
+        self.options = options
 
         self.keys = ['host', 'port', 'dbname', 'user', 'password']
 
@@ -599,10 +598,7 @@ class SQLSettingsDialog(wx.Dialog):
         self.db_type_radiobox = wx.RadioBox(self, wx.ID_ANY, 'Database Type', choices=['SQLite', 'Postgres'])
         self.db_types = ['sqlite', 'pgsql']
 
-        if isfile(SQL_CNF_PATH_PGSQL_HIST):
-            self.ip_history = load_object_from_file(SQL_CNF_PATH_PGSQL_HIST)
-        else:
-            self.ip_history = []
+        self.ip_history = self.options.SQL_PGSQL_IP_HIST
 
         self.Bind(wx.EVT_BUTTON, self.button_echo, id=self.button['echo'].GetId())
         self.Bind(wx.EVT_BUTTON, self.button_reload, id=self.button['reload'].GetId())
@@ -620,17 +616,19 @@ class SQLSettingsDialog(wx.Dialog):
         self.SetTitle("SQL Connection Settings")
 
         # Set initial db_type_radiobox to loaded settings or pgsql if none found
-        config = parse_settings_file(SQL_CNF_PATH)
-        if 'dbtype' not in list(config) or config['dbtype'] not in self.db_types:
-            config['dbtype'] = 'pgsql'
-        self.set_selected_db_type(config['dbtype'])
+        self.set_selected_db_type(self.options.DB_TYPE)
 
-        self.button['reload'].Enable(isfile(self.last_config_file_path))
+        self.button['reload'].Enable(self.has_last_cnx)
 
-    def set_db_files_in_host_input(self):
+    def set_host_items(self):
         if self.selected_db_type == 'sqlite':
             db_files = get_file_paths(DATA_DIR, extension='.db')
-            db_files = [basename(db_file) for db_file in db_files]
+            db_files.sort()
+            db_files_local = [basename(db_file) for db_file in db_files if dirname(db_file) == DATA_DIR]
+            db_files_non_local = [db_file for db_file in db_files if dirname(db_file) != DATA_DIR]
+            db_files_local.sort()
+            db_files_non_local.sort()
+            db_files = db_files_local + db_files_non_local
             self.input['host'].SetItems(db_files)
         else:
             self.input['host'].SetItems(self.ip_history)
@@ -663,23 +661,17 @@ class SQLSettingsDialog(wx.Dialog):
         self.Fit()
         self.Layout()
 
-    def load_sql_settings(self, file_path=SQL_CNF_PATH):
-        self.set_db_files_in_host_input()
+    def load_sql_settings(self):
+        self.set_host_items()
 
-        config = parse_settings_file(file_path)
-
-        if 'dbtype' not in list(config) or config['dbtype'] not in self.db_types:
-            config['dbtype'] = 'pgsql'
+        if self.has_last_cnx:
+            config = self.options.SQL_LAST_CNX[self.selected_db_type]
+        else:
+            config = self.options.DEFAULT_CNF[self.selected_db_type]
 
         self.clear_input()
 
-        if config['dbtype'] != self.selected_db_type:
-            if isfile(self.last_config_file_path):
-                config = parse_settings_file(self.last_config_file_path)
-            else:
-                config = self.default_config
-
-        if config['dbtype'] == 'sqlite':
+        if self.selected_db_type == 'sqlite':
             self.input['host'].SetValue(config['host'])
         else:
             for input_type in self.keys:
@@ -693,41 +685,38 @@ class SQLSettingsDialog(wx.Dialog):
             wx.MessageBox('Invalid credentials!', 'Echo SQL Database', wx.OK | wx.ICON_WARNING)
 
     def button_reload(self, evt):
-        self.load_sql_settings(file_path=self.last_config_file_path)
+        self.load_sql_settings()
 
-    def write_successful_cnf_file(self):
+    def write_successful_cnf(self):
         new_config = {key: self.input[key].GetValue() for key in self.keys if self.input[key].GetValue()}
-        new_config['dbtype'] = self.selected_db_type
-        config_file_path = [SQL_CNF_PATH_LAST_SQLITE, SQL_CNF_PATH_LAST_PGSQL][self.db_type_radiobox.GetSelection()]
-        write_sql_connection_settings(new_config, file_path=config_file_path)
+        self.options.SQL_LAST_CNX[self.selected_db_type] = new_config
+
+        self.options.DB_TYPE = self.selected_db_type
 
         if self.selected_db_type == 'pgsql':
             new_host = self.input['host'].GetValue()
             if new_host in self.ip_history:
                 self.ip_history.pop(self.ip_history.index(new_host))
             self.ip_history.insert(0, new_host)
-            save_object_to_file(self.ip_history, SQL_CNF_PATH_PGSQL_HIST)
 
-    @property
-    def last_config_file_path(self):
-        return [SQL_CNF_PATH_LAST_SQLITE, SQL_CNF_PATH_LAST_PGSQL][self.db_type_radiobox.GetSelection()]
+        self.options.save()
 
     @property
     def valid_sql_settings(self):
         config = {key: self.input[key].GetValue() for key in self.keys if self.input[key].GetValue()}
-        config['dbtype'] = self.selected_db_type
-        return echo_sql_db(config)
+        if self.selected_db_type == 'pgsql':
+            config['dbname'] = self.input['dbname'].GetValue()
+        return echo_sql_db(config, db_type=self.selected_db_type)
 
     def run(self):
         res = self.ShowModal()
         if res == wx.ID_OK:
             new_config = {key: self.input[key].GetValue() for key in self.keys if self.input[key].GetValue()}
-            new_config['dbtype'] = self.selected_db_type
-            write_sql_connection_settings(new_config)
-            if validate_sql_connection(new_config):
+
+            if echo_sql_db(new_config, db_type=self.selected_db_type):
+                self.write_successful_cnf()
                 with DVH_SQL() as cnx:
                     cnx.initialize_database()
-                self.write_successful_cnf_file()
             else:
                 dlg = wx.MessageDialog(self, 'Connection to database could not be established.', 'ERROR!',
                                        wx.OK | wx.ICON_ERROR)
@@ -736,18 +725,22 @@ class SQLSettingsDialog(wx.Dialog):
 
     def on_db_radio(self, *evt):
         self.load_sql_settings()
-        self.button['reload'].Enable(isfile(self.last_config_file_path))
+        self.button['reload'].Enable(self.has_last_cnx)
 
     @property
     def selected_db_type(self):
         return ['sqlite', 'pgsql'][self.db_type_radiobox.GetSelection()]
 
-    def set_selected_db_type(self, db_type):
-        self.db_type_radiobox.SetSelection({'sqlite': 0, 'pgsql': 1}[db_type])
+    @property
+    def unselected_db_type(self):
+        return ['pgsql', 'sqlite'][self.db_type_radiobox.GetSelection()]
 
     @property
-    def default_config(self):
-        return [DEFAULT_SQLITE_CNF, DEFAULT_PGSQL_CNF][self.db_type_radiobox.GetSelection()]
+    def has_last_cnx(self):
+        return 'host' in list(self.options.SQL_LAST_CNX[self.selected_db_type])
+
+    def set_selected_db_type(self, db_type):
+        self.db_type_radiobox.SetSelection({'sqlite': 0, 'pgsql': 1}[db_type])
 
     def clear_input(self):
         for input_type in self.keys:

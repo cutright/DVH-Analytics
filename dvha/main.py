@@ -14,7 +14,7 @@ import wx
 from datetime import datetime
 from dvha.db import sql_columns
 from dvha.db.sql_to_python import QuerySQL
-from dvha.db.sql_connector import echo_sql_db, get_current_db_type, initialize_db
+from dvha.db.sql_connector import echo_sql_db, initialize_db
 from dvha.dialogs.main import query_dlg, UserSettings, About
 from dvha.dialogs.database import SQLSettingsDialog
 from dvha.dialogs.export import ExportCSVDialog, save_data_to_file
@@ -442,10 +442,11 @@ class DVHAMainFrame(wx.Frame):
             self.button_query_execute.Disable()
 
     def __catch_failed_sql_connection_on_app_launch(self):
-        if not echo_sql_db():
-            wx.MessageBox('Invalid credentials!', 'Echo SQL Database', wx.OK | wx.ICON_WARNING)
-            self.on_sql()
-        elif get_current_db_type() == 'sqlite':
+        if self.options.DB_TYPE == 'pgsql':
+            if not echo_sql_db():
+                wx.MessageBox('Invalid credentials!', 'Echo SQL Database', wx.OK | wx.ICON_WARNING)
+                self.on_sql()
+        else:  # if using sqlite
             initialize_db()
 
     # --------------------------------------------------------------------------------------------------------------
@@ -798,7 +799,7 @@ class DVHAMainFrame(wx.Frame):
         UserSettings(self.options)
 
     def on_sql(self, *args):
-        SQLSettingsDialog()
+        SQLSettingsDialog(self.options)
         [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db()]()
 
     def on_save_plot_dvhs(self, evt):

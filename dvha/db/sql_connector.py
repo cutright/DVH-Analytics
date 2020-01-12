@@ -12,11 +12,11 @@ Tools used to communicate with the SQL database
 
 import psycopg2
 import sqlite3
-from sqlite3 import OperationalError as OperationalErrorSQLite
 from psycopg2 import OperationalError
 from datetime import datetime
-from os.path import dirname, join, isfile
-from dvha.paths import SQL_CNF_PATH, CREATE_PGSQL_TABLES, CREATE_SQLITE_TABLES, parse_settings_file, DATA_DIR
+from os.path import dirname, join
+from dvha.options import Options
+from dvha.paths import CREATE_PGSQL_TABLES, CREATE_SQLITE_TABLES, DATA_DIR
 from dvha.tools.errors import SQLError
 
 
@@ -24,30 +24,30 @@ class DVH_SQL:
     """
     This class is used to communicate to the SQL database to limit the need for syntax in other files
     """
-    def __init__(self, *config):
+    def __init__(self, *config, db_type='pgsql'):
         """
         :param config: optional SQL login credentials, stored values used if nothing provided
+        :param db_type: either 'pgsql' or 'sqlite'
+        :type db_type: str
         """
+
+        stored_options = Options()
+
         if config:
+            self.db_type = db_type
             config = config[0]
         else:
             # Read SQL configuration file
-            config = parse_settings_file(SQL_CNF_PATH)
-
-        if 'dbtype' in list(config):
-            self.db_type = config['dbtype']
-        else:
-            self.db_type = 'pgsql'
+            self.db_type = stored_options.DB_TYPE
+            config = stored_options.SQL_LAST_CNX[self.db_type]
 
         if self.db_type == 'sqlite':
             db_file_path = config['host']
-            if not dirname(db_file_path):
+            if not dirname(db_file_path):  # file_path has not directory, assume it lives in DATA_DIR
                 db_file_path = join(DATA_DIR, db_file_path)
             self.db_name = None
             self.cnx = sqlite3.connect(db_file_path)
         else:
-            if 'dbtype' in list(config):
-                config.pop('dbtype')
             self.db_name = config['dbname']
             self.cnx = psycopg2.connect(**config)
 
@@ -597,37 +597,27 @@ def truncate_string(input_string, character_limit):
     return input_string
 
 
-def echo_sql_db(config=None):
+def echo_sql_db(config=None, db_type='pgsql'):
     """
     Echo the database using stored or provided credentials
     :param config: database login credentials
     :type config: dict
+    :param db_type: either 'pgsql' or 'sqlite'
+    :type db_type: str
     :return: True if connection could be established
     :rtype: bool
     """
     try:
         if config:
-            cnx = DVH_SQL(config)
+            if db_type == 'pgsql' and ('dbname' not in list(config) or 'port' not in list(config)):
+                return False
+            cnx = DVH_SQL(config, db_type=db_type)
         else:
             cnx = DVH_SQL()
         cnx.close()
         return True
     except OperationalError:
         return False
-
-
-def get_current_db_type():
-    """
-    Get db_type of current cnf
-    :return: sql db_type
-    :rtype: str
-    """
-
-    if isfile(SQL_CNF_PATH):
-        config = parse_settings_file(SQL_CNF_PATH)
-        if 'dbtype' in list(config):
-            return config['dbtype']
-    return None
 
 
 def initialize_db():

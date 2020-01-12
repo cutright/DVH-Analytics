@@ -14,6 +14,7 @@ import pickle
 from os.path import isfile
 from os import unlink
 import hashlib
+from copy import deepcopy
 from dvha.paths import OPTIONS_PATH, OPTIONS_CHECKSUM_PATH
 
 
@@ -22,7 +23,15 @@ class DefaultOptions:
     Create default options, to be inherited by Options class
     """
     def __init__(self):
-        self.VERSION = '0.6.5'
+        self.VERSION = '0.6.6dev'
+
+        self.DB_TYPE = 'sqlite'
+        self.SQL_PGSQL_IP_HIST = []
+        self.DEFAULT_CNF = {'pgsql': {'host': 'localhost',
+                                      'dbname': 'dvh',
+                                      'port': '5432'},
+                            'sqlite': {'host': 'dvha.db'}}
+        self.SQL_LAST_CNX = deepcopy(self.DEFAULT_CNF)
 
         self.MIN_BORDER = 50
 
@@ -230,3 +239,7 @@ class Options(DefaultOptions):
         for attr in default_options.__dict__:
             if not attr.startswith('_'):
                 setattr(self, attr, getattr(default_options, attr))
+
+
+def get_db_type():
+    return Options().DB_TYPE
