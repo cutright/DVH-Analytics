@@ -12,7 +12,6 @@ Tools used to communicate with the SQL database
 
 import psycopg2
 import sqlite3
-from psycopg2 import OperationalError
 from datetime import datetime
 from os.path import dirname, join
 from dvha.options import Options
@@ -616,7 +615,9 @@ def echo_sql_db(config=None, db_type='pgsql'):
             cnx = DVH_SQL()
         cnx.close()
         return True
-    except OperationalError:
+    except Exception as e:
+        if type(e) not in [psycopg2.OperationalError, sqlite3.OperationalError]:
+            print(str(e))
         return False
 
 

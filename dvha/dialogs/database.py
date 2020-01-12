@@ -15,7 +15,7 @@ action which will be executed on a dialog resolution of wx.ID_OK
 import wx
 from datetime import datetime
 from os import mkdir, rename
-from os.path import join, basename, dirname
+from os.path import join
 from dvha.db.sql_connector import DVH_SQL, echo_sql_db
 from dvha.models.import_dicom import ImportDicomFrame
 from dvha.paths import IMPORTED_DIR, INBOX_DIR, DATA_DIR
@@ -624,11 +624,6 @@ class SQLSettingsDialog(wx.Dialog):
         if self.selected_db_type == 'sqlite':
             db_files = get_file_paths(DATA_DIR, extension='.db')
             db_files.sort()
-            db_files_local = [basename(db_file) for db_file in db_files if dirname(db_file) == DATA_DIR]
-            db_files_non_local = [db_file for db_file in db_files if dirname(db_file) != DATA_DIR]
-            db_files_local.sort()
-            db_files_non_local.sort()
-            db_files = db_files_local + db_files_non_local
             self.input['host'].SetItems(db_files)
         else:
             self.input['host'].SetItems(self.ip_history)

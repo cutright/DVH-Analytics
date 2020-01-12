@@ -38,10 +38,7 @@ PostgreSQL:
 
 Additional SQLite vs PostgreSQL information can be found [here](https://tableplus.com/blog/2018/08/sqlite-vs-postgresql-which-database-to-use-and-why.html).
 
-SQLite works out of the box, the 'host' field in Database Connections is the name of the file, located in your user 
-directory/Apps/dvh_analytics/data. If you'd like to store the database on a network drive, just copy and past the 
-network location (and give it a name like dvha.db). Be careful though as SQLite does not support multiple simulaneous 
-users.
+SQLite works out of the box, the 'host' field in Database Connections is the name of the file, located in ~/Apps/dvh_analytics/data
 
 ## PostgreSQL
 If you have access to a PostgreSQL DB, you simply need to fill in the login information by going to 

@@ -3,7 +3,7 @@
 v0.6.7 (TBD)
 --------------------
  - [Database] SQLite3 is now supported
- - [Database Connection] The last successful SQL CNF file is stored for easy reload (hidden file in preference folder)
+ - [Database Connection] The last successful SQL CNX settings are stored for easy reload
  - [DICOM Importer] Auto assign ROI type physician_roi name is gtv, ctv, itv, or ptv 
  - [DICOM Importer] Allow import dialog to close on crash
  - [DICOM Importer] Sometimes sim_study_date and birth_date were not date objects, more robust age calculator to account for this
