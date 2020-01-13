@@ -13,6 +13,8 @@ developed.
         <img src="https://img.shields.io/pypi/v/dvha.svg" /></a>  
 <a href="https://pypi.org/project/dvha/">
         <img src="https://img.shields.io/pypi/dm/dvha.svg" /></a>
+<a href="https://pypi.org/project/dvha/">
+        <img src="https://img.shields.io/github/license/cutright/dvh-analytics.svg" /></a>
         
 
 NEW!!!
