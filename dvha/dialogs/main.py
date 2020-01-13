@@ -594,7 +594,7 @@ class UserSettings(wx.Dialog):
         self.button_inbox = wx.Button(self, wx.ID_ANY, u"…")
         self.text_ctrl_imported = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_DONTWRAP)
         self.button_imported = wx.Button(self, wx.ID_ANY, u"…")
-        self.dvh_bin_width_input = wx.TextCtrl(self, wx.ID_ANY, str(self.options.dvh_bin_width), style=wx.TE_DONTWRAP)
+        self.dvh_bin_width_input = wx.TextCtrl(self, wx.ID_ANY, str(self.options.dvh_bin_width))
         self.combo_box_colors_category = wx.ComboBox(self, wx.ID_ANY, choices=color_variables,
                                                      style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_colors_selection = wx.ComboBox(self, wx.ID_ANY, choices=colors,
@@ -633,6 +633,7 @@ class UserSettings(wx.Dialog):
         self.text_ctrl_imported.SetMinSize((100, 21))
         self.button_imported.SetMinSize((40, 21))
         self.dvh_bin_width_input.SetToolTip("Value must be an integer.")
+        self.dvh_bin_width_input.SetMinSize((50, 21))
         self.combo_box_colors_category.SetMinSize((250, self.combo_box_colors_category.GetSize()[1]))
         self.combo_box_colors_selection.SetMinSize((145, self.combo_box_colors_selection.GetSize()[1]))
         self.combo_box_sizes_category.SetMinSize((250, self.combo_box_sizes_category.GetSize()[1]))
@@ -698,7 +699,7 @@ class UserSettings(wx.Dialog):
         label_dvh_bin_width = wx.StaticText(self, wx.ID_ANY, "DVH Bin Width (cGy):")
         label_dvh_bin_width.SetToolTip("Value must be an integer")
         sizer_dvh_bin_width.Add(label_dvh_bin_width, 0, wx.EXPAND | wx.RIGHT, 10)
-        sizer_dvh_bin_width.Add(self.dvh_bin_width_input, 0, 0, 0)
+        sizer_dvh_bin_width.Add(self.dvh_bin_width_input, 1, wx.ALL, 5)
         sizer_plot_options.Add(sizer_dvh_bin_width, 0, wx.BOTTOM, 10)
 
         label_colors = wx.StaticText(self, wx.ID_ANY, "Colors:")
@@ -910,10 +911,11 @@ class UserSettings(wx.Dialog):
     def update_dvh_bin_width_val(self, *args):
         new = self.dvh_bin_width_input.GetValue()
         try:
-            val = int(new)
+            val = abs(int(new))
             self.options.set_option('dvh_bin_width', val)
         except ValueError:
-            self.dvh_bin_width_input.SetValue(str(self.options.dvh_bin_width))
+            if new != '':
+                self.dvh_bin_width_input.SetValue(str(self.options.dvh_bin_width))
 
     def update_dvh_bin_width_var(self, *args):
         self.dvh_bin_width_input.SetValue(str(self.options.dvh_bin_width))
