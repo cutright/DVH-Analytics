@@ -5,4 +5,4 @@ include dvha/LICENSE
 include dvha/logo.png
 include dvha/icons/*.png
 include dvha/db/*.sql
-iclude dvha/db/*.roi
+include dvha/db/*.roi
