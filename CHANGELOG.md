@@ -1,6 +1,6 @@
 # Change log of DVH Analytics
 
-v0.6.7 (2020.01.12)
+v0.6.7 (2020.01.13)
 --------------------
  - [Database] SQLite3 is now supported
  - [Database Connection] The last successful SQL connections settings are stored for easy reload
