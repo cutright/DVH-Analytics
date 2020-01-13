@@ -11,7 +11,7 @@ developed.
 
 <a href="https://pypi.org/project/dvha/">
         <img src="https://img.shields.io/pypi/v/dvha.svg" /></a>  
-<a href="https://github.com/badges/shields/graphs/contributors">
+<a href="https://pypi.org/project/dvha/">
         <img src="https://img.shields.io/pypi/dm/dvha.svg" /></a>  
         
 
