@@ -7,6 +7,8 @@ only available as source code during the public beta. Compiled versions will be 
 previous web-based version can be found [here](https://github.com/cutright/DVH-Analytics-Bokeh) but is no longer being 
 developed.
 
+![alt text](https://img.shields.io/pypi/v/dvha.svg) ![alt text](https://img.shields.io/pypi/dm/dvha.svg)  
+
 ### NEW!!!
 PostgreSQL is no longer required. DVHA now supports SQLite3. This means no admin rights are needed and users do 
 not need to figure out how to create databases or user accounts in SQL. PostgreSQL is still an option.
