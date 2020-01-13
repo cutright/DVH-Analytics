@@ -417,11 +417,12 @@ class MultiVarResultsFrame(wx.Frame):
                'group': group}
         pub.sendMessage('control_chart_set_model', **msg)
 
-        algorithms = ['Random Forest', 'Support Vector Machine', 'Decision Tree', 'Gradient Boosting']
-        self.button = {key: wx.Button(self, wx.ID_ANY, key) for key in algorithms}
+        self.button_back_elimination = wx.Button(self, wx.ID_ANY, 'Backward Elimination')
         self.button_export = wx.Button(self, wx.ID_ANY, 'Export Plot Data')
         self.button_save_plot = wx.Button(self, wx.ID_ANY, 'Save Plot')
         self.button_save_model = wx.Button(self, wx.ID_ANY, 'Save Model')
+        algorithms = ['Random Forest', 'Support Vector Machine', 'Decision Tree', 'Gradient Boosting']
+        self.button = {key: wx.Button(self, wx.ID_ANY, key) for key in algorithms}
 
         self.__do_bind()
         self.__set_properties()
@@ -438,6 +439,7 @@ class MultiVarResultsFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_decision_tree, id=self.button['Decision Tree'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_support_vector_regression,
                   id=self.button['Support Vector Machine'].GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_back_elimination, id=self.button_back_elimination.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_model, id=self.button_save_model.GetId())
@@ -451,6 +453,7 @@ class MultiVarResultsFrame(wx.Frame):
         sizer_algo_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_algo_select = wx.BoxSizer(wx.HORIZONTAL)
         sizer_export_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_export_buttons.Add(self.button_back_elimination, 0, wx.ALL, 5)
         sizer_export_buttons.Add(self.button_export, 0, wx.ALL, 5)
         sizer_export_buttons.Add(self.button_save_plot, 0, wx.ALL, 5)
         sizer_export_buttons.Add(self.button_save_model, 0, wx.ALL, 5)
@@ -482,6 +485,11 @@ class MultiVarResultsFrame(wx.Frame):
 
     def on_export(self, evt):
         save_data_to_file(self, 'Save multi-variable regression data to csv', self.plot.get_csv_data())
+
+    def on_back_elimination(self, *evt):
+        wait = wx.BusyInfo('Please Wait\nPerforming Backward Elimination')
+        self.plot.backward_elimination()
+        del wait
 
     def on_save_plot(self, evt):
         save_data_to_file(self, 'Save multi-variable regression plot', self.plot.html_str,

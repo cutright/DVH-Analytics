@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.6.8 (TBD)
+--------------------
+ - [Multi-Variable Regression] Added "Backward Elimination" button to automatically remove insignificant variables using backward elimination
+
 v0.6.7 (2020.01.13)
 --------------------
  - [Database] SQLite3 is now supported
