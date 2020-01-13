@@ -226,7 +226,7 @@ class Options(DefaultOptions):
             stored_checksum = self.load_stored_checksum()
             if current_checksum == stored_checksum:
                 return True
-        except:
+        except Exception:
             pass
         print('Corrupted options file detected. Loading default options.')
         return False

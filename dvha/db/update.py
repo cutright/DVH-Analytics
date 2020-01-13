@@ -283,7 +283,7 @@ def beam_complexity(cnx, study_instance_uid):
                     column = "%s_%s" % (c, s)
                     cnx.update('Beams', column, value, condition)
             cnx.update('Beams', 'complexity', np.sum(mlca_data.summary['cmp_score']), condition)
-        except:
+        except Exception:
             print('MLC Analyzer fail for beam number %s and uid %s' % ((beam_num+1), study_instance_uid))
 
 

@@ -89,7 +89,7 @@ class DVH:
                 # Process dth_string to numpy array
                 try:
                     self.dth.append(np.array(self.dth_string[i].split(','), dtype='|S4').astype(np.float))
-                except:
+                except Exception:
                     self.dth.append(np.array([0]))
 
             # Store these now so they can be saved in DVH object without needing to query later
@@ -123,7 +123,7 @@ class DVH:
                         values[i] = str(date_parser(str(value)))
                     else:
                         values[i] = str(date_parser(value))
-                except:
+                except Exception:
                     values[i] = 'None'
         return [values[uids.index(uid)] for uid in self.study_instance_uid]
 

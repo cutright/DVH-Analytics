@@ -241,11 +241,11 @@ class RadBioFrame:
                     new_row[4] = td_50
                     try:
                         new_row[5] = "%0.2f" % round(calc_eud(data['dvh'].dvh[:, i], eud_a), 2)
-                    except:
+                    except Exception:
                         new_row[5] = 'None'
                     try:
                         new_row[6] = "%0.2f" % round(calc_tcp(gamma_50, td_50, float(new_row[5])), 3)
-                    except:
+                    except Exception:
                         new_row[6] = 'None'
                     self.data_table_rad_bio[grp].edit_row(new_row, i)
 

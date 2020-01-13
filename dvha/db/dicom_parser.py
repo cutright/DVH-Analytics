@@ -568,7 +568,7 @@ class DICOM_Parser:
                 age = relativedelta(dates['sim_study_date'], dates['birth_date']).years
                 if age >= 0:
                     return age
-            except:
+            except Exception:
                 pass
 
     @property
@@ -700,7 +700,7 @@ class DICOM_Parser:
             if hasattr(self.rt_data['dose'], 'SliceThickness') and self.rt_data['dose'].SliceThickness:
                 dose_grid_resolution.append(str(round(float(self.rt_data['dose'].SliceThickness), 1)))
             return ', '.join(dose_grid_resolution)
-        except:
+        except Exception:
             pass
 
     def process_global_over_ride(self, key, pre_over_ride_value):
@@ -859,7 +859,7 @@ class DICOM_Parser:
         coord = self.dicompyler_data['structure'].GetStructureCoordinates(key)
         try:
             return roi_calc.surface_area(coord)
-        except:
+        except Exception:
             print("Surface area calculation failed for key, name: %s, %s" % (key, self.get_roi_name(key)))
 
     def get_dvh_geometries(self, key):
@@ -877,7 +877,7 @@ class DICOM_Parser:
 
         try:
             surface_area = roi_calc.surface_area(coord)
-        except:
+        except Exception:
             print("Surface area calculation failed for key, name: %s, %s" % (key, self.get_roi_name(key)))
             surface_area = None
 
@@ -1228,14 +1228,14 @@ class BeamParser:
     def beam_mu_per_deg(self):
         try:
             return round(self.beam_mu / self.gantry_values['range'], 2)
-        except:
+        except Exception:
             pass
 
     @property
     def beam_mu_per_cp(self):
         try:
             return round(self.beam_mu / self.control_point_count, 2)
-        except:
+        except Exception:
             pass
 
     @property
@@ -1350,7 +1350,7 @@ class RxParser:
             return self.pinnacle_rx_data['fx_dose']
         try:
             return round(self.rx_dose / float(self.fx_count), 2)
-        except:
+        except Exception:
             print('WARNING: Unable to calculate fx_dose')
 
     @property

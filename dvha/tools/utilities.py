@@ -391,7 +391,7 @@ def calc_stats(data):
                     np.mean(data_np),
                     np.percentile(data_np, 25),
                     np.min(data_np)]
-    except:
+    except Exception:
         rtn_data = [0, 0, 0, 0, 0, 0]
         print("calc_stats() received non-numerical data")
     return rtn_data
@@ -450,7 +450,7 @@ def delete_imported_dicom_files(dicom_files):
                 uid = str(dicom.read_file(join(directory, f)).StudyInstanceUID)
                 if uid == str(dicom_files['study_instance_uid'][i]):
                     delete_file(f)
-            except:
+            except Exception:
                 pass
 
         # Directory is empty, delete it
@@ -458,7 +458,7 @@ def delete_imported_dicom_files(dicom_files):
         if not listdir(directory):
             try:
                 rmdir(directory)
-            except:
+            except Exception:
                 pass
 
 
@@ -481,7 +481,7 @@ def move_imported_dicom_files(dicom_files, new_dir):
                 uid = str(dicom.read_file(join(directory, f)).StudyInstanceUID)
                 if uid == str(dicom_files['study_instance_uid'][i]):
                     files.append(f)
-            except:
+            except Exception:
                 pass
         move_files_to_new_path(files, new_patient_dir)
 
@@ -490,7 +490,7 @@ def move_imported_dicom_files(dicom_files, new_dir):
         if not listdir(directory):
             try:
                 rmdir(directory)
-            except:
+            except Exception:
                 pass
 
 
@@ -555,7 +555,7 @@ def is_date(date):
         try:
             parse_date(date)
             return True
-        except:
+        except Exception:
             return False
 
     return False

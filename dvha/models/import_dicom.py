@@ -675,14 +675,14 @@ class ImportDicomFrame(wx.Frame):
             dt = parse_date(date)
             truncated = datetime_obj(dt.year, dt.month, dt.day)
             return str(truncated).replace('-', '')
-        except:
+        except Exception:
             return None
 
     @staticmethod
     def validate_dose(dose):
         try:
             return float(dose)
-        except:
+        except ValueError:
             return None
 
     @staticmethod

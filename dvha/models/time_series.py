@@ -133,7 +133,7 @@ class TimeSeriesFrame:
                 for s in range(len(x_data)):
                     try:
                         x = date_parser(x_data[sort_index[s]])
-                    except:
+                    except Exception:
                         continue
                     x_values_sorted.append(x)
                     y_values_sorted.append(y_data[sort_index[s]])
