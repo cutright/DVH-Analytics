@@ -587,15 +587,19 @@ class SQLSettingsDialog(wx.Dialog):
 
         self.keys = ['host', 'port', 'dbname', 'user', 'password']
 
-        self.input = {key: wx.TextCtrl(self, wx.ID_ANY, "") for key in self.keys if key not in {'password', 'host'}}
-        self.input['host'] = wx.ComboBox(self, wx.ID_ANY, "")
+        self.input = {'host': wx.ComboBox(self, wx.ID_ANY, "")}
+        for key in self.keys:
+            if key not in {'password', 'host'}:
+                self.input[key] = wx.TextCtrl(self, wx.ID_ANY, "")
         self.input['password'] = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_PASSWORD)
-        self.button = {'ok': wx.Button(self, wx.ID_OK, "OK"),
-                       'cancel': wx.Button(self, wx.ID_CANCEL, "Cancel"),
-                       'echo': wx.Button(self, wx.ID_ANY, "Echo"),
-                       'reload': wx.Button(self, wx.ID_ANY, "Reload Last Connection")}
 
         self.db_type_radiobox = wx.RadioBox(self, wx.ID_ANY, 'Database Type', choices=['SQLite', 'Postgres'])
+
+        self.button = {'echo': wx.Button(self, wx.ID_ANY, "Echo"),
+                       'reload': wx.Button(self, wx.ID_ANY, "Reload Last Connection"),
+                       'ok': wx.Button(self, wx.ID_OK, "OK"),
+                       'cancel': wx.Button(self, wx.ID_CANCEL, "Cancel")}
+
         self.db_types = ['sqlite', 'pgsql']
 
         self.ip_history = self.options.SQL_PGSQL_IP_HIST
