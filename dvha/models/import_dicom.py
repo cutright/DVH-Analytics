@@ -115,7 +115,7 @@ class ImportDicomFrame(wx.Frame):
         self.input_roi['type'].SetValue('')
         self.button_roi_manager = wx.Button(self, wx.ID_ANY, "ROI Manager")
 
-        self.disable_inputs()
+        self.enable_inputs(False)
         self.disable_roi_inputs()
 
         styles = TR_AUTO_CHECK_CHILD | TR_AUTO_CHECK_PARENT | TR_DEFAULT_STYLE
@@ -462,7 +462,7 @@ class ImportDicomFrame(wx.Frame):
                 self.enable_inputs()
         else:
             self.clear_plan_data()
-            self.disable_inputs()
+            self.enable_inputs(False)
             self.selected_uid = None
             self.tree_ctrl_roi.DeleteChildren(self.dicom_importer.root_rois)
         self.selected_uid = uid
@@ -587,29 +587,22 @@ class ImportDicomFrame(wx.Frame):
         for label in self.label.values():
             label.SetForegroundColour(wx.Colour(0, 0, 0))
 
-    def disable_inputs(self):
-        for input_obj in self.input.values():
-            input_obj.Disable()
-        self.button_edit_sim_study_date.Disable()
-        self.button_edit_birth_date.Disable()
-        self.button_apply_plan_data.Disable()
-        self.button_roi_manager.Disable()
-        self.button_delete_study.Disable()
-        self.button_add_physician.Disable()
-        for check_box in self.checkbox.values():
-            check_box.Disable()
+    def enable_inputs(self, *arg):
+        if arg:
+            enable = arg[0]
+        else:
+            enable = True
 
-    def enable_inputs(self):
         for input_obj in self.input.values():
-            input_obj.Enable()
-        self.button_edit_sim_study_date.Enable()
-        self.button_edit_birth_date.Enable()
-        self.button_apply_plan_data.Enable()
-        self.button_roi_manager.Enable()
-        self.button_delete_study.Enable()
-        self.button_add_physician.Enable()
+            input_obj.Enable(enable)
+        self.button_edit_sim_study_date.Enable(enable)
+        self.button_edit_birth_date.Enable(enable)
+        self.button_apply_plan_data.Enable(enable)
+        self.button_roi_manager.Enable(enable)
+        self.button_delete_study.Enable(enable)
+        self.button_add_physician.Enable(enable)
         for check_box in self.checkbox.values():
-            check_box.Enable()
+            check_box.Enable(enable)
 
     def disable_roi_inputs(self):
         for input_obj in self.input_roi.values():

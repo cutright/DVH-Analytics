@@ -192,7 +192,7 @@ class DVH_SQL:
         """
 
         try:
-            temp = float(value)
+            float(value)
             value_is_numeric = True
         except ValueError:
             value_is_numeric = False

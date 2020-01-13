@@ -19,7 +19,7 @@ from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get
 from dvha.db import sql_columns
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, LICENSE_PATH
-from dvha.options import Options, DefaultOptions
+from dvha.options import DefaultOptions
 
 
 class DatePicker(wx.Dialog):
