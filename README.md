@@ -15,8 +15,6 @@ developed.
         <img src="https://img.shields.io/lgtm/grade/python/g/cutright/DVH-Analytics.svg" /></a>
 <a href="https://pypi.org/project/dvha/">
         <img src="https://img.shields.io/pypi/dm/dvha.svg" /></a>
-<a href="https://pypi.org/project/dvha/">
-        <img src="https://img.shields.io/github/license/cutright/dvh-analytics.svg" /></a>
         
 
 NEW!!!
