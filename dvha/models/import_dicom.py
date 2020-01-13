@@ -115,7 +115,7 @@ class ImportDicomFrame(wx.Frame):
         self.input_roi['type'].SetValue('')
         self.button_roi_manager = wx.Button(self, wx.ID_ANY, "ROI Manager")
 
-        self.disable_inputs()
+        self.enable_inputs(False)
         self.disable_roi_inputs()
 
         styles = TR_AUTO_CHECK_CHILD | TR_AUTO_CHECK_PARENT | TR_DEFAULT_STYLE
@@ -462,7 +462,7 @@ class ImportDicomFrame(wx.Frame):
                 self.enable_inputs()
         else:
             self.clear_plan_data()
-            self.disable_inputs()
+            self.enable_inputs(False)
             self.selected_uid = None
             self.tree_ctrl_roi.DeleteChildren(self.dicom_importer.root_rois)
         self.selected_uid = uid
@@ -587,29 +587,22 @@ class ImportDicomFrame(wx.Frame):
         for label in self.label.values():
             label.SetForegroundColour(wx.Colour(0, 0, 0))
 
-    def disable_inputs(self):
-        for input_obj in self.input.values():
-            input_obj.Disable()
-        self.button_edit_sim_study_date.Disable()
-        self.button_edit_birth_date.Disable()
-        self.button_apply_plan_data.Disable()
-        self.button_roi_manager.Disable()
-        self.button_delete_study.Disable()
-        self.button_add_physician.Disable()
-        for check_box in self.checkbox.values():
-            check_box.Disable()
+    def enable_inputs(self, *arg):
+        if arg:
+            enable = arg[0]
+        else:
+            enable = True
 
-    def enable_inputs(self):
         for input_obj in self.input.values():
-            input_obj.Enable()
-        self.button_edit_sim_study_date.Enable()
-        self.button_edit_birth_date.Enable()
-        self.button_apply_plan_data.Enable()
-        self.button_roi_manager.Enable()
-        self.button_delete_study.Enable()
-        self.button_add_physician.Enable()
+            input_obj.Enable(enable)
+        self.button_edit_sim_study_date.Enable(enable)
+        self.button_edit_birth_date.Enable(enable)
+        self.button_apply_plan_data.Enable(enable)
+        self.button_roi_manager.Enable(enable)
+        self.button_delete_study.Enable(enable)
+        self.button_add_physician.Enable(enable)
         for check_box in self.checkbox.values():
-            check_box.Enable()
+            check_box.Enable(enable)
 
     def disable_roi_inputs(self):
         for input_obj in self.input_roi.values():
@@ -682,14 +675,14 @@ class ImportDicomFrame(wx.Frame):
             dt = parse_date(date)
             truncated = datetime_obj(dt.year, dt.month, dt.day)
             return str(truncated).replace('-', '')
-        except:
+        except Exception:
             return None
 
     @staticmethod
     def validate_dose(dose):
         try:
             return float(dose)
-        except:
+        except ValueError:
             return None
 
     @staticmethod
@@ -736,6 +729,9 @@ class ImportDicomFrame(wx.Frame):
         remove_empty_folders(self.start_path)
 
     def parse_dicom_data(self):
+        self.button_cancel.Disable()
+        self.button_save_roi_map.Disable()
+        self.button_import.Disable()
         wait = wx.BusyInfo("Parsing DICOM data\nPlease wait...")
         parsed_uids = list(self.parsed_dicom_data)
         plan_total = len(list(self.dicom_importer.plan_nodes))
@@ -760,6 +756,10 @@ class ImportDicomFrame(wx.Frame):
         self.label_progress.SetLabelText("All %s plans parsed" % plan_total)
 
         del wait
+
+        self.button_cancel.Enable()
+        self.button_save_roi_map.Enable()
+        self.button_import.Enable()
 
         self.is_all_data_parsed = True
         self.validate()
@@ -1054,7 +1054,7 @@ class ImportWorker(Thread):
         self.other_dicom_files = other_dicom_files
 
         with DVH_SQL() as cnx:
-            self.last_import_time = cnx.now  # use psql time rather than CPU since time stamps in DB are based on psql
+            self.last_import_time = cnx.now  # use pgsql time rather than CPU since time stamps in DB are based on psql
 
         self.start()  # start the thread
 
@@ -1073,7 +1073,6 @@ class ImportWorker(Thread):
             print('\tIf a study was partially imported, all data has been removed from the database '
                   'and its DICOM files remain in your inbox.')
             self.delete_partially_updated_plan()
-            return
 
         wx.CallAfter(pub.sendMessage, "close")
 
@@ -1321,4 +1320,7 @@ class ImportWorker(Thread):
         If import process fails, call this function to remove the partially imported data into SQL
         """
         with DVH_SQL() as cnx:
-            cnx.delete_rows("import_time_stamp > '%s'::date" % self.last_import_time)
+            if cnx.db_type == 'sqlite':
+                cnx.delete_rows("import_time_stamp > date(%s)" % self.last_import_time)
+            else:
+                cnx.delete_rows("import_time_stamp > '%s'::date" % self.last_import_time)

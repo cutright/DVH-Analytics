@@ -15,13 +15,12 @@ action which will be executed on a dialog resolution of wx.ID_OK
 import wx
 from datetime import datetime
 from os import mkdir, rename
-from os.path import join
-from dvha.db.sql_connector import DVH_SQL, echo_sql_db
-from dvha.db.sql_settings import write_sql_connection_settings, validate_sql_connection
+from os.path import join, basename
+from dvha.db.sql_connector import DVH_SQL, echo_sql_db, is_file_sqlite_db
 from dvha.models.import_dicom import ImportDicomFrame
-from dvha.paths import SQL_CNF_PATH, parse_settings_file, IMPORTED_DIR, INBOX_DIR
+from dvha.paths import IMPORTED_DIR, INBOX_DIR, DATA_DIR
 from dvha.tools.errors import SQLError, SQLErrorDialog
-from dvha.tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file,\
+from dvha.tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file, get_file_paths,\
     delete_imported_dicom_files, move_imported_dicom_files, MessageDialog
 
 
@@ -540,8 +539,10 @@ class ReimportDialog(wx.Dialog):
     def update_uids(self):
 
         date = ['is NULL', "= '%s'::date" % self.sim_study_date][self.sim_study_date != 'None']
-        condition = "mrn = '%s' and sim_study_date %s" % (self.mrn, date)
         with DVH_SQL() as cnx:
+            if cnx.db_type == 'sqlite':
+                date = date.replace('::date', '')
+            condition = "mrn = '%s' and sim_study_date %s" % (self.mrn, date)
             choices = cnx.get_unique_values('Plans', 'study_instance_uid', condition)
         self.combo_box_uid.SetItems(choices)
         if choices:
@@ -579,18 +580,29 @@ class SQLSettingsDialog(wx.Dialog):
     """
     Edit and validate SQL connection settings
     """
-    def __init__(self):
+    def __init__(self, options):
         wx.Dialog.__init__(self, None, title="Database Connection Settings")
+
+        self.options = options
 
         self.keys = ['host', 'port', 'dbname', 'user', 'password']
 
-        self.input = {key: wx.TextCtrl(self, wx.ID_ANY, "") for key in self.keys if key != 'password'}
+        self.input = {key: wx.TextCtrl(self, wx.ID_ANY, "") for key in self.keys if key not in {'password', 'host'}}
+        self.input['host'] = wx.ComboBox(self, wx.ID_ANY, "")
         self.input['password'] = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_PASSWORD)
         self.button = {'ok': wx.Button(self, wx.ID_OK, "OK"),
                        'cancel': wx.Button(self, wx.ID_CANCEL, "Cancel"),
-                       'echo': wx.Button(self, wx.ID_ANY, "Echo")}
+                       'echo': wx.Button(self, wx.ID_ANY, "Echo"),
+                       'reload': wx.Button(self, wx.ID_ANY, "Reload Last Connection")}
+
+        self.db_type_radiobox = wx.RadioBox(self, wx.ID_ANY, 'Database Type', choices=['SQLite', 'Postgres'])
+        self.db_types = ['sqlite', 'pgsql']
+
+        self.ip_history = self.options.SQL_PGSQL_IP_HIST
 
         self.Bind(wx.EVT_BUTTON, self.button_echo, id=self.button['echo'].GetId())
+        self.Bind(wx.EVT_BUTTON, self.button_reload, id=self.button['reload'].GetId())
+        self.Bind(wx.EVT_RADIOBOX, self.on_db_radio, id=self.db_type_radiobox.GetId())
 
         self.__set_properties()
         self.__do_layout()
@@ -603,24 +615,41 @@ class SQLSettingsDialog(wx.Dialog):
     def __set_properties(self):
         self.SetTitle("SQL Connection Settings")
 
+        # Set initial db_type_radiobox to loaded settings or pgsql if none found
+        self.set_selected_db_type(self.options.DB_TYPE)
+
+        self.button['reload'].Enable(self.has_last_cnx)
+
+    def set_host_items(self):
+        if self.selected_db_type == 'sqlite':
+            db_files = [basename(f) for f in get_file_paths(DATA_DIR, extension='.db') if is_file_sqlite_db(f)]
+            db_files.sort()
+            self.input['host'].SetItems(db_files)
+        else:
+            self.input['host'].SetItems(self.ip_history)
+
     def __do_layout(self):
         sizer_frame = wx.BoxSizer(wx.VERTICAL)
         sizer_echo = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_reload = wx.BoxSizer(wx.HORIZONTAL)
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
         grid_sizer = wx.GridSizer(5, 2, 5, 10)
 
         label_titles = ['Host:', 'Port:', 'Database Name:', 'User Name:', 'Password:']
-        label = {key: wx.StaticText(self, wx.ID_ANY, label_titles[i]) for i, key in enumerate(self.keys)}
+        self.label = {key: wx.StaticText(self, wx.ID_ANY, label_titles[i]) for i, key in enumerate(self.keys)}
 
         for key in self.keys:
-            grid_sizer.Add(label[key], 0, wx.ALL, 0)
+            grid_sizer.Add(self.label[key], 0, wx.ALL, 0)
             grid_sizer.Add(self.input[key], 0, wx.ALL | wx.EXPAND, 0)
 
         sizer_frame.Add(grid_sizer, 0, wx.ALL, 10)
+        sizer_frame.Add(self.db_type_radiobox, 0, wx.EXPAND | wx.ALL, 5)
         sizer_buttons.Add(self.button['ok'], 1, wx.ALL | wx.EXPAND, 5)
         sizer_buttons.Add(self.button['cancel'], 1, wx.ALL | wx.EXPAND, 5)
         sizer_echo.Add(self.button['echo'], 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
         sizer_frame.Add(sizer_echo, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
+        sizer_reload.Add(self.button['reload'], 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
+        sizer_frame.Add(sizer_reload, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
         sizer_frame.Add(sizer_buttons, 0, wx.ALL | wx.EXPAND, 5)
 
         self.SetSizer(sizer_frame)
@@ -628,11 +657,21 @@ class SQLSettingsDialog(wx.Dialog):
         self.Layout()
 
     def load_sql_settings(self):
-        config = parse_settings_file(SQL_CNF_PATH)
+        self.set_host_items()
 
-        for input_type in self.keys:
-            if input_type in config:
-                self.input[input_type].SetValue(config[input_type])
+        if self.has_last_cnx:
+            config = self.options.SQL_LAST_CNX[self.selected_db_type]
+        else:
+            config = self.options.DEFAULT_CNF[self.selected_db_type]
+
+        self.clear_input()
+
+        if self.selected_db_type == 'sqlite':
+            self.input['host'].SetValue(config['host'])
+        else:
+            for input_type in self.keys:
+                if input_type in config:
+                    self.input[input_type].SetValue(config[input_type])
 
     def button_echo(self, evt):
         if self.valid_sql_settings:
@@ -640,17 +679,37 @@ class SQLSettingsDialog(wx.Dialog):
         else:
             wx.MessageBox('Invalid credentials!', 'Echo SQL Database', wx.OK | wx.ICON_WARNING)
 
+    def button_reload(self, evt):
+        self.load_sql_settings()
+
+    def write_successful_cnf(self):
+        new_config = {key: self.input[key].GetValue() for key in self.keys if self.input[key].GetValue()}
+        self.options.SQL_LAST_CNX[self.selected_db_type] = new_config
+
+        self.options.DB_TYPE = self.selected_db_type
+
+        if self.selected_db_type == 'pgsql':
+            new_host = self.input['host'].GetValue()
+            if new_host in self.ip_history:
+                self.ip_history.pop(self.ip_history.index(new_host))
+            self.ip_history.insert(0, new_host)
+
+        self.options.save()
+
     @property
     def valid_sql_settings(self):
         config = {key: self.input[key].GetValue() for key in self.keys if self.input[key].GetValue()}
-        return echo_sql_db(config)
+        if self.selected_db_type == 'pgsql':
+            config['dbname'] = self.input['dbname'].GetValue()
+        return echo_sql_db(config, db_type=self.selected_db_type)
 
     def run(self):
         res = self.ShowModal()
         if res == wx.ID_OK:
             new_config = {key: self.input[key].GetValue() for key in self.keys if self.input[key].GetValue()}
-            write_sql_connection_settings(new_config)
-            if validate_sql_connection(new_config):
+
+            if echo_sql_db(new_config, db_type=self.selected_db_type):
+                self.write_successful_cnf()
                 with DVH_SQL() as cnx:
                     cnx.initialize_database()
             else:
@@ -658,6 +717,32 @@ class SQLSettingsDialog(wx.Dialog):
                                        wx.OK | wx.ICON_ERROR)
                 dlg.ShowModal()
         self.Destroy()
+
+    def on_db_radio(self, *evt):
+        self.load_sql_settings()
+        self.button['reload'].Enable(self.has_last_cnx)
+
+    @property
+    def selected_db_type(self):
+        return ['sqlite', 'pgsql'][self.db_type_radiobox.GetSelection()]
+
+    @property
+    def unselected_db_type(self):
+        return ['pgsql', 'sqlite'][self.db_type_radiobox.GetSelection()]
+
+    @property
+    def has_last_cnx(self):
+        return 'host' in list(self.options.SQL_LAST_CNX[self.selected_db_type])
+
+    def set_selected_db_type(self, db_type):
+        self.db_type_radiobox.SetSelection({'sqlite': 0, 'pgsql': 1}[db_type])
+
+    def clear_input(self):
+        for input_type in self.keys:
+            self.input[input_type].SetValue('')
+            if input_type != 'host':
+                self.input[input_type].Enable(self.selected_db_type == 'pgsql')
+                self.label[input_type].Enable(self.selected_db_type == 'pgsql')
 
 
 # ------------------------------------------------------
@@ -712,7 +797,7 @@ class MoveFiles(MessageDialog):
         dlg.Destroy()
 
     def action_no(self):
-        DeleteFiles(self.parent)
+        DeleteFiles(self.parent, self.files)
 
 
 class DeleteFiles(MessageDialog):

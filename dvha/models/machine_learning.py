@@ -134,7 +134,7 @@ class MachineLearningFrame(wx.Frame):
 
         try:
             return getters_dict[variable](input_dict[variable].GetValue())
-        except:
+        except Exception:
             return default_dict[variable]
 
     def set_defaults(self):
@@ -207,7 +207,7 @@ class MachineLearningFrame(wx.Frame):
     def to_float_str_or_none(self, str_value):
         try:
             return self.to_float_or_none(str_value)
-        except:
+        except Exception:
             return str_value
 
     @staticmethod

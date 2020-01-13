@@ -14,6 +14,7 @@ import numpy as np
 from dvha.db.sql_connector import DVH_SQL
 from dvha.db.sql_to_python import QuerySQL
 from copy import deepcopy
+from dateutil.parser import parse as date_parser
 
 
 # This class retrieves DVH data from the SQL database and calculates statistical DVHs (min, max, quartiles)
@@ -88,7 +89,7 @@ class DVH:
                 # Process dth_string to numpy array
                 try:
                     self.dth.append(np.array(self.dth_string[i].split(','), dtype='|S4').astype(np.float))
-                except:
+                except Exception:
                     self.dth.append(np.array([0]))
 
             # Store these now so they can be saved in DVH object without needing to query later
@@ -97,7 +98,6 @@ class DVH:
                                                                  "study_instance_uid in ('%s')" % "','".join(self.uid)))
             self.total_fxs = self.get_plan_values('fxs')
             self.fx_dose = self.get_rx_values('fx_dose')
-            self.ptv_overlap = self.ptv_overlap
         else:
             self.count = 0
 
@@ -112,9 +112,19 @@ class DVH:
         with DVH_SQL() as cnx:
             condition = "study_instance_uid in ('%s')" % "','".join(self.study_instance_uid)
             data = cnx.query('Plans', 'study_instance_uid, %s' % plan_column, condition)
+            force_date = cnx.is_sqlite_column_datetime('Plans', plan_column)  # returns False for pgsql
 
         uids = [row[0] for row in data]
         values = [row[1] for row in data]
+        if force_date:  # sqlite does not have date or time like variables
+            for i, value in enumerate(values):
+                try:
+                    if type(value) is int:
+                        values[i] = str(date_parser(str(value)))
+                    else:
+                        values[i] = str(date_parser(value))
+                except Exception:
+                    values[i] = 'None'
         return [values[uids.index(uid)] for uid in self.study_instance_uid]
 
     def get_rx_values(self, rx_column):

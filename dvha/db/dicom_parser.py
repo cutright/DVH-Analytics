@@ -11,6 +11,7 @@
 from dicompylercore import dicomparser, dvhcalc
 from datetime import datetime
 from dateutil.relativedelta import relativedelta  # python-dateutil
+from dateutil.parser import parse as date_parser
 import numpy as np
 import pydicom as dicom
 from os.path import basename, join
@@ -557,10 +558,17 @@ class DICOM_Parser:
     def age(self):
         if self.sim_study_date and self.birth_date:
             try:
-                age = relativedelta(self.sim_study_date, self.birth_date).years
+                dates = {'sim_study_date': None, 'birth_date': None}
+                for date_type in list(dates):
+                    dates[date_type] = getattr(self, date_type)
+                    if type(dates[date_type]) is int or float:
+                        dates[date_type] = str(dates[date_type])
+                    if type(dates[date_type]) is str:
+                        dates[date_type] = date_parser(dates[date_type]).date()
+                age = relativedelta(dates['sim_study_date'], dates['birth_date']).years
                 if age >= 0:
                     return age
-            except:
+            except Exception:
                 pass
 
     @property
@@ -692,7 +700,7 @@ class DICOM_Parser:
             if hasattr(self.rt_data['dose'], 'SliceThickness') and self.rt_data['dose'].SliceThickness:
                 dose_grid_resolution.append(str(round(float(self.rt_data['dose'].SliceThickness), 1)))
             return ', '.join(dose_grid_resolution)
-        except:
+        except Exception:
             pass
 
     def process_global_over_ride(self, key, pre_over_ride_value):
@@ -750,7 +758,9 @@ class DICOM_Parser:
 
         for key, roi_name in roi_names.items():
             roi_name_len = len(roi_name)
-            if (roi_name_len > 2 and roi_name[0:3] in {'gtv', 'ctv', 'itv', 'ptv'}) and \
+            if self.get_physician_roi(key).lower() in {'gtv', 'ctv', 'itv', 'ptv'}:
+                self.roi_type_over_ride[key] = self.get_physician_roi(key).upper()
+            elif (roi_name_len > 2 and roi_name[0:3] in {'gtv', 'ctv', 'itv', 'ptv'}) and \
                     ((roi_name_len == 3) or
                      (roi_name_len == 4 and roi_name[3].isdigit()) or
                      (roi_name_len == 5 and not roi_name[3].isdigit() and roi_name[4].isdigit())):
@@ -849,7 +859,7 @@ class DICOM_Parser:
         coord = self.dicompyler_data['structure'].GetStructureCoordinates(key)
         try:
             return roi_calc.surface_area(coord)
-        except:
+        except Exception:
             print("Surface area calculation failed for key, name: %s, %s" % (key, self.get_roi_name(key)))
 
     def get_dvh_geometries(self, key):
@@ -867,7 +877,7 @@ class DICOM_Parser:
 
         try:
             surface_area = roi_calc.surface_area(coord)
-        except:
+        except Exception:
             print("Surface area calculation failed for key, name: %s, %s" % (key, self.get_roi_name(key)))
             surface_area = None
 
@@ -1218,14 +1228,14 @@ class BeamParser:
     def beam_mu_per_deg(self):
         try:
             return round(self.beam_mu / self.gantry_values['range'], 2)
-        except:
+        except Exception:
             pass
 
     @property
     def beam_mu_per_cp(self):
         try:
             return round(self.beam_mu / self.control_point_count, 2)
-        except:
+        except Exception:
             pass
 
     @property
@@ -1340,7 +1350,7 @@ class RxParser:
             return self.pinnacle_rx_data['fx_dose']
         try:
             return round(self.rx_dose / float(self.fx_count), 2)
-        except:
+        except Exception:
             print('WARNING: Unable to calculate fx_dose')
 
     @property

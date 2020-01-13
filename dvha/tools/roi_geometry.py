@@ -70,7 +70,8 @@ def union(rois):
                 if hasattr(polygon, 'interiors'):
                     for interior in polygon.interiors:
                         xy = interior.coords.xy
-                        x_coord, y_coord = xy[0], xy[1]
+                        x_coord = xy[0]
+                        y_coord = xy[1]
                         points = []
                         for i in range(len(x_coord)):
                             points.append([x_coord[i], y_coord[i], round(float(z), 2)])

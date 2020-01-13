@@ -12,7 +12,6 @@ Class for viewing SQL table data of the current query
 
 import wx
 from dvha.models.data_table import DataTable
-from dvha.db.sql_columns import all_columns as sql_column_info
 from dvha.dialogs.export import save_data_to_file
 from dvha.tools.utilities import get_window_size
 

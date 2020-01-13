@@ -15,15 +15,17 @@ import wx
 from datetime import datetime
 from dateutil.parser import parse as parse_date
 import numpy as np
-from os import walk, listdir, unlink
-from os.path import join, isfile, isdir
-import os
+from os import walk, listdir, unlink, mkdir, rmdir, chdir
+from os.path import join, isfile, isdir, splitext, basename, dirname, realpath
 import shutil
 import pydicom as dicom
 import pickle
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import IMPORT_SETTINGS_PATH, SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
     APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR, MODELS_DIR
+
+
+IGNORED_FILES = ['.ds_store']
 
 
 def is_windows():
@@ -49,7 +51,6 @@ def initialize_directories_and_settings():
     and create if needed
     """
     initialize_directories()
-    initialize_default_sql_connection_config_file()
     initialize_default_import_settings_file()
 
 
@@ -61,8 +62,8 @@ def initialize_directories():
     directories = [APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,
                    BACKUP_DIR, TEMP_DIR, MODELS_DIR]
     for directory in directories:
-        if not os.path.isdir(directory):
-            os.mkdir(directory)
+        if not isdir(directory):
+            mkdir(directory)
 
 
 def initialize_default_import_settings_file():
@@ -105,16 +106,6 @@ def write_sql_connection_settings(config):
 
     with open(SQL_CNF_PATH, "w") as text_file:
         text_file.write(text)
-
-
-def initialize_default_sql_connection_config_file():
-    """
-    Create default postgres sql connection config file
-    """
-    if not isfile(SQL_CNF_PATH):
-        write_sql_connection_settings({'host': 'localhost',
-                                       'dbname': 'dvh',
-                                       'port': '5432'})
 
 
 def scale_bitmap(bitmap, width, height):
@@ -162,20 +153,22 @@ def get_file_paths(start_path, search_subfolders=False, extension=None):
     :return: absolute file paths
     :rtype: list
     """
-    if os.path.isdir(start_path):
+    if isdir(start_path):
         if search_subfolders:
             file_paths = []
             for root, dirs, files in walk(start_path, topdown=False):
                 for name in files:
-                    if extension is None or name.endswith(extension):
-                        file_paths.append(join(root, name))
+                    if extension is None or splitext(name)[1].lower() == extension.lower():
+                        if name.lower() not in IGNORED_FILES:
+                            file_paths.append(join(root, name))
             return file_paths
 
         file_paths = []
         for f in listdir(start_path):
             if isfile(join(start_path, f)):
-                if extension is None or f.endswith(extension):
-                    file_paths.append(join(start_path, f))
+                if extension is None or splitext(f)[1].lower() == extension.lower():
+                    if f.lower() not in IGNORED_FILES:
+                        file_paths.append(join(start_path, f))
         return file_paths
     return []
 
@@ -398,7 +391,7 @@ def calc_stats(data):
                     np.mean(data_np),
                     np.percentile(data_np, 25),
                     np.min(data_np)]
-    except:
+    except Exception:
         rtn_data = [0, 0, 0, 0, 0, 0]
         print("calc_stats() received non-numerical data")
     return rtn_data
@@ -414,11 +407,11 @@ def move_files_to_new_path(files, new_dir):
     """
     for file_path in files:
         if isfile(file_path):
-            file_name = os.path.basename(file_path)
-            old_dir = os.path.dirname(file_path)
-            new = os.path.join(new_dir, file_name)
-            if not os.path.isdir(new_dir):
-                os.mkdir(new_dir)
+            file_name = basename(file_path)
+            old_dir = dirname(file_path)
+            new = join(new_dir, file_name)
+            if not isdir(new_dir):
+                mkdir(new_dir)
             if old_dir != new_dir:
                 shutil.move(file_path, new)
 
@@ -457,15 +450,15 @@ def delete_imported_dicom_files(dicom_files):
                 uid = str(dicom.read_file(join(directory, f)).StudyInstanceUID)
                 if uid == str(dicom_files['study_instance_uid'][i]):
                     delete_file(f)
-            except:
+            except Exception:
                 pass
 
         # Directory is empty, delete it
         # Directories are by patient mrn, so it might contain files for a different study for the same patient
         if not listdir(directory):
             try:
-                os.rmdir(directory)
-            except:
+                rmdir(directory)
+            except Exception:
                 pass
 
 
@@ -488,7 +481,7 @@ def move_imported_dicom_files(dicom_files, new_dir):
                 uid = str(dicom.read_file(join(directory, f)).StudyInstanceUID)
                 if uid == str(dicom_files['study_instance_uid'][i]):
                     files.append(f)
-            except:
+            except Exception:
                 pass
         move_files_to_new_path(files, new_patient_dir)
 
@@ -496,24 +489,24 @@ def move_imported_dicom_files(dicom_files, new_dir):
         # Directories are by patient mrn, so it might contain files for a different study for the same patient
         if not listdir(directory):
             try:
-                os.rmdir(directory)
-            except:
+                rmdir(directory)
+            except Exception:
                 pass
 
 
 def remove_empty_folders(start_path):
-    for (path, dirs, files) in os.walk(start_path, topdown=False):
+    for (path, dirs, files) in walk(start_path, topdown=False):
         if files:
             continue
         try:
             if path != start_path:
-                os.rmdir(path)
+                rmdir(path)
         except OSError:
             pass
 
-    if not os.listdir(start_path):
+    if not listdir(start_path):
         try:
-            os.rmdir(start_path)
+            rmdir(start_path)
         except OSError:
             pass
 
@@ -524,22 +517,22 @@ def move_all_files(new_dir, old_dir):
     :param new_dir: absolute directory path
     :param old_dir: absolute directory path
     """
-    initial_path = os.path.dirname(os.path.realpath(__file__))
+    initial_path = dirname(realpath(__file__))
 
-    os.chdir(old_dir)
+    chdir(old_dir)
 
-    file_paths = [f for f in os.listdir(old_dir) if os.path.isfile(os.path.join(old_dir, f))]
+    file_paths = [f for f in listdir(old_dir) if isfile(join(old_dir, f))]
 
-    misc_path = os.path.join(new_dir, 'misc')
-    if not os.path.isdir(misc_path):
-        os.mkdir(misc_path)
+    misc_path = join(new_dir, 'misc')
+    if not isdir(misc_path):
+        mkdir(misc_path)
 
     for f in file_paths:
-        file_name = os.path.basename(f)
-        new = os.path.join(misc_path, file_name)
+        file_name = basename(f)
+        new = join(misc_path, file_name)
         shutil.move(f, new)
 
-    os.chdir(initial_path)
+    chdir(initial_path)
 
 
 def get_elapsed_time(start_time, end_time):
@@ -562,7 +555,7 @@ def is_date(date):
         try:
             parse_date(date)
             return True
-        except:
+        except Exception:
             return False
 
     return False
@@ -605,6 +598,9 @@ class MessageDialog:
     """
     def __init__(self, parent, caption, message="Are you sure?", action_yes_func=None, action_no_func=None,
                  flags=wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT):
+        if is_windows():
+            message = '\n'.join([caption, message])
+            caption = ' '
         self.dlg = wx.MessageDialog(parent, message, caption, flags)
         self.parent = parent
         self.action_yes_func = action_yes_func
@@ -637,7 +633,7 @@ def load_object_from_file(abs_file_path):
     """
     Load a pickled object from the provided absolute file path
     """
-    if os.path.isfile(abs_file_path):
+    if isfile(abs_file_path):
         with open(abs_file_path, 'rb') as infile:
             obj = pickle.load(infile)
         return obj

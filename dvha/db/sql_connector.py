@@ -11,9 +11,11 @@ Tools used to communicate with the SQL database
 #    available at https://github.com/cutright/DVH-Analytics
 
 import psycopg2
-from psycopg2 import OperationalError
+import sqlite3
 from datetime import datetime
-from dvha.paths import SQL_CNF_PATH, CREATE_SQL_TABLES, parse_settings_file
+from os.path import dirname, join, isfile
+from dvha.options import Options
+from dvha.paths import CREATE_PGSQL_TABLES, CREATE_SQLITE_TABLES, DATA_DIR
 from dvha.tools.errors import SQLError
 
 
@@ -21,22 +23,34 @@ class DVH_SQL:
     """
     This class is used to communicate to the SQL database to limit the need for syntax in other files
     """
-    def __init__(self, *config):
+    def __init__(self, *config, db_type='pgsql'):
         """
         :param config: optional SQL login credentials, stored values used if nothing provided
+        :param db_type: either 'pgsql' or 'sqlite'
+        :type db_type: str
         """
+
+        stored_options = Options()
+
         if config:
+            self.db_type = db_type
             config = config[0]
         else:
             # Read SQL configuration file
-            config = parse_settings_file(SQL_CNF_PATH)
+            self.db_type = stored_options.DB_TYPE
+            config = stored_options.SQL_LAST_CNX[self.db_type]
 
-        self.dbname = config['dbname']
+        if self.db_type == 'sqlite':
+            db_file_path = config['host']
+            if not dirname(db_file_path):  # file_path has not directory, assume it lives in DATA_DIR
+                db_file_path = join(DATA_DIR, db_file_path)
+            self.db_name = None
+            self.cnx = sqlite3.connect(db_file_path)
+        else:
+            self.db_name = config['dbname']
+            self.cnx = psycopg2.connect(**config)
 
-        cnx = psycopg2.connect(**config)
-
-        self.cnx = cnx
-        self.cursor = cnx.cursor()
+        self.cursor = self.cnx.cursor()
         self.tables = ['DVHs', 'Plans', 'Rxs', 'Beams', 'DICOM_Files']
 
     def __enter__(self):
@@ -153,7 +167,16 @@ class DVH_SQL:
         :return: The current time as seen by the SQL database
         :rtype: datetime
         """
-        return self.query_generic("Select NOW()")[0][0]
+
+        return self.query_generic("SELECT %s" % self.sql_cmd_now)[0][0]
+
+    @property
+    def sql_cmd_now(self):
+        if self.db_type == 'sqlite':
+            sql_cmd = "date('now')"
+        else:
+            sql_cmd = "NOW()"
+        return sql_cmd
 
     def update(self, table_name, column, value, condition_str):
         """
@@ -169,13 +192,14 @@ class DVH_SQL:
         """
 
         try:
-            temp = float(value)
+            float(value)
             value_is_numeric = True
         except ValueError:
             value_is_numeric = False
 
         if '::date' in str(value):
-            value = "'%s'::date" % value.strip('::date')  # augment value string for postgresql date formatting
+            amend_type = ['', '::date'][self.db_type == 'pgsql']  # sqlite3 does not support ::date
+            value = "'%s'%s" % (value.strip('::date'), amend_type)  # augment value for postgresql date formatting
         elif value_is_numeric:
             value = str(value)
         elif 'null' == str(value.lower()):
@@ -216,15 +240,15 @@ class DVH_SQL:
         for column in columns:
             if row[column] is None or row[column][0] is None or row[column][0] == '':
                 if column == 'import_time_stamp':
-                    values.append("NOW()")
+                    values.append(self.sql_cmd_now)
                 else:
                     values.append("NULL")
             else:
                 if 'varchar' in row[column][1]:
                     max_length = int(row[column][1].replace('varchar(', '').replace(')', ''))
                     values.append("'%s'" % truncate_string(row[column][0], max_length))
-                elif 'time_stamp' in row[column][1]:
-                    values.append("'%s'::date" % row[column][0])
+                elif 'time_stamp' in row[column][1] and self.db_type != 'sqlite':
+                    values.append("'%s'::date" % row[column][0])  # sqlite3 does not support ::date
                 else:
                     values.append("'%s'" % row[column][0])
 
@@ -349,7 +373,8 @@ class DVH_SQL:
         """
         Ensure that all of the latest SQL columns exist in the user's database
         """
-        self.execute_file(CREATE_SQL_TABLES)
+        create_tables_file = [CREATE_PGSQL_TABLES, CREATE_SQLITE_TABLES][self.db_type == 'sqlite']
+        self.execute_file(create_tables_file)
 
     def reinitialize_database(self):
         """
@@ -364,10 +389,13 @@ class DVH_SQL:
         :return: existence of database
         :rtype: bool
         """
-        line = "SELECT datname FROM pg_catalog.pg_database WHERE lower(datname) = lower('%s');" % self.dbname
-        self.cursor.execute(line)
+        if self.db_name:
+            line = "SELECT datname FROM pg_catalog.pg_database WHERE lower(datname) = lower('%s');" % self.db_name
+            self.cursor.execute(line)
 
-        return bool(len(self.cursor.fetchone()))
+            return bool(len(self.cursor.fetchone()))
+        else:
+            return True
 
     def is_sql_table_empty(self, table):
         """
@@ -417,12 +445,28 @@ class DVH_SQL:
         :return: column names of specified table, sorted alphabetically
         :rtype: list
         """
-        query = "select column_name from information_schema.columns where table_name = '%s';" % table_name.lower()
+        if self.db_type == 'sqlite':
+            query = "PRAGMA table_info(%s);" % table_name.lower()
+            index = 1
+        else:
+            query = "select column_name from information_schema.columns where table_name = '%s';" % table_name.lower()
+            index = 0
         self.cursor.execute(query)
         cursor_return = self.cursor.fetchall()
-        columns = [str(c[0]) for c in cursor_return]
+        columns = [str(c[index]) for c in cursor_return]
         columns.sort()
         return columns
+
+    def is_sqlite_column_datetime(self, table_name, column):
+        if self.db_type == 'sqlite':
+            query = "PRAGMA table_info(%s);" % table_name.lower()
+            self.cursor.execute(query)
+            cursor_return = self.cursor.fetchall()
+            columns = {str(c[1]): str(c[2]) for c in cursor_return}
+            if column in list(columns):
+                column_type = columns[column]
+                return 'time' in column_type.lower() or 'date' in column_type.lower()
+        return False
 
     def get_min_value(self, table, column, condition=None):
         """
@@ -552,20 +596,43 @@ def truncate_string(input_string, character_limit):
     return input_string
 
 
-def echo_sql_db(config=None):
+def echo_sql_db(config=None, db_type='pgsql'):
     """
     Echo the database using stored or provided credentials
     :param config: database login credentials
     :type config: dict
+    :param db_type: either 'pgsql' or 'sqlite'
+    :type db_type: str
     :return: True if connection could be established
     :rtype: bool
     """
     try:
         if config:
-            cnx = DVH_SQL(config)
+            if db_type == 'pgsql' and ('dbname' not in list(config) or 'port' not in list(config)):
+                return False
+            cnx = DVH_SQL(config, db_type=db_type)
         else:
             cnx = DVH_SQL()
         cnx.close()
         return True
-    except OperationalError:
+    except Exception as e:
+        if type(e) not in [psycopg2.OperationalError, sqlite3.OperationalError]:
+            print(str(e))
         return False
+
+
+def initialize_db():
+    with DVH_SQL() as cnx:
+        cnx.initialize_database()
+
+
+def is_file_sqlite_db(sqlite_db_file):
+    if isfile(sqlite_db_file):
+        try:
+            cnx = sqlite3.connect(sqlite_db_file)
+            cnx.close()
+            return True
+        except sqlite3.OperationalError:
+            pass
+
+    return False

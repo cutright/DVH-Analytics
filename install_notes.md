@@ -1,7 +1,6 @@
 # Installation notes for DVH Analytics
 
 ## Pre-requisites
- - [PostgreSQL](https://www.postgresql.org/)
  - [Python >=3.5](https://www.python.org/downloads/release)
  - Additional python libraries as specifed in 
  [requirements.txt](https://github.com/cutright/DVH-Analytics-Desktop/blob/master/requirements.txt)
@@ -24,14 +23,32 @@ $ python dvha_app.py
 The python package Shapely frequently has issues installing on Windows. If your pip install failed, consider installing 
 Shapely from [here](https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely).
 
+## SQL
+DVH Analytics now supports both SQLite3 and PostgreSQL. Most users will prefer SQLite due to ease. Advantages are as follows:  
+      
+SQLite:  
+* No admin rights needed on your computer
+* No need to figure out how to make user logins and databases in SQL
+* Easier to share your database - just zip (and encrypt), send to colleague  
+  
+PostgreSQL:  
+* Supports multiple instances of DVHA accessing the same database at once
+* Database may be housed remotely (just need the accessible IP address)
+* Supports user login and password
+
+Additional SQLite vs PostgreSQL information can be found [here](https://tableplus.com/blog/2018/08/sqlite-vs-postgresql-which-database-to-use-and-why.html).
+
+SQLite works out-of-the-box, the 'host' field in Settings -> Database Connections is the name of the file, 
+located in ~/Apps/dvh_analytics/data
+
 ## PostgreSQL
 If you have access to a PostgreSQL DB, you simply need to fill in the login information by going to 
 the menu bar: Settings -> Database Settings.
 
 If you need PostgreSQL, here are some options for each OS.
 
-#### Mac OS
-Simply download the PostgreSQL app: http://postgresapp.com/  
+#### macOS
+Download the PostgreSQL app: http://postgresapp.com/  
  - Open the app
  - Click "Start"
  - Double-click "postgres" with the cylindrical database icon

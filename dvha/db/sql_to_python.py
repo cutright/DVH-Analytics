@@ -11,6 +11,7 @@ A generic class to query a DVHA SQL table and parse the return into a python obj
 #    available at https://github.com/cutright/DVH-Analytics
 
 from dvha.db.sql_connector import DVH_SQL
+from dateutil.parser import parse as date_parser
 
 
 class QuerySQL:
@@ -49,14 +50,15 @@ class QuerySQL:
                         self.cursor = cnx.query(self.table_name,
                                                 column,
                                                 self.condition_str)
-                        rtn_list = self.cursor_to_list()
+                        force_date = cnx.is_sqlite_column_datetime(self.table_name, column)  # returns False for pgsql
+                        rtn_list = self.cursor_to_list(force_date=force_date)
                         if unique:
                             rtn_list = get_unique_list(rtn_list)
                         setattr(self, column, rtn_list)  # create property of QuerySQL based on SQL column name
         else:
             print('Table name in valid. Please select from Beams, DVHs, Plans, or Rxs.')
 
-    def cursor_to_list(self):
+    def cursor_to_list(self, force_date=False):
         """
         Convert a cursor return into a list of values
         :return: queried data
@@ -64,7 +66,16 @@ class QuerySQL:
         """
         rtn_list = []
         for row in self.cursor:
-            if isinstance(row[0], (int, float)):
+            if force_date:
+                try:
+                    if type(row[0]) is int:
+                        rtn_list.append(str(date_parser(str(row[0]))))
+                    else:
+                        rtn_list.append(str(date_parser(row[0])))
+                except:
+                    rtn_list.append('None')
+
+            elif isinstance(row[0], (int, float)):
                 rtn_list.append(row[0])
             else:
                 rtn_list.append(str(row[0]))
