@@ -236,7 +236,9 @@ class RadBioFrame:
                     for j in [7, 9]:
                         current_row[j] = convert_value_to_str(current_row[j])
                     new_row = deepcopy(current_row)
-                    new_row[2], new_row[3], new_row[4] = eud_a, gamma_50, td_50
+                    new_row[2] = eud_a
+                    new_row[3] = gamma_50
+                    new_row[4] = td_50
                     try:
                         new_row[5] = "%0.2f" % round(calc_eud(data['dvh'].dvh[:, i], eud_a), 2)
                     except:

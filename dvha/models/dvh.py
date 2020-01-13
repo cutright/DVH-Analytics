@@ -98,7 +98,6 @@ class DVH:
                                                                  "study_instance_uid in ('%s')" % "','".join(self.uid)))
             self.total_fxs = self.get_plan_values('fxs')
             self.fx_dose = self.get_rx_values('fx_dose')
-            self.ptv_overlap = self.ptv_overlap
         else:
             self.count = 0
 

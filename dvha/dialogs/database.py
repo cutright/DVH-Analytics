@@ -797,7 +797,7 @@ class MoveFiles(MessageDialog):
         dlg.Destroy()
 
     def action_no(self):
-        DeleteFiles(self.parent)
+        DeleteFiles(self.parent, self.files)
 
 
 class DeleteFiles(MessageDialog):

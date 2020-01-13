@@ -10,7 +10,9 @@ previous web-based version can be found [here](https://github.com/cutright/DVH-A
 developed.
 
 <a href="https://pypi.org/project/dvha/">
-        <img src="https://img.shields.io/pypi/v/dvha.svg" /></a>  
+        <img src="https://img.shields.io/pypi/v/dvha.svg" /></a>
+<a href="https://lgtm.com/projects/g/cutright/DVH-Analytics/context:python">
+        <img src="https://img.shields.io/lgtm/grade/python/g/cutright/DVH-Analytics.svg" /></a>
 <a href="https://pypi.org/project/dvha/">
         <img src="https://img.shields.io/pypi/dm/dvha.svg" /></a>
 <a href="https://pypi.org/project/dvha/">
