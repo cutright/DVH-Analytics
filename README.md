@@ -17,7 +17,7 @@ developed.
         <img src="https://img.shields.io/pypi/dm/dvha.svg" /></a>
         
 
-NEW!!!
+New in v0.6.7
 ---------
 DVHA now supports both SQLite and PostgreSQL.
 
@@ -32,25 +32,6 @@ PostgreSQL:
 * Supports user login and password
 
 Additional SQLite vs PostgreSQL information can be found [here](https://tableplus.com/blog/2018/08/sqlite-vs-postgresql-which-database-to-use-and-why.html).
-
-How to Run
----------
-Install via pip:
-~~~
-$ pip install dvha
-~~~
-If you've installed via pip or setup.py, launch from your terminal with:
-~~~
-$ dvha
-~~~
-If you've cloned the project, but did not run the setup.py installer, launch DVHA with:
-~~~
-$ python dvha_app.py
-~~~
-See our [installation notes](https://github.com/cutright/DVH-Analytics/blob/master/install_notes.md) for potential 
-Shapely install issues on MS Windows and help setting up a PostgreSQL database if it is preferred over SQLite3. 
-
-We are working on compiled executables.  See [this](https://github.com/cutright/DVH-Analytics/issues/23) post for information.
 
 
 About
@@ -79,6 +60,26 @@ The code is built upon these core libraries:
 * [dicompyler-core](https://github.com/dicompyler/dicompyler-core) - Extensible radiation therapy research platform and viewer for DICOM and DICOM RT
 * [Bokeh](https://github.com/bokeh/bokeh) - Interactive Web Plotting for Python
 * [scikit-learn](https://github.com/scikit-learn/scikit-learn) - Machine Learning in Python
+
+
+Installation
+---------
+To install via pip:
+```
+pip install dvha
+```
+If you've installed via pip or setup.py, launch from your terminal with:
+```
+dvha
+```
+If you've cloned the project, but did not run the setup.py installer, launch DVHA with:
+```
+python dvha_app.py
+```
+See our [installation notes](https://github.com/cutright/DVH-Analytics/blob/master/install_notes.md) for potential 
+Shapely install issues on MS Windows and help setting up a PostgreSQL database if it is preferred over SQLite3. 
+
+We are working on compiled executables.  See [this](https://github.com/cutright/DVH-Analytics/issues/23) post for information.
 
 
 Dependencies
