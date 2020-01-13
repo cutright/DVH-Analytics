@@ -4,7 +4,7 @@
 
 ---------  
 
-Welcome to the brand new DVH Analytics, rewritten as a native OS application with wxPython. This version is currently 
+Welcome to the brand new DVH Analytics (DVHA), rewritten as a native OS application with wxPython. This version is currently 
 only available as source code during the public beta. Compiled versions will be available after successful testing. The 
 previous web-based version can be found [here](https://github.com/cutright/DVH-Analytics-Bokeh) but is no longer being 
 developed.
@@ -12,13 +12,13 @@ developed.
 <a href="https://pypi.org/project/dvha/">
         <img src="https://img.shields.io/pypi/v/dvha.svg" /></a>  
 <a href="https://pypi.org/project/dvha/">
-        <img src="https://img.shields.io/pypi/dm/dvha.svg" /></a>  
+        <img src="https://img.shields.io/pypi/dm/dvha.svg" /></a>
         
 
 NEW!!!
 ---------
-PostgreSQL is no longer required. DVHA now supports SQLite3. This means no admin rights are needed and users do 
-not need to figure out how to create databases or user accounts in SQL. PostgreSQL is still an option.
+DVHA now supports both SQLite and PostgreSQL. With SQLite, no admin rights are needed and users no longer 
+need to manually setup a database.
 
 How to Run
 ---------
