@@ -1162,7 +1162,7 @@ class PlotMultiVarRegression(Plot):
     @property
     def worst_p_value(self):
         index = self.worst_x_p_value_index
-        if index is not None:
+        if index is not None and len(self.reg.p_values) > 2:
             return self.reg.p_values[index+1]
 
     def backward_elimination(self, threshold=0.05):
