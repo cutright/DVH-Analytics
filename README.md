@@ -7,11 +7,8 @@ only available as source code during the public beta. Compiled versions will be 
 previous web-based version can be found [here](https://github.com/cutright/DVH-Analytics-Bokeh) but is no longer being 
 developed.
 
-### WARNING
-You are viewing a pre-release development branch (v.0.6.7dev)
-
 ### NEW!!!
-PostgreSQL is no longer required. DVHA now uses SQLite3 by default. This means no admin rights are needed and users do 
+PostgreSQL is no longer required. DVHA now supports SQLite3. This means no admin rights are needed and users do 
 not need to figure out how to create databases or user accounts in SQL. PostgreSQL is still an option.
 
 ### How to Run
@@ -49,7 +46,7 @@ In addition to viewing DVH data, this software provides methods to:
 - create time-series plots of various planning and dosimetric variables
 - calculate correlations
 - generate multi-variable linear and machine learning regressions.
-- Additional screenshots available [here](https://github.com/cutright/DVH-Analytics/issues/9).
+- additional screenshots available [here](https://github.com/cutright/DVH-Analytics/issues/9)
 
 
 The code is built upon these core libraries:
@@ -82,4 +79,3 @@ Roy A, Cutright D, Gopalakrishnan M, Yeh AB, and Mittal BB. "A Risk-Adjusted Con
 * [Statsmodels](https://github.com/statsmodels/statsmodels) 0.8.0
 * [Scikit-learn](http://scikit-learn.org)
 * [regressors](https://pypi.org/project/regressors/)
-

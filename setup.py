@@ -29,6 +29,10 @@ requires = [
     'regressors'
 ]
 
+with open('README.md', 'r') as doc:
+    long_description = doc.read()
+
+
 setup(
     name='dvha',
     include_package_data=True,
@@ -45,14 +49,6 @@ setup(
     classifiers=[],
     install_requires=requires,
     entry_points={'console_scripts': ['dvha = dvha.main:start']},
-    long_description="""DVH Database for Clinicians and Researchers
-    
-    DVH Analytics is a software application to help radiation oncology departments build an in-house database of 
-    treatment planning data for the purpose of historical comparisons and statistical analysis. This code is still in 
-    development. Please contact the developer if you are interested in testing or collaborating.
-
-    The application builds a SQL database of DVHs and various planning parameters from DICOM files (i.e., Plan, Structure, 
-    Dose). Since the data is extracted directly from DICOM files, we intend to accommodate an array of treatment planning 
-    system vendors.
-    """
+    long_description=long_description,
+    long_description_content_type="text/markdown"
 )

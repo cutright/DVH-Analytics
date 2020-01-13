@@ -23,7 +23,7 @@ class DefaultOptions:
     Create default options, to be inherited by Options class
     """
     def __init__(self):
-        self.VERSION = '0.6.6dev'
+        self.VERSION = '0.6.7rc1'
 
         self.DB_TYPE = 'sqlite'
         self.SQL_PGSQL_IP_HIST = []
@@ -190,6 +190,7 @@ class Options(DefaultOptions):
         out_options = {}
         for attr in self.option_attr:
             out_options[attr] = getattr(self, attr)
+        out_options['VERSION'] = DefaultOptions().VERSION
         with open(OPTIONS_PATH, 'wb') as outfile:
             pickle.dump(out_options, outfile)
         self.save_checksum()

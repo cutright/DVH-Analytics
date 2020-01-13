@@ -32,13 +32,14 @@ SQLite:
 * Easier to share your database. Just zip (and encrypt), send to colleague  
   
 PostgreSQL:  
-* Supports multiple instances of DVHA accessing the database at once
+* Supports multiple instances of DVHA accessing the same database at once
 * Database may be housed remotely (just need the accessible IP address)
 * Supports user login and password
 
 Additional SQLite vs PostgreSQL information can be found [here](https://tableplus.com/blog/2018/08/sqlite-vs-postgresql-which-database-to-use-and-why.html).
 
-SQLite works out of the box, the 'host' field in Database Connections is the name of the file, located in ~/Apps/dvh_analytics/data
+SQLite works out-of-the-box, the 'host' field in Settings -> Database Connections is the name of the file, 
+located in ~/Apps/dvh_analytics/data
 
 ## PostgreSQL
 If you have access to a PostgreSQL DB, you simply need to fill in the login information by going to 

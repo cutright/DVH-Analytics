@@ -1,9 +1,9 @@
 # Change log of DVH Analytics
 
-v0.6.7 (TBD)
+v0.6.7 (2020.01.12)
 --------------------
  - [Database] SQLite3 is now supported
- - [Database Connection] The last successful SQL CNX settings are stored for easy reload
+ - [Database Connection] The last successful SQL connections settings are stored for easy reload
  - [DICOM Importer] Auto assign ROI type physician_roi name is gtv, ctv, itv, or ptv 
  - [DICOM Importer] Allow import dialog to close on crash
  - [DICOM Importer] Sometimes sim_study_date and birth_date were not date objects, more robust age calculator to account for this
