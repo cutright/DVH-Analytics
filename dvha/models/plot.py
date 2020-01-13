@@ -1160,17 +1160,14 @@ class PlotMultiVarRegression(Plot):
         return x_p_values.index(max(x_p_values))  # self.p_values has y-int
 
     @property
-    def worst_p_value(self):
+    def worst_x_p_value(self):
         index = self.worst_x_p_value_index
         if index is not None and len(self.reg.p_values) > 2:
             return self.reg.p_values[index+1]
 
     def backward_elimination(self, threshold=0.05):
-        while self.worst_p_value is not None:
-            if self.worst_p_value > threshold:
-                self.remove_worst_p_value()
-            else:
-                return
+        while self.worst_x_p_value is not None and self.worst_x_p_value > threshold:
+            self.remove_worst_p_value()
 
     def get_csv_data(self):
         csv_data = ['Multi-Variable Regression',
@@ -1222,10 +1219,11 @@ class PlotMultiVarRegression(Plot):
     def get_regression_csv_row(var_name, data, var_type='Independent'):
         return '%s,%s,%s' % (var_type, var_name, ','.join(str(a) for a in data))
 
-    @property
-    def final_stats_data(self):
-        return {'X': self.X_init, 'y': self.y,
-                'x_variables': self.x_variables,
+    def get_final_stats_data(self, include_all=True):
+        X = [self.X, self.X_init][include_all]
+        x_variables = [self.x_variables_updated, self.x_variables][include_all]
+        return {'X': X, 'y': self.y,
+                'x_variables': x_variables,
                 'y_variable': self.y_variable,
                 'multi_var_pred': self.reg.predictions,
                 'multi_var_mse': self.reg.mse,
