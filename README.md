@@ -17,8 +17,19 @@ developed.
 
 NEW!!!
 ---------
-DVHA now supports both SQLite and PostgreSQL. With SQLite, no admin rights are needed and users no longer 
-need to manually setup a database.
+DVHA now supports both SQLite and PostgreSQL.
+
+SQLite:  
+* No admin rights needed on your computer
+* No need to figure out how to make user logins and databases in SQL
+* Easier to share your database. Just zip (and encrypt), send to colleague  
+  
+PostgreSQL:  
+* Supports multiple instances of DVHA accessing the same database at once
+* Database may be housed remotely (just need the accessible IP address)
+* Supports user login and password
+
+Additional SQLite vs PostgreSQL information can be found [here](https://tableplus.com/blog/2018/08/sqlite-vs-postgresql-which-database-to-use-and-why.html).
 
 How to Run
 ---------
