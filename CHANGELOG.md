@@ -1,12 +1,13 @@
 # Change log of DVH Analytics
 
-v0.6.8 (TBD)
+v0.6.8 (2020.01.14)
 --------------------
+ - [DICOM Importer] Fix for [issue 30](https://github.com/cutright/DVH-Analytics/issues/30)
+ - [Machine Learning] Fix for [issue 29](https://github.com/cutright/DVH-Analytics/issues/29)
+ - [Misc] LICENSE was renamed to LICENSE.txt in v0.6.7, but MANIFEST.in and paths.LICENSE_PATH were not updated
  - [Multi-Variable Regression] Added "Backward Elimination" button to automatically remove insignificant 
     variables using backward elimination
- - [Machine Learning] Fix for [issue 29](https://github.com/cutright/DVH-Analytics/issues/29)
- - [DICOM Importer] Fix for [issue 30](https://github.com/cutright/DVH-Analytics/issues/30)
- - [Misc] LICENSE was renamed to LICENSE.txt in v0.6.7, but MANIFEST.in and paths.LICENSE_PATH were not updated
+
 
 v0.6.7 (2020.01.13)
 --------------------
