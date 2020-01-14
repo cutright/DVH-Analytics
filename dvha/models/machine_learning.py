@@ -19,21 +19,20 @@ from sklearn.tree import DecisionTreeRegressor
 from dvha.dialogs.export import save_data_to_file
 from dvha.paths import MODELS_DIR
 from dvha.models.plot import PlotMachineLearning, PlotFeatureImportance
-from dvha.tools.utilities import set_msw_background_color, get_window_size
+from dvha.tools.utilities import set_msw_background_color, get_window_size, load_object_from_file
 
 
 class MachineLearningFrame(wx.Frame):
-    def __init__(self, data, title, regressor, tool_tips):
+    def __init__(self, data, title, regressor, tool_tips, include_test_data=True):
         wx.Frame.__init__(self, None)
 
         self.data = data
-
-        self.regressor = regressor
-        self.reg = None
         self.title = title
+        self.regressor = regressor
         self.tool_tips = tool_tips
 
-        self.plot = PlotMachineLearning(self, ml_type=title, ml_type_short=self.ml_type_short, **data)
+        self.reg = None
+        self.plot = PlotMachineLearning(self, ml_type=self.title, ml_type_short=self.ml_type_short, **self.data)
 
         self.feature_importance_dlg = None
 
@@ -147,6 +146,10 @@ class MachineLearningFrame(wx.Frame):
     def input_parameters(self):
         return {variable: self.get_param(variable) for variable in self.input.keys()
                 if self.get_param(variable) != self.defaults[variable]}
+
+    def set_input_parameters(self, input_parameters):
+        for variable, value in input_parameters.keys():
+            self.input[variable].SetValue(str(value))
 
     @property
     def data_split_parameters(self):
@@ -268,8 +271,11 @@ class MachineLearningFrame(wx.Frame):
     def on_save_model(self, evt):
         data = {'y_variable': self.plot.y_variable,
                 'regression': self.reg,
+                'regressor': self.regressor,
+                'tool_tips': self.tool_tips,
                 'x_variables': self.plot.x_variables,
-                'regression_type': self.title.lower().replace(' ', '_')}
+                'title': self.title,
+                'input_parameters': self.input_parameters}
         save_data_to_file(self, 'Save Model', data,
                           wildcard="REG files (*.reg)|*.reg", data_type='pickle', initial_dir=MODELS_DIR)
 
@@ -831,3 +837,30 @@ class FeatureImportanceFrame(wx.Frame):
             wx.CallAfter(self.redraw_plot)
         except RuntimeError:
             pass
+
+
+class MachineLearningModelViewer(MachineLearningFrame):
+    def __init__(self, data):
+        self.__load_model()
+        MachineLearningFrame.__init__(self, data, self.title, self.regressor, self.tool_tips, include_test_data=False)
+
+        self.reg = self.loaded_data['reg']
+        self.set_input_parameters(self.data['input_parameters'])
+        self.disable_input_parameters()
+
+    def disable_input_parameters(self):
+        for variable, input_obj in self.input.items():
+            input_obj.Disable()
+
+    def file_select_dlg(self):
+        with wx.FileDialog(self, "Load saved model", wildcard='*.reg',
+                           style=wx.FD_FILE_MUST_EXIST | wx.FD_OPEN) as dlg:
+            dlg.SetDirectory(MODELS_DIR)
+            if dlg.ShowModal() == wx.ID_OK:
+                return dlg.GetPath()
+
+    def __load_model(self):
+        file_path = self.file_select_dlg()
+        self.loaded_data = load_object_from_file(file_path)
+        for attr in ['title', 'regressor', 'tool_tips', 'input_parameters']:
+            setattr(self, attr, self.loaded_data[attr])

@@ -1,5 +1,10 @@
 # Change log of DVH Analytics
 
+v0.6.9 (TBD)
+--------------------
+ - [Machine Learning] Allow user to load saved models
+
+
 v0.6.8 (2020.01.14)
 --------------------
  - [DICOM Importer] Fix for [issue 30](https://github.com/cutright/DVH-Analytics/issues/30)
