@@ -2,7 +2,10 @@
 
 v0.6.8 (TBD)
 --------------------
- - [Multi-Variable Regression] Added "Backward Elimination" button to automatically remove insignificant variables using backward elimination
+ - [Multi-Variable Regression] Added "Backward Elimination" button to automatically remove insignificant 
+    variables using backward elimination
+ - [Machine Learning] Fix for [issue 29](https://github.com/cutright/DVH-Analytics/issues/29)
+ - [DICOM Importer] Fix for [issue 30](https://github.com/cutright/DVH-Analytics/issues/30)
 
 v0.6.7 (2020.01.13)
 --------------------

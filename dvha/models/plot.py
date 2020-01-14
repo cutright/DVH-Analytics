@@ -27,6 +27,7 @@ from dvha.tools.stats import MultiVariableRegression, get_control_limits
 from dvha.paths import TEMP_DIR
 from math import pi
 from copy import deepcopy
+from sklearn.metrics import mean_squared_error
 
 
 DEFAULT_TOOLS = "pan,box_zoom,crosshair,reset"
@@ -1226,7 +1227,6 @@ class PlotMultiVarRegression(Plot):
                 'x_variables': x_variables,
                 'y_variable': self.y_variable,
                 'multi_var_pred': self.reg.predictions,
-                'multi_var_mse': self.reg.mse,
                 'options': self.options,
                 'mrn': self.mrn,
                 'study_date': self.dates,
@@ -1532,7 +1532,7 @@ class PlotMachineLearning(Plot):
     """
     Generate plot for Machine Learning frames created in the MultiVariable Regression frame
     """
-    def __init__(self, parent, options, multi_var_pred, multi_var_mse, x_variables, y_variable, mrn, study_date, uid,
+    def __init__(self, parent, options, multi_var_pred, x_variables, y_variable, mrn, study_date, uid,
                  ml_type=None, ml_type_short=None, **kwargs):
         """
         :param parent: the wx UI object where the plot will be displayed
@@ -1555,7 +1555,6 @@ class PlotMachineLearning(Plot):
 
         self.options = options
         self.multi_var_pred = multi_var_pred
-        self.multi_var_mse = multi_var_mse
 
         self.y_variable = y_variable
         self.x_variables = x_variables
@@ -1717,7 +1716,8 @@ class PlotMachineLearning(Plot):
                                  'y0': [0] * len(x),
                                  'mrn': mrn, 'study_date': study_date}
 
-            mse_values = [plot_data.mse[data_type], self.multi_var_mse]
+            mse_values = [plot_data.mse[data_type],
+                          mean_squared_error(y, multi_var_pred)]
             mse_text = []
             for i, mse in enumerate(mse_values):
                 if 1.0 < mse < 1000:
