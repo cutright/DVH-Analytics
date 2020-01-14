@@ -10,7 +10,7 @@ A collection of directories and paths updated with the script directory and user
 #    See the file LICENSE included with this distribution, also
 #    available at https://github.com/cutright/DVH-Analytics
 
-from os.path import join, dirname, expanduser
+from os.path import join, dirname, expanduser, abspath
 
 SCRIPT_DIR = dirname(__file__)
 ICONS_DIR = join(SCRIPT_DIR, 'icons')
@@ -30,7 +30,7 @@ OPTIONS_PATH = join(PREF_DIR, '.options')
 OPTIONS_CHECKSUM_PATH = join(PREF_DIR, '.options_checksum')
 IMPORT_SETTINGS_PATH = join(PREF_DIR, 'import_settings.txt')
 SQL_CNF_PATH = join(PREF_DIR, 'sql_connection.cnf')
-LICENSE_PATH = join(SCRIPT_DIR, 'LICENSE')
+LICENSE_PATH = abspath(join(SCRIPT_DIR, '..', 'LICENSE.txt'))
 CREATE_PGSQL_TABLES = join(SCRIPT_DIR, 'db', 'create_tables.sql')
 CREATE_SQLITE_TABLES = join(SCRIPT_DIR, 'db', 'create_tables_sqlite.sql')
 

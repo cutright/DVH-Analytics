@@ -494,19 +494,13 @@ def move_imported_dicom_files(dicom_files, new_dir):
                 pass
 
 
-def remove_empty_folders(start_path):
+def remove_empty_sub_folders(start_path):
     for (path, dirs, files) in walk(start_path, topdown=False):
         if files:
             continue
         try:
             if path != start_path:
                 rmdir(path)
-        except OSError:
-            pass
-
-    if not listdir(start_path):
-        try:
-            rmdir(start_path)
         except OSError:
             pass
 
