@@ -16,8 +16,7 @@ from wx.lib.agw.customtreectrl import CustomTreeCtrl, TR_AUTO_CHECK_CHILD, TR_AU
 from datetime import date as datetime_obj, datetime
 from dateutil.parser import parse as parse_date
 from dicompylercore import dicomparser
-from os.path import isdir, join, dirname
-from os import listdir, rmdir
+from os.path import isdir, join
 from pubsub import pub
 from threading import Thread
 from dvha.db import update as db_update
