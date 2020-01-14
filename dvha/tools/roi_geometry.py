@@ -61,7 +61,8 @@ def union(rois):
 
             for polygon in current_slice:
                 xy = polygon.exterior.xy
-                x_coord, y_coord = xy[0], xy[1]
+                x_coord = xy[0]
+                y_coord = xy[1]
                 points = []
                 for i in range(len(x_coord)):
                     points.append([x_coord[i], y_coord[i], round(float(z), 2)])
