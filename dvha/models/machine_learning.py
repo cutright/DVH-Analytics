@@ -168,7 +168,6 @@ class MachineLearningFrame(wx.Frame):
             return float(str_value)
         return str_value
 
-
     @staticmethod
     def to_int_or_float(str_value):
         if str_value.isnumeric():  # int

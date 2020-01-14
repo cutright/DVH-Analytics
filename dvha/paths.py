@@ -30,7 +30,7 @@ OPTIONS_PATH = join(PREF_DIR, '.options')
 OPTIONS_CHECKSUM_PATH = join(PREF_DIR, '.options_checksum')
 IMPORT_SETTINGS_PATH = join(PREF_DIR, 'import_settings.txt')
 SQL_CNF_PATH = join(PREF_DIR, 'sql_connection.cnf')
-LICENSE_PATH = abspath(join(SCRIPT_DIR, '..', 'LICENSE.txt'))
+LICENSE_PATH = join(SCRIPT_DIR, 'LICENSE.txt')
 CREATE_PGSQL_TABLES = join(SCRIPT_DIR, 'db', 'create_tables.sql')
 CREATE_SQLITE_TABLES = join(SCRIPT_DIR, 'db', 'create_tables_sqlite.sql')
 

@@ -948,7 +948,7 @@ class About(wx.Dialog):
 
         scrolled_window = wx.ScrolledWindow(self, wx.ID_ANY)
 
-        with open(LICENSE_PATH, 'r') as license_file:
+        with open(LICENSE_PATH, 'r', encoding="utf8") as license_file:
             license_text = ''.join([line for line in license_file])
 
         license_text = "DVH Analytics v%s\ndvhanalytics.com\n\n%s" % (DefaultOptions().VERSION, license_text)
