@@ -72,7 +72,7 @@ class QuerySQL:
                         rtn_list.append(str(date_parser(str(row[0]))))
                     else:
                         rtn_list.append(str(date_parser(row[0])))
-                except:
+                except Exception:
                     rtn_list.append('None')
 
             elif isinstance(row[0], (int, float)):
