@@ -970,3 +970,4 @@ class About(wx.Dialog):
         self.Center()
 
         self.ShowModal()
+        self.Destroy()
