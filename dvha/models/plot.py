@@ -27,6 +27,7 @@ from dvha.tools.stats import MultiVariableRegression, get_control_limits
 from dvha.paths import TEMP_DIR
 from math import pi
 from copy import deepcopy
+from sklearn.metrics import mean_squared_error
 
 
 DEFAULT_TOOLS = "pan,box_zoom,crosshair,reset"
@@ -1014,8 +1015,8 @@ class PlotMultiVarRegression(Plot):
                             'table': (0.95, 0.45)}
 
         self.options = options
-        self.X, self.y = None, None
-        self.x_variables, self.y_variable, self.stats_data = None, None, None
+        self.X, self.X_init, self.y = None, None, None
+        self.x_variables, self.x_variables_updated, self.y_variable, self.stats_data = None, None, None, None
         self.mrn, self.uid, self.dates = None, None, None
         self.reg = None
         self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], date=[])),
@@ -1101,15 +1102,20 @@ class PlotMultiVarRegression(Plot):
         self.regression_table.width = int(self.size_factor['table'][0] * float(panel_width))
         self.regression_table.height = int(self.size_factor['table'][1] * float(panel_height))
 
-    def update_plot(self, y_variable, x_variables, stats_data):
+    def update_plot(self, y_variable, x_variables, stats_data, update_x_variables=True):
         self.type = 'multi-variable_regression_%s' % y_variable.replace(' ', '_')
         self.set_figure_dimensions()
-        self.y_variable, self.x_variables = y_variable, x_variables
+        self.y_variable = y_variable
+        self.x_variables_updated = x_variables
+        if update_x_variables:
+            self.x_variables = x_variables
         self.stats_data = stats_data
         self.clear_sources()
         x_len = len(x_variables)
         self.X, self.y, self.mrn, self.uid, self.dates = stats_data.get_X_and_y(y_variable, x_variables,
                                                                                 include_patient_info=True)
+        if update_x_variables:
+            self.X_init = deepcopy(self.X)
 
         self.reg = MultiVariableRegression(self.X, self.y)
 
@@ -1144,6 +1150,26 @@ class PlotMultiVarRegression(Plot):
 
         self.update_bokeh_layout_in_wx_python()
 
+    def remove_worst_p_value(self):
+        index = self.worst_x_p_value_index  # self.p_values has y-int
+        new_x_variables = [x for i, x in enumerate(self.x_variables_updated) if i != index]
+        self.update_plot(self.y_variable, new_x_variables, self.stats_data, update_x_variables=False)
+
+    @property
+    def worst_x_p_value_index(self):
+        x_p_values = self.reg.p_values[1:]
+        return x_p_values.index(max(x_p_values))  # self.p_values has y-int
+
+    @property
+    def worst_x_p_value(self):
+        index = self.worst_x_p_value_index
+        if index is not None and len(self.reg.p_values) > 2:
+            return self.reg.p_values[index+1]
+
+    def backward_elimination(self, threshold=0.05):
+        while self.worst_x_p_value is not None and self.worst_x_p_value > threshold:
+            self.remove_worst_p_value()
+
     def get_csv_data(self):
         csv_data = ['Multi-Variable Regression',
                     'Data',
@@ -1152,7 +1178,7 @@ class PlotMultiVarRegression(Plot):
                     ',Sim Study Date,%s' % ','.join(self.dates),
                     self.get_regression_csv_row(self.y_variable, self.y, var_type='Dependent')]
 
-        for i, x_variable in enumerate(self.x_variables):
+        for i, x_variable in enumerate(self.x_variables_updated):
             csv_data.append(self.get_regression_csv_row(x_variable, self.X[:, i]))
 
         csv_data.append('')
@@ -1194,13 +1220,13 @@ class PlotMultiVarRegression(Plot):
     def get_regression_csv_row(var_name, data, var_type='Independent'):
         return '%s,%s,%s' % (var_type, var_name, ','.join(str(a) for a in data))
 
-    @property
-    def final_stats_data(self):
-        return {'X': self.X, 'y': self.y,
-                'x_variables': self.x_variables,
+    def get_final_stats_data(self, include_all=True):
+        X = [self.X, self.X_init][include_all]
+        x_variables = [self.x_variables_updated, self.x_variables][include_all]
+        return {'X': X, 'y': self.y,
+                'x_variables': x_variables,
                 'y_variable': self.y_variable,
                 'multi_var_pred': self.reg.predictions,
-                'multi_var_mse': self.reg.mse,
                 'options': self.options,
                 'mrn': self.mrn,
                 'study_date': self.dates,
@@ -1506,7 +1532,7 @@ class PlotMachineLearning(Plot):
     """
     Generate plot for Machine Learning frames created in the MultiVariable Regression frame
     """
-    def __init__(self, parent, options, multi_var_pred, multi_var_mse, x_variables, y_variable, mrn, study_date, uid,
+    def __init__(self, parent, options, multi_var_pred, x_variables, y_variable, mrn, study_date, uid,
                  ml_type=None, ml_type_short=None, **kwargs):
         """
         :param parent: the wx UI object where the plot will be displayed
@@ -1529,7 +1555,6 @@ class PlotMachineLearning(Plot):
 
         self.options = options
         self.multi_var_pred = multi_var_pred
-        self.multi_var_mse = multi_var_mse
 
         self.y_variable = y_variable
         self.x_variables = x_variables
@@ -1691,7 +1716,8 @@ class PlotMachineLearning(Plot):
                                  'y0': [0] * len(x),
                                  'mrn': mrn, 'study_date': study_date}
 
-            mse_values = [plot_data.mse[data_type], self.multi_var_mse]
+            mse_values = [plot_data.mse[data_type],
+                          mean_squared_error(y, multi_var_pred)]
             mse_text = []
             for i, mse in enumerate(mse_values):
                 if 1.0 < mse < 1000:

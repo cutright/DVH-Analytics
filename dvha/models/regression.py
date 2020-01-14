@@ -417,11 +417,13 @@ class MultiVarResultsFrame(wx.Frame):
                'group': group}
         pub.sendMessage('control_chart_set_model', **msg)
 
-        algorithms = ['Random Forest', 'Support Vector Machine', 'Decision Tree', 'Gradient Boosting']
-        self.button = {key: wx.Button(self, wx.ID_ANY, key) for key in algorithms}
+        self.button_back_elimination = wx.Button(self, wx.ID_ANY, 'Backward Elimination')
         self.button_export = wx.Button(self, wx.ID_ANY, 'Export Plot Data')
         self.button_save_plot = wx.Button(self, wx.ID_ANY, 'Save Plot')
         self.button_save_model = wx.Button(self, wx.ID_ANY, 'Save Model')
+        algorithms = ['Random Forest', 'Support Vector Machine', 'Decision Tree', 'Gradient Boosting']
+        self.button = {key: wx.Button(self, wx.ID_ANY, key) for key in algorithms}
+        self.radiobox_include_back_elim = wx.RadioBox(self, wx.ID_ANY, 'Include all x-variables?', choices=['Yes', 'No'])
 
         self.__do_bind()
         self.__set_properties()
@@ -431,6 +433,10 @@ class MultiVarResultsFrame(wx.Frame):
 
     def __set_properties(self):
         self.SetMinSize(get_window_size(0.491, 0.690))
+        self.radiobox_include_back_elim.SetSelection(0)
+        self.radiobox_include_back_elim.Disable()
+        self.radiobox_include_back_elim.SetToolTip("Set to No if you want to the machine learning to only include "
+                                                   "variables that survived the backward elimination.")
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_random_forest, id=self.button['Random Forest'].GetId())
@@ -438,6 +444,7 @@ class MultiVarResultsFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_decision_tree, id=self.button['Decision Tree'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_support_vector_regression,
                   id=self.button['Support Vector Machine'].GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_back_elimination, id=self.button_back_elimination.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_model, id=self.button_save_model.GetId())
@@ -451,6 +458,7 @@ class MultiVarResultsFrame(wx.Frame):
         sizer_algo_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_algo_select = wx.BoxSizer(wx.HORIZONTAL)
         sizer_export_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_export_buttons.Add(self.button_back_elimination, 0, wx.ALL, 5)
         sizer_export_buttons.Add(self.button_export, 0, wx.ALL, 5)
         sizer_export_buttons.Add(self.button_save_plot, 0, wx.ALL, 5)
         sizer_export_buttons.Add(self.button_save_model, 0, wx.ALL, 5)
@@ -459,6 +467,7 @@ class MultiVarResultsFrame(wx.Frame):
         sizer_algo_wrapper.Add(text, 0, wx.EXPAND | wx.ALL, 5)
         for key, button in self.button.items():
             sizer_algo_select.Add(button, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_algo_select.Add(self.radiobox_include_back_elim, 0, wx.EXPAND | wx.ALL, 5)
         sizer_algo_wrapper.Add(sizer_algo_select, 0, wx.ALL, 5)
 
         sizer_wrapper.Add(sizer_algo_wrapper, 0, wx.EXPAND | wx.ALL, 10)
@@ -468,20 +477,34 @@ class MultiVarResultsFrame(wx.Frame):
         self.Layout()
         self.Center()
 
+    @property
+    def ml_include_all(self):
+        return bool(1 - self.radiobox_include_back_elim.GetSelection())
+
+    @property
+    def final_stats_data(self):
+        return self.plot.get_final_stats_data(include_all=self.ml_include_all)
+
     def on_random_forest(self, evt):
-        self.ml_frames.append(RandomForestFrame(self.plot.final_stats_data))
+        self.ml_frames.append(RandomForestFrame(self.final_stats_data))
 
     def on_gradient_boosting(self, evt):
-        self.ml_frames.append(GradientBoostingFrame(self.plot.final_stats_data))
+        self.ml_frames.append(GradientBoostingFrame(self.final_stats_data))
 
     def on_decision_tree(self, evt):
-        self.ml_frames.append(DecisionTreeFrame(self.plot.final_stats_data))
+        self.ml_frames.append(DecisionTreeFrame(self.final_stats_data))
 
     def on_support_vector_regression(self, evt):
-        self.ml_frames.append(SupportVectorRegressionFrame(self.plot.final_stats_data))
+        self.ml_frames.append(SupportVectorRegressionFrame(self.final_stats_data))
 
     def on_export(self, evt):
         save_data_to_file(self, 'Save multi-variable regression data to csv', self.plot.get_csv_data())
+
+    def on_back_elimination(self, *evt):
+        wait = wx.BusyInfo('Please Wait\nPerforming Backward Elimination')
+        self.plot.backward_elimination()
+        del wait
+        self.radiobox_include_back_elim.Enable()
 
     def on_save_plot(self, evt):
         save_data_to_file(self, 'Save multi-variable regression plot', self.plot.html_str,
