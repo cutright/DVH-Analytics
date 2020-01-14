@@ -30,7 +30,7 @@ from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, IMPORTED_DIR, 
 from dvha.tools.dicom_dose_sum import sum_dose_grids
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
-    set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_folders, get_window_size
+    set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size
 
 
 # TODO: Provide methods to write over-rides to DICOM file
@@ -149,7 +149,6 @@ class ImportDicomFrame(wx.Frame):
         After DICOM directory is scanned and sorted, parse_dicom_data will be called
         """
         pub.subscribe(self.parse_dicom_data, "parse_dicom_data")
-        pub.subscribe(self.remove_empty_folders, "remove_empty_folders")
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_browse, id=self.button_browse.GetId())
@@ -714,7 +713,7 @@ class ImportDicomFrame(wx.Frame):
             self.roi_map.write_to_file()
             ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
                          self.checkbox_include_uncategorized.GetValue(), self.terminate,
-                         self.dicom_importer.other_dicom_files)
+                         self.dicom_importer.other_dicom_files, self.start_path)
             dlg = ImportStatusDialog(self.terminate)
             # calling self.Close() below caused issues in Windows if Show() used instead of ShowModal()
             [dlg.Show, dlg.ShowModal][is_windows()]()
@@ -724,9 +723,6 @@ class ImportDicomFrame(wx.Frame):
                                    style=wx.OK | wx.OK_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
             dlg.ShowModal()
             dlg.Destroy()
-
-    def remove_empty_folders(self):
-        remove_empty_folders(self.start_path)
 
     def parse_dicom_data(self):
         self.button_cancel.Disable()
@@ -1032,7 +1028,7 @@ class ImportWorker(Thread):
     """
     Create a thread separate from the GUI to perform the import calculations
     """
-    def __init__(self, data, checked_uids, import_uncategorized, terminate, other_dicom_files):
+    def __init__(self, data, checked_uids, import_uncategorized, terminate, other_dicom_files, start_path):
         """
         :param data: parsed dicom data
         :type data: dict
@@ -1052,6 +1048,7 @@ class ImportWorker(Thread):
         self.import_uncategorized = import_uncategorized
         self.terminate = terminate
         self.other_dicom_files = other_dicom_files
+        self.start_path = start_path
 
         with DVH_SQL() as cnx:
             self.last_import_time = cnx.now  # use pgsql time rather than CPU since time stamps in DB are based on psql
@@ -1074,6 +1071,7 @@ class ImportWorker(Thread):
                   'and its DICOM files remain in your inbox.')
             self.delete_partially_updated_plan()
 
+        remove_empty_sub_folders(self.start_path)
         wx.CallAfter(pub.sendMessage, "close")
 
     def get_study_uids(self):
@@ -1134,8 +1132,6 @@ class ImportWorker(Thread):
                     print('\tMRN: %s' % self.data[plan_uid].mrn)
 
                 plan_counter += 1
-
-        pub.sendMessage("remove_empty_folders")
 
     def import_study(self, plan_uid, final_plan_in_study=True):
         """
@@ -1310,10 +1306,10 @@ class ImportWorker(Thread):
         move_files_to_new_path(files, new_dir)
 
         # remove old directory if empty
-        for file in files:
-            old_dir = dirname(file)
-            if isdir(old_dir) and not listdir(old_dir):
-                rmdir(old_dir)
+        # for file in files:
+        #     old_dir = dirname(file)
+        #     if isdir(old_dir) and not listdir(old_dir):
+        #         rmdir(old_dir)
 
     def delete_partially_updated_plan(self):
         """
