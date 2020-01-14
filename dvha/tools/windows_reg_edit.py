@@ -33,3 +33,10 @@ def set_ie_emulation_level(value=11001):
     # https://docs.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/general-info/ee330730(v=vs.85)#browser_emulation
     reg_path = r"Software\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_BROWSER_EMULATION"
     set_reg(basename(sys.executable), reg_path, value)
+
+
+def set_ie_lockdown_level(value=0):
+    # Based on info from Venkatakrishnan at
+    # https://stackoverflow.com/questions/44513580/powershell-how-to-allow-blocked-content-in-internet-explorer/44514051
+    reg_path = r"Software\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_LOCALMACHINE_LOCKDOWN"
+    set_reg(basename(sys.executable), reg_path, value)
