@@ -2,7 +2,10 @@
 
 v0.6.9 (TBD)
 --------------------
+ - [Correlation] Catch crash if there is insufficient data for a correlation calculation
  - [Machine Learning] Allow user to load saved models
+ - [Query] Fix [issue 20](https://github.com/cutright/DVH-Analytics/issues/20)
+ - [Query] Corrected physician count of query
 
 
 v0.6.8 (2020.01.14)
