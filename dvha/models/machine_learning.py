@@ -32,7 +32,8 @@ class MachineLearningFrame(wx.Frame):
         self.tool_tips = tool_tips
 
         self.reg = None
-        self.plot = PlotMachineLearning(self, ml_type=self.title, ml_type_short=self.ml_type_short, **self.data)
+        self.plot = PlotMachineLearning(self, ml_type=self.title, ml_type_short=self.ml_type_short,
+                                        include_test_data=include_test_data, **self.data)
 
         self.feature_importance_dlg = None
 
@@ -764,7 +765,7 @@ DATA_SPLIT_TOOL_TIPS = {'test_size': "float, int, or None\n"
 
 
 class MachineLearningPlotData:
-    def __init__(self, X, y, reg, **kwargs):
+    def __init__(self, X, y, reg, do_training=True, **kwargs):
         self.reg = reg
         self.split_args = kwargs
 
@@ -778,7 +779,8 @@ class MachineLearningPlotData:
         self.x = {key: [i + 1 for i in range(len(data))] for key, data in self.y.items()}
 
         # Train model, then calculate predictions, residuals, and mse
-        self.reg.fit(self.X['train'], self.y['train'])
+        if do_training:
+            self.reg.fit(self.X['train'], self.y['train'])
         self.predictions = {key: self.get_prediction(key) for key in self.y.keys()}
         self.residuals = {key: self.get_residual(key) for key in self.y.keys()}
         self.mse = {key: self.get_mse(key) for key in self.y.keys()}

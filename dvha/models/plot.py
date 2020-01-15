@@ -1022,7 +1022,7 @@ class PlotMultiVarRegression(Plot):
         self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], date=[])),
                        'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'residuals': ColumnDataSource(data=dict(x=[], y=[], mrn=[], date=[])),
-                       'residuals_zero': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                       'residuals_zero': ColumnDataSource(data=dict(x=[], y=[])),
                        'prob': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
                        'prob_45': ColumnDataSource(data=dict(x=[], y=[])),
                        'table': ColumnDataSource(data=dict(var=[], coef=[], std_err=[], t_value=[], p_value=[],
@@ -1125,8 +1125,7 @@ class PlotMultiVarRegression(Plot):
                                          'date': self.dates}
 
         self.source['residuals_zero'].data = {'x': [min(self.reg.predictions), max(self.reg.predictions)],
-                                              'y': [0, 0],
-                                              'mrn': [None, None]}
+                                              'y': [0, 0]}
 
         self.source['prob'].data = {'x': self.reg.norm_prob_plot[0],
                                     'y': self.reg.norm_prob_plot[1]}
@@ -1533,7 +1532,7 @@ class PlotMachineLearning(Plot):
     Generate plot for Machine Learning frames created in the MultiVariable Regression frame
     """
     def __init__(self, parent, options, multi_var_pred, x_variables, y_variable, mrn, study_date, uid,
-                 ml_type=None, ml_type_short=None, **kwargs):
+                 ml_type=None, ml_type_short=None, include_test_data=True, **kwargs):
         """
         :param parent: the wx UI object where the plot will be displayed
         :param options: user preferences
@@ -1541,6 +1540,7 @@ class PlotMachineLearning(Plot):
         """
         Plot.__init__(self, parent, options)
 
+        self.plot_types = ['train']
         self.type = 'machine_learning'
         self.ml_type = ml_type
         self.ml_type_short = ml_type_short
@@ -1549,6 +1549,7 @@ class PlotMachineLearning(Plot):
         self.study_date = study_date
         self.uid = uid
         self.X, self.y = None, None
+        self.include_test_data = include_test_data
 
         self.size_factor = {'data': (0.38, 0.425),
                             'diff': (0.38, 0.425)}
@@ -1559,30 +1560,34 @@ class PlotMachineLearning(Plot):
         self.y_variable = y_variable
         self.x_variables = x_variables
 
-        self.div_title = {'train': Div(text="<b>Training Data</b>"),
-                          'test': Div(text="<b>Testing Data</b>")}
-
-        self.div_mse = {'train': Div(),
-                        'test': Div()}
+        self.div_title = {'train': Div(text="<b>Current Queried Data with Loaded Model</b>")}
+        self.div_mse = {'train': Div()}
 
         self.source = {'train': {'data': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
                                  'predict': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
                                  'multi_var': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
                                  'diff': ColumnDataSource(data=dict(x=[], y_ml=[], y_mvr=[], y0=[], mrn=[],
                                                                     study_date=[])),
-                                 'importance': ColumnDataSource(data=dict(x=[], top=[], width=[], variable=[]))},
-                       'test': {'data': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
-                                'predict': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
-                                'multi_var': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
-                                'diff': ColumnDataSource(data=dict(x=[], y_ml=[], y_mvr=[], y0=[], mrn=[],
-                                                                   study_date=[]))}}
+                                 'importance': ColumnDataSource(data=dict(x=[], top=[], width=[], variable=[]))}}
 
         self.figure.xaxis.axis_label = "Study"
 
         self.figures = {'train': {'data': figure(tools=DEFAULT_TOOLS),
-                                  'diff': figure(tools=DEFAULT_TOOLS)},
-                        'test': {'data': figure(tools=DEFAULT_TOOLS),
-                                 'diff': figure(tools=DEFAULT_TOOLS)}}
+                                  'diff': figure(tools=DEFAULT_TOOLS)}}
+
+        if self.include_test_data:
+            self.plot_types.append('test')
+            self.div_title['train'] = Div(text="<b>Training Data</b>")
+            self.div_title['test'] = Div(text="<b>Testing Data</b>")
+            self.div_mse['test'] = Div()
+            self.source['test'] = {'data': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
+                                   'predict': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
+                                   'multi_var': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
+                                   'diff': ColumnDataSource(data=dict(x=[], y_ml=[], y_mvr=[], y0=[], mrn=[],
+                                                                      study_date=[]))}
+            self.figures['test'] = {'data': figure(tools=DEFAULT_TOOLS),
+                                    'diff': figure(tools=DEFAULT_TOOLS)}
+
         self.initialize_figures()
 
         self.__add_plot_data()
@@ -1596,7 +1601,7 @@ class PlotMachineLearning(Plot):
     def __add_plot_data(self):
         self.glyphs = {}
 
-        for data_type in {'train', 'test'}:
+        for data_type in self.plot_types:
             srcs = self.source[data_type]
             figs = self.figures[data_type]
             opt = self.options
@@ -1621,12 +1626,13 @@ class PlotMachineLearning(Plot):
 
     def __do_layout(self):
         self.bokeh_layout = row(column(self.div_title['train'], self.div_mse['train'],
-                                       self.figures['train']['data'], self.figures['train']['diff']),
-                                column(self.div_title['test'], self.div_mse['test'],
-                                       self.figures['test']['data'], self.figures['test']['diff']))
+                                       self.figures['train']['data'], self.figures['train']['diff']))
+        if self.include_test_data:
+            self.bokeh_layout.children.append(column(self.div_title['test'], self.div_mse['test'],
+                                                     self.figures['test']['data'], self.figures['test']['diff']))
 
     def __add_hover(self):
-        for data_type in {'train', 'test'}:
+        for data_type in self.plot_types:
             self.figures[data_type]['data'].add_tools(HoverTool(show_arrow=True,
                                                                 tooltips=[('ID', '@mrn'),
                                                                           ('Date', '@study_date{%F}'),
@@ -1644,7 +1650,7 @@ class PlotMachineLearning(Plot):
 
     def __add_legend(self):
         legend = {}
-        for data_type in {'train', 'test'}:
+        for data_type in self.plot_types:
             legend[data_type] = {'data': Legend(items=[("Data  ", [self.glyphs[data_type]['data']]),
                                                        ("%s  " % self.ml_type, [self.glyphs[data_type]['predict']]),
                                                        ("Multi-Variable Reg.  ", [self.glyphs[data_type]['multi_var']])],
@@ -1658,7 +1664,7 @@ class PlotMachineLearning(Plot):
 
     def initialize_figures(self):
 
-        for data_type in {'train', 'test'}:
+        for data_type in self.plot_types:
             for key in {'data', 'diff'}:
                 fig = self.figures[data_type][key]
                 fig.xaxis.axis_label = 'Study'
@@ -1676,13 +1682,14 @@ class PlotMachineLearning(Plot):
             self.figures[data_type]['diff'].yaxis.axis_label = 'Residual'
 
         self.figures['train']['diff'].x_range = self.figures['train']['data'].x_range
-        self.figures['test']['data'].y_range = self.figures['train']['data'].y_range
-        self.figures['test']['diff'].y_range = self.figures['train']['diff'].y_range
-        self.figures['test']['diff'].x_range = self.figures['test']['data'].x_range
+        if self.include_test_data:
+            self.figures['test']['data'].y_range = self.figures['train']['data'].y_range
+            self.figures['test']['diff'].y_range = self.figures['train']['diff'].y_range
+            self.figures['test']['diff'].x_range = self.figures['test']['data'].x_range
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.frame_size
-        for data_type in {'train', 'test'}:
+        for data_type in self.plot_types:
             for key in ['data', 'diff']:
                 self.figures[data_type][key].plot_width = int(self.size_factor['data'][0] * float(panel_width))
                 self.figures[data_type][key].plot_height = int(self.size_factor['data'][1] * float(panel_height))
@@ -1696,7 +1703,7 @@ class PlotMachineLearning(Plot):
 
         self.X = plot_data.X['data']
 
-        for data_type in {'train', 'test'}:
+        for data_type in self.plot_types:
             x = plot_data.x[data_type]
             y = plot_data.y[data_type]
             y_pred = plot_data.predictions[data_type]
@@ -1734,7 +1741,7 @@ class PlotMachineLearning(Plot):
         col_titles = 'MRN,Study Instance UID,Study #,Date,%s,%s, Multi-Variable Regression' % \
                      (self.y_variable, self.ml_type)
         csv_data = []
-        for data_type in {'train', 'test'}:
+        for data_type in self.plot_types:
             data = self.source[data_type]['data'].data
             csv_data.append('%s Data\n%s' % (['Training', 'Testing'][data_type == 'test'], col_titles))
             for i in range(len(data['mrn'])):
