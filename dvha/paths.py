@@ -10,7 +10,7 @@ A collection of directories and paths updated with the script directory and user
 #    See the file LICENSE included with this distribution, also
 #    available at https://github.com/cutright/DVH-Analytics
 
-from os.path import join, dirname, expanduser, abspath
+from os.path import join, dirname, expanduser
 
 SCRIPT_DIR = dirname(__file__)
 ICONS_DIR = join(SCRIPT_DIR, 'icons')
