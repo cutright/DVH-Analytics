@@ -189,7 +189,8 @@ class DVHAMainFrame(wx.Frame):
 
         self.Bind(wx.EVT_MENU, self.on_quit, qmi)
         self.Bind(wx.EVT_MENU, self.on_open, menu_open)
-        self.Bind(wx.EVT_MENU, self.on_load_model, load_model_mvr)
+        self.Bind(wx.EVT_MENU, self.on_load_mvr_model, load_model_mvr)
+        self.Bind(wx.EVT_MENU, self.on_load_ml_model, load_model_ml)
         self.Bind(wx.EVT_MENU, self.on_close, menu_close)
         self.Bind(wx.EVT_MENU, self.on_export, export_csv)
         self.Bind(wx.EVT_MENU, self.on_save, menu_save)
@@ -479,7 +480,7 @@ class DVHAMainFrame(wx.Frame):
 
         dlg.Destroy()
 
-    def on_load_model(self, *evt):
+    def on_load_mvr_model(self, *evt):
         with wx.FileDialog(self, "Load a machine learning model", "", wildcard='*.mvr',
                            style=wx.FD_FILE_MUST_EXIST | wx.FD_OPEN) as dlg:
             dlg.SetDirectory(MODELS_DIR)
@@ -488,6 +489,10 @@ class DVHAMainFrame(wx.Frame):
                 dlg.Destroy()
                 group = self.radio_button_query_group.GetSelection() + 1
                 LoadMultiVarModelFrame(model_file_path, self.group_data, group, self.options)
+
+    def on_load_ml_model(self, *evt):
+        wx.MessageBox('Currently under development.', 'Error',
+                      wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
 
     def save_data_obj(self):
         self.save_data['group_data'] = self.group_data

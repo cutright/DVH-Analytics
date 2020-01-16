@@ -558,14 +558,28 @@ class LoadMultiVarModelFrame(MultiVarResultsFrame):
 
             self.Show()
         else:
-            pass
+            if self.stats_data is None:
+                msg = 'No data has been queried for Group %s.' % group
+            elif not self.is_mvr:
+                msg = 'Selected file is not a valid multi-variable regression save file.'
+            elif not self.stats_data_has_y:
+                msg = "The model's dependent variable is not found in your queried data:\n%s" % self.y_variable
+            elif self.missing_x_variables:
+                msg = 'Your queried data is missing the following independent variables:\n%s' % \
+                      ', '.join(self.missing_x_variables)
+            else:
+                msg = 'Unknown error.'
+
+            wx.MessageBox(msg, 'Model Loading Error', wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+
+    @property
+    def is_mvr(self):
+        return 'regression_type' in list(self.loaded_data) \
+                and self.loaded_data['regression_type'] == 'multi-variable-linear'
 
     @property
     def is_valid(self):
-        return 'regression_type' in list(self.loaded_data) \
-                and self.loaded_data['regression_type'] == 'multi-variable-linear' \
-                and not self.missing_x_variables \
-                and self.stats_data_has_y
+        return self.stats_data is not None and self.is_mvr and not self.missing_x_variables and self.stats_data_has_y
 
     @property
     def missing_x_variables(self):
