@@ -19,7 +19,8 @@ from dvha.models.machine_learning import RandomForestFrame, GradientBoostingFram
 from dvha.dialogs.export import save_data_to_file
 from dvha.dialogs.main import SelectRegressionVariablesDialog
 from dvha.paths import ICONS, MODELS_DIR
-from dvha.tools.utilities import set_msw_background_color, get_tree_ctrl_image, get_window_size
+from dvha.tools.stats import MultiVariableRegression
+from dvha.tools.utilities import set_msw_background_color, get_tree_ctrl_image, get_window_size, load_object_from_file
 
 
 class RegressionFrame:
@@ -388,7 +389,7 @@ class MultiVarResultsFrame(wx.Frame):
     """
     Class to view multi-variable regression with data passed from RegressionFrame
     """
-    def __init__(self, y_variable, x_variables, group_data, group, options):
+    def __init__(self, y_variable, x_variables, group_data, group, options, auto_update_plot=True):
         """
         :param y_variable: dependent variable
         :type y_variable: str
@@ -410,12 +411,13 @@ class MultiVarResultsFrame(wx.Frame):
         self.options = options
 
         self.plot = PlotMultiVarRegression(self, options, group)
-        self.plot.update_plot(y_variable, x_variables, self.stats_data)
-        msg = {'y_variable': y_variable,
-               'x_variables': x_variables,
-               'regression': self.plot.reg,
-               'group': group}
-        pub.sendMessage('control_chart_set_model', **msg)
+        if auto_update_plot:
+            self.plot.update_plot(y_variable, x_variables, self.stats_data)
+            msg = {'y_variable': y_variable,
+                   'x_variables': x_variables,
+                   'regression': self.plot.reg,
+                   'group': group}
+            pub.sendMessage('control_chart_set_model', **msg)
 
         self.button_back_elimination = wx.Button(self, wx.ID_ANY, 'Backward Elimination')
         self.button_export = wx.Button(self, wx.ID_ANY, 'Export Plot Data')
@@ -516,7 +518,7 @@ class MultiVarResultsFrame(wx.Frame):
                 'x_variables': self.plot.x_variables,
                 'regression_type': 'multi-variable-linear'}
         save_data_to_file(self, 'Save Model', data,
-                          wildcard="REG files (*.reg)|*.reg", data_type='pickle', initial_dir=MODELS_DIR)
+                          wildcard="MVR files (*.mvr)|*.mvr", data_type='pickle', initial_dir=MODELS_DIR)
 
     def redraw_plot(self):
         self.plot.redraw_plot()
@@ -536,3 +538,39 @@ class MultiVarResultsFrame(wx.Frame):
                     frame.Close()
                 except RuntimeError:
                     pass
+
+
+class LoadMultiVarModelFrame(MultiVarResultsFrame):
+    def __init__(self, model_file_path, group_data, group, options):
+        self.loaded_data = load_object_from_file(model_file_path)
+        self.stats_data = group_data[group]['stats_data']
+        if self.is_valid:
+            y_variable = self.loaded_data['y_variable']
+            x_variables = self.loaded_data['x_variables']
+            stats_data = group_data[group]['stats_data']
+
+            MultiVarResultsFrame.__init__(self, y_variable, x_variables, group_data, group, options,
+                                          auto_update_plot=False)
+            X, y = stats_data.get_X_and_y(y_variable, x_variables)
+
+            reg = MultiVariableRegression(X, y, saved_reg=self.loaded_data['regression'])
+            self.plot.update_plot(y_variable, x_variables, self.stats_data, reg=reg)
+
+            self.Show()
+        else:
+            pass
+
+    @property
+    def is_valid(self):
+        return 'regression_type' in list(self.loaded_data) \
+                and self.loaded_data['regression_type'] == 'multi-variable-linear' \
+                and not self.missing_x_variables \
+                and self.stats_data_has_y
+
+    @property
+    def missing_x_variables(self):
+        return [x for x in self.loaded_data['x_variables'] if x not in list(self.stats_data.data)]
+
+    @property
+    def stats_data_has_y(self):
+        return self.loaded_data['y_variable'] in list(self.stats_data.data)

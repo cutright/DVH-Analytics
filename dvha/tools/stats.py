@@ -384,7 +384,7 @@ class MultiVariableRegression:
     """
     Perform a multi-variable regression using sklearn
     """
-    def __init__(self, X, y):
+    def __init__(self, X, y, saved_reg=None):
         """
         :param X: independent data
         :type X: np.array
@@ -392,8 +392,12 @@ class MultiVariableRegression:
         :type y: list
         """
 
-        self.reg = linear_model.LinearRegression()
-        ols = self.reg.fit(X, y)
+        if saved_reg is None:
+            self.reg = linear_model.LinearRegression()
+            self.ols = self.reg.fit(X, y)
+        else:
+            self.reg = saved_reg.reg
+            self.ols = saved_reg.ols
 
         self.y_intercept = self.reg.intercept_
         self.slope = self.reg.coef_
@@ -417,7 +421,7 @@ class MultiVariableRegression:
         self.x_trend_prob = [min(self.norm_prob_plot[0]), max(self.norm_prob_plot[0])]
         self.y_trend_prob = np.add(np.multiply(self.x_trend_prob, self.slope_prob), self.y_intercept_prob)
 
-        self.f_stat = regressors_stats.f_stat(ols, X, y)
+        self.f_stat = regressors_stats.f_stat(self.ols, X, y)
         self.df_error = len(X[:, 0]) - len(X[0, :]) - 1
         self.df_model = len(X[0, :])
 

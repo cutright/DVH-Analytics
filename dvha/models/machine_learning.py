@@ -271,7 +271,7 @@ class MachineLearningFrame(wx.Frame):
                 'x_variables': self.plot.x_variables,
                 'regression_type': self.title.lower().replace(' ', '_')}
         save_data_to_file(self, 'Save Model', data,
-                          wildcard="REG files (*.reg)|*.reg", data_type='pickle', initial_dir=MODELS_DIR)
+                          wildcard="MODEL files (*.model)|*.model", data_type='pickle', initial_dir=MODELS_DIR)
 
     def run(self):
         self.set_properties()
