@@ -278,7 +278,7 @@ class MachineLearningFrame(wx.Frame):
                 'title': self.title,
                 'input_parameters': self.input_parameters}
         save_data_to_file(self, 'Save Model', data,
-                          wildcard="REG files (*.reg)|*.reg", data_type='pickle', initial_dir=MODELS_DIR)
+                          wildcard="MODEL files (*.model)|*.model", data_type='pickle', initial_dir=MODELS_DIR)
 
     def run(self):
         self.set_properties()

@@ -1102,7 +1102,7 @@ class PlotMultiVarRegression(Plot):
         self.regression_table.width = int(self.size_factor['table'][0] * float(panel_width))
         self.regression_table.height = int(self.size_factor['table'][1] * float(panel_height))
 
-    def update_plot(self, y_variable, x_variables, stats_data, update_x_variables=True):
+    def update_plot(self, y_variable, x_variables, stats_data, update_x_variables=True, reg=None):
         self.type = 'multi-variable_regression_%s' % y_variable.replace(' ', '_')
         self.set_figure_dimensions()
         self.y_variable = y_variable
@@ -1117,7 +1117,10 @@ class PlotMultiVarRegression(Plot):
         if update_x_variables:
             self.X_init = deepcopy(self.X)
 
-        self.reg = MultiVariableRegression(self.X, self.y)
+        if reg is None:
+            self.reg = MultiVariableRegression(self.X, self.y)
+        else:
+            self.reg = reg
 
         self.source['residuals'].data = {'x': self.reg.predictions,
                                          'y': self.reg.residuals,
