@@ -18,6 +18,7 @@ from dvha.models.machine_learning import RandomForestFrame, GradientBoostingFram
     SupportVectorRegressionFrame
 from dvha.dialogs.export import save_data_to_file
 from dvha.dialogs.main import SelectRegressionVariablesDialog
+from dvha.options import DefaultOptions
 from dvha.paths import ICONS, MODELS_DIR
 from dvha.tools.stats import MultiVariableRegression
 from dvha.tools.utilities import set_msw_background_color, get_tree_ctrl_image, get_window_size, load_object_from_file
@@ -516,7 +517,8 @@ class MultiVarResultsFrame(wx.Frame):
         data = {'y_variable': self.plot.y_variable,
                 'regression': self.plot.reg,
                 'x_variables': self.plot.x_variables,
-                'regression_type': 'multi-variable-linear'}
+                'regression_type': 'multi-variable-linear',
+                'version': DefaultOptions().version}
         save_data_to_file(self, 'Save Model', data,
                           wildcard="MVR files (*.mvr)|*.mvr", data_type='pickle', initial_dir=MODELS_DIR)
 

@@ -32,7 +32,7 @@ from dvha.models.regression import RegressionFrame, LoadMultiVarModelFrame
 from dvha.models.control_chart import ControlChartFrame
 from dvha.models.roi_map import ROIMapFrame
 from dvha.models.stats_data_editor import StatsDataEditor
-from dvha.options import Options
+from dvha.options import Options, DefaultOptions
 from dvha.paths import LOGO_PATH, DATA_DIR, ICONS, MODELS_DIR
 from dvha.tools.errors import MemoryErrorDialog, PlottingMemoryError
 from dvha.tools.roi_name_manager import DatabaseROIs
@@ -498,7 +498,7 @@ class DVHAMainFrame(wx.Frame):
         self.save_data['group_data'] = self.group_data
         self.save_data['query_filters'] = self.query_filters
         self.save_data['time_stamp'] = datetime.now()
-        self.save_data['version'] = self.options.VERSION
+        self.save_data['version'] = DefaultOptions().VERSION
         # data_table_categorical and data_table_numerical saved after query to ensure these data reflect
         # the rest of the saved data
         self.save_data['endpoint'] = self.endpoint.get_save_data()
@@ -707,7 +707,7 @@ class DVHAMainFrame(wx.Frame):
                 col = self.numerical_columns[category]['var_name']
                 value_low = self.data_table_numerical.data['min'][i]
                 value_high = self.data_table_numerical.data['max'][i]
-                if 'date' in col:
+                if 'date' in col and self.options.DB_TYPE == 'pgsql':
                     value_low = "'%s'::date" % value_low
                     value_high = "'%s'::date" % value_high
                 if col not in queries_by_sql_column[table]:
@@ -812,7 +812,8 @@ class DVHAMainFrame(wx.Frame):
             wx.MessageBox('There is no data to export! Please query some data first.', 'Export Error',
                           wx.OK | wx.ICON_WARNING)
 
-    def on_about(self, evt):
+    @staticmethod
+    def on_about(evt):
         About()
 
     def on_pref(self, *args):
