@@ -1554,8 +1554,9 @@ class PlotMachineLearning(Plot):
         self.X, self.y = None, None
         self.include_test_data = include_test_data
 
-        self.size_factor = {'data': (0.38, 0.425),
-                            'diff': (0.38, 0.425)}
+        x_size = [0.64, 0.38][include_test_data]
+        self.size_factor = {'data': (x_size, 0.425),
+                            'diff': (x_size, 0.425)}
 
         self.options = options
         self.multi_var_pred = multi_var_pred
@@ -1707,13 +1708,14 @@ class PlotMachineLearning(Plot):
         self.X = plot_data.X['data']
 
         for data_type in self.plot_types:
-            x = plot_data.x[data_type]
-            y = plot_data.y[data_type]
-            y_pred = plot_data.predictions[data_type]
-            multi_var_pred = [self.multi_var_pred[i] for i in plot_data.indices[data_type]]
-            mrn = [self.mrn[i] for i in plot_data.indices[data_type]]
-            uid = [self.uid[i] for i in plot_data.indices[data_type]]
-            study_date = [self.study_date[i] for i in plot_data.indices[data_type]]
+            plot_data_type = [data_type, 'data'][len(self.plot_types) == 1 and data_type == 'train']
+            x = plot_data.x[plot_data_type]
+            y = plot_data.y[plot_data_type]
+            y_pred = plot_data.predictions[plot_data_type]
+            multi_var_pred = [self.multi_var_pred[i] for i in plot_data.indices[plot_data_type]]
+            mrn = [self.mrn[i] for i in plot_data.indices[plot_data_type]]
+            uid = [self.uid[i] for i in plot_data.indices[plot_data_type]]
+            study_date = [self.study_date[i] for i in plot_data.indices[plot_data_type]]
 
             srcs = self.source[data_type]
 

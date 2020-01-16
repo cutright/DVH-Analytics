@@ -481,7 +481,7 @@ class DVHAMainFrame(wx.Frame):
         dlg.Destroy()
 
     def on_load_mvr_model(self, *evt):
-        with wx.FileDialog(self, "Load a machine learning model", "", wildcard='*.mvr',
+        with wx.FileDialog(self, "Load a multi-variable linear regression model", "", wildcard='*.mvr',
                            style=wx.FD_FILE_MUST_EXIST | wx.FD_OPEN) as dlg:
             dlg.SetDirectory(MODELS_DIR)
             if dlg.ShowModal() == wx.ID_OK:
