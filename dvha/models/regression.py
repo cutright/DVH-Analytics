@@ -562,32 +562,36 @@ class LoadMultiVarModelFrame(MultiVarResultsFrame):
     def __init__(self, model_file_path, group_data, group, options):
         self.loaded_data = load_object_from_file(model_file_path)
         self.stats_data = group_data[group]['stats_data']
-        if self.is_valid:
-            y_variable = self.loaded_data['y_variable']
-            x_variables = self.loaded_data['x_variables']
-            stats_data = group_data[group]['stats_data']
+        try:
+            if self.is_valid:
+                y_variable = self.loaded_data['y_variable']
+                x_variables = self.loaded_data['x_variables']
+                stats_data = group_data[group]['stats_data']
 
-            MultiVarResultsFrame.__init__(self, y_variable, x_variables, group_data, group, options,
-                                          auto_update_plot=False)
-            X, y = stats_data.get_X_and_y(y_variable, x_variables)
+                MultiVarResultsFrame.__init__(self, y_variable, x_variables, group_data, group, options,
+                                              auto_update_plot=False)
+                X, y = stats_data.get_X_and_y(y_variable, x_variables)
 
-            reg = MultiVariableRegression(X, y, saved_reg=self.loaded_data['regression'])
-            self.plot.update_plot(y_variable, x_variables, self.stats_data, reg=reg)
+                reg = MultiVariableRegression(X, y, saved_reg=self.loaded_data['regression'])
+                self.plot.update_plot(y_variable, x_variables, self.stats_data, reg=reg)
 
-            self.Show()
-        else:
-            if self.stats_data is None:
-                msg = 'No data has been queried for Group %s.' % group
-            elif not self.is_mvr:
-                msg = 'Selected file is not a valid multi-variable regression save file.'
-            elif not self.stats_data_has_y:
-                msg = "The model's dependent variable is not found in your queried data:\n%s" % self.y_variable
-            elif self.missing_x_variables:
-                msg = 'Your queried data is missing the following independent variables:\n%s' % \
-                      ', '.join(self.missing_x_variables)
+                self.Show()
             else:
-                msg = 'Unknown error.'
+                if self.stats_data is None:
+                    msg = 'No data has been queried for Group %s.' % group
+                elif not self.is_mvr:
+                    msg = 'Selected file is not a valid multi-variable regression save file.'
+                elif not self.stats_data_has_y:
+                    msg = "The model's dependent variable is not found in your queried data:\n%s" % self.y_variable
+                elif self.missing_x_variables:
+                    msg = 'Your queried data is missing the following independent variables:\n%s' % \
+                          ', '.join(self.missing_x_variables)
+                else:
+                    msg = 'Unknown error.'
 
+                wx.MessageBox(msg, 'Model Loading Error', wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+        except Exception as e:
+            msg = str(e)
             wx.MessageBox(msg, 'Model Loading Error', wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
 
     @property

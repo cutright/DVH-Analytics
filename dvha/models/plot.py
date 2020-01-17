@@ -1748,7 +1748,11 @@ class PlotMachineLearning(Plot):
         csv_data = []
         for data_type in self.plot_types:
             data = self.source[data_type]['data'].data
-            csv_data.append('%s Data\n%s' % (['Training', 'Testing'][data_type == 'test'], col_titles))
+            if self.include_test_data:
+                data_title = data_type
+            else:
+                data_title = 'Loaded Model Applied to Queried '
+            csv_data.append('%s Data\n%s' % (data_title, col_titles))
             for i in range(len(data['mrn'])):
                 csv_data.append(','.join(str(data[key][i]).replace(',', '^')
                                          for key in ['mrn', 'uid', 'x', 'study_date', 'y']))

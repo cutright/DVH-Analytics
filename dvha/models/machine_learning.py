@@ -874,30 +874,37 @@ class MachineLearningModelViewer:
         self.options = options
 
         self.__load_mlr_file()
-        self.__set_X_and_y_data()
+        try:
+            if self.is_valid:
+                self.__set_X_and_y_data()
 
-        self.mvr = MultiVariableRegression(self.X, self.y)
-        self.multi_var_pred = self.mvr.predictions
+                self.mvr = MultiVariableRegression(self.X, self.y)
+                self.multi_var_pred = self.mvr.predictions
 
-        data_keys = ['X', 'y', 'x_variables', 'y_variable', 'multi_var_pred', 'options', 'mrn', 'study_date', 'uid']
-        data = {key: getattr(self, key) for key in data_keys}
-        frame = ALGORITHMS[self.title]['frame']
-        self.ml_frame = frame(data, include_test_data=False)
-        self.__load_model()
+                data_keys = ['X', 'y', 'x_variables', 'y_variable', 'multi_var_pred', 'options', 'mrn', 'study_date', 'uid']
+                data = {key: getattr(self, key) for key in data_keys}
+                frame = ALGORITHMS[self.title]['frame']
+                self.ml_frame = frame(data, include_test_data=False)
+                self.__load_model()
 
-        self.ml_frame.run()
+                self.ml_frame.run()
+            else:
+                if self.stats_data is None:
+                    msg = 'No data has been queried for Group %s.' % group
+                elif not self.is_mlr:
+                    msg = 'Selected file is not a valid machine learning regression save file.'
+                elif not self.stats_data_has_y:
+                    msg = "The model's dependent variable is not found in your queried data:\n%s" % self.y_variable
+                elif self.missing_x_variables:
+                    msg = 'Your queried data is missing the following independent variables:\n%s' % \
+                          ', '.join(self.missing_x_variables)
+                else:
+                    msg = 'Unknown error.'
 
-    def __set_X_and_y_data(self):
-        self.X, self.y, self.mrn, self.uid, self.study_date = \
-            self.stats_data.get_X_and_y(self.y_variable, self.x_variables, include_patient_info=True)
-
-    def disable_input(self):
-        for variable, input_obj in self.ml_frame.input.items():
-            input_obj.Disable()
-        for variable, input_obj in self.ml_frame.data_split_input.items():
-            input_obj.Disable()
-        self.ml_frame.button_calculate.Disable()
-        self.ml_frame.button_save_model.Disable()
+                wx.MessageBox(msg, 'Model Loading Error', wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+        except Exception as e:
+            msg = str(e)
+            wx.MessageBox(msg, 'Model Loading Error', wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
 
     def file_select_dlg(self):
         with wx.FileDialog(self.parent, "Load a machine learning regression model", wildcard='*.mlr',
@@ -908,20 +915,49 @@ class MachineLearningModelViewer:
 
     def __load_mlr_file(self):
         file_path = self.file_select_dlg()
-        data = load_object_from_file(file_path)
+        self.loaded_data = load_object_from_file(file_path)
 
-        self.y_variable = data['y_variable']
-        self.regression = data['regression']
-        self.regressor = data['regressor']
-        self.tool_tips = data['tool_tips']
-        self.x_variables = data['x_variables']
-        self.title = data['title']
-        self.input_parameters = data['input_parameters']
-        self.data_split = data['data_split']
-        self.version = data['version']
+        self.y_variable = self.loaded_data['y_variable']
+        self.regression = self.loaded_data['regression']
+        self.regressor = self.loaded_data['regressor']
+        self.tool_tips = self.loaded_data['tool_tips']
+        self.x_variables = self.loaded_data['x_variables']
+        self.title = self.loaded_data['title']
+        self.input_parameters = self.loaded_data['input_parameters']
+        self.data_split = self.loaded_data['data_split']
+        self.version = self.loaded_data['version']
 
     def __load_model(self):
         self.ml_frame.reg = self.regression
         self.ml_frame.set_input_parameters(self.input_parameters)
         self.ml_frame.set_data_split_parameters(self.data_split)
-        self.disable_input()
+        self.__disable_input()
+
+    def __disable_input(self):
+        for variable, input_obj in self.ml_frame.input.items():
+            input_obj.Disable()
+        for variable, input_obj in self.ml_frame.data_split_input.items():
+            input_obj.Disable()
+        self.ml_frame.button_calculate.Disable()
+        self.ml_frame.button_save_model.Disable()
+
+    def __set_X_and_y_data(self):
+        self.X, self.y, self.mrn, self.uid, self.study_date = \
+            self.stats_data.get_X_and_y(self.y_variable, self.x_variables, include_patient_info=True)
+
+    @property
+    def is_mlr(self):
+        return 'title' in list(self.loaded_data) \
+               and self.loaded_data['title'] in list(ALGORITHMS)
+
+    @property
+    def is_valid(self):
+        return self.stats_data is not None and self.is_mlr and not self.missing_x_variables and self.stats_data_has_y
+
+    @property
+    def missing_x_variables(self):
+        return [x for x in self.x_variables if x not in list(self.stats_data.data)]
+
+    @property
+    def stats_data_has_y(self):
+        return self.y_variable in list(self.stats_data.data)

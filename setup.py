@@ -25,7 +25,7 @@ requires = [
     'psycopg2-binary',
     'shapely[vectorized]',
     'statsmodels',
-    'scikit-learn',
+    'scikit-learn = 0.22',
     'regressors'
 ]
 
