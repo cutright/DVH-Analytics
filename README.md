@@ -15,10 +15,17 @@ developed.
         <img src="https://img.shields.io/lgtm/grade/python/g/cutright/DVH-Analytics.svg?logo=lgtm&label=code%20quality" /></a>
 
 
-New in v0.6.7
+DVHA Compiled!
 ---------
-DVHA now supports both SQLite and PostgreSQL.
 
+Compiled versions of DVHA 0.6.9 can be found [here](https://github.com/cutright/DVH-Analytics/releases/tag/v0.6.9). 
+Please keep in mind this software is still in beta. If you have issues, compiling from source may be more informative. 
+
+
+Admin Rights No Longer Needed
+---------
+As of v0.6.7, DVHA supports both SQLite and PostgreSQL.  
+  
 SQLite:  
 * No admin rights needed on your computer
 * No need to figure out how to make user logins and databases in SQL
@@ -76,8 +83,6 @@ python dvha_app.py
 ```
 See our [installation notes](https://github.com/cutright/DVH-Analytics/blob/master/install_notes.md) for potential 
 Shapely install issues on MS Windows and help setting up a PostgreSQL database if it is preferred over SQLite3. 
-
-We are working on compiled executables.  See [this](https://github.com/cutright/DVH-Analytics/issues/23) post for information.
 
 
 Dependencies
