@@ -17,23 +17,26 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVR
 from sklearn.tree import DecisionTreeRegressor
 from dvha.dialogs.export import save_data_to_file
+from dvha.options import DefaultOptions
 from dvha.paths import MODELS_DIR
 from dvha.models.plot import PlotMachineLearning, PlotFeatureImportance
-from dvha.tools.utilities import set_msw_background_color, get_window_size
+from dvha.tools.stats import MultiVariableRegression
+from dvha.tools.utilities import set_msw_background_color, get_window_size, load_object_from_file
 
 
 class MachineLearningFrame(wx.Frame):
-    def __init__(self, data, title, regressor, tool_tips):
+    def __init__(self, data, title, regressor=None, tool_tips=None, include_test_data=True):
         wx.Frame.__init__(self, None)
 
         self.data = data
-
-        self.regressor = regressor
-        self.reg = None
         self.title = title
-        self.tool_tips = tool_tips
+        self.regressor = [regressor, ALGORITHMS[title]['regressor']][regressor is None]
+        self.tool_tips = [tool_tips, ALGORITHMS[title]['tool_tips']][tool_tips is None]
+        self.include_test_data = include_test_data
 
-        self.plot = PlotMachineLearning(self, ml_type=title, ml_type_short=self.ml_type_short, **data)
+        self.reg = None
+        self.plot = PlotMachineLearning(self, ml_type=self.title, ml_type_short=self.ml_type_short,
+                                        include_test_data=include_test_data, **self.data)
 
         self.feature_importance_dlg = None
 
@@ -75,7 +78,8 @@ class MachineLearningFrame(wx.Frame):
 
     def set_properties(self):
         self.SetTitle(self.title)
-        self.SetMinSize(get_window_size(0.8, 0.7))
+        x_size = [0.47, 0.8][self.include_test_data]
+        self.SetMinSize(get_window_size(x_size, 0.7))
         self.set_defaults()
 
         for key, input_obj in self.input.items():
@@ -148,10 +152,18 @@ class MachineLearningFrame(wx.Frame):
         return {variable: self.get_param(variable) for variable in self.input.keys()
                 if self.get_param(variable) != self.defaults[variable]}
 
+    def set_input_parameters(self, input_parameters):
+        for variable, value in input_parameters.keys():
+            self.input[variable].SetValue(str(value))
+
     @property
     def data_split_parameters(self):
         return {variable: self.get_param(variable) for variable in self.data_split_input.keys()
                 if self.get_param(variable) != self.data_split_defaults[variable]}
+
+    def set_data_split_parameters(self, data_split_input):
+        for variable, value in data_split_input.keys():
+            self.data_split_input[variable].SetValue(str(value))
 
     def to_int_float_or_none(self, str_value):
         if str_value.lower() == 'none':
@@ -268,10 +280,15 @@ class MachineLearningFrame(wx.Frame):
     def on_save_model(self, evt):
         data = {'y_variable': self.plot.y_variable,
                 'regression': self.reg,
+                'regressor': self.regressor,
+                'tool_tips': self.tool_tips,
                 'x_variables': self.plot.x_variables,
-                'regression_type': self.title.lower().replace(' ', '_')}
+                'title': self.title,
+                'input_parameters': self.input_parameters,
+                'data_split': self.data_split_parameters,
+                'version': DefaultOptions().VERSION}
         save_data_to_file(self, 'Save Model', data,
-                          wildcard="REG files (*.reg)|*.reg", data_type='pickle', initial_dir=MODELS_DIR)
+                          wildcard="MODEL files (*.mlr)|*.mlr", data_type='pickle', initial_dir=MODELS_DIR)
 
     def run(self):
         self.set_properties()
@@ -296,8 +313,8 @@ class MachineLearningFrame(wx.Frame):
 
 
 class RandomForestFrame(MachineLearningFrame):
-    def __init__(self, data):
-        MachineLearningFrame.__init__(self, data, 'Random Forest', RandomForestRegressor, RF_TOOL_TIPS)
+    def __init__(self, data, include_test_data=True):
+        MachineLearningFrame.__init__(self, data, 'Random Forest', include_test_data=include_test_data)
 
         self.input = {'n_estimators': wx.TextCtrl(self, wx.ID_ANY, "100"),
                       'criterion': wx.ComboBox(self, wx.ID_ANY, choices=["mse", "mae"],
@@ -348,8 +365,8 @@ class RandomForestFrame(MachineLearningFrame):
 
 
 class GradientBoostingFrame(MachineLearningFrame):
-    def __init__(self, data):
-        MachineLearningFrame.__init__(self, data, 'Gradient Boosting', GradientBoostingRegressor, GB_TOOL_TIPS)
+    def __init__(self, data, include_test_data=True):
+        MachineLearningFrame.__init__(self, data, 'Gradient Boosting', include_test_data=include_test_data)
 
         self.input = {'loss': wx.ComboBox(self, wx.ID_ANY, choices=["ls", "lad", "huber", "quantile"],
                                           style=wx.CB_DROPDOWN | wx.CB_READONLY),
@@ -419,8 +436,8 @@ class GradientBoostingFrame(MachineLearningFrame):
 
 
 class DecisionTreeFrame(MachineLearningFrame):
-    def __init__(self, data):
-        MachineLearningFrame.__init__(self, data, 'Decision Tree',  DecisionTreeRegressor, DT_TOOL_TIPS)
+    def __init__(self, data, include_test_data=True):
+        MachineLearningFrame.__init__(self, data, 'Decision Tree', include_test_data=include_test_data)
 
         self.input = {'criterion': wx.ComboBox(self, wx.ID_ANY, choices=["mse", "friedman_mse", "mae"],
                                                style=wx.CB_DROPDOWN | wx.CB_READONLY),
@@ -465,8 +482,8 @@ class DecisionTreeFrame(MachineLearningFrame):
 
 
 class SupportVectorRegressionFrame(MachineLearningFrame):
-    def __init__(self, data):
-        MachineLearningFrame.__init__(self, data, 'Support Vector Machine', SVR, SVR_TOOL_TIPS)
+    def __init__(self, data, include_test_data=True):
+        MachineLearningFrame.__init__(self, data, 'Support Vector Machine', include_test_data=include_test_data)
 
         self.input = {'kernel': wx.ComboBox(self, wx.ID_ANY, "rbf",
                                             choices=["linear", "poly", "rbf", "sigmoid", "precomputed"],
@@ -757,8 +774,22 @@ DATA_SPLIT_TOOL_TIPS = {'test_size': "float, int, or None\n"
                                    " must be None."}
 
 
+ALGORITHMS = {'Random Forest': {'regressor': RandomForestRegressor,
+                                'tool_tips': RF_TOOL_TIPS,
+                                'frame': RandomForestFrame},
+              'Support Vector Machine': {'regressor': SVR,
+                                         'tool_tips': SVR_TOOL_TIPS,
+                                         'frame': SupportVectorRegressionFrame},
+              'Gradient Boosting': {'regressor': GradientBoostingRegressor,
+                                    'tool_tips': GB_TOOL_TIPS,
+                                    'frame': GradientBoostingFrame},
+              'Decision Tree': {'regressor': DecisionTreeRegressor,
+                                'tool_tips': DT_TOOL_TIPS,
+                                'frame': DecisionTreeFrame}}
+
+
 class MachineLearningPlotData:
-    def __init__(self, X, y, reg, **kwargs):
+    def __init__(self, X, y, reg, do_training=True, **kwargs):
         self.reg = reg
         self.split_args = kwargs
 
@@ -772,7 +803,8 @@ class MachineLearningPlotData:
         self.x = {key: [i + 1 for i in range(len(data))] for key, data in self.y.items()}
 
         # Train model, then calculate predictions, residuals, and mse
-        self.reg.fit(self.X['train'], self.y['train'])
+        if do_training:
+            self.reg.fit(self.X['train'], self.y['train'])
         self.predictions = {key: self.get_prediction(key) for key in self.y.keys()}
         self.residuals = {key: self.get_residual(key) for key in self.y.keys()}
         self.mse = {key: self.get_mse(key) for key in self.y.keys()}
@@ -831,3 +863,101 @@ class FeatureImportanceFrame(wx.Frame):
             wx.CallAfter(self.redraw_plot)
         except RuntimeError:
             pass
+
+
+class MachineLearningModelViewer:
+    def __init__(self, parent, group_data, group, options):
+        self.parent = parent
+        self.group_data = group_data
+        self.group = group
+        self.stats_data = group_data[group]['stats_data']
+        self.options = options
+
+        self.__load_mlr_file()
+        try:
+            if self.is_valid:
+                self.__set_X_and_y_data()
+
+                self.mvr = MultiVariableRegression(self.X, self.y)
+                self.multi_var_pred = self.mvr.predictions
+
+                data_keys = ['X', 'y', 'x_variables', 'y_variable', 'multi_var_pred', 'options', 'mrn', 'study_date', 'uid']
+                data = {key: getattr(self, key) for key in data_keys}
+                frame = ALGORITHMS[self.title]['frame']
+                self.ml_frame = frame(data, include_test_data=False)
+                self.__load_model()
+
+                self.ml_frame.run()
+            else:
+                if self.stats_data is None:
+                    msg = 'No data has been queried for Group %s.' % group
+                elif not self.is_mlr:
+                    msg = 'Selected file is not a valid machine learning regression save file.'
+                elif not self.stats_data_has_y:
+                    msg = "The model's dependent variable is not found in your queried data:\n%s" % self.y_variable
+                elif self.missing_x_variables:
+                    msg = 'Your queried data is missing the following independent variables:\n%s' % \
+                          ', '.join(self.missing_x_variables)
+                else:
+                    msg = 'Unknown error.'
+
+                wx.MessageBox(msg, 'Model Loading Error', wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+        except Exception as e:
+            msg = str(e)
+            wx.MessageBox(msg, 'Model Loading Error', wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+
+    def file_select_dlg(self):
+        with wx.FileDialog(self.parent, "Load a machine learning regression model", wildcard='*.mlr',
+                           style=wx.FD_FILE_MUST_EXIST | wx.FD_OPEN) as dlg:
+            dlg.SetDirectory(MODELS_DIR)
+            if dlg.ShowModal() == wx.ID_OK:
+                return dlg.GetPath()
+
+    def __load_mlr_file(self):
+        file_path = self.file_select_dlg()
+        self.loaded_data = load_object_from_file(file_path)
+
+        self.y_variable = self.loaded_data['y_variable']
+        self.regression = self.loaded_data['regression']
+        self.regressor = self.loaded_data['regressor']
+        self.tool_tips = self.loaded_data['tool_tips']
+        self.x_variables = self.loaded_data['x_variables']
+        self.title = self.loaded_data['title']
+        self.input_parameters = self.loaded_data['input_parameters']
+        self.data_split = self.loaded_data['data_split']
+        self.version = self.loaded_data['version']
+
+    def __load_model(self):
+        self.ml_frame.reg = self.regression
+        self.ml_frame.set_input_parameters(self.input_parameters)
+        self.ml_frame.set_data_split_parameters(self.data_split)
+        self.__disable_input()
+
+    def __disable_input(self):
+        for variable, input_obj in self.ml_frame.input.items():
+            input_obj.Disable()
+        for variable, input_obj in self.ml_frame.data_split_input.items():
+            input_obj.Disable()
+        self.ml_frame.button_calculate.Disable()
+        self.ml_frame.button_save_model.Disable()
+
+    def __set_X_and_y_data(self):
+        self.X, self.y, self.mrn, self.uid, self.study_date = \
+            self.stats_data.get_X_and_y(self.y_variable, self.x_variables, include_patient_info=True)
+
+    @property
+    def is_mlr(self):
+        return 'title' in list(self.loaded_data) \
+               and self.loaded_data['title'] in list(ALGORITHMS)
+
+    @property
+    def is_valid(self):
+        return self.stats_data is not None and self.is_mlr and not self.missing_x_variables and self.stats_data_has_y
+
+    @property
+    def missing_x_variables(self):
+        return [x for x in self.x_variables if x not in list(self.stats_data.data)]
+
+    @property
+    def stats_data_has_y(self):
+        return self.y_variable in list(self.stats_data.data)

@@ -13,8 +13,6 @@ developed.
         <img src="https://img.shields.io/pypi/v/dvha.svg" /></a>
 <a href="https://lgtm.com/projects/g/cutright/DVH-Analytics/context:python">
         <img src="https://img.shields.io/lgtm/grade/python/g/cutright/DVH-Analytics.svg?logo=lgtm&label=code%20quality" /></a>
-<a href="https://pypi.org/project/dvha/">
-        <img src="https://img.shields.io/pypi/dm/dvha.svg" /></a>
 
 
 New in v0.6.7

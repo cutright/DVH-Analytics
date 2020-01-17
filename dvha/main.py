@@ -28,12 +28,12 @@ from dvha.models.queried_data import QueriedDataFrame
 from dvha.models.rad_bio import RadBioFrame
 from dvha.models.time_series import TimeSeriesFrame
 from dvha.models.correlation import CorrelationFrame
-from dvha.models.regression import RegressionFrame
+from dvha.models.regression import RegressionFrame, LoadMultiVarModelFrame
 from dvha.models.control_chart import ControlChartFrame
 from dvha.models.roi_map import ROIMapFrame
 from dvha.models.stats_data_editor import StatsDataEditor
-from dvha.options import Options
-from dvha.paths import LOGO_PATH, DATA_DIR, ICONS
+from dvha.options import Options, DefaultOptions
+from dvha.paths import LOGO_PATH, DATA_DIR, ICONS, MODELS_DIR
 from dvha.tools.errors import MemoryErrorDialog, PlottingMemoryError
 from dvha.tools.roi_name_manager import DatabaseROIs
 from dvha.tools.stats import StatsData, sync_variables_in_stats_data_objects
@@ -150,6 +150,10 @@ class DVHAMainFrame(wx.Frame):
         menu_save = file_menu.Append(wx.ID_ANY, '&Save\tCtrl+S')
         menu_close = file_menu.Append(wx.ID_ANY, '&Close')
 
+        load_model = wx.Menu()
+        load_model_mvr = load_model.Append(wx.ID_ANY, 'Multi-Variable Regression')
+        load_model_ml = load_model.Append(wx.ID_ANY, 'Machine Learning')
+
         export_plot = wx.Menu()
         export_dvhs = export_plot.Append(wx.ID_ANY, 'DVHs')
         export_time_series = export_plot.Append(wx.ID_ANY, 'Time Series')
@@ -167,6 +171,7 @@ class DVHAMainFrame(wx.Frame):
         self.data_menu = wx.Menu()
 
         self.data_views = {key: None for key in ['DVHs', 'Plans', 'Rxs', 'Beams']}
+        self.data_menu.AppendSubMenu(load_model, 'Load &Model')
         self.data_menu.AppendSubMenu(export, '&Export')
         self.data_menu_items = {'DVHs': self.data_menu.Append(wx.ID_ANY, 'Show DVHs\tCtrl+1'),
                                 'Plans': self.data_menu.Append(wx.ID_ANY, 'Show Plans\tCtrl+2'),
@@ -178,14 +183,14 @@ class DVHAMainFrame(wx.Frame):
         settings_menu = wx.Menu()
         menu_pref = settings_menu.Append(wx.ID_PREFERENCES)
         menu_sql = settings_menu.Append(wx.ID_ANY, '&Database Connection\tCtrl+D')
-        if is_mac():
-            menu_user_settings = settings_menu.Append(wx.ID_ANY, '&Preferences\tCtrl+,')
 
         help_menu = wx.Menu()
         menu_about = help_menu.Append(wx.ID_ANY, '&About')
 
         self.Bind(wx.EVT_MENU, self.on_quit, qmi)
         self.Bind(wx.EVT_MENU, self.on_open, menu_open)
+        self.Bind(wx.EVT_MENU, self.on_load_mvr_model, load_model_mvr)
+        self.Bind(wx.EVT_MENU, self.on_load_ml_model, load_model_ml)
         self.Bind(wx.EVT_MENU, self.on_close, menu_close)
         self.Bind(wx.EVT_MENU, self.on_export, export_csv)
         self.Bind(wx.EVT_MENU, self.on_save, menu_save)
@@ -193,6 +198,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_about, menu_about)
         self.Bind(wx.EVT_MENU, self.on_sql, menu_sql)
         if is_mac():
+            menu_user_settings = settings_menu.Append(wx.ID_ANY, '&Preferences\tCtrl+,')
             self.Bind(wx.EVT_MENU, self.on_pref, menu_user_settings)
 
         self.Bind(wx.EVT_MENU, self.on_save_plot_dvhs, export_dvhs)
@@ -474,11 +480,25 @@ class DVHAMainFrame(wx.Frame):
 
         dlg.Destroy()
 
+    def on_load_mvr_model(self, *evt):
+        with wx.FileDialog(self, "Load a multi-variable linear regression model", "", wildcard='*.mvr',
+                           style=wx.FD_FILE_MUST_EXIST | wx.FD_OPEN) as dlg:
+            dlg.SetDirectory(MODELS_DIR)
+            if dlg.ShowModal() == wx.ID_OK:
+                model_file_path = dlg.GetPath()
+                dlg.Destroy()
+                group = self.radio_button_query_group.GetSelection() + 1
+                LoadMultiVarModelFrame(model_file_path, self.group_data, group, self.options)
+
+    def on_load_ml_model(self, *evt):
+        wx.MessageBox('Currently under development.', 'Error',
+                      wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+
     def save_data_obj(self):
         self.save_data['group_data'] = self.group_data
         self.save_data['query_filters'] = self.query_filters
         self.save_data['time_stamp'] = datetime.now()
-        self.save_data['version'] = self.options.VERSION
+        self.save_data['version'] = DefaultOptions().VERSION
         # data_table_categorical and data_table_numerical saved after query to ensure these data reflect
         # the rest of the saved data
         self.save_data['endpoint'] = self.endpoint.get_save_data()
@@ -687,7 +707,7 @@ class DVHAMainFrame(wx.Frame):
                 col = self.numerical_columns[category]['var_name']
                 value_low = self.data_table_numerical.data['min'][i]
                 value_high = self.data_table_numerical.data['max'][i]
-                if 'date' in col:
+                if 'date' in col and self.options.DB_TYPE == 'pgsql':
                     value_low = "'%s'::date" % value_low
                     value_high = "'%s'::date" % value_high
                 if col not in queries_by_sql_column[table]:
@@ -792,7 +812,8 @@ class DVHAMainFrame(wx.Frame):
             wx.MessageBox('There is no data to export! Please query some data first.', 'Export Error',
                           wx.OK | wx.ICON_WARNING)
 
-    def on_about(self, evt):
+    @staticmethod
+    def on_about(evt):
         About()
 
     def on_pref(self, *args):

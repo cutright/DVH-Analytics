@@ -1,5 +1,15 @@
 # Change log of DVH Analytics
 
+v0.6.9 (2020.01.17)
+--------------------
+ - [Correlation] Catch crash if there is insufficient data for a correlation calculation
+ - [Modeling] Allow user to load saved models (Multi-Variable and Machine Learning)
+    Still under development, currently ML must be loaded after a MVR has been generated
+ - [Query] Fix for [issue 20](https://github.com/cutright/DVH-Analytics/issues/20)
+ - [Query] Corrected physician count of query
+ - [Executable] Initial version with MS Windows executable available 
+
+
 v0.6.8 (2020.01.14)
 --------------------
  - [DICOM Importer] Fix for [issue 30](https://github.com/cutright/DVH-Analytics/issues/30)

@@ -30,7 +30,6 @@ class DVH:
         :type dvh_bin_width: int
         """
 
-        self.uid = uid
         self.dvh_bin_width = dvh_bin_width
 
         if uid:
@@ -57,6 +56,9 @@ class DVH:
             if 'mrn' in self.keys:
                 self.keys.pop(self.keys.index('mrn'))
                 self.keys.insert(0, 'mrn')
+
+            # uid passed into DVH init is a unique list for querying and it is not in order of query results
+            self.uid = self.study_instance_uid
 
             # Add these properties to dvh_data since they aren't in the DVHs SQL table
             self.count = len(self.mrn)

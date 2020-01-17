@@ -14,6 +14,7 @@ import wx
 from dvha.dialogs.export import save_data_to_file
 from dvha.models.plot import PlotCorrelation
 from dvha.dialogs.main import SelectFromListDialog
+from dvha.tools.errors import ErrorDialog
 from dvha.tools.utilities import get_window_size
 
 
@@ -91,7 +92,11 @@ class CorrelationFrame:
         self.update_plot_data()
 
     def update_plot_data(self):
-        self.plot.update_plot_data(self.stats_data, stats_data_2=self.stats_data_2, included_vars=self.selections)
+        try:
+            self.plot.update_plot_data(self.stats_data, stats_data_2=self.stats_data_2, included_vars=self.selections)
+        except Exception as e:
+            msg = "Correlation calculation failed. Perhaps more data is needed?\n%s" % str(e)
+            ErrorDialog(self.parent, msg, "Correlation Error")
 
     def clear_data(self):
         pass
