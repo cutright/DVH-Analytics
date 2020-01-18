@@ -62,7 +62,7 @@ class DVH:
 
             # Add these properties to dvh_data since they aren't in the DVHs SQL table
             self.count = len(self.mrn)
-            self.study_count = len(uid)
+            self.study_count = len(set(self.uid))
             self.rx_dose = self.get_plan_values('rx_dose')
             self.sim_study_date = self.get_plan_values('sim_study_date')
             self.keys.append('rx_dose')
@@ -344,7 +344,7 @@ class DVH:
         return x2, y2
 
     def get_summary(self):
-        summary = ["Study count: %s" % len(set(self.study_instance_uid)),
+        summary = ["Study count: %s" % self.study_count,
                    "DVH count: %s" % self.count,
                    "Institutional ROI count: %s" % len(set(self.institutional_roi)),
                    "Physician ROI count: %s" % len(set(self.physician_roi)),
@@ -415,13 +415,16 @@ def calc_eud(dvh, a, dvh_bin_width=1):
     EUD = sum[ v(i) * D(i)^a ] ^ [1/a]
     :param dvh: a single DVH as a list of numpy 1D array with 1cGy bins
     :param a: standard a-value for EUD calculations, organ and dose fractionation specific
+    :param dvh_bin_width: dose bin width of dvh
+    :type dvh_bin_width: int
     :return: equivalent uniform dose
+    :rtype: float
     """
     v = -np.gradient(dvh)
 
-    dose_bins = np.linspace(1, np.size(dvh), np.size(dvh))
-    dose_bins = np.round(dose_bins, 3)
-    bin_centers = dose_bins - 0.5
+    dose_bins = np.linspace(0, np.size(dvh), np.size(dvh))
+    dose_bins = np.round(dose_bins, 3) * dvh_bin_width
+    bin_centers = dose_bins - (dvh_bin_width / 2.)
     eud = np.power(np.sum(np.multiply(v, np.power(bin_centers, a))), 1. / float(a))
     eud = np.round(eud, 2) * 0.01
 

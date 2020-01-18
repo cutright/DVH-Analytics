@@ -23,7 +23,7 @@ class DefaultOptions:
     Create default options, to be inherited by Options class
     """
     def __init__(self):
-        self.VERSION = '0.6.9'
+        self.VERSION = '0.7.0dev'
 
         self.DB_TYPE = 'sqlite'
         self.SQL_PGSQL_IP_HIST = []
