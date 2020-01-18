@@ -28,6 +28,7 @@ from dvha.models.queried_data import QueriedDataFrame
 from dvha.models.rad_bio import RadBioFrame
 from dvha.models.time_series import TimeSeriesFrame
 from dvha.models.correlation import CorrelationFrame
+from dvha.models.machine_learning import MachineLearningModelViewer
 from dvha.models.regression import RegressionFrame, LoadMultiVarModelFrame
 from dvha.models.control_chart import ControlChartFrame
 from dvha.models.roi_map import ROIMapFrame
@@ -444,7 +445,7 @@ class DVHAMainFrame(wx.Frame):
             self.button_query_execute.Disable()
 
         # Force user to populate group 1 first
-        if self.radio_button_query_group.GetSelection() == 1 and self.group_data[1]['dvh'] is None:
+        if self.selected_group == 2 and self.group_data[1]['dvh'] is None:
             self.button_query_execute.Disable()
 
     def __catch_failed_sql_connection_on_app_launch(self):
@@ -487,12 +488,18 @@ class DVHAMainFrame(wx.Frame):
             if dlg.ShowModal() == wx.ID_OK:
                 model_file_path = dlg.GetPath()
                 dlg.Destroy()
-                group = self.radio_button_query_group.GetSelection() + 1
-                LoadMultiVarModelFrame(model_file_path, self.group_data, group, self.options)
+                LoadMultiVarModelFrame(model_file_path, self.group_data, self.selected_group, self.options)
 
     def on_load_ml_model(self, *evt):
-        wx.MessageBox('Currently under development.', 'Error',
-                      wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+        if self.group_data[self.selected_group]['stats_data']:
+            MachineLearningModelViewer(self, self.group_data, self.selected_group, self.options)
+        else:
+            wx.MessageBox('No data as been queried for Group %s.' % self.selected_group, 'Error',
+                          wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+
+    @property
+    def selected_group(self):
+        return self.radio_button_query_group.GetSelection() + 1
 
     def save_data_obj(self):
         self.save_data['group_data'] = self.group_data
@@ -625,7 +632,7 @@ class DVHAMainFrame(wx.Frame):
         wait = wx.BusyCursor()
         if group is not None:
             self.radio_button_query_group.SetSelection(group - 1)
-        group = self.radio_button_query_group.GetSelection() + 1
+        group = self.selected_group
 
         # TODO: retain group 1 endpoint defs after query of group 2
         self.endpoint.clear_data()
@@ -946,7 +953,7 @@ class DVHAMainFrame(wx.Frame):
         self.query_filters = {key: None for key in [1, 2]}
 
     def on_group_select(self, *evt):
-        group = self.radio_button_query_group.GetSelection() + 1
+        group = self.selected_group
         other = 3 - group
 
         self.button_query_execute.SetLabelText('Query and Retrieve Group %s' % group)

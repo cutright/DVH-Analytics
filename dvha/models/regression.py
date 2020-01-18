@@ -536,7 +536,7 @@ class MultiVarResultsFrame(wx.Frame):
         #         saved_data = load_object_from_file(model_file_path)
         #         print(type(saved_data['regressor']))
         #         self.ml_frames.append(RandomForestFrame(self.final_stats_data))
-        MachineLearningModelViewer(self, self.group_data, self.group, self.options)
+        MachineLearningModelViewer(self, self.group_data, self.group, self.options, mvr=self.plot.reg)
 
     def redraw_plot(self):
         self.plot.redraw_plot()
