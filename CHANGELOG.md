@@ -1,5 +1,10 @@
 # Change log of DVH Analytics
 
+v0.7.0 (TBD)
+--------------------
+ - [RadBio] Fix for [Issue #34](https://github.com/cutright/DVH-Analytics/issues/34)
+
+
 v0.6.9 (2020.01.17)
 --------------------
  - [Correlation] Catch crash if there is insufficient data for a correlation calculation

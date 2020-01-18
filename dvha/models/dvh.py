@@ -378,6 +378,8 @@ def dose_to_volume(dvh, rel_volume, dvh_bin_width=1):
     """
     :param dvh: a single dvh
     :param rel_volume: fractional volume
+    :param dvh_bin_width: dose bin width of dvh
+    :type dvh_bin_width: int
     :return: minimum dose in Gy of specified volume
     """
 
@@ -398,6 +400,8 @@ def volume_of_dose(dvh, dose, dvh_bin_width=1):
     """
     :param dvh: a single dvh
     :param dose: dose in cGy
+    :param dvh_bin_width: dose bin width of dvh
+    :type dvh_bin_width: int
     :return: volume in cm^3 of roi receiving at least the specified dose
     """
 
