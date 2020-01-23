@@ -102,6 +102,7 @@ class ImportDicomFrame(wx.Frame):
 
         self.button_browse = wx.Button(self, wx.ID_ANY, u"Browse…")
         self.checkbox_subfolders = wx.CheckBox(self, wx.ID_ANY, "Search within sub-folders")
+        self.checkbox_keep_in_inbox = wx.CheckBox(self, wx.ID_ANY, "Leave files in import directory")
         self.panel_study_tree = wx.Panel(self, wx.ID_ANY, style=wx.BORDER_SUNKEN)
         self.gauge = wx.Gauge(self, -1, 100)
         self.button_import = wx.Button(self, wx.ID_ANY, "Import")
@@ -190,6 +191,9 @@ class ImportDicomFrame(wx.Frame):
         self.checkbox_subfolders.SetValue(1)
         self.checkbox_include_uncategorized.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
                                                             wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
+        self.checkbox_keep_in_inbox.SetValue(0)
+        self.checkbox_keep_in_inbox.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
+                                                    wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         self.checkbox_include_uncategorized.SetValue(0)
 
         for checkbox in self.checkbox.values():
@@ -245,11 +249,14 @@ class ImportDicomFrame(wx.Frame):
         sizer_dicom_import_directory = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "DICOM Import Directory"),
                                                          wx.VERTICAL)
         sizer_directory = wx.BoxSizer(wx.VERTICAL)
+        sizer_import_checkboxes = wx.BoxSizer(wx.HORIZONTAL)
         sizer_browse = wx.BoxSizer(wx.HORIZONTAL)
         sizer_browse.Add(self.text_ctrl_directory, 1, wx.ALL | wx.EXPAND, 5)
         sizer_browse.Add(self.button_browse, 0, wx.ALL, 5)
         sizer_directory.Add(sizer_browse, 1, wx.EXPAND, 0)
-        sizer_directory.Add(self.checkbox_subfolders, 0, wx.LEFT, 10)
+        sizer_import_checkboxes.Add(self.checkbox_subfolders, 0, wx.LEFT, 10)
+        sizer_import_checkboxes.Add(self.checkbox_keep_in_inbox, 0, wx.LEFT, 10)
+        sizer_directory.Add(sizer_import_checkboxes, 1, wx.EXPAND, 0)
         sizer_dicom_import_directory.Add(sizer_directory, 1, wx.EXPAND, 0)
         sizer_browse_and_tree.Add(sizer_dicom_import_directory, 0, wx.ALL | wx.EXPAND, 10)
         label_note = wx.StaticText(self, wx.ID_ANY,
@@ -712,7 +719,7 @@ class ImportDicomFrame(wx.Frame):
             self.roi_map.write_to_file()
             ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
                          self.checkbox_include_uncategorized.GetValue(), self.terminate,
-                         self.dicom_importer.other_dicom_files, self.start_path)
+                         self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue())
             dlg = ImportStatusDialog(self.terminate)
             # calling self.Close() below caused issues in Windows if Show() used instead of ShowModal()
             [dlg.Show, dlg.ShowModal][is_windows()]()
@@ -1027,7 +1034,8 @@ class ImportWorker(Thread):
     """
     Create a thread separate from the GUI to perform the import calculations
     """
-    def __init__(self, data, checked_uids, import_uncategorized, terminate, other_dicom_files, start_path):
+    def __init__(self, data, checked_uids, import_uncategorized, terminate, other_dicom_files, start_path,
+                 keep_in_inbox):
         """
         :param data: parsed dicom data
         :type data: dict
@@ -1039,6 +1047,8 @@ class ImportWorker(Thread):
         :type terminate: dict
         :param other_dicom_files: other dicom files found in the import directory
         :type other_dicom_files: dict
+        :param keep_in_inbox: Set to False to move files, True to copy files to imported
+        :type keep_in_inbox: bool
         """
         Thread.__init__(self)
 
@@ -1048,6 +1058,7 @@ class ImportWorker(Thread):
         self.terminate = terminate
         self.other_dicom_files = other_dicom_files
         self.start_path = start_path
+        self.keep_in_inbox = keep_in_inbox
 
         with DVH_SQL() as cnx:
             self.last_import_time = cnx.now  # use pgsql time rather than CPU since time stamps in DB are based on psql
@@ -1302,7 +1313,7 @@ class ImportWorker(Thread):
             files.extend(self.other_dicom_files[study_uid])
 
         new_dir = join(self.data[uid].import_path, self.data[uid].mrn)
-        move_files_to_new_path(files, new_dir)
+        move_files_to_new_path(files, new_dir, copy_files=self.keep_in_inbox)
 
         # remove old directory if empty
         # for file in files:

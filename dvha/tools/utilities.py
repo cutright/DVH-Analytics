@@ -397,13 +397,15 @@ def calc_stats(data):
     return rtn_data
 
 
-def move_files_to_new_path(files, new_dir):
+def move_files_to_new_path(files, new_dir, copy_files=False):
     """
     Move all files provided to the new directory
     :param files: absolute file paths
     :type files: list
     :param new_dir: absolute directory path
     :type new_dir: str
+    :param copy_files: Set to True to keep original files and copy to new_dir, False to remove original files
+    :type copy_files: bool
     """
     for file_path in files:
         if isfile(file_path):
@@ -413,7 +415,7 @@ def move_files_to_new_path(files, new_dir):
             if not isdir(new_dir):
                 mkdir(new_dir)
             if old_dir != new_dir:
-                shutil.move(file_path, new)
+                [shutil.move, shutil.copy][copy_files](file_path, new)
 
 
 def delete_directory_contents(dir_to_delete):
