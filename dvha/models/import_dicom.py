@@ -102,7 +102,7 @@ class ImportDicomFrame(wx.Frame):
 
         self.button_browse = wx.Button(self, wx.ID_ANY, u"Browse…")
         self.checkbox_subfolders = wx.CheckBox(self, wx.ID_ANY, "Search within sub-folders")
-        self.checkbox_keep_in_inbox = wx.CheckBox(self, wx.ID_ANY, "Leave files in import directory")
+        self.checkbox_keep_in_inbox = wx.CheckBox(self, wx.ID_ANY, "Leave files in inbox")
         self.panel_study_tree = wx.Panel(self, wx.ID_ANY, style=wx.BORDER_SUNKEN)
         self.gauge = wx.Gauge(self, -1, 100)
         self.button_import = wx.Button(self, wx.ID_ANY, "Import")
@@ -189,11 +189,16 @@ class ImportDicomFrame(wx.Frame):
         self.checkbox_subfolders.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
                                                  wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         self.checkbox_subfolders.SetValue(1)
-        self.checkbox_include_uncategorized.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
-                                                            wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
+
         self.checkbox_keep_in_inbox.SetValue(0)
         self.checkbox_keep_in_inbox.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
                                                     wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
+        self.checkbox_keep_in_inbox.SetToolTip("Successfully imported DICOM files will either be copied or moved into "
+                                               "your Imported Directory. Check this box to copy. Uncheck this box to "
+                                               "remove these files from the inbox.")
+
+        self.checkbox_include_uncategorized.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
+                                                            wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         self.checkbox_include_uncategorized.SetValue(0)
 
         for checkbox in self.checkbox.values():
