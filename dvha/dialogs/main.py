@@ -14,6 +14,8 @@ import wx
 import wx.adv
 from dateutil.parser import parse as parse_date
 import matplotlib.colors as plot_colors
+import numpy as np
+import time
 from os.path import isdir
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_window_size
 from dvha.db import sql_columns
@@ -26,15 +28,19 @@ class DatePicker(wx.Dialog):
     """
     Pop-up window to select a date to ensure proper formatting (over typing in a date into a text_ctrl directly)
     """
-    def __init__(self, title='', initial_date=None, action=None):
+    def __init__(self, title='', initial_date=None, action=None, sql_date_format=False):
         """
         :param title: optional title for the wx.Dialog
         :type title: str
         :param initial_date: optional initial date
         :type initial_date: str
         :param action: pointer to function to be executed on wx.ID_OK or
+        :param sql_date_format: Set to True for SQL compatible format
+        :type sql_date_format: bool
         """
         wx.Dialog.__init__(self, None, title=title)
+
+        self.sql_date_format = sql_date_format
 
         self.calendar_ctrl = wx.adv.CalendarCtrl(self, wx.ID_ANY,
                                                  style=wx.adv.CAL_SHOW_HOLIDAYS | wx.adv.CAL_SHOW_SURROUNDING_WEEKS)
@@ -44,6 +50,8 @@ class DatePicker(wx.Dialog):
         self.button = {'apply': wx.Button(self, wx.ID_OK, "Apply"),
                        'delete': wx.Button(self, wx.ID_ANY, "Delete"),
                        'cancel': wx.Button(self, wx.ID_CANCEL, "Cancel")}
+
+        self.button['delete'].Enable(not sql_date_format)
 
         self.none = False  # If True after close of this dialog, user deleted the value
 
@@ -76,7 +84,10 @@ class DatePicker(wx.Dialog):
         if self.none:
             return ''
         date = self.calendar_ctrl.GetDate()
-        return "%s/%s/%s" % (date.month+1, date.day, date.year)
+        date = "%s/%s/%s" % (date.month+1, date.day, date.year)
+        if self.sql_date_format:
+            return str(parse_date(date).date())
+        return date
 
     def on_delete(self, evt):
         self.none = True
@@ -465,16 +476,19 @@ class QueryNumericalDialog(wx.Dialog):
         self.checkbox_1 = wx.CheckBox(self, wx.ID_ANY, "Exclude")
         self.button_OK = wx.Button(self, wx.ID_OK, "OK")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+        self.button_date_picker = wx.Button(self, wx.ID_ANY, "Edit Dates")
+
+        self.__do_layout()
+        self.__do_bind()
 
         self.combo_box_1.SetValue("ROI Max Dose")
         self.update_range(None)
 
+    def __do_bind(self):
         self.Bind(wx.EVT_COMBOBOX, self.update_range, id=self.combo_box_1.GetId())
-
-        self.__do_layout()
+        self.Bind(wx.EVT_BUTTON, self.on_date_picker, id=self.button_date_picker.GetId())
 
     def __do_layout(self):
-        # begin wxGlade: MyFrame.__do_layout
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_vbox = wx.BoxSizer(wx.VERTICAL)
         sizer_ok_cancel = wx.BoxSizer(wx.HORIZONTAL)
@@ -486,16 +500,17 @@ class QueryNumericalDialog(wx.Dialog):
         sizer_category_1.Add(label_category, 0, wx.ALL | wx.EXPAND, 5)
         sizer_category_1.Add(self.combo_box_1, 0, wx.ALL, 5)
         sizer_widgets.Add(sizer_category_1, 1, wx.EXPAND, 0)
-        label_min = wx.StaticText(self, wx.ID_ANY, "Min:")
-        sizer_min.Add(label_min, 0, wx.ALL | wx.EXPAND, 5)
+        self.label_min = wx.StaticText(self, wx.ID_ANY, "Min:")
+        sizer_min.Add(self.label_min, 0, wx.ALL | wx.EXPAND, 5)
         sizer_min.Add(self.text_ctrl_min, 0, wx.ALL, 5)
         sizer_widgets.Add(sizer_min, 0, wx.EXPAND, 0)
-        label_max = wx.StaticText(self, wx.ID_ANY, "Max:")
-        sizer_max.Add(label_max, 0, wx.ALL | wx.EXPAND, 5)
+        self.label_max = wx.StaticText(self, wx.ID_ANY, "Max:")
+        sizer_max.Add(self.label_max, 0, wx.ALL | wx.EXPAND, 5)
         sizer_max.Add(self.text_ctrl_max, 0, wx.ALL, 5)
         sizer_widgets.Add(sizer_max, 0, wx.EXPAND, 0)
         sizer_widgets.Add(self.checkbox_1, 0, wx.ALL | wx.EXPAND, 5)
         sizer_vbox.Add(sizer_widgets, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_ok_cancel.Add(self.button_date_picker, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_ok_cancel.Add(self.button_OK, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_ok_cancel.Add(self.button_cancel, 0, wx.LEFT | wx.RIGHT, 5)
         sizer_vbox.Add(sizer_ok_cancel, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
@@ -514,14 +529,26 @@ class QueryNumericalDialog(wx.Dialog):
             min_value = cnx.get_min_value(table, col)
             max_value = cnx.get_max_value(table, col)
 
-        if units:
-            self.text_ctrl_min.SetLabelText('Min (%s):' % units)
-            self.text_ctrl_max.SetLabelText('Max (%s):' % units)
-        else:
-            self.text_ctrl_min.SetLabelText('Min:')
-            self.text_ctrl_max.SetLabelText('Max:')
+        self.button_date_picker.Enable(key == 'Simulation Date')
+        self.text_ctrl_min.Enable(key != 'Simulation Date')
+        self.text_ctrl_max.Enable(key != 'Simulation Date')
+
         self.set_min_value(min_value)
         self.set_max_value(max_value)
+
+        if key == 'Simulation Date':
+            self.update_min_max_text('Start:', 'End:')
+            self.on_date_picker()
+        elif units:
+            self.update_min_max_text('Min (%s):' % units, 'Max (%s):' % units)
+        else:
+            self.update_min_max_text('Min:', 'Max:')
+
+        self.clean_numeric_input()
+
+    def update_min_max_text(self, min_text, max_text):
+        self.label_min.SetLabelText(min_text)
+        self.label_max.SetLabelText(max_text)
 
     def set_category(self, value):
         self.combo_box_1.SetValue(value)
@@ -563,6 +590,22 @@ class QueryNumericalDialog(wx.Dialog):
                 else:
                     new_value = cnx.get_max_value(table, col)
         return new_value
+
+    def on_date_picker(self, *evt):
+        DatePicker(initial_date=self.text_ctrl_min.GetValue(), title='Start Date',
+                   action=self.set_min_value, sql_date_format=True)
+        time.sleep(0.3)  # Immediately loading the next DatePicker looks like a glitch
+        DatePicker(initial_date=self.text_ctrl_max.GetValue(), title='End Date',
+                   action=self.set_max_value, sql_date_format=True)
+
+    def clean_numeric_input(self):
+        for text_ctrl in [self.text_ctrl_min, self.text_ctrl_max]:
+            try:
+                value = float(text_ctrl.GetValue())
+                func = [np.floor, np.ceil][text_ctrl == self.text_ctrl_max]
+                text_ctrl.SetValue("%0.2f" % func(value))
+            except ValueError:
+                pass
 
 
 class UserSettings(wx.Dialog):
