@@ -2,9 +2,9 @@
 
 v0.7.0 (TBD)
 --------------------
- - [Importing] Fix for [Issue 37](https://github.com/cutright/DVH-Analytics/issues/37)
+ - [Import] Allow user to keep dicom files in the selected import directory
  - [Modeling] Allow user to open ML model without explicitly generating an MVR model
- - [RadBio] Fix for [Issue 34](https://github.com/cutright/DVH-Analytics/issues/34)
+ - [RadBio] Fix for [Issue #34](https://github.com/cutright/DVH-Analytics/issues/34)
  - [Misc] Corrected units for beam perimeter and area
 
 
