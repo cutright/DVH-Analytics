@@ -1120,10 +1120,18 @@ class ImportWorker(Thread):
                 dose_files = [self.data[plan_uid].dicompyler_data['dose'] for plan_uid in plan_uid_set]
 
                 wait = wx.BusyInfo('Summing grids for\n%s' % study_uid)
-                dose_sum = sum_dose_grids(dose_files)
-                del wait
-                for plan_uid in plan_uid_set:
-                    self.data[plan_uid].import_dose_sum(dose_sum)
+                try:
+                    dose_sum = sum_dose_grids(dose_files)
+                    for plan_uid in plan_uid_set:
+                        self.data[plan_uid].import_dose_sum(dose_sum)
+                    del wait
+                except Exception as e:
+                    print(str(e))
+                    print('ERROR: Dose sum failed, this feature is currently under development. Skipping Import.')
+                    mrns = ', '.join(list(set([self.data[plan_uid].mrn for plan_uid in plan_uid_set])))
+                    print('\tMRNs: %s' % mrns)
+                    del wait
+                    continue
 
             for i, plan_uid in enumerate(plan_uid_set):
                 if plan_uid in list(self.data):
@@ -1141,7 +1149,7 @@ class ImportWorker(Thread):
                         self.delete_partially_updated_plan()
                         return
                 else:
-                    print('WARNING: This plan could not be parsed. Skipping import. '
+                    print('ERROR: This plan could not be parsed. Skipping import. '
                           'Did you supply RT Structure, Dose, and Plan?')
                     print('\tPlan UID: %s' % plan_uid)
                     print('\tMRN: %s' % self.data[plan_uid].mrn)

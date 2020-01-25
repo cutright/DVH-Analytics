@@ -3,6 +3,7 @@
 v0.7.0 (TBD)
 --------------------
  - [Import] Allow user to keep dicom files in the selected import directory
+ - [Import] Prevent crash on dose summation, dose sum bug still not fixed
  - [Modeling] Allow user to open ML model without explicitly generating an MVR model
  - [Query] Fix for [Issue #37](https://github.com/cutright/DVH-Analytics/issues/37)
  - [Query] Proper min and max label updates with units in numerical query dialog
