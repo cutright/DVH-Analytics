@@ -725,9 +725,12 @@ class DVHAMainFrame(wx.Frame):
                 col = self.numerical_columns[category]['var_name']
                 value_low = self.data_table_numerical.data['min'][i]
                 value_high = self.data_table_numerical.data['max'][i]
-                if 'date' in col and self.options.DB_TYPE == 'pgsql':
-                    value_low = "'%s'::date" % value_low
-                    value_high = "'%s'::date" % value_high
+                if 'date' in col:
+                    value_low = "'%s'" % value_low
+                    value_high = "'%s'" % value_high
+                    if self.options.DB_TYPE == 'pgsql':
+                        value_low = value_low + '::date'
+                        value_high = value_high + '::date'
                 if col not in queries_by_sql_column[table]:
                     queries_by_sql_column[table][col] = []
                 operator = ['BETWEEN', 'NOT BETWEEN'][
