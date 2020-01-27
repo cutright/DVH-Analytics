@@ -4,8 +4,7 @@
 
 ---------  
 
-Welcome to the brand new DVH Analytics (DVHA), rewritten as a native OS application with wxPython. This version is currently 
-only available as source code during the public beta. Compiled versions will be available after successful testing. The 
+Welcome to the brand new DVH Analytics (DVHA), rewritten as a native OS application with wxPython. The 
 previous web-based version can be found [here](https://github.com/cutright/DVH-Analytics-Bokeh) but is no longer being 
 developed.
 
