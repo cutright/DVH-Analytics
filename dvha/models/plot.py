@@ -14,13 +14,14 @@ import wx.html2
 from bokeh.plotting import figure
 from bokeh.io.export import get_layout_html
 from bokeh.models import Legend, HoverTool, ColumnDataSource, DataTable, TableColumn,\
-    NumberFormatter, Div, Range1d, LabelSet
+    NumberFormatter, Div, Range1d, LabelSet, Spacer
 from bokeh.layouts import column, row
 from bokeh.palettes import Colorblind8 as palette
 import itertools
 import numpy as np
 from os.path import join, isdir
 from os import mkdir
+from scipy.stats import ttest_ind, ranksums, normaltest
 from dvha.tools.errors import PlottingMemoryError
 from dvha.tools.utilities import collapse_into_single_dates, moving_avg, is_windows
 from dvha.tools.stats import MultiVariableRegression, get_control_limits
@@ -421,8 +422,8 @@ class PlotTimeSeries(Plot):
 
         self.type = 'time_series'
         self.parent = parent
-        self.size_factor = {'plot': (0.885, 0.424),
-                            'hist': (0.885, 0.359)}
+        self.size_factor = {'plot': (0.885, 0.38),
+                            'hist': (0.885, 0.32)}
 
         self.options = options
         self.source = {key: {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], group=[])),
@@ -436,6 +437,7 @@ class PlotTimeSeries(Plot):
 
         self.__add_plot_data()
         self.__add_histogram_data()
+        self.__add_stat_divs()
         self.__add_legend()
         self.__add_hover()
         self.__do_layout()
@@ -483,6 +485,11 @@ class PlotTimeSeries(Plot):
         self.histogram.xaxis.axis_label = ""
         self.histogram.yaxis.axis_label = "Frequency"
 
+    def __add_stat_divs(self):
+        self.normal_test_div = {key: Div() for key in [1, 2]}
+        self.t_test_div = Div()
+        self.wilcoxon_div = Div()
+
     def __add_legend(self):
         # Set the legend
         legend_plot = Legend(items=[("Data 1 ", [self.plot_data]),
@@ -527,6 +534,11 @@ class PlotTimeSeries(Plot):
     def __do_layout(self):
         self.bokeh_layout = column(self.figure,
                                    self.div,
+                                   row(column(self.normal_test_div[1],
+                                              self.normal_test_div[2]),
+                                       Spacer(width=30),
+                                       column(self.t_test_div,
+                                              self.wilcoxon_div)),
                                    self.histogram)
 
     def clear_source(self, source_key):
@@ -551,6 +563,8 @@ class PlotTimeSeries(Plot):
         self.update_plot_data(data)
         self.update_histogram(data[1]['bin_size'])
         self.update_trend(data[1]['avg_len'], data[1]['percentile'])
+
+        self.update_divs()
 
         self.update_bokeh_layout_in_wx_python()
 
@@ -598,6 +612,30 @@ class PlotTimeSeries(Plot):
                                                   'y': [average] * 2}
                 self.source[grp]['patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
                                                   'y': [upper_bound, upper_bound, lower_bound, lower_bound]}
+
+    def update_divs(self):
+
+        grp_data = {grp: self.source[grp]['plot'].data['y'] for grp in [1, 2]}
+
+        # Normal Test
+        s, p = {1: '', 2: ''}, {1: '', 2: ''}
+        for grp, data in grp_data.items():
+            if data:
+                s[grp], p[grp] = normaltest(data)
+                p[grp] = "%0.3f" % p[grp]
+
+        # t-Test and Rank Sums
+        pt, pr = '', ''
+        if grp_data[1] and grp_data[2]:
+            st, pt = ttest_ind(grp_data[1], grp_data[2])
+            sr, pr = ranksums(grp_data[1], grp_data[2])
+            pt = "%0.3f" % pt
+            pr = "%0.3f" % pr
+
+        self.normal_test_div[1].text = "<b>Group 1 Normal Test p-value</b>: %s" % p[1]
+        self.normal_test_div[2].text = "<b>Group 2 Normal Test p-value</b>: %s" % p[2]
+        self.t_test_div.text = "<b>Two Sample t-Test (Group 1 vs 2) p-value</b>: %s" % pt
+        self.wilcoxon_div.text = "<b>Wilcoxon rank-sum (Group 1 vs 2) p-value</b>: %s" % pr
 
     def get_csv(self):
         data = self.source[1]['plot'].data
