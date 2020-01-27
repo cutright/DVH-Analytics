@@ -21,6 +21,7 @@ import itertools
 import numpy as np
 from os.path import join, isdir
 from os import mkdir
+from scipy.stats import ttest_ind, ranksums, normaltest
 from dvha.tools.errors import PlottingMemoryError
 from dvha.tools.utilities import collapse_into_single_dates, moving_avg, is_windows
 from dvha.tools.stats import MultiVariableRegression, get_control_limits
@@ -421,8 +422,8 @@ class PlotTimeSeries(Plot):
 
         self.type = 'time_series'
         self.parent = parent
-        self.size_factor = {'plot': (0.885, 0.424),
-                            'hist': (0.885, 0.359)}
+        self.size_factor = {'plot': (0.885, 0.38),
+                            'hist': (0.885, 0.32)}
 
         self.options = options
         self.source = {key: {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], group=[])),
@@ -432,10 +433,9 @@ class PlotTimeSeries(Plot):
                              'patch': ColumnDataSource(data=dict(x=[], y=[]))} for key in [1, 2]}
         self.y_axis_label = ''
 
-        self.div = Div(text='<hr>')
-
         self.__add_plot_data()
         self.__add_histogram_data()
+        self.__add_stat_divs()
         self.__add_legend()
         self.__add_hover()
         self.__do_layout()
@@ -483,6 +483,11 @@ class PlotTimeSeries(Plot):
         self.histogram.xaxis.axis_label = ""
         self.histogram.yaxis.axis_label = "Frequency"
 
+    def __add_stat_divs(self):
+        self.normal_test_div = {key: Div() for key in [1, 2]}
+        self.t_test_div = Div()
+        self.wilcoxon_div = Div()
+
     def __add_legend(self):
         # Set the legend
         legend_plot = Legend(items=[("Data 1 ", [self.plot_data]),
@@ -526,7 +531,10 @@ class PlotTimeSeries(Plot):
 
     def __do_layout(self):
         self.bokeh_layout = column(self.figure,
-                                   self.div,
+                                   row(column(self.normal_test_div[1],
+                                              self.normal_test_div[2]),
+                                       column(self.t_test_div,
+                                              self.wilcoxon_div)),
                                    self.histogram)
 
     def clear_source(self, source_key):
@@ -551,6 +559,8 @@ class PlotTimeSeries(Plot):
         self.update_plot_data(data)
         self.update_histogram(data[1]['bin_size'])
         self.update_trend(data[1]['avg_len'], data[1]['percentile'])
+
+        self.update_divs()
 
         self.update_bokeh_layout_in_wx_python()
 
@@ -599,6 +609,42 @@ class PlotTimeSeries(Plot):
                 self.source[grp]['patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
                                                   'y': [upper_bound, upper_bound, lower_bound, lower_bound]}
 
+    def update_divs(self):
+
+        grp_data = {grp: self.source[grp]['plot'].data['y'] for grp in [1, 2]}
+
+        # Normal Test
+        s, p = {1: '', 2: ''}, {1: '', 2: ''}
+        for grp, data in grp_data.items():
+            if data:
+                try:
+                    s[grp], p[grp] = normaltest(data)
+                    p[grp] = "%0.3f" % p[grp]
+                except Exception as e:
+                    print('Normal test failed: ', str(e))
+                    p[grp] = 'ERROR'
+
+        # t-Test and Rank Sums
+        pt, pr = '', ''
+        if grp_data[1] and grp_data[2]:
+            try:
+                st, pt = ttest_ind(grp_data[1], grp_data[2])
+                pt = "%0.3f" % pt
+            except Exception as e:
+                print('t-Test failed: ', str(e))
+                pt = 'ERROR'
+            try:
+                sr, pr = ranksums(grp_data[1], grp_data[2])
+                pr = "%0.3f" % pr
+            except Exception as e:
+                print('Wilcoxon ranksums failed: ', str(e))
+                pr = 'ERROR'
+
+        self.normal_test_div[1].text = "<b>Group 1 Normal Test p-value</b>: %s" % p[1]
+        self.normal_test_div[2].text = "<b>Group 2 Normal Test p-value</b>: %s" % p[2]
+        self.t_test_div.text = "<b>Two Sample t-Test (Group 1 vs 2) p-value</b>: %s" % pt
+        self.wilcoxon_div.text = "<b>Wilcoxon rank-sum (Group 1 vs 2) p-value</b>: %s" % pr
+
     def get_csv(self):
         data = self.source[1]['plot'].data
         csv_data = ['MRN,Study Instance UID,Date,%s' % self.y_axis_label]
@@ -623,7 +669,12 @@ class PlotTimeSeries(Plot):
         self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
         self.histogram.plot_width = int(self.size_factor['hist'][0] * float(panel_width))
         self.histogram.plot_height = int(self.size_factor['hist'][1] * float(panel_height))
-        self.div.width = int(self.size_factor['plot'][0] * float(panel_width))
+
+        div_width = int(self.size_factor['plot'][0] * float(panel_width) / 2)
+        self.normal_test_div[1].width = div_width
+        self.normal_test_div[2].width = div_width
+        self.t_test_div.width = div_width
+        self.wilcoxon_div.width = div_width
 
 
 class PlotCorrelation(Plot):

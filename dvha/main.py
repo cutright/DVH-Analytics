@@ -12,6 +12,7 @@ The main file DVH Analytics
 
 import wx
 from datetime import datetime
+import webbrowser
 from dvha.db import sql_columns
 from dvha.db.sql_to_python import QuerySQL
 from dvha.db.sql_connector import echo_sql_db, initialize_db
@@ -28,6 +29,7 @@ from dvha.models.queried_data import QueriedDataFrame
 from dvha.models.rad_bio import RadBioFrame
 from dvha.models.time_series import TimeSeriesFrame
 from dvha.models.correlation import CorrelationFrame
+from dvha.models.machine_learning import MachineLearningModelViewer
 from dvha.models.regression import RegressionFrame, LoadMultiVarModelFrame
 from dvha.models.control_chart import ControlChartFrame
 from dvha.models.roi_map import ROIMapFrame
@@ -147,6 +149,7 @@ class DVHAMainFrame(wx.Frame):
         file_menu = wx.Menu()
         # file_menu.Append(wx.ID_NEW, '&New')
         menu_open = file_menu.Append(wx.ID_OPEN, '&Open\tCtrl+O')
+        menu_import = file_menu.Append(wx.ID_OPEN, '&Import DICOM\tCtrl+I')
         menu_save = file_menu.Append(wx.ID_ANY, '&Save\tCtrl+S')
         menu_close = file_menu.Append(wx.ID_ANY, '&Close')
 
@@ -171,6 +174,7 @@ class DVHAMainFrame(wx.Frame):
         self.data_menu = wx.Menu()
 
         self.data_views = {key: None for key in ['DVHs', 'Plans', 'Rxs', 'Beams']}
+        menu_db_admin = self.data_menu.Append(wx.ID_ANY, 'Database Administrator')
         self.data_menu.AppendSubMenu(load_model, 'Load &Model')
         self.data_menu.AppendSubMenu(export, '&Export')
         self.data_menu_items = {'DVHs': self.data_menu.Append(wx.ID_ANY, 'Show DVHs\tCtrl+1'),
@@ -183,20 +187,27 @@ class DVHAMainFrame(wx.Frame):
         settings_menu = wx.Menu()
         menu_pref = settings_menu.Append(wx.ID_PREFERENCES)
         menu_sql = settings_menu.Append(wx.ID_ANY, '&Database Connection\tCtrl+D')
+        menu_roi_map = settings_menu.Append(wx.ID_ANY, '&ROI Map\tCtrl+R')
 
         help_menu = wx.Menu()
+        menu_github = help_menu.Append(wx.ID_ANY, 'GitHub Page')
+        menu_report_issue = help_menu.Append(wx.ID_ANY, 'Report an Issue')
         menu_about = help_menu.Append(wx.ID_ANY, '&About')
 
         self.Bind(wx.EVT_MENU, self.on_quit, qmi)
         self.Bind(wx.EVT_MENU, self.on_open, menu_open)
+        self.Bind(wx.EVT_MENU, self.on_toolbar_import, menu_import)
         self.Bind(wx.EVT_MENU, self.on_load_mvr_model, load_model_mvr)
         self.Bind(wx.EVT_MENU, self.on_load_ml_model, load_model_ml)
         self.Bind(wx.EVT_MENU, self.on_close, menu_close)
         self.Bind(wx.EVT_MENU, self.on_export, export_csv)
         self.Bind(wx.EVT_MENU, self.on_save, menu_save)
         self.Bind(wx.EVT_MENU, self.on_pref, menu_pref)
+        self.Bind(wx.EVT_MENU, self.on_githubpage, menu_github)
+        self.Bind(wx.EVT_MENU, self.on_report_issue, menu_report_issue)
         self.Bind(wx.EVT_MENU, self.on_about, menu_about)
         self.Bind(wx.EVT_MENU, self.on_sql, menu_sql)
+        self.Bind(wx.EVT_MENU, self.on_toolbar_roi_map, menu_roi_map)
         if is_mac():
             menu_user_settings = settings_menu.Append(wx.ID_ANY, '&Preferences\tCtrl+,')
             self.Bind(wx.EVT_MENU, self.on_pref, menu_user_settings)
@@ -206,6 +217,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_save_plot_correlation, export_correlation)
         self.Bind(wx.EVT_MENU, self.on_save_plot_regression, export_regression)
         self.Bind(wx.EVT_MENU, self.on_save_plot_control_chart, export_control_chart)
+        self.Bind(wx.EVT_MENU, self.on_toolbar_database, menu_db_admin)
         self.Bind(wx.EVT_MENU, self.on_view_dvhs, self.data_menu_items['DVHs'])
         self.Bind(wx.EVT_MENU, self.on_view_plans, self.data_menu_items['Plans'])
         self.Bind(wx.EVT_MENU, self.on_view_rxs, self.data_menu_items['Rxs'])
@@ -444,7 +456,7 @@ class DVHAMainFrame(wx.Frame):
             self.button_query_execute.Disable()
 
         # Force user to populate group 1 first
-        if self.radio_button_query_group.GetSelection() == 1 and self.group_data[1]['dvh'] is None:
+        if self.selected_group == 2 and self.group_data[1]['dvh'] is None:
             self.button_query_execute.Disable()
 
     def __catch_failed_sql_connection_on_app_launch(self):
@@ -487,12 +499,18 @@ class DVHAMainFrame(wx.Frame):
             if dlg.ShowModal() == wx.ID_OK:
                 model_file_path = dlg.GetPath()
                 dlg.Destroy()
-                group = self.radio_button_query_group.GetSelection() + 1
-                LoadMultiVarModelFrame(model_file_path, self.group_data, group, self.options)
+                LoadMultiVarModelFrame(model_file_path, self.group_data, self.selected_group, self.options)
 
     def on_load_ml_model(self, *evt):
-        wx.MessageBox('Currently under development.', 'Error',
-                      wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+        if self.group_data[self.selected_group]['stats_data']:
+            MachineLearningModelViewer(self, self.group_data, self.selected_group, self.options)
+        else:
+            wx.MessageBox('No data as been queried for Group %s.' % self.selected_group, 'Error',
+                          wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+
+    @property
+    def selected_group(self):
+        return self.radio_button_query_group.GetSelection() + 1
 
     def save_data_obj(self):
         self.save_data['group_data'] = self.group_data
@@ -625,7 +643,7 @@ class DVHAMainFrame(wx.Frame):
         wait = wx.BusyCursor()
         if group is not None:
             self.radio_button_query_group.SetSelection(group - 1)
-        group = self.radio_button_query_group.GetSelection() + 1
+        group = self.selected_group
 
         # TODO: retain group 1 endpoint defs after query of group 2
         self.endpoint.clear_data()
@@ -707,9 +725,12 @@ class DVHAMainFrame(wx.Frame):
                 col = self.numerical_columns[category]['var_name']
                 value_low = self.data_table_numerical.data['min'][i]
                 value_high = self.data_table_numerical.data['max'][i]
-                if 'date' in col and self.options.DB_TYPE == 'pgsql':
-                    value_low = "'%s'::date" % value_low
-                    value_high = "'%s'::date" % value_high
+                if 'date' in col:
+                    value_low = "'%s'" % value_low
+                    value_high = "'%s'" % value_high
+                    if self.options.DB_TYPE == 'pgsql':
+                        value_low = value_low + '::date'
+                        value_high = value_high + '::date'
                 if col not in queries_by_sql_column[table]:
                     queries_by_sql_column[table][col] = []
                 operator = ['BETWEEN', 'NOT BETWEEN'][
@@ -811,6 +832,14 @@ class DVHAMainFrame(wx.Frame):
         else:
             wx.MessageBox('There is no data to export! Please query some data first.', 'Export Error',
                           wx.OK | wx.ICON_WARNING)
+
+    @staticmethod
+    def on_githubpage(evt):
+        webbrowser.open_new_tab("http://dvhanalytics.com/")
+
+    @staticmethod
+    def on_report_issue(evt):
+        webbrowser.open_new_tab("https://github.com/cutright/DVH-Analytics/issues")
 
     @staticmethod
     def on_about(evt):
@@ -946,7 +975,7 @@ class DVHAMainFrame(wx.Frame):
         self.query_filters = {key: None for key in [1, 2]}
 
     def on_group_select(self, *evt):
-        group = self.radio_button_query_group.GetSelection() + 1
+        group = self.selected_group
         other = 3 - group
 
         self.button_query_execute.SetLabelText('Query and Retrieve Group %s' % group)

@@ -13,6 +13,7 @@ Tools used to communicate with the SQL database
 import psycopg2
 import sqlite3
 from datetime import datetime
+from dateutil.parser import parse as date_parser
 from os.path import dirname, join, isfile
 from dvha.options import Options
 from dvha.paths import CREATE_PGSQL_TABLES, CREATE_SQLITE_TABLES, DATA_DIR
@@ -244,13 +245,25 @@ class DVH_SQL:
                 else:
                     values.append("NULL")
             else:
-                if 'varchar' in row[column][1]:
-                    max_length = int(row[column][1].replace('varchar(', '').replace(')', ''))
-                    values.append("'%s'" % truncate_string(row[column][0], max_length))
-                elif 'time_stamp' in row[column][1] and self.db_type != 'sqlite':
-                    values.append("'%s'::date" % row[column][0])  # sqlite3 does not support ::date
+                value = row[column][0]
+                value_type = row[column][1]
+
+                if 'varchar' in value_type:
+                    max_length = int(value_type.replace('varchar(', '').replace(')', ''))
+                    values.append("'%s'" % truncate_string(value, max_length))
+
+                elif value_type in {'time_stamp', 'date'}:
+                    date = date_parser(value)
+                    value = date.date()
+                    if value_type == 'time_stamp':
+                        value = "%s %s" % (value, date.time())
+                    if self.db_type == 'pgsql':  # sqlite3 does not support ::date
+                        values.append("'%s'::date" % value)
+                    else:
+                        values.append("'%s'" % value)
+
                 else:
-                    values.append("'%s'" % row[column][0])
+                    values.append("'%s'" % value)
 
         cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (table, ','.join(columns), ",".join(values))
         self.execute_str(cmd)

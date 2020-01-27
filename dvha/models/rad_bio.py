@@ -240,7 +240,8 @@ class RadBioFrame:
                     new_row[3] = gamma_50
                     new_row[4] = td_50
                     try:
-                        new_row[5] = "%0.2f" % round(calc_eud(data['dvh'].dvh[:, i], eud_a), 2)
+                        eud = calc_eud(data['dvh'].dvh[:, i], eud_a, dvh_bin_width=data['dvh'].dvh_bin_width)
+                        new_row[5] = "%0.2f" % round(eud, 2)
                     except Exception:
                         new_row[5] = 'None'
                     try:

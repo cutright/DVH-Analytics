@@ -161,6 +161,11 @@ class StatsData:
         :rtype: dict
         """
         if x in list(self.data) and y in list(self.data):
+            # TODO: potential data length issue with study_instance_uid
+            # Received the following error with 0.6.9, can't reproduce
+            # BokehUserWarning: ColumnDataSource's columns must be of the same length. Current lengths:
+            # ('date', 69), ('mrn', 69), ('uid', 70), ('x', 69), ('y', 69)
+            # Appears to point to this function's return?
             return {'uid': self.uids,
                     'mrn': self.mrns,
                     'date': self.sim_study_dates,

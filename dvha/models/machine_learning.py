@@ -78,7 +78,7 @@ class MachineLearningFrame(wx.Frame):
 
     def set_properties(self):
         self.SetTitle(self.title)
-        x_size = [0.47, 0.8][self.include_test_data]
+        x_size = [0.6, 0.8][self.include_test_data]
         self.SetMinSize(get_window_size(x_size, 0.7))
         self.set_defaults()
 
@@ -866,45 +866,52 @@ class FeatureImportanceFrame(wx.Frame):
 
 
 class MachineLearningModelViewer:
-    def __init__(self, parent, group_data, group, options):
+    def __init__(self, parent, group_data, group, options, mvr=None):
         self.parent = parent
         self.group_data = group_data
         self.group = group
         self.stats_data = group_data[group]['stats_data']
         self.options = options
 
-        self.__load_mlr_file()
-        try:
-            if self.is_valid:
-                self.__set_X_and_y_data()
+        self.file_path = self.file_select_dlg()
 
-                self.mvr = MultiVariableRegression(self.X, self.y)
-                self.multi_var_pred = self.mvr.predictions
+        if self.file_path:
 
-                data_keys = ['X', 'y', 'x_variables', 'y_variable', 'multi_var_pred', 'options', 'mrn', 'study_date', 'uid']
-                data = {key: getattr(self, key) for key in data_keys}
-                frame = ALGORITHMS[self.title]['frame']
-                self.ml_frame = frame(data, include_test_data=False)
-                self.__load_model()
+            self.__load_mlr_file()
+            try:
+                if self.is_valid:
+                    self.__set_X_and_y_data()
 
-                self.ml_frame.run()
-            else:
-                if self.stats_data is None:
-                    msg = 'No data has been queried for Group %s.' % group
-                elif not self.is_mlr:
-                    msg = 'Selected file is not a valid machine learning regression save file.'
-                elif not self.stats_data_has_y:
-                    msg = "The model's dependent variable is not found in your queried data:\n%s" % self.y_variable
-                elif self.missing_x_variables:
-                    msg = 'Your queried data is missing the following independent variables:\n%s' % \
-                          ', '.join(self.missing_x_variables)
+                    if mvr:
+                        self.mvr = mvr
+                    else:
+                        self.mvr = MultiVariableRegression(self.X, self.y)
+                    self.multi_var_pred = self.mvr.predictions
+
+                    data_keys = ['X', 'y', 'x_variables', 'y_variable', 'multi_var_pred', 'options', 'mrn', 'study_date', 'uid']
+                    data = {key: getattr(self, key) for key in data_keys}
+                    frame = ALGORITHMS[self.title]['frame']
+                    self.ml_frame = frame(data, include_test_data=False)
+                    self.__load_model()
+
+                    self.ml_frame.run()
                 else:
-                    msg = 'Unknown error.'
+                    if self.stats_data is None:
+                        msg = 'No data has been queried for Group %s.' % group
+                    elif not self.is_mlr:
+                        msg = 'Selected file is not a valid machine learning regression save file.'
+                    elif not self.stats_data_has_y:
+                        msg = "The model's dependent variable is not found in your queried data:\n%s" % self.y_variable
+                    elif self.missing_x_variables:
+                        msg = 'Your queried data is missing the following independent variables:\n%s' % \
+                              ', '.join(self.missing_x_variables)
+                    else:
+                        msg = 'Unknown error.'
 
+                    wx.MessageBox(msg, 'Model Loading Error', wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+            except Exception as e:
+                msg = str(e)
                 wx.MessageBox(msg, 'Model Loading Error', wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
-        except Exception as e:
-            msg = str(e)
-            wx.MessageBox(msg, 'Model Loading Error', wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
 
     def file_select_dlg(self):
         with wx.FileDialog(self.parent, "Load a machine learning regression model", wildcard='*.mlr',
@@ -914,8 +921,7 @@ class MachineLearningModelViewer:
                 return dlg.GetPath()
 
     def __load_mlr_file(self):
-        file_path = self.file_select_dlg()
-        self.loaded_data = load_object_from_file(file_path)
+        self.loaded_data = load_object_from_file(self.file_path)
 
         self.y_variable = self.loaded_data['y_variable']
         self.regression = self.loaded_data['regression']

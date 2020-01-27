@@ -15,10 +15,10 @@ developed.
         <img src="https://img.shields.io/lgtm/grade/python/g/cutright/DVH-Analytics.svg?logo=lgtm&label=code%20quality" /></a>
 
 
-DVHA Compiled!
+DVHA Executables
 ---------
 
-Compiled versions of DVHA 0.6.9 can be found [here](https://github.com/cutright/DVH-Analytics/releases/tag/v0.6.9). 
+Executable versions of DVHA can be found [here](https://github.com/cutright/DVH-Analytics/releases). 
 Please keep in mind this software is still in beta. If you have issues, compiling from source may be more informative. 
 
 

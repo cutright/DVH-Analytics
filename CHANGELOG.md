@@ -1,5 +1,17 @@
 # Change log of DVH Analytics
 
+v0.7.0 (TBD)
+--------------------
+ - [Import] Allow user to keep dicom files in the selected import directory
+ - [Import] Prevent crash on dose summation, dose sum bug still not fixed
+ - [Modeling] Allow user to open ML model without explicitly generating an MVR model
+ - [Query] Fix for [Issue #37](https://github.com/cutright/DVH-Analytics/issues/37)
+ - [Query] Proper min and max label updates with units in numerical query dialog
+ - [RadBio] Fix for [Issue #34](https://github.com/cutright/DVH-Analytics/issues/34)
+ - [Time Series] Calculate tests for normality, two sample t-test, and Wilcoxon ranksum
+ - [Misc] Corrected units for beam perimeter and area
+
+
 v0.6.9 (2020.01.17)
 --------------------
  - [Correlation] Catch crash if there is insufficient data for a correlation calculation
