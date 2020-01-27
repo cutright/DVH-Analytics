@@ -617,16 +617,28 @@ class PlotTimeSeries(Plot):
         s, p = {1: '', 2: ''}, {1: '', 2: ''}
         for grp, data in grp_data.items():
             if data:
-                s[grp], p[grp] = normaltest(data)
-                p[grp] = "%0.3f" % p[grp]
+                try:
+                    s[grp], p[grp] = normaltest(data)
+                    p[grp] = "%0.3f" % p[grp]
+                except Exception as e:
+                    print('Normal test failed: ', str(e))
+                    p[grp] = 'ERROR'
 
         # t-Test and Rank Sums
         pt, pr = '', ''
         if grp_data[1] and grp_data[2]:
-            st, pt = ttest_ind(grp_data[1], grp_data[2])
-            sr, pr = ranksums(grp_data[1], grp_data[2])
-            pt = "%0.3f" % pt
-            pr = "%0.3f" % pr
+            try:
+                st, pt = ttest_ind(grp_data[1], grp_data[2])
+                pt = "%0.3f" % pt
+            except Exception as e:
+                print('t-Test failed: ', str(e))
+                pt = 'ERROR'
+            try:
+                sr, pr = ranksums(grp_data[1], grp_data[2])
+                pr = "%0.3f" % pr
+            except Exception as e:
+                print('Wilcoxon ranksums failed: ', str(e))
+                pr = 'ERROR'
 
         self.normal_test_div[1].text = "<b>Group 1 Normal Test p-value</b>: %s" % p[1]
         self.normal_test_div[2].text = "<b>Group 2 Normal Test p-value</b>: %s" % p[2]
