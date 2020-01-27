@@ -44,7 +44,7 @@ class DatePicker(wx.Dialog):
 
         self.calendar_ctrl = wx.adv.CalendarCtrl(self, wx.ID_ANY,
                                                  style=wx.adv.CAL_SHOW_HOLIDAYS | wx.adv.CAL_SHOW_SURROUNDING_WEEKS)
-        if initial_date:
+        if initial_date and initial_date.lower() != 'none':
             self.calendar_ctrl.SetDate(parse_date(initial_date))
 
         self.button = {'apply': wx.Button(self, wx.ID_OK, "Apply"),
@@ -529,14 +529,14 @@ class QueryNumericalDialog(wx.Dialog):
             min_value = cnx.get_min_value(table, col)
             max_value = cnx.get_max_value(table, col)
 
-        self.button_date_picker.Enable(key == 'Simulation Date')
-        self.text_ctrl_min.Enable(key != 'Simulation Date')
-        self.text_ctrl_max.Enable(key != 'Simulation Date')
+        self.button_date_picker.Enable('date' in key.lower())
+        self.text_ctrl_min.Enable('date' not in key.lower())
+        self.text_ctrl_max.Enable('date' not in key.lower())
 
         self.set_min_value(min_value)
         self.set_max_value(max_value)
 
-        if key == 'Simulation Date':
+        if 'date' in key.lower():
             self.update_min_max_text('Start:', 'End:')
             self.on_date_picker()
         elif units:
