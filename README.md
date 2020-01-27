@@ -18,7 +18,7 @@ developed.
 DVHA Executables
 ---------
 
-Executable versions of DVHA 0.6.9 can be found [here](https://github.com/cutright/DVH-Analytics/releases/tag/v0.6.9). 
+Executable versions of DVHA can be found [here](https://github.com/cutright/DVH-Analytics/releases). 
 Please keep in mind this software is still in beta. If you have issues, compiling from source may be more informative. 
 
 
