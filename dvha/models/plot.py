@@ -14,7 +14,7 @@ import wx.html2
 from bokeh.plotting import figure
 from bokeh.io.export import get_layout_html
 from bokeh.models import Legend, HoverTool, ColumnDataSource, DataTable, TableColumn,\
-    NumberFormatter, Div, Range1d, LabelSet, Spacer
+    NumberFormatter, Div, Range1d, LabelSet
 from bokeh.layouts import column, row
 from bokeh.palettes import Colorblind8 as palette
 import itertools
@@ -433,8 +433,6 @@ class PlotTimeSeries(Plot):
                              'patch': ColumnDataSource(data=dict(x=[], y=[]))} for key in [1, 2]}
         self.y_axis_label = ''
 
-        self.div = Div(text='<hr>')
-
         self.__add_plot_data()
         self.__add_histogram_data()
         self.__add_stat_divs()
@@ -533,10 +531,8 @@ class PlotTimeSeries(Plot):
 
     def __do_layout(self):
         self.bokeh_layout = column(self.figure,
-                                   self.div,
                                    row(column(self.normal_test_div[1],
                                               self.normal_test_div[2]),
-                                       Spacer(width=30),
                                        column(self.t_test_div,
                                               self.wilcoxon_div)),
                                    self.histogram)
@@ -661,7 +657,12 @@ class PlotTimeSeries(Plot):
         self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
         self.histogram.plot_width = int(self.size_factor['hist'][0] * float(panel_width))
         self.histogram.plot_height = int(self.size_factor['hist'][1] * float(panel_height))
-        self.div.width = int(self.size_factor['plot'][0] * float(panel_width))
+
+        div_width = int(self.size_factor['plot'][0] * float(panel_width) / 2)
+        self.normal_test_div[1].width = div_width
+        self.normal_test_div[2].width = div_width
+        self.t_test_div.width = div_width
+        self.wilcoxon_div.width = div_width
 
 
 class PlotCorrelation(Plot):
