@@ -1,6 +1,6 @@
 # Change log of DVH Analytics
 
-v0.7.0 (TBD)
+v0.7.0 (2020.01.27)
 --------------------
  - [Import] Allow user to keep dicom files in the selected import directory
  - [Import] Prevent crash on dose summation, dose sum bug still not fixed
