@@ -640,7 +640,7 @@ class DVHAMainFrame(wx.Frame):
         self.exec_query()
 
     def exec_query(self, load_saved_dvh_data=False, group=None):
-        wait = wx.BusyCursor()
+        wx.BeginBusyCursor()
         if group is not None:
             self.radio_button_query_group.SetSelection(group - 1)
         group = self.selected_group
@@ -673,7 +673,7 @@ class DVHAMainFrame(wx.Frame):
                 self.endpoint.update_dvh(self.group_data)
                 self.set_summary_text(group)
                 self.plot.update_plot(self.group_data[1]['dvh'], dvh_2=self.group_data[2]['dvh'])
-                del wait
+                wx.EndBusyCursor()
                 self.update_data(load_saved_dvh_data=load_saved_dvh_data, group_2_only=bool(group-1))
 
                 if group == 1:
@@ -689,10 +689,10 @@ class DVHAMainFrame(wx.Frame):
                     self.update_stats_data_plots()
 
             except PlottingMemoryError as e:
-                del wait
+                wx.EndBusyCursor()
                 self.on_plotting_memory_error(str(e))
         else:
-            del wait
+            wx.EndBusyCursor()
             msg = "%s DVHs returned. Please modify query or import more data." % ['Less than 2', 'No'][count == 0]
             wx.MessageBox(msg, 'Query Error', wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
             self.group_data[group]['dvh'] = None
@@ -747,7 +747,7 @@ class DVHAMainFrame(wx.Frame):
         return uids, queries['DVHs']
 
     def update_data(self, load_saved_dvh_data=False, group_2_only=False):
-        wait = wx.BusyCursor()
+        wx.BeginBusyCursor()
         tables = ['Plans', 'Rxs', 'Beams']
         for grp, grp_data in self.group_data.items():
             if not(grp == 1 and group_2_only) or grp == 2:
@@ -770,7 +770,7 @@ class DVHAMainFrame(wx.Frame):
         self.regression.update_combo_box_choices()
         self.radbio.update_dvh_data(self.group_data)
 
-        del wait
+        wx.EndBusyCursor()
 
     # --------------------------------------------------------------------------------------------------------------
     # Menu bar event functions

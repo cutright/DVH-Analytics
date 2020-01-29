@@ -440,7 +440,7 @@ class ImportDicomFrame(wx.Frame):
         if uid in list(self.parsed_dicom_data) and self.parsed_dicom_data[uid].validation['complete_file_set']:
             if uid != self.selected_uid:
                 self.selected_uid = uid
-                wait = wx.BusyCursor()
+                wx.BeginBusyCursor()
                 self.dicom_importer.rebuild_tree_ctrl_rois(uid)
                 self.tree_ctrl_roi.ExpandAll()
                 if uid not in list(self.parsed_dicom_data):
@@ -467,7 +467,7 @@ class ImportDicomFrame(wx.Frame):
                 self.input['tx_site'].SetValue(data.tx_site)
                 self.input['rx_dose'].SetValue(str(data.rx_dose))
                 self.dicom_importer.update_mapped_roi_status(data.physician)
-                del wait
+                wx.EndBusyCursor()
                 self.update_physician_roi_choices()
                 self.enable_inputs()
         else:
@@ -639,7 +639,7 @@ class ImportDicomFrame(wx.Frame):
             self.input_roi['physician'].SetValue(physician_roi)
 
     def on_apply_plan(self, evt):
-        wait = wx.BusyCursor()
+        wx.BeginBusyCursor()
         self.on_physician_change()
         over_rides = self.parsed_dicom_data[self.selected_uid].plan_over_rides
         apply_all_selected = False
@@ -667,7 +667,7 @@ class ImportDicomFrame(wx.Frame):
         else:
             self.validate(uid=self.selected_uid)
         self.update_warning_label()
-        del wait
+        wx.EndBusyCursor()
 
     def on_apply_roi(self, evt):
         if self.allow_input_roi_apply:
