@@ -81,6 +81,21 @@ class Plot:
         self.figure.min_border = self.options.MIN_BORDER
         self.figure.yaxis.axis_label_text_baseline = "bottom"
 
+    def add_legend(self, fig, legend_items=None):
+        if legend_items is None:
+            legend_items = self.legend_items
+        legend = Legend(items=legend_items,
+                        orientation='horizontal')
+
+        # Add the layout outside the plot, clicking legend item hides the line
+        fig.add_layout(legend, 'above')
+        fig.legend.click_policy = "hide"
+
+    @property
+    def legend_items(self):
+        # must be over-ridden
+        return []
+
     def clear_plot(self):
         if self.bokeh_layout:
             self.clear_sources()
@@ -184,7 +199,7 @@ class PlotStatDVH(Plot):
 
         self.__add_plot_data()
         self.__add_hover()
-        self.__add_legend()
+        self.add_legend(self.figure)
         self.__create_table()
 
         self.bokeh_layout = column(self.figure, self.table)
@@ -255,24 +270,18 @@ class PlotStatDVH(Plot):
         self.iqr_2 = self.figure.varea('x', 'y1', 'y2', source=self.source['patch_2'], alpha=self.options.IQR_ALPHA,
                                        color=self.options.PLOT_COLOR_2)
 
-    def __add_legend(self):
-        # Set the legend (for stat dvhs only)
-        legend_stats = Legend(items=[("Max  ", [self.stats_max]),
-                                     ("Median  ", [self.stats_median]),
-                                     ("Mean  ", [self.stats_mean]),
-                                     ("Min  ", [self.stats_min]),
-                                     ("IQR  ", [self.iqr]),
-                                     ("Max 2 ", [self.stats_max_2]),
-                                     ("Median 2 ", [self.stats_median_2]),
-                                     ("Mean 2 ", [self.stats_mean_2]),
-                                     ("Min 2 ", [self.stats_min_2]),
-                                     ("IQR 2 ", [self.iqr_2])
-                                     ],
-                              orientation='horizontal')
-
-        # Add the layout outside the plot, clicking legend item hides the line
-        self.figure.add_layout(legend_stats, 'above')
-        self.figure.legend.click_policy = "hide"
+    @property
+    def legend_items(self):
+        return [("Max  ", [self.stats_max]),
+                ("Median  ", [self.stats_median]),
+                ("Mean  ", [self.stats_mean]),
+                ("Min  ", [self.stats_min]),
+                ("IQR  ", [self.iqr]),
+                ("Max 2 ", [self.stats_max_2]),
+                ("Median 2 ", [self.stats_median_2]),
+                ("Mean 2 ", [self.stats_mean_2]),
+                ("Min 2 ", [self.stats_min_2]),
+                ("IQR 2 ", [self.iqr_2]) ]
 
     def __create_table(self):
         columns = [TableColumn(field="mrn", title="MRN", width=175),
@@ -436,7 +445,8 @@ class PlotTimeSeries(Plot):
         self.__add_plot_data()
         self.__add_histogram_data()
         self.__add_stat_divs()
-        self.__add_legend()
+        self.add_legend(self.figure)
+        self.add_legend(self.histogram, legend_items=self.legend_items_hist)
         self.__add_hover()
         self.__do_layout()
 
@@ -488,31 +498,21 @@ class PlotTimeSeries(Plot):
         self.t_test_div = Div()
         self.wilcoxon_div = Div()
 
-    def __add_legend(self):
-        # Set the legend
-        legend_plot = Legend(items=[("Data 1 ", [self.plot_data]),
-                                    ("Avg 1 ", [self.plot_avg]),
-                                    ("Rolling Avg 1 ", [self.plot_trend]),
-                                    ("Perc. Region 1 ", [self.plot_patch]),
-                                    ("Data 2 ", [self.plot_data_2]),
-                                    ("Avg 2 ", [self.plot_avg_2]),
-                                    ("Rolling Avg 2 ", [self.plot_trend_2]),
-                                    ("Perc. Region 2 ", [self.plot_patch_2])
-                                    ],
-                             orientation='horizontal')
+    @property
+    def legend_items(self):
+        return [("Data 1 ", [self.plot_data]),
+                ("Avg 1 ", [self.plot_avg]),
+                ("Rolling Avg 1 ", [self.plot_trend]),
+                ("Perc. Region 1 ", [self.plot_patch]),
+                ("Data 2 ", [self.plot_data_2]),
+                ("Avg 2 ", [self.plot_avg_2]),
+                ("Rolling Avg 2 ", [self.plot_trend_2]),
+                ("Perc. Region 2 ", [self.plot_patch_2])]
 
-        # Add the layout outside the plot, clicking legend item hides the line
-        self.figure.add_layout(legend_plot, 'above')
-        self.figure.legend.click_policy = "hide"
-
-        legend_hist = Legend(items=[("Group 1 ", [self.vbar]),
-                                    ("Group 2 ", [self.vbar_2])
-                                    ],
-                             orientation='horizontal')
-
-        # Add the layout outside the plot, clicking legend item hides the line
-        self.histogram.add_layout(legend_hist, 'above')
-        self.histogram.legend.click_policy = "hide"
+    @property
+    def legend_items_hist(self):
+        return [("Group 1 ", [self.vbar]),
+                ("Group 2 ", [self.vbar_2])]
 
     def __add_hover(self):
         self.figure.add_tools(HoverTool(show_arrow=True,
@@ -1322,7 +1322,8 @@ class PlotControlChart(Plot):
         self.__add_plot_data()
         self.__add_hover()
         self.__create_divs()
-        self.__add_legend()
+        self.add_legend(self.figure)
+        self.add_legend(self.adj_figure, legend_items=self.legend_items_adj)
         self.__do_layout()
 
     def __add_adj_figure(self):
@@ -1407,27 +1408,21 @@ class PlotControlChart(Plot):
                                             formatters={'dates': 'datetime'},
                                             renderers=[self.adj_plot_data]))
 
-    def __add_legend(self):
-        # Set the legend
-        legend_plot = Legend(items=[("Charting Variable   ", [self.plot_data]),
-                                    ("Charting Variable Line  ", [self.plot_data_line]),
-                                    ('Center Line   ', [self.plot_center_line]),
-                                    ('UCL  ', [self.plot_ucl_line]),
-                                    ('LCL  ', [self.plot_lcl_line])],
-                             orientation='horizontal')
+    @property
+    def legend_items(self):
+        return [("Charting Variable   ", [self.plot_data]),
+                ("Charting Variable Line  ", [self.plot_data_line]),
+                ('Center Line   ', [self.plot_center_line]),
+                ('UCL  ', [self.plot_ucl_line]),
+                ('LCL  ', [self.plot_lcl_line])]
 
-        adj_legend_plot = Legend(items=[("Residuals   ", [self.adj_plot_data]),
-                                        ("Residuals Line  ", [self.adj_plot_data_line]),
-                                        ('Center Line   ', [self.adj_plot_center_line]),
-                                        ('UCL  ', [self.adj_plot_ucl_line]),
-                                        ('LCL  ', [self.adj_plot_lcl_line])],
-                                 orientation='horizontal')
-
-        # Add the layout outside the plot, clicking legend item hides the line
-        self.figure.add_layout(legend_plot, 'above')
-        self.figure.legend.click_policy = "hide"
-        self.adj_figure.add_layout(adj_legend_plot, 'above')
-        self.adj_figure.legend.click_policy = "hide"
+    @property
+    def legend_items_adj(self):
+        return [("Residuals   ", [self.adj_plot_data]),
+                ("Residuals Line  ", [self.adj_plot_data_line]),
+                ('Center Line   ', [self.adj_plot_center_line]),
+                ('UCL  ', [self.adj_plot_ucl_line]),
+                ('LCL  ', [self.adj_plot_lcl_line])]
 
     def __create_divs(self):
         self.div_center_line = Div(text='', width=175)
@@ -1648,7 +1643,7 @@ class PlotMachineLearning(Plot):
         self.__add_plot_data()
         self.__do_layout()
         self.__add_hover()
-        self.__add_legend()
+        self.add_legend()
 
         self.set_figure_dimensions()
         self.update_bokeh_layout_in_wx_python()
@@ -1703,7 +1698,7 @@ class PlotMachineLearning(Plot):
                                                                           ('MVR', '@y_mvr{0.2f}')],
                                                                 formatters={'study_date': 'datetime'}))
 
-    def __add_legend(self):
+    def add_legend(self):
         legend = {}
         for data_type in self.plot_types:
             legend[data_type] = {'data': Legend(items=[("Data  ", [self.glyphs[data_type]['data']]),
