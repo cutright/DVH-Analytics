@@ -1,13 +1,13 @@
 dicompyler-core>=0.5.4
 wxPython>=4.0.4
 pypubsub
-numpy
+numpy==1.17.4
 scipy
 pydicom>1.0
 bokeh>=1.2.0
 psycopg2-binary
-shapely[vectorized]
+shapely[vectorized]==1.6.4post2
 python-dateutil
 statsmodels
-scikit-learn
+scikit-learn==0.22
 regressors
