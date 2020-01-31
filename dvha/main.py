@@ -35,7 +35,7 @@ from dvha.models.control_chart import ControlChartFrame
 from dvha.models.roi_map import ROIMapFrame
 from dvha.models.stats_data_editor import StatsDataEditor
 from dvha.options import Options, DefaultOptions
-from dvha.paths import LOGO_PATH, DATA_DIR, ICONS, MODELS_DIR
+from dvha.paths import LOGO_PATH, DATA_DIR, ICONS, MODELS_DIR, WIN_APP_ICON
 from dvha.tools.errors import MemoryErrorDialog, PlottingMemoryError
 from dvha.tools.roi_name_manager import DatabaseROIs
 from dvha.tools.stats import StatsData, sync_variables_in_stats_data_objects
@@ -1018,6 +1018,8 @@ class MainApp(wx.App):
 
         self.SetAppName('DVH Analytics')
         self.frame = DVHAMainFrame(None, wx.ID_ANY, "")
+        if is_windows():
+            self.frame.SetIcon(wx.Icon(WIN_APP_ICON))
         self.SetTopWindow(self.frame)
         self.frame.Show()
         return True

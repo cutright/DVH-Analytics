@@ -6,3 +6,4 @@ include dvha/logo.png
 include dvha/icons/*.png
 include dvha/db/*.sql
 include dvha/db/*.roi
+include dvha/dvha.ico
