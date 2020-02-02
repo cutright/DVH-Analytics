@@ -722,6 +722,7 @@ class ImportDicomFrame(wx.Frame):
     def on_import(self, evt):
         if self.parsed_dicom_data and self.dicom_importer.checked_plans:
             self.roi_map.write_to_file()
+            self.clear_file_loaded_data_in_parsed_dicom_data()
             ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
                          self.checkbox_include_uncategorized.GetValue(), self.terminate,
                          self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue())
@@ -734,6 +735,10 @@ class ImportDicomFrame(wx.Frame):
                                    style=wx.OK | wx.OK_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
             dlg.ShowModal()
             dlg.Destroy()
+
+    def clear_file_loaded_data_in_parsed_dicom_data(self):
+        for dicom_parser_obj in self.parsed_dicom_data.values():
+            dicom_parser_obj.clear_loaded_data()
 
     def parse_dicom_data(self):
         self.button_cancel.Disable()
@@ -1098,7 +1103,7 @@ class ImportWorker(Thread):
         """
         study_uids = {}
         for plan_uid in self.checked_uids:
-            study_uid = self.data[plan_uid].study_instance_uid_to_be_imported
+            study_uid = self.data[plan_uid].stored_study_uid
             if study_uid not in list(study_uids):
                 study_uids[study_uid] = []
             study_uids[study_uid].append(plan_uid)
@@ -1117,7 +1122,7 @@ class ImportWorker(Thread):
         plan_counter = 0
         for study_uid, plan_uid_set in study_uids.items():
             if len(plan_uid_set) > 1:
-                dose_files = [self.data[plan_uid].dicompyler_data['dose'] for plan_uid in plan_uid_set]
+                dose_files = [self.data[plan_uid].dose_file for plan_uid in plan_uid_set]
 
                 wait = wx.BusyInfo('Summing grids for\n%s' % study_uid)
                 try:
@@ -1136,8 +1141,8 @@ class ImportWorker(Thread):
             for i, plan_uid in enumerate(plan_uid_set):
                 if plan_uid in list(self.data):
 
-                    msg = {'patient_name': self.data[plan_uid].patient_name,
-                           'uid': self.data[plan_uid].study_instance_uid_to_be_imported,
+                    msg = {'patient_name': self.data[plan_uid].stored_patient_name,
+                           'uid': self.data[plan_uid].stored_study_uid,
                            'progress': int(100 * plan_counter / plan_total),
                            'study_number': plan_counter + 1,
                            'study_total': plan_total}
@@ -1164,9 +1169,10 @@ class ImportWorker(Thread):
         :param final_plan_in_study: indicates if post-import calculations should be performed and files moved
         :type final_plan_in_study: bool
         """
-        dicom_rt_struct = dicomparser.DicomParser(self.data[plan_uid].structure_file)
+        self.data[plan_uid].load_from_file()
+        mrn = self.data[plan_uid].mrn
         study_uid = self.data[plan_uid].study_instance_uid_to_be_imported
-        structures = dicom_rt_struct.GetStructures()
+        structures = self.data[plan_uid].dicompyler_rt_structures
         roi_name_map = {key: structures[key]['name'] for key in list(structures) if structures[key]['type'] != 'MARKER'}
         data_to_import = {'Plans': [self.data[plan_uid].get_plan_row()],
                           'Rxs': self.data[plan_uid].get_rx_rows(),
@@ -1221,6 +1227,8 @@ class ImportWorker(Thread):
                                         or roi_name.lower() in ['external', 'skin', 'body']):
                                     post_import_rois.append(clean_name(roi_name_map[roi_key]))
 
+        self.data[plan_uid].clear_loaded_data()  # free up memory
+
         # Sort PTVs by their D_95% (applicable to SIBs)
         if ptvs['dvh']:
             ptv_order = rank_ptvs_by_D95(ptvs)
@@ -1273,7 +1281,7 @@ class ImportWorker(Thread):
 
             else:
                 print("WARNING: No PTV found for %s" % plan_uid)
-                print("\tMRN: %s" % self.data[plan_uid].mrn)
+                print("\tMRN: %s" % mrn)
                 print("\tSkipping PTV related calculations.")
 
         # Move files to imported directory
