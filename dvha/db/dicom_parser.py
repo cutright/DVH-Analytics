@@ -54,8 +54,11 @@ class DICOM_Parser:
         self.dose_file = dose
         self.dose_sum = dose_sum
 
-        self.stored_study_uid = None  # store this value when clearing file loaded data
-        self.stored_patient_name = None  # store this value when clearing file loaded data
+        # store these values when clearing file loaded data
+        self.stored_study_uid = None
+        self.stored_patient_name = None
+        self.stored_validation = None
+        self.cleared = False
 
         self.rt_data = {key: None for key in ['plan', 'structure', 'dose']}
         self.dicompyler_data = {key: None for key in ['plan', 'structure', 'dose']}
@@ -80,6 +83,8 @@ class DICOM_Parser:
                                 'rx_dose': None}
         self.global_plan_over_rides = global_plan_over_rides
         self.roi_type_over_ride = {}
+        self.warning = {'label': '', 'incomplete': True}
+        self.update_warning_label()
 
     def load_from_file(self):
         # TODO: Remove the need for both pydicom and dicompyler DICOM parsers
@@ -99,13 +104,17 @@ class DICOM_Parser:
                 self.dicompyler_data['dose'] = self.dose_sum
 
     def clear_loaded_data(self):
-        self.stored_study_uid = self.study_instance_uid_to_be_imported
-        self.stored_patient_name = self.patient_name
+        if not self.cleared:
+            self.stored_study_uid = self.study_instance_uid_to_be_imported
+            self.stored_patient_name = self.patient_name
+            self.stored_validation = self.validation
 
-        self.rt_data = {key: None for key in ['plan', 'structure', 'dose']}
-        self.dicompyler_data = {key: None for key in ['plan', 'structure', 'dose']}
-        self.dicompyler_rt_plan = None
-        self.dicompyler_rt_structures = None
+            self.rt_data = {key: None for key in ['plan', 'structure', 'dose']}
+            self.dicompyler_data = {key: None for key in ['plan', 'structure', 'dose']}
+            self.dicompyler_rt_plan = None
+            self.dicompyler_rt_structures = None
+
+            self.cleared = True
 
     def __initialize_rx_beam_and_ref_beam_data(self):
         beam_num = 0
@@ -1003,6 +1012,23 @@ class DICOM_Parser:
         new_data_set.is_implicit_VR = True
 
         return new_data_set
+
+    def update_warning_label(self):
+        msg = ''
+        incomplete = False
+        if self.plan_file and self.dose_file and self.structure_file:
+            validation = self.validation
+            failed_keys = {key for key, value in validation.items() if not value['status']}
+            if failed_keys:
+                if 'complete_file_set' in failed_keys:
+                    msg = "ERROR: %s" % validation['complete_file_set']['message']
+                    incomplete = True
+                else:
+                    msg = "WARNING: %s" % ' '.join([validation[key]['message'] for key in failed_keys])
+        else:
+            msg = "ERROR: Incomplete Fileset. RT Plan, Dose, and Structure required."
+            incomplete = True
+        self.warning = {'label': msg, 'incomplete': incomplete}
 
 
 class BeamParser:

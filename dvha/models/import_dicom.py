@@ -15,7 +15,6 @@ import wx.adv
 from wx.lib.agw.customtreectrl import CustomTreeCtrl, TR_AUTO_CHECK_CHILD, TR_AUTO_CHECK_PARENT, TR_DEFAULT_STYLE
 from datetime import date as datetime_obj, datetime
 from dateutil.parser import parse as parse_date
-from dicompylercore import dicomparser
 from os.path import isdir, join
 from pubsub import pub
 from threading import Thread
@@ -27,6 +26,7 @@ from dvha.dialogs.main import DatePicker
 from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddROIType, RoiManager, ChangePlanROIName
 from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, IMPORTED_DIR, ICONS
 from dvha.tools.dicom_dose_sum import sum_dose_grids
+from dvha.tools.errors import ErrorDialog
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
     set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size
@@ -437,8 +437,11 @@ class ImportDicomFrame(wx.Frame):
         """
         uid = self.get_file_tree_item_plan_uid(evt.GetItem())
         self.tree_ctrl_roi.SelectItem(self.tree_ctrl_roi_root, True)
-        if uid in list(self.parsed_dicom_data) and self.parsed_dicom_data[uid].validation['complete_file_set']:
+        if uid in list(self.parsed_dicom_data) and self.parsed_dicom_data[uid].stored_validation['complete_file_set']:
             if uid != self.selected_uid:
+                if self.selected_uid is not None:
+                    self.parsed_dicom_data[self.selected_uid].clear_loaded_data()
+                self.parsed_dicom_data[uid].load_from_file()
                 self.selected_uid = uid
                 wx.BeginBusyCursor()
                 self.dicom_importer.rebuild_tree_ctrl_rois(uid)
@@ -760,10 +763,16 @@ class ImportDicomFrame(wx.Frame):
                                                                dose=file_paths['rtdose'][0],
                                                                global_plan_over_rides=self.global_plan_over_rides,
                                                                roi_map=self.roi_map)
+                    if not self.parsed_dicom_data[uid].ptv_exists:
+                        self.parsed_dicom_data[uid].autodetect_target_roi_type()
+                        self.validate(uid)
+                    self.update_warning_label()
+                    self.update_roi_inputs()
+                    self.parsed_dicom_data[uid].clear_loaded_data()
 
             wx.CallAfter(self.gauge.SetValue, int(100 * (plan_counter+1) / plan_total))
-        self.label_progress.SetLabelText("Auto-detecting plans missing PTV labels")
-        self.autodetect_target_for_plans_missing_targets()
+        # self.label_progress.SetLabelText("Auto-detecting plans missing PTV labels")
+        # self.autodetect_target_for_plans_missing_targets()
         self.gauge.Hide()
         self.label_progress.SetLabelText("All %s plans parsed" % plan_total)
 
@@ -786,9 +795,12 @@ class ImportDicomFrame(wx.Frame):
                 nodes = self.dicom_importer.plan_nodes
             else:
                 nodes = {uid: self.dicom_importer.plan_nodes[uid]}
-            for uid, node in nodes.items():
-                if uid in list(self.parsed_dicom_data):
-                    validation = self.parsed_dicom_data[uid].validation
+            for node_uid, node in nodes.items():
+                if node_uid in list(self.parsed_dicom_data):
+                    if uid:
+                        validation = self.parsed_dicom_data[node_uid].validation
+                    else:
+                        validation = self.parsed_dicom_data[node_uid].stored_validation
                     failed_keys = {key for key, value in validation.items() if not value['status']}
                 else:
                     failed_keys = {'complete_file_set'}
@@ -799,30 +811,42 @@ class ImportDicomFrame(wx.Frame):
                         color = orange
                     else:
                         color = yellow
-                elif uid in self.dicom_importer.incomplete_plans:
+                elif node_uid in self.dicom_importer.incomplete_plans:
                     color = red
                 else:
                     color = None
                 self.tree_ctrl_import.SetItemBackgroundColour(node, color)
 
-                if uid is not None:
+                if node_uid is not None:
                     self.tree_ctrl_import.CheckItem(node, color != red)
 
             del wait
+
+    # def update_warning_label_old(self):
+    #     msg = ''
+    #     if self.selected_uid:
+    #         if self.selected_uid in list(self.parsed_dicom_data):
+    #             validation = self.parsed_dicom_data[self.selected_uid].validation
+    #             failed_keys = {key for key, value in validation.items() if not value['status']}
+    #             if failed_keys:
+    #                 if 'complete_file_set' in failed_keys:
+    #                     msg = "ERROR: %s" % validation['complete_file_set']['message']
+    #                     if self.selected_uid not in self.incomplete_studies:
+    #                         self.incomplete_studies.append(self.selected_uid)
+    #                 else:
+    #                     msg = "WARNING: %s" % ' '.join([validation[key]['message'] for key in failed_keys])
+    #         else:
+    #             msg = "ERROR: Incomplete Fileset. RT Plan, Dose, and Structure required."
+    #     self.label_warning.SetLabelText(msg)
 
     def update_warning_label(self):
         msg = ''
         if self.selected_uid:
             if self.selected_uid in list(self.parsed_dicom_data):
-                validation = self.parsed_dicom_data[self.selected_uid].validation
-                failed_keys = {key for key, value in validation.items() if not value['status']}
-                if failed_keys:
-                    if 'complete_file_set' in failed_keys:
-                        msg = "ERROR: %s" % validation['complete_file_set']['message']
-                        if self.selected_uid not in self.incomplete_studies:
-                            self.incomplete_studies.append(self.selected_uid)
-                    else:
-                        msg = "WARNING: %s" % ' '.join([validation[key]['message'] for key in failed_keys])
+                warning = self.parsed_dicom_data[self.selected_uid].warning
+                msg = warning['label']
+                if warning['incomplete'] and self.selected_uid not in self.incomplete_studies:
+                    self.incomplete_studies.append(self.selected_uid)
             else:
                 msg = "ERROR: Incomplete Fileset. RT Plan, Dose, and Structure required."
         self.label_warning.SetLabelText(msg)
@@ -858,7 +882,7 @@ class ImportDicomFrame(wx.Frame):
                    title=key.replace('_', ' ').title(),
                    action=self.input[key].SetValue)
 
-        self.validate(self.selected_uid)
+        self.validate(uid=self.selected_uid)
         self.update_warning_label()
 
     def autodetect_target_for_plans_missing_targets(self):
@@ -1131,11 +1155,11 @@ class ImportWorker(Thread):
                         self.data[plan_uid].import_dose_sum(dose_sum)
                     del wait
                 except Exception as e:
-                    print(str(e))
-                    print('ERROR: Dose sum failed, this feature is currently under development. Skipping Import.')
+                    # print(str(e))
+                    msg = "Dose Sum Failed - This feature is still in development\n%s" % e
                     mrns = ', '.join(list(set([self.data[plan_uid].mrn for plan_uid in plan_uid_set])))
-                    print('\tMRNs: %s' % mrns)
                     del wait
+                    ErrorDialog(None, msg, 'Dose Sum Error')
                     continue
 
             for i, plan_uid in enumerate(plan_uid_set):
