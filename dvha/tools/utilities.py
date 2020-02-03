@@ -22,7 +22,7 @@ import pydicom as dicom
 import pickle
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import IMPORT_SETTINGS_PATH, SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
-    APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR, MODELS_DIR
+    APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR, MODELS_DIR, WIN_APP_ICON
 
 
 IGNORED_FILES = ['.ds_store']
@@ -698,3 +698,8 @@ def get_window_size(width, height):
     if user_width / user_height < 1.5:  # catch 4:3 or non-widescreen
         user_height = user_width / 1.6
     return tuple([int(width * user_width), int(height * user_height)])
+
+
+def set_frame_icon(frame):
+    if not is_mac():
+        frame.SetIcon(wx.Icon(WIN_APP_ICON))
