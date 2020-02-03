@@ -29,7 +29,8 @@ from dvha.tools.dicom_dose_sum import sum_dose_grids
 from dvha.tools.errors import ErrorDialog
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
-    set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size
+    set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size,\
+    set_frame_icon
 
 
 # TODO: Provide methods to write over-rides to DICOM file
@@ -47,6 +48,7 @@ class ImportDicomFrame(wx.Frame):
         :type inbox: str
         """
         wx.Frame.__init__(self, None, title='Import DICOM')
+        set_frame_icon(self)
 
         set_msw_background_color(self)  # If windows, change the background color
 
@@ -1100,20 +1102,20 @@ class ImportWorker(Thread):
         self.start()  # start the thread
 
     def run(self):
-        try:
-            self.import_studies()
+        # try:
+        self.import_studies()
 
-        except MemoryError as mem_err:
-            # This usually occurs for DVHs of large ROIs or minimum distance calculations
-            print(mem_err)
-
-        except Exception as e:
-            print('Error: ', e)
-            print('Import incomplete. Any studies successfully imported were transferred to your imported folder:')
-            print('\t%s' % IMPORTED_DIR)
-            print('\tIf a study was partially imported, all data has been removed from the database '
-                  'and its DICOM files remain in your inbox.')
-            self.delete_partially_updated_plan()
+        # except MemoryError as mem_err:
+        #     # This usually occurs for DVHs of large ROIs or minimum distance calculations
+        #     print(mem_err)
+        #
+        # except Exception as e:
+        #     print('Error: ', e)
+        #     print('Import incomplete. Any studies successfully imported were transferred to your imported folder:')
+        #     print('\t%s' % IMPORTED_DIR)
+        #     print('\tIf a study was partially imported, all data has been removed from the database '
+        #           'and its DICOM files remain in your inbox.')
+        #     self.delete_partially_updated_plan()
 
         remove_empty_sub_folders(self.start_path)
         wx.CallAfter(pub.sendMessage, "close")
@@ -1202,7 +1204,7 @@ class ImportWorker(Thread):
                           'Rxs': self.data[plan_uid].get_rx_rows(),
                           'Beams': self.data[plan_uid].get_beam_rows(),
                           'DICOM_Files': [self.data[plan_uid].get_dicom_file_row()],
-                          'DVHs': []}
+                          'DVHs': []}  # DVHs will only include PTVs, others pushed en route
 
         if not self.import_uncategorized:  # remove uncategorized ROIs unless this is checked
             for roi_key in list(roi_name_map):
@@ -1229,7 +1231,13 @@ class ImportWorker(Thread):
                     wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
                     wx.CallAfter(pub.sendMessage, "update_elapsed_time")
 
-                    dvh_row = self.data[plan_uid].get_dvh_row(roi_key)
+                    try:
+                        dvh_row = self.data[plan_uid].get_dvh_row(roi_key)
+                    except MemoryError as e:
+                        print('Skipping roi: %s, for mrn: %s' % (roi_name_map[roi_key], mrn))
+                        print('Memory Error:\n%s' % e)
+                        dvh_row = None
+
                     if dvh_row:
                         roi_type = dvh_row['roi_type'][0]
                         roi_name = dvh_row['roi_name'][0]
@@ -1240,8 +1248,9 @@ class ImportWorker(Thread):
                             ptvs['dvh'].append(dvh_row['dvh_string'][0])
                             ptvs['volume'].append(dvh_row['volume'][0])
                             ptvs['index'].append(len(data_to_import['DVHs']))
-
-                        data_to_import['DVHs'].append(dvh_row)
+                            data_to_import['DVHs'].append(dvh_row)
+                        else:
+                            self.push({'DVHs': [dvh_row]})
 
                         # collect roi names for post-import calculations
                         if roi_type and roi_name and physician_roi:

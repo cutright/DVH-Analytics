@@ -93,8 +93,8 @@ class DICOM_Parser:
             self.dicompyler_data['plan'] = dicomparser.DicomParser(self.plan_file)
             self.dicompyler_rt_plan = self.dicompyler_data['plan'].GetPlan()
         if self.structure_file:
-            self.rt_data['structure'] = dicom.read_file( self.structure_file, force=True)
-            self.dicompyler_data['structure'] = dicomparser.DicomParser( self.structure_file)
+            self.rt_data['structure'] = dicom.read_file(self.structure_file, force=True)
+            self.dicompyler_data['structure'] = dicomparser.DicomParser(self.structure_file)
             self.dicompyler_rt_structures = self.dicompyler_data['structure'].GetStructures()
         if self.dose_file:
             self.rt_data['dose'] = dicom.read_file(self.dose_file, force=True)
@@ -417,8 +417,8 @@ class DICOM_Parser:
         try:
             dvh = dvhcalc.get_dvh(self.rt_data['structure'], self.dicompyler_data['dose'], dvh_index)
         except AttributeError as e:
-            print(str(e), 'for MRN: %s' % self.mrn)
-            print('Applying validate_transfer_syntax_uid() due to missing data in user provided DICOM')
+            # print(str(e), 'for MRN: %s' % self.mrn)
+            # print('Applying validate_transfer_syntax_uid() due to missing data in user provided DICOM')
             dose = self.validate_transfer_syntax_uid(self.rt_data['dose'])
             structure = self.validate_transfer_syntax_uid(self.rt_data['structure'])
             dvh = dvhcalc.get_dvh(structure, dose, dvh_index)
@@ -894,17 +894,17 @@ class DICOM_Parser:
         :rtype: dict
         """
 
+        # TODO: GetStructureCoordinates can throw memory error for large Structures
         structure_coord = self.dicompyler_data['structure'].GetStructureCoordinates(key)
-        roi_coord_str = dicompyler_roi_coord_to_db_string(structure_coord)
-        planes = get_planes_from_string(roi_coord_str)
-        coord = self.dicompyler_data['structure'].GetStructureCoordinates(key)
 
         try:
-            surface_area = roi_calc.surface_area(coord)
+            surface_area = roi_calc.surface_area(structure_coord)
         except Exception:
             print("Surface area calculation failed for key, name: %s, %s" % (key, self.get_roi_name(key)))
             surface_area = None
 
+        roi_coord_str = dicompyler_roi_coord_to_db_string(structure_coord)
+        planes = get_planes_from_string(roi_coord_str)
         centroid = roi_calc.centroid(planes)
         spread = roi_calc.spread(planes)
         cross_sections = roi_calc.cross_section(planes)
