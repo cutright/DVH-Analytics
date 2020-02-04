@@ -25,13 +25,12 @@ from dvha.db.dicom_parser import DICOM_Parser
 from dvha.dialogs.main import DatePicker
 from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddROIType, RoiManager, ChangePlanROIName
 from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, IMPORTED_DIR, ICONS
-from dvha.tools.dicom_dose_sum import sum_dose_grids
-from dvha.tools.errors import ErrorDialog
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
     set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size,\
     set_frame_icon, trace_memory_alloc_pretty_top
 import tracemalloc
+from multiprocessing import Pool
 
 
 # TODO: Provide methods to write over-rides to DICOM file
@@ -451,9 +450,9 @@ class ImportDicomFrame(wx.Frame):
                 self.tree_ctrl_roi.ExpandAll()
                 if uid not in list(self.parsed_dicom_data):
                     file_paths = self.dicom_importer.dicom_file_paths[uid]
-                    self.parsed_dicom_data[uid] = DICOM_Parser(plan=file_paths['rtplan']['file_path'],
-                                                               structure=file_paths['rtstruct']['file_path'],
-                                                               dose=file_paths['rtdose']['file_path'],
+                    self.parsed_dicom_data[uid] = DICOM_Parser(plan_file=file_paths['rtplan']['file_path'],
+                                                               structure_file=file_paths['rtstruct']['file_path'],
+                                                               dose_file=file_paths['rtdose']['file_path'],
                                                                global_plan_over_rides=self.global_plan_over_rides,
                                                                roi_map=self.roi_map)
                 data = self.parsed_dicom_data[uid]
@@ -762,9 +761,9 @@ class ImportDicomFrame(wx.Frame):
                 file_paths = self.dicom_importer.dicom_file_paths[uid]
                 wx.Yield()
                 if file_paths['rtplan'] and file_paths['rtstruct'] and file_paths['rtdose']:
-                    self.parsed_dicom_data[uid] = DICOM_Parser(plan=file_paths['rtplan'][0],
-                                                               structure=file_paths['rtstruct'][0],
-                                                               dose=file_paths['rtdose'][0],
+                    self.parsed_dicom_data[uid] = DICOM_Parser(plan_file=file_paths['rtplan'][0],
+                                                               structure_file=file_paths['rtstruct'][0],
+                                                               dose_file=file_paths['rtdose'][0],
                                                                global_plan_over_rides=self.global_plan_over_rides,
                                                                roi_map=self.roi_map)
                     if not self.parsed_dicom_data[uid].ptv_exists:
@@ -1068,6 +1067,176 @@ class ImportStatusDialog(wx.Dialog):
         self.close()
 
 
+class ImportStudyWorker(Thread):
+    def __init__(self, init_param, plan_uid, msg, import_uncategorized, final_plan_in_study=True):
+
+        Thread.__init__(self)
+        self.parsed_data = DICOM_Parser(**init_param)
+        self.plan_uid = plan_uid
+        self.msg = msg
+        self.import_uncategorized = import_uncategorized
+        self.final_plan_in_study = final_plan_in_study
+
+        self.start()
+
+    def start(self):
+        # wx.CallAfter(pub.sendMessage, "update_patient", msg=self.msg)
+        # wx.CallAfter(pub.sendMessage, "update_elapsed_time")
+        pub.sendMessage("update_patient", msg=self.msg)
+        pub.sendMessage("update_elapsed_time")
+
+        mrn = self.parsed_data.mrn
+        study_uid = self.parsed_data.study_instance_uid_to_be_imported
+        structures = self.parsed_data.dicompyler_rt_structures
+        roi_name_map = {key: structures[key]['name'] for key in list(structures) if structures[key]['type'] != 'MARKER'}
+        data_to_import = {'Plans': [self.parsed_data.get_plan_row()],
+                          'Rxs': self.parsed_data.get_rx_rows(),
+                          'Beams': self.parsed_data.get_beam_rows(),
+                          'DICOM_Files': [self.parsed_data.get_dicom_file_row()],
+                          'DVHs': []}  # DVHs will only include PTVs, others pushed en route
+
+        if not self.import_uncategorized:  # remove uncategorized ROIs unless this is checked
+            for roi_key in list(roi_name_map):
+                if self.parsed_data.get_physician_roi(roi_key) == 'uncategorized':
+                    roi_name_map.pop(roi_key)
+
+        post_import_rois = []
+        roi_total = len(roi_name_map)
+        ptvs = {key: [] for key in ['dvh', 'volume', 'index']}
+        with DVH_SQL() as cnx:
+            for roi_counter, roi_key in enumerate(list(roi_name_map)):
+
+                # Skip dvh calculation if roi was already imported (e.g, from previous plan in this study)
+                if not cnx.is_roi_imported(roi_name_map[roi_key], study_uid):
+
+                    # Send messages to status dialog about progress
+                    msg = {'calculation': 'DVH',
+                           'roi_num': roi_counter+1,
+                           'roi_total': roi_total,
+                           'roi_name': roi_name_map[roi_key],
+                           'progress': int(100 * (roi_counter+1) / roi_total)}
+                    # wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+                    # wx.CallAfter(pub.sendMessage, "update_elapsed_time")
+                    pub.sendMessage("update_calculation", msg=msg)
+                    pub.sendMessage("update_elapsed_time")
+
+                    try:
+                        dvh_row = self.parsed_data.get_dvh_row(roi_key)
+                    except MemoryError as e:
+                        print('Skipping roi: %s, for mrn: %s' % (roi_name_map[roi_key], mrn))
+                        print('Memory Error:\n%s' % e)
+                        dvh_row = None
+
+                    if dvh_row:
+                        roi_type = dvh_row['roi_type'][0]
+                        roi_name = dvh_row['roi_name'][0]
+                        physician_roi = dvh_row['physician_roi'][0]
+
+                        # Collect dvh, volume, and index of ptvs to be used for post-import calculations
+                        if roi_type.startswith('PTV'):
+                            ptvs['dvh'].append(dvh_row['dvh_string'][0])
+                            ptvs['volume'].append(dvh_row['volume'][0])
+                            ptvs['index'].append(len(data_to_import['DVHs']))
+                            data_to_import['DVHs'].append(dvh_row)
+                        else:
+                            self.push({'DVHs': [dvh_row]})
+
+                        # collect roi names for post-import calculations
+                        if roi_type and roi_name and physician_roi:
+                            if roi_type.lower() in ['organ', 'ctv', 'gtv']:
+                                if not (physician_roi.lower() in
+                                        ['uncategorized', 'ignored', 'external', 'skin', 'body']
+                                        or roi_name.lower() in ['external', 'skin', 'body']):
+                                    post_import_rois.append(clean_name(roi_name_map[roi_key]))
+
+        self.parsed_data.clear_loaded_data()  # free up memory
+
+        # Sort PTVs by their D_95% (applicable to SIBs)
+        if ptvs['dvh']:
+            ptv_order = rank_ptvs_by_D95(ptvs)
+            for ptv_row, dvh_row_index in enumerate(ptvs['index']):
+                data_to_import['DVHs'][dvh_row_index]['roi_type'][0] = "PTV%s" % (ptv_order[ptv_row]+1)
+
+        # Must push data to SQL before processing post import calculations since they rely on SQL
+        self.push(data_to_import)
+
+        # Wait until entire study has been pushed since these values are based on entire PTV volume
+        if self.final_plan_in_study:
+            if ptvs['dvh']:
+
+                # Calculate the PTV overlap for each roi
+                tv = db_update.get_total_treatment_volume_of_study(study_uid)
+                self.post_import_calc('PTV Overlap Volume', study_uid, post_import_rois,
+                                      db_update.treatment_volume_overlap, tv)
+
+                # Calculate the centroid distances of roi-to-PTV for each roi
+                tv_centroid = db_update.get_treatment_volume_centroid(tv)
+                self.post_import_calc('Centroid Distance to PTV', study_uid, post_import_rois,
+                                      db_update.dist_to_ptv_centroids, tv_centroid)
+
+                # Calculate minimum, mean, median, and max distances and DTH
+                tv_coord = db_update.get_treatment_volume_coord(tv)
+                tv_coord = sample_roi(tv_coord)
+                self.post_import_calc('Distances to PTV', study_uid, post_import_rois,
+                                      db_update.min_distances, tv_coord)
+
+                # Update progress dialog
+                msg = {'calculation': 'Total Treatment Volume Statistics',
+                       'roi_num': 0,
+                       'roi_total': 1,
+                       'roi_name': 'PTV',
+                       'progress': 0}
+                # wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+                pub.sendMessage("update_calculation", msg=msg)
+
+                # Update PTV geometric data
+                db_update.update_ptv_data(tv, study_uid)
+
+                # Update progress dialog
+                msg['roi_num'], msg['progress'] = 1, 100
+                # wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+                pub.sendMessage("update_calculation", msg=msg)
+
+            else:
+                print("WARNING: No PTV found for %s" % self.plan_uid)
+                print("\tMRN: %s" % mrn)
+                print("\tSkipping PTV related calculations.")
+
+    @staticmethod
+    def push(data_to_import):
+        """
+        Push data to the SQL database
+        :param data_to_import: data to import, should be formatted as indicated in db.sql_connector.DVH_SQL.insert_row
+        :type data_to_import: dict
+        """
+        with DVH_SQL() as cnx:
+            cnx.insert_data_set(data_to_import)
+
+    @staticmethod
+    def post_import_calc(title, uid, rois, func, pre_calc):
+        """
+        Generic function to perform a post-import calculation
+        :param title: title to be displayed in progress dialog
+        :type title: str
+        :param uid: the plan uid to be displayed in the progress dialog
+        :type uid: str
+        :param rois: the roi_names to be processed
+        :type rois: list
+        :param func: the function from db.update called to process the data
+        :param pre_calc: data related to total treatment volume for the specific func passed
+        """
+        roi_total = len(rois)
+        for roi_counter, roi_name in enumerate(rois):
+            msg = {'calculation': title,
+                   'roi_num': roi_counter + 1,
+                   'roi_total': roi_total,
+                   'roi_name': roi_name,
+                   'progress': int(100 * roi_counter / roi_total)}
+            # wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+            pub.sendMessage("update_calculation", msg=msg)
+            func(uid, roi_name, pre_calc=pre_calc)
+
+
 class ImportWorker(Thread):
     """
     Create a thread separate from the GUI to perform the import calculations
@@ -1098,29 +1267,13 @@ class ImportWorker(Thread):
         self.start_path = start_path
         self.keep_in_inbox = keep_in_inbox
 
-        # self.prev_memory = None
-
         with DVH_SQL() as cnx:
             self.last_import_time = cnx.now  # use pgsql time rather than CPU since time stamps in DB are based on psql
 
         self.start()  # start the thread
 
     def run(self):
-        # try:
-        tracemalloc.start()
         self.import_studies()
-
-        # except MemoryError as mem_err:
-        #     # This usually occurs for DVHs of large ROIs or minimum distance calculations
-        #     print(mem_err)
-        #
-        # except Exception as e:
-        #     print('Error: ', e)
-        #     print('Import incomplete. Any studies successfully imported were transferred to your imported folder:')
-        #     print('\t%s' % IMPORTED_DIR)
-        #     print('\tIf a study was partially imported, all data has been removed from the database '
-        #           'and its DICOM files remain in your inbox.')
-        #     self.delete_partially_updated_plan()
 
         remove_empty_sub_folders(self.start_path)
         wx.CallAfter(pub.sendMessage, "close")
@@ -1151,24 +1304,8 @@ class ImportWorker(Thread):
         study_uids = self.get_study_uids()
         plan_total = len(self.checked_uids)
         plan_counter = 0
+        pool_args = []
         for study_uid, plan_uid_set in study_uids.items():
-            # if len(plan_uid_set) > 1:
-            #     dose_files = [self.data[plan_uid].dose_file for plan_uid in plan_uid_set]
-            #
-            #     wait = wx.BusyInfo('Summing grids for\n%s' % study_uid)
-            #     try:
-            #         dose_sum = sum_dose_grids(dose_files)
-            #         for plan_uid in plan_uid_set:
-            #             self.data[plan_uid].import_dose_sum(dose_sum)
-            #         del wait
-            #     except Exception as e:
-            #         # print(str(e))
-            #         msg = "Dose Sum Failed - This feature is still in development\n%s" % e
-            #         mrns = ', '.join(list(set([self.data[plan_uid].mrn for plan_uid in plan_uid_set])))
-            #         del wait
-            #         ErrorDialog(None, msg, 'Dose Sum Error')
-            #         continue
-
             for i, plan_uid in enumerate(plan_uid_set):
                 if plan_uid in list(self.data):
 
@@ -1177,13 +1314,9 @@ class ImportWorker(Thread):
                            'progress': int(100 * plan_counter / plan_total),
                            'study_number': plan_counter + 1,
                            'study_total': plan_total}
-                    wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
-                    wx.CallAfter(pub.sendMessage, "update_elapsed_time")
-
-                    self.import_study(plan_uid, final_plan_in_study=plan_uid == plan_uid_set[-1])
-                    if self.terminate['status']:
-                        self.delete_partially_updated_plan()
-                        return
+                    init_param = self.data[plan_uid].init_param
+                    args = (init_param, plan_uid, msg, self.import_uncategorized, plan_uid == plan_uid_set[-1])
+                    pool_args.append(args)
                 else:
                     print('ERROR: This plan could not be parsed. Skipping import. '
                           'Did you supply RT Structure, Dose, and Plan?')
@@ -1192,207 +1325,6 @@ class ImportWorker(Thread):
 
                 plan_counter += 1
 
-    def import_study(self, plan_uid, final_plan_in_study=True):
-        """
-        Import DVHs and perform post-import calculations for a given plan uid (SOPInstanceUID from RTPlan)
-        :param plan_uid: the SOPInstanceUID from the DICOM RT Plan file
-        :type plan_uid: str
-        :param final_plan_in_study: indicates if post-import calculations should be performed and files moved
-        :type final_plan_in_study: bool
-        """
-        snapshot = tracemalloc.take_snapshot()
-        # top_stats = snapshot.statistics('lineno')
-        # print("[ Top 10 ]")
-        # for stat in top_stats[:10]:
-        #     print(stat)
-        trace_memory_alloc_pretty_top(snapshot)
-
-        self.data[plan_uid].load_from_file()
-        mrn = self.data[plan_uid].mrn
-        study_uid = self.data[plan_uid].study_instance_uid_to_be_imported
-        structures = self.data[plan_uid].dicompyler_rt_structures
-        roi_name_map = {key: structures[key]['name'] for key in list(structures) if structures[key]['type'] != 'MARKER'}
-        data_to_import = {'Plans': [self.data[plan_uid].get_plan_row()],
-                          'Rxs': self.data[plan_uid].get_rx_rows(),
-                          'Beams': self.data[plan_uid].get_beam_rows(),
-                          'DICOM_Files': [self.data[plan_uid].get_dicom_file_row()],
-                          'DVHs': []}  # DVHs will only include PTVs, others pushed en route
-
-        if not self.import_uncategorized:  # remove uncategorized ROIs unless this is checked
-            for roi_key in list(roi_name_map):
-                if self.data[plan_uid].get_physician_roi(roi_key) == 'uncategorized':
-                    roi_name_map.pop(roi_key)
-
-        post_import_rois = []
-        roi_total = len(roi_name_map)
-        ptvs = {key: [] for key in ['dvh', 'volume', 'index']}
-        with DVH_SQL() as cnx:
-            for roi_counter, roi_key in enumerate(list(roi_name_map)):
-                if self.terminate['status']:
-                    return
-
-                # Skip dvh calculation if roi was already imported (e.g, from previous plan in this study)
-                if not cnx.is_roi_imported(roi_name_map[roi_key], study_uid):
-
-                    # Send messages to status dialog about progress
-                    msg = {'calculation': 'DVH',
-                           'roi_num': roi_counter+1,
-                           'roi_total': roi_total,
-                           'roi_name': roi_name_map[roi_key],
-                           'progress': int(100 * (roi_counter+1) / roi_total)}
-                    wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
-                    wx.CallAfter(pub.sendMessage, "update_elapsed_time")
-
-                    try:
-                        dvh_row = self.data[plan_uid].get_dvh_row(roi_key)
-                    except MemoryError as e:
-                        print('Skipping roi: %s, for mrn: %s' % (roi_name_map[roi_key], mrn))
-                        print('Memory Error:\n%s' % e)
-                        dvh_row = None
-
-                    if dvh_row:
-                        roi_type = dvh_row['roi_type'][0]
-                        roi_name = dvh_row['roi_name'][0]
-                        physician_roi = dvh_row['physician_roi'][0]
-
-                        # Collect dvh, volume, and index of ptvs to be used for post-import calculations
-                        if roi_type.startswith('PTV'):
-                            ptvs['dvh'].append(dvh_row['dvh_string'][0])
-                            ptvs['volume'].append(dvh_row['volume'][0])
-                            ptvs['index'].append(len(data_to_import['DVHs']))
-                            data_to_import['DVHs'].append(dvh_row)
-                        else:
-                            self.push({'DVHs': [dvh_row]})
-
-                        # collect roi names for post-import calculations
-                        if roi_type and roi_name and physician_roi:
-                            if roi_type.lower() in ['organ', 'ctv', 'gtv']:
-                                if not (physician_roi.lower() in
-                                        ['uncategorized', 'ignored', 'external', 'skin', 'body']
-                                        or roi_name.lower() in ['external', 'skin', 'body']):
-                                    post_import_rois.append(clean_name(roi_name_map[roi_key]))
-
-        self.data[plan_uid].clear_loaded_data()  # free up memory
-
-        # Sort PTVs by their D_95% (applicable to SIBs)
-        if ptvs['dvh']:
-            ptv_order = rank_ptvs_by_D95(ptvs)
-            for ptv_row, dvh_row_index in enumerate(ptvs['index']):
-                data_to_import['DVHs'][dvh_row_index]['roi_type'][0] = "PTV%s" % (ptv_order[ptv_row]+1)
-
-        # Must push data to SQL before processing post import calculations since they rely on SQL
-        self.push(data_to_import)
-
-        # Wait until entire study has been pushed since these values are based on entire PTV volume
-        if final_plan_in_study:
-            if ptvs['dvh']:
-
-                # Calculate the PTV overlap for each roi
-                tv = db_update.get_total_treatment_volume_of_study(study_uid)
-                self.post_import_calc('PTV Overlap Volume', study_uid, post_import_rois,
-                                      db_update.treatment_volume_overlap, tv)
-                if self.terminate['status']:
-                    return
-
-                # Calculate the centroid distances of roi-to-PTV for each roi
-                tv_centroid = db_update.get_treatment_volume_centroid(tv)
-                self.post_import_calc('Centroid Distance to PTV', study_uid, post_import_rois,
-                                      db_update.dist_to_ptv_centroids, tv_centroid)
-                if self.terminate['status']:
-                    return
-
-                # Calculate minimum, mean, median, and max distances and DTH
-                tv_coord = db_update.get_treatment_volume_coord(tv)
-                tv_coord = sample_roi(tv_coord)
-                self.post_import_calc('Distances to PTV', study_uid, post_import_rois,
-                                      db_update.min_distances, tv_coord)
-                if self.terminate['status']:
-                    return
-
-                # Update progress dialog
-                msg = {'calculation': 'Total Treatment Volume Statistics',
-                       'roi_num': 0,
-                       'roi_total': 1,
-                       'roi_name': 'PTV',
-                       'progress': 0}
-                wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
-
-                # Update PTV geometric data
-                db_update.update_ptv_data(tv, study_uid)
-
-                # Update progress dialog
-                msg['roi_num'], msg['progress'] = 1, 100
-                wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
-
-            else:
-                print("WARNING: No PTV found for %s" % plan_uid)
-                print("\tMRN: %s" % mrn)
-                print("\tSkipping PTV related calculations.")
-
-        # Move files to imported directory
-        if final_plan_in_study:
-            self.move_files(plan_uid, study_uid)
-
-            # Record the time per SQL of last complete import for a study
-            with DVH_SQL() as cnx:
-                self.last_import_time = cnx.now
-
-    @staticmethod
-    def push(data_to_import):
-        """
-        Push data to the SQL database
-        :param data_to_import: data to import, should be formatted as indicated in db.sql_connector.DVH_SQL.insert_row
-        :type data_to_import: dict
-        """
-        with DVH_SQL() as cnx:
-            cnx.insert_data_set(data_to_import)
-
-    def post_import_calc(self, title, uid, rois, func, pre_calc):
-        """
-        Generic function to perform a post-import calculation
-        :param title: title to be displayed in progress dialog
-        :type title: str
-        :param uid: the plan uid to be displayed in the progress dialog
-        :type uid: str
-        :param rois: the roi_names to be processed
-        :type rois: list
-        :param func: the function from db.update called to process the data
-        :param pre_calc: data related to total treatment volume for the specific func passed
-        """
-        roi_total = len(rois)
-        for roi_counter, roi_name in enumerate(rois):
-            if self.terminate['status']:
-                return
-            msg = {'calculation': title,
-                   'roi_num': roi_counter + 1,
-                   'roi_total': roi_total,
-                   'roi_name': roi_name,
-                   'progress': int(100 * roi_counter / roi_total)}
-            wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
-            func(uid, roi_name, pre_calc=pre_calc)
-
-    def move_files(self, uid, study_uid):
-        files = [self.data[uid].plan_file,
-                 self.data[uid].structure_file,
-                 self.data[uid].dose_file]
-        if study_uid in self.other_dicom_files.keys():
-            files.extend(self.other_dicom_files[study_uid])
-
-        new_dir = join(self.data[uid].import_path, self.data[uid].mrn)
-        move_files_to_new_path(files, new_dir, copy_files=self.keep_in_inbox)
-
-        # remove old directory if empty
-        # for file in files:
-        #     old_dir = dirname(file)
-        #     if isdir(old_dir) and not listdir(old_dir):
-        #         rmdir(old_dir)
-
-    def delete_partially_updated_plan(self):
-        """
-        If import process fails, call this function to remove the partially imported data into SQL
-        """
-        with DVH_SQL() as cnx:
-            if cnx.db_type == 'sqlite':
-                cnx.delete_rows("import_time_stamp > date(%s)" % self.last_import_time)
-            else:
-                cnx.delete_rows("import_time_stamp > '%s'::date" % self.last_import_time)
+        pool = Pool(processes=1)
+        pool.starmap(ImportStudyWorker, pool_args)
+        pool.close()

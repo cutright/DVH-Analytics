@@ -13,7 +13,6 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta  # python-dateutil
 from dateutil.parser import parse as date_parser
 import numpy as np
-import pydicom as dicom
 from os.path import basename, join
 from dvha.tools.roi_name_manager import clean_name, DatabaseROIs
 from dvha.tools.utilities import change_angle_origin, calc_stats, is_date
@@ -30,16 +29,18 @@ class DICOM_Parser:
     """
     Parse a set of DICOM files for database
     """
-    def __init__(self, plan=None, structure=None, dose=None, dose_sum=None,
+    def __init__(self, plan_file=None, structure_file=None, dose_file=None, dose_sum=None, plan_over_rides=None,
                  global_plan_over_rides=None, roi_map=DatabaseROIs()):
         """
-        :param plan: absolute path of DICOM RT Plan file
-        :type plan: str
-        :param structure: absolute path of DICOM RT Struct file
-        :type structure: str
-        :param dose: absolute path of DICOM RT Dose file
-        :type dose: str
+        :param plan_file: absolute path of DICOM RT Plan file
+        :type plan_file: str
+        :param structure_file: absolute path of DICOM RT Struct file
+        :type structure_file: str
+        :param dose_file: absolute path of DICOM RT Dose file
+        :type dose_file: str
         :param dose_sum: return from sum_dose_grids of tools.dicomdose_sum (dicompyler-core plugin)
+        :param plan_over_rides: Values from import GUI to override DICOM file data
+        :type plan_over_rides: dict
         :param global_plan_over_rides: Values from import GUI to override DICOM file data
         :type global_plan_over_rides: dict
         :param roi_map: roi name map
@@ -49,9 +50,9 @@ class DICOM_Parser:
         self.database_rois = roi_map
         self.import_path = parse_settings_file(IMPORT_SETTINGS_PATH)['imported']
 
-        self.plan_file = plan
-        self.structure_file = structure
-        self.dose_file = dose
+        self.plan_file = plan_file
+        self.structure_file = structure_file
+        self.dose_file = dose_file
         self.dose_sum = dose_sum
 
         # store these values when clearing file loaded data
@@ -74,14 +75,10 @@ class DICOM_Parser:
         self.__initialize_rx_beam_and_ref_beam_data()
 
         # over ride objects
-        self.plan_over_rides = {'mrn': None,
-                                'study_instance_uid': None,
-                                'birth_date': None,
-                                'sim_study_date': None,
-                                'physician': None,
-                                'tx_site': None,
-                                'rx_dose': None}
+        keys = ['mrn', 'study_instance_uid', 'birth_date', 'sim_study_date', 'physician', 'tx_site', 'rx_dose']
+        self.plan_over_rides = [plan_over_rides, {key: None for key in keys}][plan_over_rides is None]
         self.global_plan_over_rides = global_plan_over_rides
+
         self.roi_type_over_ride = {}
         self.warning = {'label': '', 'incomplete': True}
         self.update_warning_label()
@@ -89,15 +86,15 @@ class DICOM_Parser:
     def load_from_file(self):
         # TODO: Remove the need for both pydicom and dicompyler DICOM parsers
         if self.plan_file:
-            self.rt_data['plan'] = dicom.read_file(self.plan_file, force=True)
+            self.rt_data['plan'] = pydicom.read_file(self.plan_file, force=True)
             self.dicompyler_data['plan'] = dicomparser.DicomParser(self.plan_file)
             self.dicompyler_rt_plan = self.dicompyler_data['plan'].GetPlan()
         if self.structure_file:
-            self.rt_data['structure'] = dicom.read_file(self.structure_file, force=True)
+            self.rt_data['structure'] = pydicom.read_file(self.structure_file, force=True)
             self.dicompyler_data['structure'] = dicomparser.DicomParser(self.structure_file)
             self.dicompyler_rt_structures = self.dicompyler_data['structure'].GetStructures()
         if self.dose_file:
-            self.rt_data['dose'] = dicom.read_file(self.dose_file, force=True)
+            self.rt_data['dose'] = pydicom.read_file(self.dose_file, force=True)
             if self.dose_sum is None:
                 self.dicompyler_data['dose'] = dicomparser.DicomParser(self.dose_file).ds
             else:
@@ -918,6 +915,11 @@ class DICOM_Parser:
     # ------------------------------------------------------------------------------
     # Generic tools
     # ------------------------------------------------------------------------------
+    @property
+    def init_param(self):
+        params = ['plan_file', 'structure_file', 'dose_file', 'dose_sum', 'plan_over_rides', 'global_plan_over_rides']
+        return {key: getattr(self, key) for key in params}
+
     def get_attribute(self, rt_type, pydicom_attribute):
         """
         :param rt_type: plan. dose, or structure
