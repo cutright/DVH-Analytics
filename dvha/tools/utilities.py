@@ -15,7 +15,7 @@ import wx
 from datetime import datetime
 from dateutil.parser import parse as parse_date
 import numpy as np
-from os import walk, listdir, unlink, mkdir, rmdir, chdir
+from os import walk, listdir, unlink, mkdir, rmdir, chdir, sep
 from os.path import join, isfile, isdir, splitext, basename, dirname, realpath
 import shutil
 import pydicom as dicom
@@ -23,6 +23,8 @@ import pickle
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import IMPORT_SETTINGS_PATH, SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
     APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR, MODELS_DIR, WIN_APP_ICON
+import tracemalloc
+import linecache
 
 
 IGNORED_FILES = ['.ds_store']
@@ -703,3 +705,40 @@ def get_window_size(width, height):
 def set_frame_icon(frame):
     if not is_mac():
         frame.SetIcon(wx.Icon(WIN_APP_ICON))
+
+
+def trace_memory_alloc_pretty_top(snapshot, key_type='lineno', limit=10):
+    """From https://docs.python.org/3/library/tracemalloc.html"""
+    print('-----------------------------------------------------------------')
+    snapshot = snapshot.filter_traces((
+        tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
+        tracemalloc.Filter(False, "<unknown>"),
+    ))
+    top_stats = snapshot.statistics(key_type)
+
+    print("Top %s lines" % limit)
+    for index, stat in enumerate(top_stats[:limit], 1):
+        frame = stat.traceback[0]
+        # replace "/path/to/module/file.py" with "module/file.py"
+        filename = sep.join(frame.filename.split(sep)[-2:])
+        print("#%s: %s:%s: %.1f KiB"
+              % (index, filename, frame.lineno, stat.size / 1024))
+        line = linecache.getline(frame.filename, frame.lineno).strip()
+        if line:
+            print('    %s' % line)
+
+    other = top_stats[limit:]
+    if other:
+        size = sum(stat.size for stat in other)
+        print("%s other: %.1f KiB" % (len(other), size / 1024))
+    total = sum(stat.size for stat in top_stats)
+    print("Total allocated size: %.1f KiB" % (total / 1024))
+
+
+def trace_memory_alloc_simple_stats(snapshot, key_type='lineno'):
+    """From https://docs.python.org/3/library/tracemalloc.html"""
+    print('-----------------------------------------------------------------')
+    print("[ Top 10 ]")
+    top_stats = snapshot.statistics(key_type)
+    for stat in top_stats[:10]:
+        print(stat)

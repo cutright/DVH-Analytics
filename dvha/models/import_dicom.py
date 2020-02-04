@@ -30,7 +30,8 @@ from dvha.tools.errors import ErrorDialog
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
     set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size,\
-    set_frame_icon
+    set_frame_icon, trace_memory_alloc_pretty_top
+import tracemalloc
 
 
 # TODO: Provide methods to write over-rides to DICOM file
@@ -731,6 +732,7 @@ class ImportDicomFrame(wx.Frame):
             ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
                          self.checkbox_include_uncategorized.GetValue(), self.terminate,
                          self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue())
+            del self.parsed_dicom_data
             dlg = ImportStatusDialog(self.terminate)
             # calling self.Close() below caused issues in Windows if Show() used instead of ShowModal()
             [dlg.Show, dlg.ShowModal][is_windows()]()
@@ -1096,6 +1098,8 @@ class ImportWorker(Thread):
         self.start_path = start_path
         self.keep_in_inbox = keep_in_inbox
 
+        # self.prev_memory = None
+
         with DVH_SQL() as cnx:
             self.last_import_time = cnx.now  # use pgsql time rather than CPU since time stamps in DB are based on psql
 
@@ -1103,6 +1107,7 @@ class ImportWorker(Thread):
 
     def run(self):
         # try:
+        tracemalloc.start()
         self.import_studies()
 
         # except MemoryError as mem_err:
@@ -1147,22 +1152,22 @@ class ImportWorker(Thread):
         plan_total = len(self.checked_uids)
         plan_counter = 0
         for study_uid, plan_uid_set in study_uids.items():
-            if len(plan_uid_set) > 1:
-                dose_files = [self.data[plan_uid].dose_file for plan_uid in plan_uid_set]
-
-                wait = wx.BusyInfo('Summing grids for\n%s' % study_uid)
-                try:
-                    dose_sum = sum_dose_grids(dose_files)
-                    for plan_uid in plan_uid_set:
-                        self.data[plan_uid].import_dose_sum(dose_sum)
-                    del wait
-                except Exception as e:
-                    # print(str(e))
-                    msg = "Dose Sum Failed - This feature is still in development\n%s" % e
-                    mrns = ', '.join(list(set([self.data[plan_uid].mrn for plan_uid in plan_uid_set])))
-                    del wait
-                    ErrorDialog(None, msg, 'Dose Sum Error')
-                    continue
+            # if len(plan_uid_set) > 1:
+            #     dose_files = [self.data[plan_uid].dose_file for plan_uid in plan_uid_set]
+            #
+            #     wait = wx.BusyInfo('Summing grids for\n%s' % study_uid)
+            #     try:
+            #         dose_sum = sum_dose_grids(dose_files)
+            #         for plan_uid in plan_uid_set:
+            #             self.data[plan_uid].import_dose_sum(dose_sum)
+            #         del wait
+            #     except Exception as e:
+            #         # print(str(e))
+            #         msg = "Dose Sum Failed - This feature is still in development\n%s" % e
+            #         mrns = ', '.join(list(set([self.data[plan_uid].mrn for plan_uid in plan_uid_set])))
+            #         del wait
+            #         ErrorDialog(None, msg, 'Dose Sum Error')
+            #         continue
 
             for i, plan_uid in enumerate(plan_uid_set):
                 if plan_uid in list(self.data):
@@ -1195,6 +1200,13 @@ class ImportWorker(Thread):
         :param final_plan_in_study: indicates if post-import calculations should be performed and files moved
         :type final_plan_in_study: bool
         """
+        snapshot = tracemalloc.take_snapshot()
+        # top_stats = snapshot.statistics('lineno')
+        # print("[ Top 10 ]")
+        # for stat in top_stats[:10]:
+        #     print(stat)
+        trace_memory_alloc_pretty_top(snapshot)
+
         self.data[plan_uid].load_from_file()
         mrn = self.data[plan_uid].mrn
         study_uid = self.data[plan_uid].study_instance_uid_to_be_imported
