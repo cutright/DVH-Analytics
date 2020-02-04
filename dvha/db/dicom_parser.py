@@ -30,7 +30,7 @@ class DICOM_Parser:
     Parse a set of DICOM files for database
     """
     def __init__(self, plan_file=None, structure_file=None, dose_file=None, dose_sum=None, plan_over_rides=None,
-                 global_plan_over_rides=None, roi_map=DatabaseROIs()):
+                 global_plan_over_rides=None, roi_type_over_ride=None, roi_map=DatabaseROIs()):
         """
         :param plan_file: absolute path of DICOM RT Plan file
         :type plan_file: str
@@ -79,7 +79,7 @@ class DICOM_Parser:
         self.plan_over_rides = [plan_over_rides, {key: None for key in keys}][plan_over_rides is None]
         self.global_plan_over_rides = global_plan_over_rides
 
-        self.roi_type_over_ride = {}
+        self.roi_type_over_ride = [roi_type_over_ride, {}][roi_type_over_ride is None]
         self.warning = {'label': '', 'incomplete': True}
         self.update_warning_label()
 
@@ -917,7 +917,8 @@ class DICOM_Parser:
     # ------------------------------------------------------------------------------
     @property
     def init_param(self):
-        params = ['plan_file', 'structure_file', 'dose_file', 'dose_sum', 'plan_over_rides', 'global_plan_over_rides']
+        params = ['plan_file', 'structure_file', 'dose_file', 'dose_sum',
+                  'plan_over_rides', 'global_plan_over_rides', 'roi_type_over_ride']
         return {key: getattr(self, key) for key in params}
 
     def get_attribute(self, rt_type, pydicom_attribute):
