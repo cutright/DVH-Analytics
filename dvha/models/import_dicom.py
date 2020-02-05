@@ -18,6 +18,7 @@ from dateutil.parser import parse as parse_date
 from os.path import isdir, join
 from pubsub import pub
 from threading import Thread
+from queue import Queue
 from dvha.db import update as db_update
 from dvha.db.sql_connector import DVH_SQL
 from dvha.db.dicom_importer import DicomImporter
@@ -30,7 +31,6 @@ from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move
     set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size,\
     set_frame_icon, trace_memory_alloc_pretty_top
 import tracemalloc
-from multiprocessing import Pool
 
 
 # TODO: Provide methods to write over-rides to DICOM file
@@ -1067,37 +1067,27 @@ class ImportStatusDialog(wx.Dialog):
         self.close()
 
 
-class ImportStudyWorker(Thread):
-    def __init__(self, init_param, plan_uid, msg, import_uncategorized, final_plan_in_study=True):
+class StudyImporter:
+    def __init__(self, init_params, plan_uid, msg, import_uncategorized, final_plan_in_study):
 
-        Thread.__init__(self)
-        self.parsed_data = DICOM_Parser(**init_param)
-        self.plan_uid = plan_uid
-        self.msg = msg
-        self.import_uncategorized = import_uncategorized
-        self.final_plan_in_study = final_plan_in_study
+        parsed_data = DICOM_Parser(**init_params)
 
-        self.start()
+        wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
+        wx.CallAfter(pub.sendMessage, "update_elapsed_time")
 
-    def start(self):
-        # wx.CallAfter(pub.sendMessage, "update_patient", msg=self.msg)
-        # wx.CallAfter(pub.sendMessage, "update_elapsed_time")
-        pub.sendMessage("update_patient", msg=self.msg)
-        pub.sendMessage("update_elapsed_time")
-
-        mrn = self.parsed_data.mrn
-        study_uid = self.parsed_data.study_instance_uid_to_be_imported
-        structures = self.parsed_data.dicompyler_rt_structures
+        mrn = parsed_data.mrn
+        study_uid = parsed_data.study_instance_uid_to_be_imported
+        structures = parsed_data.dicompyler_rt_structures
         roi_name_map = {key: structures[key]['name'] for key in list(structures) if structures[key]['type'] != 'MARKER'}
-        data_to_import = {'Plans': [self.parsed_data.get_plan_row()],
-                          'Rxs': self.parsed_data.get_rx_rows(),
-                          'Beams': self.parsed_data.get_beam_rows(),
-                          'DICOM_Files': [self.parsed_data.get_dicom_file_row()],
+        data_to_import = {'Plans': [parsed_data.get_plan_row()],
+                          'Rxs': parsed_data.get_rx_rows(),
+                          'Beams': parsed_data.get_beam_rows(),
+                          'DICOM_Files': [parsed_data.get_dicom_file_row()],
                           'DVHs': []}  # DVHs will only include PTVs, others pushed en route
 
-        if not self.import_uncategorized:  # remove uncategorized ROIs unless this is checked
+        if not import_uncategorized:  # remove uncategorized ROIs unless this is checked
             for roi_key in list(roi_name_map):
-                if self.parsed_data.get_physician_roi(roi_key) == 'uncategorized':
+                if parsed_data.get_physician_roi(roi_key) == 'uncategorized':
                     roi_name_map.pop(roi_key)
 
         post_import_rois = []
@@ -1115,13 +1105,13 @@ class ImportStudyWorker(Thread):
                            'roi_total': roi_total,
                            'roi_name': roi_name_map[roi_key],
                            'progress': int(100 * (roi_counter+1) / roi_total)}
-                    # wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
-                    # wx.CallAfter(pub.sendMessage, "update_elapsed_time")
-                    pub.sendMessage("update_calculation", msg=msg)
-                    pub.sendMessage("update_elapsed_time")
+                    wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+                    wx.CallAfter(pub.sendMessage, "update_elapsed_time")
+                    # pub.sendMessage("update_calculation", msg=msg)
+                    # pub.sendMessage("update_elapsed_time")
 
                     try:
-                        dvh_row = self.parsed_data.get_dvh_row(roi_key)
+                        dvh_row = parsed_data.get_dvh_row(roi_key)
                     except MemoryError as e:
                         print('Skipping roi: %s, for mrn: %s' % (roi_name_map[roi_key], mrn))
                         print('Memory Error:\n%s' % e)
@@ -1149,7 +1139,7 @@ class ImportStudyWorker(Thread):
                                         or roi_name.lower() in ['external', 'skin', 'body']):
                                     post_import_rois.append(clean_name(roi_name_map[roi_key]))
 
-        self.parsed_data.clear_loaded_data()  # free up memory
+        parsed_data.clear_loaded_data()  # free up memory
 
         # Sort PTVs by their D_95% (applicable to SIBs)
         if ptvs['dvh']:
@@ -1161,7 +1151,7 @@ class ImportStudyWorker(Thread):
         self.push(data_to_import)
 
         # Wait until entire study has been pushed since these values are based on entire PTV volume
-        if self.final_plan_in_study:
+        if final_plan_in_study:
             if ptvs['dvh']:
 
                 # Calculate the PTV overlap for each roi
@@ -1186,19 +1176,19 @@ class ImportStudyWorker(Thread):
                        'roi_total': 1,
                        'roi_name': 'PTV',
                        'progress': 0}
-                # wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
-                pub.sendMessage("update_calculation", msg=msg)
+                wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+                # pub.sendMessage("update_calculation", msg=msg)
 
                 # Update PTV geometric data
                 db_update.update_ptv_data(tv, study_uid)
 
                 # Update progress dialog
                 msg['roi_num'], msg['progress'] = 1, 100
-                # wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
-                pub.sendMessage("update_calculation", msg=msg)
+                wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+                # pub.sendMessage("update_calculation", msg=msg)
 
             else:
-                print("WARNING: No PTV found for %s" % self.plan_uid)
+                print("WARNING: No PTV found for %s" % plan_uid)
                 print("\tMRN: %s" % mrn)
                 print("\tSkipping PTV related calculations.")
 
@@ -1232,8 +1222,8 @@ class ImportStudyWorker(Thread):
                    'roi_total': roi_total,
                    'roi_name': roi_name,
                    'progress': int(100 * roi_counter / roi_total)}
-            # wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
-            pub.sendMessage("update_calculation", msg=msg)
+            wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+            # pub.sendMessage("update_calculation", msg=msg)
             func(uid, roi_name, pre_calc=pre_calc)
 
 
@@ -1293,18 +1283,11 @@ class ImportWorker(Thread):
             study_uids[study_uid].append(plan_uid)
         return study_uids
 
-    def import_studies(self):
-        """
-        Iterate through StudyInstanceUIDs that match plan SOPInstanceUIDs in self.checked_uids
-        Update dialog with status information
-        If there are multiple plans for a study uid, sum the dose grids
-        Import the study
-        """
-
+    def get_queue(self):
         study_uids = self.get_study_uids()
         plan_total = len(self.checked_uids)
         plan_counter = 0
-        pool_args = []
+        queue = Queue()
         for study_uid, plan_uid_set in study_uids.items():
             for i, plan_uid in enumerate(plan_uid_set):
                 if plan_uid in list(self.data):
@@ -1316,15 +1299,28 @@ class ImportWorker(Thread):
                            'study_total': plan_total}
                     init_param = self.data[plan_uid].init_param
                     args = (init_param, plan_uid, msg, self.import_uncategorized, plan_uid == plan_uid_set[-1])
-                    pool_args.append(args)
+                    queue.put(args)
                 else:
-                    print('ERROR: This plan could not be parsed. Skipping import. '
+                    print('ERROR: This plan could not be parsed. Skipping import.'
                           'Did you supply RT Structure, Dose, and Plan?')
                     print('\tPlan UID: %s' % plan_uid)
                     print('\tMRN: %s' % self.data[plan_uid].mrn)
 
                 plan_counter += 1
+        return queue
 
-        pool = Pool(processes=1)
-        pool.starmap(ImportStudyWorker, pool_args)
-        pool.close()
+    def import_studies(self):
+
+        queue = self.get_queue()
+        worker = Thread(target=self.import_study, args=[queue])
+        worker.setDaemon(True)
+        worker.start()
+        queue.join()
+
+    @staticmethod
+    def import_study(queue):
+        while queue.qsize():
+            parameters = queue.get()
+            StudyImporter(*parameters)
+            queue.task_done()
+
