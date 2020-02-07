@@ -56,10 +56,8 @@ class DICOM_Parser:
         self.dose_sum = dose_sum
 
         # store these values when clearing file loaded data
-        self.stored_study_uid = None
-        self.stored_patient_name = None
-        self.stored_validation = None
-        self.cleared = False
+        self.stored_values = {}
+        self.is_dicom_loaded = False
 
         self.rt_data = {key: None for key in ['plan', 'structure', 'dose']}
         self.dicompyler_data = {key: None for key in ['plan', 'structure', 'dose']}
@@ -80,8 +78,6 @@ class DICOM_Parser:
         self.global_plan_over_rides = global_plan_over_rides
 
         self.roi_type_over_ride = [roi_type_over_ride, {}][roi_type_over_ride is None]
-        self.warning = {'label': '', 'incomplete': True}
-        self.update_warning_label()
 
     def load_from_file(self):
         # TODO: Remove the need for both pydicom and dicompyler DICOM parsers
@@ -100,18 +96,23 @@ class DICOM_Parser:
             else:
                 self.dicompyler_data['dose'] = self.dose_sum
 
+        self.is_dicom_loaded = True
+
     def clear_loaded_data(self):
-        if not self.cleared:
-            self.stored_study_uid = self.study_instance_uid_to_be_imported
-            self.stored_patient_name = self.patient_name
-            self.stored_validation = self.validation
+        if self.is_dicom_loaded:
+            self.update_stored_values()
 
             self.rt_data = {key: None for key in ['plan', 'structure', 'dose']}
             self.dicompyler_data = {key: None for key in ['plan', 'structure', 'dose']}
             self.dicompyler_rt_plan = None
             self.dicompyler_rt_structures = None
 
-            self.cleared = True
+            self.is_dicom_loaded = False
+
+    def update_stored_values(self):
+        keys = ['study_instance_uid_to_be_imported', 'patient_name', 'mrn', 'sim_study_date', 'birth_date',
+                'rx_dose', 'ptv_names', 'physician', 'ptv_exists']
+        self.stored_values = {key: getattr(self, key) for key in keys}
 
     def __initialize_rx_beam_and_ref_beam_data(self):
         beam_num = 0
@@ -472,17 +473,23 @@ class DICOM_Parser:
     def mrn(self):
         if self.plan_over_rides['mrn'] is not None:
             return self.plan_over_rides['mrn']
-        return self.rt_data['plan'].PatientID
+        if self.is_dicom_loaded:
+            return self.rt_data['plan'].PatientID
+        return self.stored_values['mrn']
 
     @property
     def study_instance_uid(self):
-        return self.rt_data['plan'].StudyInstanceUID
+        if self.is_dicom_loaded:
+            return self.rt_data['plan'].StudyInstanceUID
+        return self.stored_values['study_instance_uid']
 
     @property
     def study_instance_uid_to_be_imported(self):
         if hasattr(self, 'plan_over_rides') and self.plan_over_rides['study_instance_uid']:
             return self.plan_over_rides['study_instance_uid']
-        return self.rt_data['plan'].StudyInstanceUID
+        if self.is_dicom_loaded:
+            return self.rt_data['plan'].StudyInstanceUID
+        return self.stored_values['study_instance_uid_to_be_imported']
 
     @property
     def is_study_instance_uid_valid(self):
@@ -502,7 +509,9 @@ class DICOM_Parser:
 
     @property
     def patient_name(self):
-        return str(self.rt_data['plan'].PatientName)
+        if self.is_dicom_loaded:
+            return str(self.rt_data['plan'].PatientName)
+        return self.stored_values['patient_name']
 
     @property
     def file_set_complete(self):
@@ -529,8 +538,10 @@ class DICOM_Parser:
             ans = self.plan_over_rides['rx_dose']
         elif self.poi_rx_data:
             ans = sum([rx['rx_dose'] for rx in self.poi_rx_data.values()])
-        else:
+        elif self.is_dicom_loaded:
             ans = sum([rx.rx_dose for rx in self.rx_data if rx.rx_dose])
+        else:
+            ans = self.stored_values['rx_dose']
         return self.process_global_over_ride('rx_dose', ans)
 
     @property
@@ -563,16 +574,20 @@ class DICOM_Parser:
     def sim_study_date(self):
         if self.plan_over_rides['sim_study_date'] is not None:
             ans = self.plan_over_rides['sim_study_date']
-        else:
+        elif self.is_dicom_loaded:
             ans = self.get_attribute('plan', 'StudyDate')
+        else:
+            ans = self.stored_values['sim_study_date']
         return self.process_global_over_ride('sim_study_date', ans)
 
     @property
     def birth_date(self):
         if self.plan_over_rides['birth_date'] is not None:
-            ans =  self.plan_over_rides['birth_date']
-        else:
+            ans = self.plan_over_rides['birth_date']
+        elif self.is_dicom_loaded:
             ans = self.get_attribute('plan', 'PatientBirthDate')
+        else:
+            ans = self.stored_values['birth_date']
         return self.process_global_over_ride('birth_date', ans)
 
     @property
@@ -596,10 +611,12 @@ class DICOM_Parser:
     def physician(self):
         if self.plan_over_rides['physician'] is not None:
             ans = self.plan_over_rides['physician']
-        else:
+        elif self.is_dicom_loaded:
             ans = str(self.get_attribute('plan', ['PhysiciansOfRecord', 'ReferringPhysicianName'])).upper()
             if not ans:
                 ans = 'DEFAULT'
+        else:
+            ans = self.stored_values['physician']
         return self.process_global_over_ride('physician', ans)
 
     @property
@@ -840,6 +857,8 @@ class DICOM_Parser:
             for key in list(self.dicompyler_rt_structures):
                 if self.get_roi_type(key) == 'PTV':
                     return True
+        if not self.is_dicom_loaded:
+            return self.stored_values['ptv_exists']
         return False
 
     @property
@@ -862,7 +881,8 @@ class DICOM_Parser:
             if roi_name == clean_name(self.get_roi_name(key)):
                 return key
 
-    def get_ptv_names(self):
+    @property
+    def ptv_names(self):
         """
         Scan all ROIs for PTVs
         :return: PTV names
@@ -870,6 +890,7 @@ class DICOM_Parser:
         """
         if self.dicompyler_rt_structures:
             return [self.get_roi_name(x) for x in list(self.dicompyler_rt_structures) if self.get_roi_type(x) == 'PTV']
+        return self.stored_values['ptv_names']
 
     def get_surface_area(self, key):
         """
@@ -992,7 +1013,7 @@ class DICOM_Parser:
                                        'value': self.study_instance_uid_to_be_imported,
                                        'message': "Study Instance UID already exists in the database."},
                 'ptv': {'status': self.ptv_exists,
-                        'value': self.get_ptv_names(),
+                        'value': self.ptv_names,
                         'message': "No PTV found."},
                 'sim_study_date': {'status': is_date(self.sim_study_date),
                                    'value': self.sim_study_date,
@@ -1002,7 +1023,8 @@ class DICOM_Parser:
                             'message': "Prescription dose is not defined."},
                 'complete_file_set': {'status': self.file_set_complete,
                                       'value': self.file_set_complete,
-                                      'message': "Missing RT %s." % ', '.join(self.missing_files)}}
+                                      'message': ["Missing RT %s." % ', '.join(self.missing_files), '']
+                                      [self.file_set_complete]}}
 
     @staticmethod
     def validate_transfer_syntax_uid(data_set):
@@ -1016,7 +1038,8 @@ class DICOM_Parser:
 
         return new_data_set
 
-    def update_warning_label(self):
+    @property
+    def warning(self):
         msg = ''
         incomplete = False
         if self.plan_file and self.dose_file and self.structure_file:
@@ -1031,7 +1054,8 @@ class DICOM_Parser:
         else:
             msg = "ERROR: Incomplete Fileset. RT Plan, Dose, and Structure required."
             incomplete = True
-        self.warning = {'label': msg, 'incomplete': incomplete}
+
+        return {'label': msg, 'incomplete': incomplete}
 
 
 class BeamParser:

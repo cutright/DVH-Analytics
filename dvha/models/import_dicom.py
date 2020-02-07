@@ -21,16 +21,15 @@ from threading import Thread
 from queue import Queue
 from dvha.db import update as db_update
 from dvha.db.sql_connector import DVH_SQL
-from dvha.db.dicom_importer import DicomImporter
+from dvha.models.dicom_tree_builder import DicomTreeBuilder
 from dvha.db.dicom_parser import DICOM_Parser
 from dvha.dialogs.main import DatePicker
 from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddROIType, RoiManager, ChangePlanROIName
-from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, IMPORTED_DIR, ICONS
+from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, ICONS
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
     set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size,\
-    set_frame_icon, trace_memory_alloc_pretty_top
-import tracemalloc
+    set_frame_icon
 
 
 # TODO: Provide methods to write over-rides to DICOM file
@@ -407,14 +406,8 @@ class ImportDicomFrame(wx.Frame):
 
     def on_browse(self, evt):
         """
-        Clear data, open a DirDialog, run a DicomImporter on selected directory
+        Clear data, open a DirDialog, run a DicomTreeBuilder on selected directory
         """
-        self.parsed_dicom_data = {}
-        for key in list(self.global_plan_over_rides):
-            self.global_plan_over_rides[key] = {'value': None, 'only_if_missing': False}
-        self.clear_plan_data()
-        if self.dicom_importer:
-            self.tree_ctrl_roi.DeleteChildren(self.dicom_importer.root_rois)
         starting_dir = self.text_ctrl_directory.GetValue()
         if starting_dir == '':
             starting_dir = self.start_path
@@ -423,13 +416,20 @@ class ImportDicomFrame(wx.Frame):
 
         dlg = wx.DirDialog(self, "Select inbox directory", starting_dir, wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:
+            self.parsed_dicom_data = {}
+            for key in list(self.global_plan_over_rides):
+                self.global_plan_over_rides[key] = {'value': None, 'only_if_missing': False}
+            self.clear_plan_data()
+            if self.dicom_importer:
+                self.tree_ctrl_roi.DeleteChildren(self.dicom_importer.root_rois)
+
             self.text_ctrl_directory.SetValue(dlg.GetPath())
             self.dicom_importer = self.get_importer()
 
     def get_importer(self):
-        return DicomImporter(self.text_ctrl_directory.GetValue(), self.tree_ctrl_import,
-                             self.tree_ctrl_roi, self.tree_ctrl_roi_root, self.tree_ctrl_images,
-                             self.roi_map, search_subfolders=self.checkbox_subfolders.GetValue())
+        return DicomTreeBuilder(self.text_ctrl_directory.GetValue(), self.tree_ctrl_import,
+                                self.tree_ctrl_roi, self.tree_ctrl_roi_root, self.tree_ctrl_images,
+                                self.roi_map, search_subfolders=self.checkbox_subfolders.GetValue())
 
     def on_file_tree_select(self, evt):
         """
@@ -437,7 +437,7 @@ class ImportDicomFrame(wx.Frame):
         """
         uid = self.get_file_tree_item_plan_uid(evt.GetItem())
         self.tree_ctrl_roi.SelectItem(self.tree_ctrl_roi_root, True)
-        if uid in list(self.parsed_dicom_data) and self.parsed_dicom_data[uid].stored_validation['complete_file_set']:
+        if uid in list(self.parsed_dicom_data) and self.parsed_dicom_data[uid].validation['complete_file_set']:
             if uid != self.selected_uid:
                 if self.selected_uid is not None:
                     self.parsed_dicom_data[self.selected_uid].clear_loaded_data()
@@ -532,15 +532,12 @@ class ImportDicomFrame(wx.Frame):
         plan_node = None
         node_id, node_type = self.dicom_importer.get_id_of_tree_ctrl_node(item)
 
-        # if item is a plan node
         if node_type == 'plan':
             plan_node = item
 
-        # if item is a study node
         elif node_type == 'study':
             plan_node, valid = self.tree_ctrl_import.GetFirstChild(item)
 
-        # if item is a patient node
         elif node_type == 'patient':
             study_node, valid = self.tree_ctrl_import.GetFirstChild(item)
             plan_node, valid = self.tree_ctrl_import.GetFirstChild(study_node)
@@ -553,15 +550,12 @@ class ImportDicomFrame(wx.Frame):
         study_node = None
         node_id, node_type = self.dicom_importer.get_id_of_tree_ctrl_node(item)
 
-        # if selected item is a study node
         if node_type == 'study':
             study_node = item
 
-        # if selected item is plan node
         elif node_type == 'plan':
             study_node, valid = self.tree_ctrl_import.GetItemParent(item)
 
-        # if selected item is a patient node
         elif node_type == 'patient':
             study_node, valid = self.tree_ctrl_import.GetFirstChild(item)
 
@@ -798,10 +792,7 @@ class ImportDicomFrame(wx.Frame):
                 nodes = {uid: self.dicom_importer.plan_nodes[uid]}
             for node_uid, node in nodes.items():
                 if node_uid in list(self.parsed_dicom_data):
-                    if uid:
-                        validation = self.parsed_dicom_data[node_uid].validation
-                    else:
-                        validation = self.parsed_dicom_data[node_uid].stored_validation
+                    validation = self.parsed_dicom_data[node_uid].validation
                     failed_keys = {key for key, value in validation.items() if not value['status']}
                 else:
                     failed_keys = {'complete_file_set'}
@@ -822,23 +813,6 @@ class ImportDicomFrame(wx.Frame):
                     self.tree_ctrl_import.CheckItem(node, color != red)
 
             del wait
-
-    # def update_warning_label_old(self):
-    #     msg = ''
-    #     if self.selected_uid:
-    #         if self.selected_uid in list(self.parsed_dicom_data):
-    #             validation = self.parsed_dicom_data[self.selected_uid].validation
-    #             failed_keys = {key for key, value in validation.items() if not value['status']}
-    #             if failed_keys:
-    #                 if 'complete_file_set' in failed_keys:
-    #                     msg = "ERROR: %s" % validation['complete_file_set']['message']
-    #                     if self.selected_uid not in self.incomplete_studies:
-    #                         self.incomplete_studies.append(self.selected_uid)
-    #                 else:
-    #                     msg = "WARNING: %s" % ' '.join([validation[key]['message'] for key in failed_keys])
-    #         else:
-    #             msg = "ERROR: Incomplete Fileset. RT Plan, Dose, and Structure required."
-    #     self.label_warning.SetLabelText(msg)
 
     def update_warning_label(self):
         msg = ''

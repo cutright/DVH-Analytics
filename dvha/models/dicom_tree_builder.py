@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# db.dicom_importer.py
+# models.dicom_tree_builder.py
 """Class and functions related to parsing a directory containing DICOM files and updating the GUI."""
 # Copyright (c) 2016-2019 Dan Cutright
 # This file is part of DVH Analytics, released under a BSD license.
@@ -22,7 +22,7 @@ from dvha.tools.utilities import get_file_paths
 SCRIPT_DIR = os.path.dirname(__file__)
 
 
-class DicomImporter:
+class DicomTreeBuilder:
     """
     This class processes data for various UI objects from models.import_dicom.ImportDicomFrame
     """
@@ -101,10 +101,10 @@ class DicomImporter:
 
     def set_file_tree(self, tree, file_paths, other_dicom_files):
         """
-        DicomDirectoryParserThread subscribes to this function to initiate the tree_ctrl_files build
-        :param tree: the plan_file_sets object from DicomDirectoryParserThread
+        DicomDirectoryParserWorker subscribes to this function to initiate the tree_ctrl_files build
+        :param tree: the plan_file_sets object from DicomDirectoryParserWorker
         :type tree: dict
-        :param file_paths: the dicom_file_paths objet from DicomDirectoryParserThread
+        :param file_paths: the dicom_file_paths objet from DicomDirectoryParserWorker
         :type file_paths: dict
         """
         self.file_tree = tree
@@ -323,7 +323,7 @@ class DicomImporter:
 
 class DicomDirectoryParserFrame(wx.Dialog):
     """
-    Create a window to display parsing progress and begin DicomDirectoryParserThread. After thread completes,
+    Create a window to display parsing progress and begin DicomDirectoryParserWorker. After thread completes,
     send message to begin DICOM parsing
     """
     def __init__(self, start_path, search_subfolders=True):
@@ -381,7 +381,7 @@ class DicomDirectoryParserFrame(wx.Dialog):
         Initiate layout in GUI and begin dicom directory parser thread
         """
         self.Show()
-        DicomDirectoryParserThread(self.start_path, self.search_subfolders)
+        DicomDirectoryParserWorker(self.start_path, self.search_subfolders)
 
     def close(self):
         """
@@ -391,7 +391,7 @@ class DicomDirectoryParserFrame(wx.Dialog):
         wx.CallAfter(pub.sendMessage, 'parse_dicom_data')
 
 
-class DicomDirectoryParserThread(Thread):
+class DicomDirectoryParserWorker(Thread):
     """
     With a given start path, scan for RT DICOM files (plan, struct, dose) connected by SOPInstanceUID
     Previous versions strictly used StudyInstanceUID which was sufficient for Philips Pinnacle because
@@ -431,6 +431,7 @@ class DicomDirectoryParserThread(Thread):
                    'gauge': file_index / file_count}
             wx.CallAfter(pub.sendMessage, "dicom_directory_parser_update", msg=msg)
 
+            # TODO: Thread this to avoid pydicom memory leak
             try:
                 ds = dicom.read_file(file_path, stop_before_pixels=True, force=True)
             except InvalidDicomError:
