@@ -2,8 +2,11 @@
 
 v0.7.1 (TBD)
 --------------------
- - 
-
+ - [Executable] Reduced file size by ~20MB, MS Windows icon now works (needs fine-tuning)
+ - [Import] Ignore metacache.mim files on import, they throw a MemoryError in pydicom.read_file
+ - [Import] Fix for [Issue #26](https://github.com/cutright/DVH-Analytics/issues/26) (in progress)
+ - [Import] Fixed a bug that lost parsed data browsing for a new import directory, even when clicking cancel
+ 
 v0.7.0 (2020.01.27)
 --------------------
  - [Import] Allow user to keep dicom files in the selected import directory

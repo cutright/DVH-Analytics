@@ -1318,7 +1318,7 @@ class ImportWorker(Thread):
         """
         study_uids = {}
         for plan_uid in self.checked_uids:
-            study_uid = self.data[plan_uid].stored_study_uid
+            study_uid = self.data[plan_uid].study_instance_uid_to_be_imported
             if study_uid not in list(study_uids):
                 study_uids[study_uid] = []
             study_uids[study_uid].append(plan_uid)
@@ -1333,8 +1333,8 @@ class ImportWorker(Thread):
             for i, plan_uid in enumerate(plan_uid_set):
                 if plan_uid in list(self.data):
 
-                    msg = {'patient_name': self.data[plan_uid].stored_patient_name,
-                           'uid': self.data[plan_uid].stored_study_uid,
+                    msg = {'patient_name': self.data[plan_uid].patient_name,
+                           'uid': self.data[plan_uid].study_instance_uid_to_be_imported,
                            'progress': int(100 * plan_counter / plan_total),
                            'study_number': plan_counter + 1,
                            'study_total': plan_total}

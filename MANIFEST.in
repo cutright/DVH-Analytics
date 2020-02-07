@@ -1,4 +1,5 @@
-recursive-include *.py
+include dvha_app.py
+recursive-include dvha/*.py
 include CHANGELOG.md
 include README.md
 include dvha/LICENSE.txt

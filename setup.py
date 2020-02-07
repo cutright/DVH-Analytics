@@ -14,10 +14,8 @@ from setuptools import setup, find_packages
 from dvha.options import DefaultOptions
 
 
-requires = []
 with open('requirements.txt', 'r') as doc:
-    for line in doc:
-        requires.append(line.strip())
+    requires = [line.strip() for line in doc]
 
 with open('README.md', 'r') as doc:
     long_description = doc.read()
