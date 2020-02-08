@@ -107,6 +107,7 @@ class DVHAMainFrame(wx.Frame):
         self.__disable_notebook_tabs()
 
         self.Bind(wx.EVT_CLOSE, self.on_quit)
+        self.tool_bar_windows = []
 
         wx.CallAfter(self.__catch_failed_sql_connection_on_app_launch)
 
@@ -588,7 +589,7 @@ class DVHAMainFrame(wx.Frame):
             self.on_sql()
 
         if echo_sql_db():
-            func(*parameters)
+            self.tool_bar_windows.append(func(*parameters))
         else:
             wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
@@ -783,6 +784,11 @@ class DVHAMainFrame(wx.Frame):
                     view.Destroy()
                 except RuntimeError:
                     pass
+
+        for window in self.tool_bar_windows:
+            if window and hasattr(window, 'Destroy'):
+                window.Destroy()
+
         self.regression.close_mvr_frames()
 
     def on_quit(self, evt):

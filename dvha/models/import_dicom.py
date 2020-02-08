@@ -21,7 +21,7 @@ from threading import Thread
 from queue import Queue
 from dvha.db import update as db_update
 from dvha.db.sql_connector import DVH_SQL
-from dvha.models.dicom_tree_builder import DicomTreeBuilder
+from dvha.models.dicom_tree_builder import DicomTreeBuilder, PreImportFileSetParserWorker
 from dvha.db.dicom_parser import DICOM_Parser, PreImportData
 from dvha.dialogs.main import DatePicker
 from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddROIType, RoiManager, ChangePlanROIName
@@ -105,7 +105,6 @@ class ImportDicomFrame(wx.Frame):
         self.checkbox_subfolders = wx.CheckBox(self, wx.ID_ANY, "Search within sub-folders")
         self.checkbox_keep_in_inbox = wx.CheckBox(self, wx.ID_ANY, "Leave files in inbox")
         self.panel_study_tree = wx.Panel(self, wx.ID_ANY, style=wx.BORDER_SUNKEN)
-        self.gauge = wx.Gauge(self, -1, 100)
         self.button_import = wx.Button(self, wx.ID_ANY, "Import")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
         self.button_save_roi_map = wx.Button(self, wx.ID_ANY, "Save ROI Map")
@@ -148,6 +147,8 @@ class ImportDicomFrame(wx.Frame):
         After DICOM directory is scanned and sorted, parse_dicom_data will be called
         """
         pub.subscribe(self.parse_dicom_data, "parse_dicom_data")
+        pub.subscribe(self.set_pre_import_parsed_dicom_data, 'set_pre_import_parsed_dicom_data')
+        pub.subscribe(self.pre_import_complete, "pre_import_complete")
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_browse, id=self.button_browse.GetId())
@@ -275,7 +276,6 @@ class ImportDicomFrame(wx.Frame):
         self.label_progress = wx.StaticText(self, wx.ID_ANY, "")
         self.label_progress.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         sizer_progress.Add(self.label_progress, 1, 0, 0)
-        sizer_progress.Add(self.gauge, 1, wx.LEFT | wx.EXPAND, 40)
         sizer_studies.Add(sizer_progress, 0, wx.EXPAND | wx.RIGHT, 5)
         sizer_browse_and_tree.Add(sizer_studies, 1, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
         sizer_main.Add(sizer_browse_and_tree, 1, wx.EXPAND, 0)
@@ -385,8 +385,6 @@ class ImportDicomFrame(wx.Frame):
         self.SetSizer(sizer_wrapper)
         self.Layout()
         self.Center()
-
-        self.gauge.Hide()
 
     def run(self):
         self.Show()
@@ -716,11 +714,9 @@ class ImportDicomFrame(wx.Frame):
     def on_import(self, evt):
         if self.parsed_dicom_data and self.dicom_importer.checked_plans:
             self.roi_map.write_to_file()
-            self.clear_file_loaded_data_in_parsed_dicom_data()
             ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
                          self.checkbox_include_uncategorized.GetValue(),
                          self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue())
-            del self.parsed_dicom_data
             dlg = ImportStatusDialog()
             # calling self.Close() below caused issues in Windows if Show() used instead of ShowModal()
             [dlg.Show, dlg.ShowModal][is_windows()]()
@@ -731,52 +727,23 @@ class ImportDicomFrame(wx.Frame):
             dlg.ShowModal()
             dlg.Destroy()
 
-    def clear_file_loaded_data_in_parsed_dicom_data(self):
-        for dicom_parser_obj in self.parsed_dicom_data.values():
-            dicom_parser_obj.clear_loaded_data()
-
     def parse_dicom_data(self):
-        self.button_cancel.Disable()
-        self.button_save_roi_map.Disable()
-        self.button_import.Disable()
-        wait = wx.BusyInfo("Parsing DICOM data\nPlease wait...")
-        parsed_uids = list(self.parsed_dicom_data)
-        plan_total = len(list(self.dicom_importer.plan_nodes))
-        self.gauge.SetValue(0)
-        self.gauge.Show()
-        for plan_counter, uid in enumerate(list(self.dicom_importer.plan_nodes)):
-            self.label_progress.SetLabelText("Parsing %s of %s studies" % (plan_counter+1, plan_total))
-            if uid not in parsed_uids:
-                file_paths = self.dicom_importer.dicom_file_paths[uid]
-                wx.Yield()
-                if file_paths['rtplan'] and file_paths['rtstruct'] and file_paths['rtdose']:
-                    init_params = DICOM_Parser(plan_file=file_paths['rtplan'][0],
-                                               structure_file=file_paths['rtstruct'][0],
-                                               dose_file=file_paths['rtdose'][0],
-                                               global_plan_over_rides=self.global_plan_over_rides,
-                                               roi_map=self.roi_map).pre_import_data
-                    self.parsed_dicom_data[uid] = PreImportData(**init_params)
-                    self.parsed_dicom_data[uid].global_plan_over_rides = self.global_plan_over_rides
-                    if not self.parsed_dicom_data[uid].ptv_exists:
-                        self.parsed_dicom_data[uid].autodetect_target_roi_type()
-                        self.validate(uid)
-                    self.update_warning_label()
-                    self.update_roi_inputs()
+        PreImportFileSetParserWorker(self.dicom_importer.dicom_file_paths)
 
-            wx.CallAfter(self.gauge.SetValue, int(100 * (plan_counter+1) / plan_total))
-        # self.label_progress.SetLabelText("Auto-detecting plans missing PTV labels")
-        # self.autodetect_target_for_plans_missing_targets()
-        self.gauge.Hide()
-        self.label_progress.SetLabelText("All %s plans parsed" % plan_total)
-
-        del wait
-
-        self.button_cancel.Enable()
-        self.button_save_roi_map.Enable()
-        self.button_import.Enable()
-
+    def pre_import_complete(self):
+        self.label_progress.SetLabelText("Plan count: %s" % len(list(self.dicom_importer.plan_nodes)))
         self.is_all_data_parsed = True
-        self.validate()
+        wx.CallAfter(self.validate)
+
+    def set_pre_import_parsed_dicom_data(self, msg):
+        uid = msg['uid']
+        self.parsed_dicom_data[uid] = PreImportData(**msg['init_params'])
+        self.parsed_dicom_data[uid].global_plan_over_rides = self.global_plan_over_rides
+        if not self.parsed_dicom_data[uid].ptv_exists:
+            self.parsed_dicom_data[uid].autodetect_target_roi_type()
+            self.validate(uid)
+        self.update_warning_label()
+        self.update_roi_inputs()
 
     def validate(self, uid=None):
         red = wx.Colour(255, 0, 0)
@@ -1145,8 +1112,6 @@ class StudyImporter:
                                         ['uncategorized', 'ignored', 'external', 'skin', 'body']
                                         or roi_name.lower() in ['external', 'skin', 'body']):
                                     post_import_rois.append(clean_name(roi_name_map[roi_key]))
-
-        parsed_data.clear_loaded_data()  # free up memory
 
         # Sort PTVs by their D_95% (applicable to SIBs)
         if ptvs['dvh']:
