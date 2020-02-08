@@ -22,7 +22,7 @@ from queue import Queue
 from dvha.db import update as db_update
 from dvha.db.sql_connector import DVH_SQL
 from dvha.models.dicom_tree_builder import DicomTreeBuilder
-from dvha.db.dicom_parser import DICOM_Parser
+from dvha.db.dicom_parser import DICOM_Parser, PreImportData
 from dvha.dialogs.main import DatePicker
 from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddROIType, RoiManager, ChangePlanROIName
 from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, ICONS
@@ -439,20 +439,17 @@ class ImportDicomFrame(wx.Frame):
         self.tree_ctrl_roi.SelectItem(self.tree_ctrl_roi_root, True)
         if uid in list(self.parsed_dicom_data) and self.parsed_dicom_data[uid].validation['complete_file_set']:
             if uid != self.selected_uid:
-                if self.selected_uid is not None:
-                    self.parsed_dicom_data[self.selected_uid].clear_loaded_data()
-                self.parsed_dicom_data[uid].load_from_file()
                 self.selected_uid = uid
                 wx.BeginBusyCursor()
                 self.dicom_importer.rebuild_tree_ctrl_rois(uid)
                 self.tree_ctrl_roi.ExpandAll()
-                if uid not in list(self.parsed_dicom_data):
-                    file_paths = self.dicom_importer.dicom_file_paths[uid]
-                    self.parsed_dicom_data[uid] = DICOM_Parser(plan_file=file_paths['rtplan']['file_path'],
-                                                               structure_file=file_paths['rtstruct']['file_path'],
-                                                               dose_file=file_paths['rtdose']['file_path'],
-                                                               global_plan_over_rides=self.global_plan_over_rides,
-                                                               roi_map=self.roi_map)
+                # if uid not in list(self.parsed_dicom_data):
+                #     file_paths = self.dicom_importer.dicom_file_paths[uid]
+                #     self.parsed_dicom_data[uid] = DICOM_Parser(plan_file=file_paths['rtplan']['file_path'],
+                #                                                structure_file=file_paths['rtstruct']['file_path'],
+                #                                                dose_file=file_paths['rtdose']['file_path'],
+                #                                                global_plan_over_rides=self.global_plan_over_rides,
+                #                                                roi_map=self.roi_map)
                 data = self.parsed_dicom_data[uid]
 
                 self.input['mrn'].SetValue(data.mrn)
@@ -753,17 +750,18 @@ class ImportDicomFrame(wx.Frame):
                 file_paths = self.dicom_importer.dicom_file_paths[uid]
                 wx.Yield()
                 if file_paths['rtplan'] and file_paths['rtstruct'] and file_paths['rtdose']:
-                    self.parsed_dicom_data[uid] = DICOM_Parser(plan_file=file_paths['rtplan'][0],
-                                                               structure_file=file_paths['rtstruct'][0],
-                                                               dose_file=file_paths['rtdose'][0],
-                                                               global_plan_over_rides=self.global_plan_over_rides,
-                                                               roi_map=self.roi_map)
+                    init_params = DICOM_Parser(plan_file=file_paths['rtplan'][0],
+                                               structure_file=file_paths['rtstruct'][0],
+                                               dose_file=file_paths['rtdose'][0],
+                                               global_plan_over_rides=self.global_plan_over_rides,
+                                               roi_map=self.roi_map).pre_import_data
+                    self.parsed_dicom_data[uid] = PreImportData(**init_params)
+                    self.parsed_dicom_data[uid].global_plan_over_rides = self.global_plan_over_rides
                     if not self.parsed_dicom_data[uid].ptv_exists:
                         self.parsed_dicom_data[uid].autodetect_target_roi_type()
                         self.validate(uid)
                     self.update_warning_label()
                     self.update_roi_inputs()
-                    self.parsed_dicom_data[uid].clear_loaded_data()
 
             wx.CallAfter(self.gauge.SetValue, int(100 * (plan_counter+1) / plan_total))
         # self.label_progress.SetLabelText("Auto-detecting plans missing PTV labels")

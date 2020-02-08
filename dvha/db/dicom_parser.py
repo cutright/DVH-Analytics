@@ -111,7 +111,7 @@ class DICOM_Parser:
 
     def update_stored_values(self):
         keys = ['study_instance_uid_to_be_imported', 'patient_name', 'mrn', 'sim_study_date', 'birth_date',
-                'rx_dose', 'ptv_names', 'physician', 'ptv_exists']
+                'rx_dose', 'ptv_names', 'physician', 'ptv_exists', 'tx_site']
         self.stored_values = {key: getattr(self, key) for key in keys}
 
     def __initialize_rx_beam_and_ref_beam_data(self):
@@ -997,35 +997,6 @@ class DICOM_Parser:
                     return True
         return False
 
-    @property
-    def validation(self):
-        """
-        :return: data used in GUI to indicate validity of data read-in from DICOM files to attract user to edit data
-        :rtype: dict
-        """
-        return {'physician': {'status': self.database_rois.is_physician(self.physician) and self.physician != 'DEFAULT',
-                              'value': self.physician,
-                              'message': "No physician assigned or physician is not in ROI Map."},
-                'mrn': {'status': self.mrn is not None,
-                        'value': self.mrn,
-                        'message': "MRN is empty."},
-                'study_instance_uid': {'status': self.is_study_instance_uid_to_be_imported_valid,
-                                       'value': self.study_instance_uid_to_be_imported,
-                                       'message': "Study Instance UID already exists in the database."},
-                'ptv': {'status': self.ptv_exists,
-                        'value': self.ptv_names,
-                        'message': "No PTV found."},
-                'sim_study_date': {'status': is_date(self.sim_study_date),
-                                   'value': self.sim_study_date,
-                                   'message': "Simulation date is empty or invalid."},
-                'rx_dose': {'status': self.rx_dose is not None,
-                            'value': self.rx_dose,
-                            'message': "Prescription dose is not defined."},
-                'complete_file_set': {'status': self.file_set_complete,
-                                      'value': self.file_set_complete,
-                                      'message': ["Missing RT %s." % ', '.join(self.missing_files), '']
-                                      [self.file_set_complete]}}
-
     @staticmethod
     def validate_transfer_syntax_uid(data_set):
         meta = pydicom.Dataset()
@@ -1039,23 +1010,25 @@ class DICOM_Parser:
         return new_data_set
 
     @property
-    def warning(self):
-        msg = ''
-        incomplete = False
-        if self.plan_file and self.dose_file and self.structure_file:
-            validation = self.validation
-            failed_keys = {key for key, value in validation.items() if not value['status']}
-            if failed_keys:
-                if 'complete_file_set' in failed_keys:
-                    msg = "ERROR: %s" % validation['complete_file_set']['message']
-                    incomplete = True
-                else:
-                    msg = "WARNING: %s" % ' '.join([validation[key]['message'] for key in failed_keys])
-        else:
-            msg = "ERROR: Incomplete Fileset. RT Plan, Dose, and Structure required."
-            incomplete = True
+    def pre_import_data(self):
+        """
+        :return: Only the data needed for the pre import screen, pass to PreImportData
+        :rtype: dict
+        """
+        self.update_stored_values()
+        return {'file_set': {'plan': self.plan_file, 'dose': self.dose_file, 'structure': self.structure_file},
+                'stored_values': self.stored_values,
+                'dicompyler_rt_structures': self.light_weight_dicompyler_rt_structures,
+                'roi_map': self.database_rois}
 
-        return {'label': msg, 'incomplete': incomplete}
+    @property
+    def light_weight_dicompyler_rt_structures(self):
+        """Return only type and name of ROIs"""
+        drts = self.dicompyler_rt_structures
+        if drts:
+            return {key: {'type': drts[key]['type'],
+                          'name': drts[key]['name']} for key in list(drts)}
+        return {}
 
 
 class BeamParser:
@@ -1447,3 +1420,255 @@ class RxParser:
     def beam_numbers(self):
         return [ref_beam.ReferencedBeamNumber for ref_beam in self.fx_grp_data.ReferencedBeamSequence]
 
+
+class PreImportData:
+    """
+    Light-weight object for the DICOM Importer GUI to avoid memory allocation issues
+    """
+    def __init__(self, file_set, stored_values, dicompyler_rt_structures, roi_map=DatabaseROIs()):
+
+        self.plan_file = file_set['plan']
+        self.dose_file = file_set['dose']
+        self.structure_file = file_set['structure']
+        self.missing_files = [key.capitalize() for key, value in file_set.items() if value is None]
+
+        self.stored_values = stored_values
+        self.dicompyler_rt_structures = dicompyler_rt_structures
+        self.database_rois = roi_map
+
+        # over ride objects
+        keys = ['mrn', 'study_instance_uid', 'birth_date', 'sim_study_date', 'physician', 'tx_site', 'rx_dose']
+        self.plan_over_rides = {key: None for key in keys}
+        self.global_plan_over_rides = None
+
+        self.roi_type_over_ride = {}
+
+    @property
+    def mrn(self):
+        if self.plan_over_rides['mrn'] is not None:
+            return self.plan_over_rides['mrn']
+        return self.stored_values['mrn']
+
+    @property
+    def study_instance_uid(self):
+        return self.stored_values['study_instance_uid']
+
+    @property
+    def study_instance_uid_to_be_imported(self):
+        if hasattr(self, 'plan_over_rides') and self.plan_over_rides['study_instance_uid']:
+            return self.plan_over_rides['study_instance_uid']
+        return self.stored_values['study_instance_uid_to_be_imported']
+
+    @property
+    def is_study_instance_uid_valid(self):
+        return self.is_uid_valid(self.study_instance_uid)
+
+    @property
+    def is_study_instance_uid_to_be_imported_valid(self):
+        return self.is_uid_valid(self.study_instance_uid_to_be_imported)
+
+    @staticmethod
+    def is_uid_valid(uid):
+        valid = False
+        if uid:
+            with DVH_SQL() as cnx:
+                valid = not cnx.is_study_instance_uid_in_table('Plans', uid)
+        return valid
+
+    @property
+    def patient_name(self):
+        return self.stored_values['patient_name']
+
+    @property
+    def file_set_complete(self):
+        return all([self.plan_file, self.structure_file, self.dose_file])
+
+    @property
+    def rx_dose(self):
+        if self.plan_over_rides['rx_dose'] is not None:
+            ans = self.plan_over_rides['rx_dose']
+        else:
+            ans = self.stored_values['rx_dose']
+        return self.process_global_over_ride('rx_dose', ans)
+
+    @property
+    def sim_study_date(self):
+        if self.plan_over_rides['sim_study_date'] is not None:
+            ans = self.plan_over_rides['sim_study_date']
+        else:
+            ans = self.stored_values['sim_study_date']
+        return self.process_global_over_ride('sim_study_date', ans)
+
+    @property
+    def birth_date(self):
+        if self.plan_over_rides['birth_date'] is not None:
+            ans = self.plan_over_rides['birth_date']
+        else:
+            ans = self.stored_values['birth_date']
+        return self.process_global_over_ride('birth_date', ans)
+
+    @property
+    def physician(self):
+        if self.plan_over_rides['physician'] is not None:
+            ans = self.plan_over_rides['physician']
+        else:
+            ans = self.stored_values['physician']
+        return self.process_global_over_ride('physician', ans)
+
+    @property
+    def tx_site(self):
+        if self.plan_over_rides['tx_site'] is not None:
+            ans = self.plan_over_rides['tx_site']
+        else:
+            ans = self.stored_values['tx_site']
+        return self.process_global_over_ride('tx_site', ans)
+
+    def process_global_over_ride(self, key, pre_over_ride_value):
+        if self.global_plan_over_rides:
+            over_ride = self.global_plan_over_rides[key]
+            if over_ride['value']:
+                if not over_ride['only_if_missing'] or (over_ride['only_if_missing'] and not pre_over_ride_value):
+                    return over_ride['value']
+        return pre_over_ride_value
+
+    def get_roi_type(self, key):
+        """
+        Get the ROI type as defined in DICOM (e.g., PTV, ORGAN, EXTERNAL, etc.)
+        :param key: index of ROI
+        :type key: int
+        :return: the roi type
+        :rtype: str
+        """
+        if key in list(self.roi_type_over_ride):
+            return self.roi_type_over_ride[key]
+        return self.dicompyler_rt_structures[key]['type'].upper()
+
+    def reset_roi_type_over_ride(self, key):
+        self.roi_type_over_ride[key] = None
+
+    def get_roi_name(self, key):
+        """
+        Applies clean_name from roi_name_manager.py to the name in the DICOM file
+        :param key: the index of the roi
+        :return: roi name to be used in the database
+        :rtype: str
+        """
+        return clean_name(self.dicompyler_rt_structures[key]['name'])
+
+    def get_physician_roi(self, key):
+        """
+        Look up the physician roi of the specified roi for this plan
+        :param key: the index of the roi
+        :return: physician roi or 'uncategorized'
+        :rtype: str
+        """
+        roi_name = self.get_roi_name(key)
+        if self.database_rois.is_roi(roi_name):
+            if self.database_rois.is_physician(self.physician):
+                return self.database_rois.get_physician_roi(self.physician, roi_name)
+        return 'uncategorized'
+
+    def get_institutional_roi(self, key):
+        """
+        Look up the institutional roi of the specified roi for this plan
+        :param key: the index of the roi
+        :return: institutional roi or 'uncategorized'
+        :rtype: str
+        """
+        roi_name = self.get_roi_name(key)
+        if self.database_rois.is_roi(roi_name):
+            if self.database_rois.is_physician(self.physician):
+                return self.database_rois.get_institutional_roi(self.physician, self.get_physician_roi(key))
+            if roi_name in self.database_rois.institutional_rois:
+                return roi_name
+        return 'uncategorized'
+
+    @property
+    def ptv_exists(self):
+        """
+        Check if the plan has at least one PTV assigned
+        :rtype: bool
+        """
+        if self.dicompyler_rt_structures:
+            for key in list(self.dicompyler_rt_structures):
+                if self.get_roi_type(key) == 'PTV':
+                    return True
+        return False
+
+    @property
+    def roi_names(self):
+        """
+        :return: roi_names for this plan per the plan (clean_name not applied)
+        :rtype: list
+        """
+        return [self.get_roi_name(key) for key in list(self.dicompyler_rt_structures)]
+
+    def get_roi_key(self, roi_name):
+        """
+        Look-up the roi index for a given roi_name
+        :param roi_name: the ROI name to be looked-up
+        :return: the roi index or None
+        :rtype: int
+        """
+        roi_name = clean_name(roi_name)
+        for key in list(self.dicompyler_rt_structures):
+            if roi_name == clean_name(self.get_roi_name(key)):
+                return key
+
+    @property
+    def ptv_names(self):
+        return self.stored_values['ptv_names']
+
+    @property
+    def init_param(self):
+        params = ['plan_file', 'structure_file', 'dose_file',
+                  'plan_over_rides', 'global_plan_over_rides', 'roi_type_over_ride']
+        return {key: getattr(self, key) for key in params}
+
+    @property
+    def validation(self):
+        """
+        :return: data used in GUI to indicate validity of data read-in from DICOM files to attract user to edit data
+        :rtype: dict
+        """
+        return {'physician': {'status': self.database_rois.is_physician(self.physician) and self.physician != 'DEFAULT',
+                              'value': self.physician,
+                              'message': "No physician assigned or physician is not in ROI Map."},
+                'mrn': {'status': self.mrn is not None,
+                        'value': self.mrn,
+                        'message': "MRN is empty."},
+                'study_instance_uid': {'status': self.is_study_instance_uid_to_be_imported_valid,
+                                       'value': self.study_instance_uid_to_be_imported,
+                                       'message': "Study Instance UID already exists in the database."},
+                'ptv': {'status': self.ptv_exists,
+                        'value': self.ptv_names,
+                        'message': "No PTV found."},
+                'sim_study_date': {'status': is_date(self.sim_study_date),
+                                   'value': self.sim_study_date,
+                                   'message': "Simulation date is empty or invalid."},
+                'rx_dose': {'status': self.rx_dose is not None,
+                            'value': self.rx_dose,
+                            'message': "Prescription dose is not defined."},
+                'complete_file_set': {'status': self.file_set_complete,
+                                      'value': self.file_set_complete,
+                                      'message': ["Missing RT %s." % ', '.join(self.missing_files), '']
+                                      [self.file_set_complete]}}
+
+    @property
+    def warning(self):
+        msg = ''
+        incomplete = False
+        if self.plan_file and self.dose_file and self.structure_file:
+            validation = self.validation
+            failed_keys = {key for key, value in validation.items() if not value['status']}
+            if failed_keys:
+                if 'complete_file_set' in failed_keys:
+                    msg = "ERROR: %s" % validation['complete_file_set']['message']
+                    incomplete = True
+                else:
+                    msg = "WARNING: %s" % ' '.join([validation[key]['message'] for key in failed_keys])
+        else:
+            msg = "ERROR: Incomplete Fileset. RT Plan, Dose, and Structure required."
+            incomplete = True
+
+        return {'label': msg, 'incomplete': incomplete}
