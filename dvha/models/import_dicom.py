@@ -743,17 +743,33 @@ class ImportDicomFrame(wx.Frame):
         self.button_save_roi_map.Disable()
         self.button_import.Disable()
         wait = wx.BusyInfo("Parsing DICOM data\nPlease wait...")
-
+        parsed_uids = list(self.parsed_dicom_data)
+        plan_total = len(list(self.dicom_importer.plan_nodes))
+        self.gauge.SetValue(0)
         self.gauge.Show()
+        for plan_counter, uid in enumerate(list(self.dicom_importer.plan_nodes)):
+            self.label_progress.SetLabelText("Parsing %s of %s studies" % (plan_counter+1, plan_total))
+            if uid not in parsed_uids:
+                file_paths = self.dicom_importer.dicom_file_paths[uid]
+                wx.Yield()
+                if file_paths['rtplan'] and file_paths['rtstruct'] and file_paths['rtdose']:
+                    self.parsed_dicom_data[uid] = DICOM_Parser(plan_file=file_paths['rtplan'][0],
+                                                               structure_file=file_paths['rtstruct'][0],
+                                                               dose_file=file_paths['rtdose'][0],
+                                                               global_plan_over_rides=self.global_plan_over_rides,
+                                                               roi_map=self.roi_map)
+                    if not self.parsed_dicom_data[uid].ptv_exists:
+                        self.parsed_dicom_data[uid].autodetect_target_roi_type()
+                        self.validate(uid)
+                    self.update_warning_label()
+                    self.update_roi_inputs()
+                    self.parsed_dicom_data[uid].clear_loaded_data()
 
-        queue = self.get_parse_dicom_data_queue()
-        worker = Thread(target=self.do_parsing, args=[queue])
-        worker.setDaemon(True)
-        worker.start()
-        queue.join()
-
+            wx.CallAfter(self.gauge.SetValue, int(100 * (plan_counter+1) / plan_total))
+        # self.label_progress.SetLabelText("Auto-detecting plans missing PTV labels")
+        # self.autodetect_target_for_plans_missing_targets()
         self.gauge.Hide()
-        self.label_progress.SetLabelText("All %s plans parsed" % len(self.dicom_importer.plan_nodes))
+        self.label_progress.SetLabelText("All %s plans parsed" % plan_total)
 
         del wait
 
@@ -763,44 +779,6 @@ class ImportDicomFrame(wx.Frame):
 
         self.is_all_data_parsed = True
         self.validate()
-
-    def get_parse_dicom_data_queue(self):
-        queue = Queue()
-
-        parsed_uids = list(self.parsed_dicom_data)
-        plan_total = len(list(self.dicom_importer.plan_nodes))
-        for plan_counter, uid in enumerate(list(self.dicom_importer.plan_nodes)):
-            self.label_progress.SetLabelText("Parsing %s of %s studies" % (plan_counter + 1, plan_total))
-            if uid not in parsed_uids:
-                file_paths = self.dicom_importer.dicom_file_paths[uid]
-                wx.Yield()
-                if file_paths['rtplan'] and file_paths['rtstruct'] and file_paths['rtdose']:
-                    msg = "Parsing %s of %s studies" % (plan_counter + 1, plan_total)
-                    gauge = int(100 * (plan_counter + 1) / plan_total)
-                    dicom_parser_kwargs = {'plan_file': file_paths['rtplan'][0],
-                                           'structure_file': file_paths['rtstruct'][0],
-                                           'dose_file': file_paths['rtdose'][0],
-                                           'global_plan_over_rides': self.global_plan_over_rides}
-                    queue.put((uid, dicom_parser_kwargs, msg, gauge))
-        return queue
-
-    def parse_file_set(self, uid, dicom_parser_kwargs, msg, gauge):
-        wx.Yield()
-        self.label_progress.SetLabelText(msg)
-        self.parsed_dicom_data[uid] = DICOM_Parser(**dicom_parser_kwargs)
-        if not self.parsed_dicom_data[uid].ptv_exists:
-            self.parsed_dicom_data[uid].autodetect_target_roi_type()
-            self.validate(uid)
-        self.update_warning_label()
-        self.update_roi_inputs()
-        self.parsed_dicom_data[uid].clear_loaded_data()
-        wx.CallAfter(self.gauge.SetValue, gauge)
-
-    def do_parsing(self, queue):
-        while queue.qsize():
-            parameters = queue.get()
-            self.parse_file_set(*parameters)
-            queue.task_done()
 
     def validate(self, uid=None):
         red = wx.Colour(255, 0, 0)
