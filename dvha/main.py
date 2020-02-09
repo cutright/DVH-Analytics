@@ -107,7 +107,7 @@ class DVHAMainFrame(wx.Frame):
         self.__disable_notebook_tabs()
 
         self.Bind(wx.EVT_CLOSE, self.on_quit)
-        self.tool_bar_windows = []
+        self.tool_bar_windows = {key: None for key in ['import', 'database', 'roi_map']}
 
         wx.CallAfter(self.__catch_failed_sql_connection_on_app_launch)
 
@@ -576,20 +576,23 @@ class DVHAMainFrame(wx.Frame):
         self.on_pref()
 
     def on_toolbar_import(self, evt):
-        self.check_db_then_call(ImportDicomFrame, self.roi_map, self.options)
+        self.check_db_then_call(ImportDicomFrame, 'import', self.roi_map, self.options)
 
     def on_toolbar_database(self, evt):
-        self.check_db_then_call(DatabaseEditorFrame, self.roi_map, self.options)
+        self.check_db_then_call(DatabaseEditorFrame, 'database', self.roi_map, self.options)
 
     def on_toolbar_roi_map(self, evt):
-        self.check_db_then_call(ROIMapFrame, self.roi_map)
+        self.check_db_then_call(ROIMapFrame, 'roi_map', self.roi_map)
 
-    def check_db_then_call(self, func, *parameters):
+    def check_db_then_call(self, func, window_type, *parameters):
         if not echo_sql_db():
             self.on_sql()
 
         if echo_sql_db():
-            self.tool_bar_windows.append(func(*parameters))
+            if self.tool_bar_windows[window_type]:
+                self.tool_bar_windows[window_type].Raise()
+            else:
+                self.tool_bar_windows[window_type] = func(*parameters)
         else:
             wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
@@ -785,7 +788,7 @@ class DVHAMainFrame(wx.Frame):
                 except RuntimeError:
                     pass
 
-        for window in self.tool_bar_windows:
+        for window in self.tool_bar_windows.values():
             if window and hasattr(window, 'Destroy'):
                 window.Destroy()
 

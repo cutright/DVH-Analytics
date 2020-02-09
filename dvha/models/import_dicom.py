@@ -184,6 +184,8 @@ class ImportDicomFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_roi_manager, id=self.button_roi_manager.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.on_physician_roi_change, id=self.input_roi['physician'].GetId())
 
+        self.Bind(wx.EVT_CLOSE, self.on_cancel)
+
     def __set_properties(self):
 
         self.checkbox_subfolders.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
@@ -397,7 +399,16 @@ class ImportDicomFrame(wx.Frame):
 
     def on_cancel(self, evt):
         self.roi_map.import_from_file()  # reload from file, ignore changes
+        # pub.unsubscribe(self.parse_dicom_data, "parse_dicom_data")
+        # pub.unsubscribe(self.set_pre_import_parsed_dicom_data, 'set_pre_import_parsed_dicom_data')
+        # pub.unsubscribe(self.pre_import_complete, "pre_import_complete")
+        self.do_unsubscribe()
         self.Destroy()
+
+    def do_unsubscribe(self):
+        pub.unsubAll(topicName="parse_dicom_data")
+        pub.unsubAll(topicName="set_pre_import_parsed_dicom_data")
+        pub.unsubAll(topicName="pre_import_complete")
 
     def on_save_roi_map(self, evt):
         self.roi_map.write_to_file()
@@ -441,13 +452,6 @@ class ImportDicomFrame(wx.Frame):
                 wx.BeginBusyCursor()
                 self.dicom_importer.rebuild_tree_ctrl_rois(uid)
                 self.tree_ctrl_roi.ExpandAll()
-                # if uid not in list(self.parsed_dicom_data):
-                #     file_paths = self.dicom_importer.dicom_file_paths[uid]
-                #     self.parsed_dicom_data[uid] = DICOM_Parser(plan_file=file_paths['rtplan']['file_path'],
-                #                                                structure_file=file_paths['rtstruct']['file_path'],
-                #                                                dose_file=file_paths['rtdose']['file_path'],
-                #                                                global_plan_over_rides=self.global_plan_over_rides,
-                #                                                roi_map=self.roi_map)
                 data = self.parsed_dicom_data[uid]
 
                 self.input['mrn'].SetValue(data.mrn)
@@ -726,6 +730,8 @@ class ImportDicomFrame(wx.Frame):
                                    style=wx.OK | wx.OK_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
             dlg.ShowModal()
             dlg.Destroy()
+
+        self.do_unsubscribe()
 
     def parse_dicom_data(self):
         PreImportFileSetParserWorker(self.dicom_importer.dicom_file_paths)

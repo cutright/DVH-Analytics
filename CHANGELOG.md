@@ -7,6 +7,7 @@ v0.7.1 (TBD)
  - [Import] Fix for [Issue #26](https://github.com/cutright/DVH-Analytics/issues/26)
  - [Import] Fixed a bug that lost parsed data browsing for a new import directory, even when clicking cancel
  - [Misc] Import, ROI Map, and Database windows now close on application quit
+ - [Misc] Better window management, only one instance of Import, ROI Map, and Database at a time
  
 v0.7.0 (2020.01.27)
 --------------------
