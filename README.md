@@ -21,23 +21,6 @@ Executable versions of DVHA can be found [here](https://github.com/cutright/DVH-
 Please keep in mind this software is still in beta. If you have issues, compiling from source may be more informative. 
 
 
-Admin Rights No Longer Needed
----------
-As of v0.6.7, DVHA supports both SQLite and PostgreSQL.  
-  
-SQLite:  
-* No admin rights needed on your computer
-* No need to figure out how to make user logins and databases in SQL
-* Easier to share your database - just zip (and encrypt), send to colleague  
-  
-PostgreSQL:  
-* Supports multiple instances of DVHA accessing the same database at once
-* Database may be housed remotely (just need the accessible IP address)
-* Supports user login and password
-
-Additional SQLite vs PostgreSQL information can be found [here](https://tableplus.com/blog/2018/08/sqlite-vs-postgresql-which-database-to-use-and-why.html).
-
-
 About
 ---------
 DVH Analytics is a software application to help radiation oncology departments build an in-house database of treatment 
