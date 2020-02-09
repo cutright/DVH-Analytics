@@ -828,14 +828,6 @@ class ImportDicomFrame(wx.Frame):
         self.validate(uid=self.selected_uid)
         self.update_warning_label()
 
-    def autodetect_target_for_plans_missing_targets(self):
-        for uid, parsed_dicom_data in self.parsed_dicom_data.items():
-            if not parsed_dicom_data.ptv_exists:
-                parsed_dicom_data.autodetect_target_roi_type()
-                self.validate(uid)
-        self.update_warning_label()
-        self.update_roi_inputs()
-
     def on_roi_manager(self, evt):
         RoiManager(self, self.roi_map, self.input['physician'].GetValue(), self.input_roi['physician'].GetValue())
         self.update_physician_choices(keep_old_physician=True)
