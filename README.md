@@ -112,5 +112,21 @@ Cite
 DOI: [https://doi.org/10.1002/acm2.12401](https://doi.org/10.1002/acm2.12401)  
 Cutright D, Gopalakrishnan M, Roy A, Panchal A, and Mittal BB. "DVH Analytics: A DVH database for clinicians and researchers." Journal of Applied Clinical Medical Physics 19.5 (2018): 413-427.
 
+
+Related Publications
+---------  
 DOI: [https://doi.org/10.1016/j.adro.2019.11.006](https://doi.org/10.1016/j.adro.2019.11.006)  
 Roy A, Cutright D, Gopalakrishnan M, Yeh AB, and Mittal BB. "A Risk-Adjusted Control Chart to Evaluate IMRT Plan Quality." Advances in Radiation Oncology (2019).
+
+
+Selected Studies Using DVHA
+---------  
+*5,000 Patients*  
+National Cancer Institute (5R01CA219013-03): Active 8/1/17 → 7/31/22  
+[Retrospective NCI Phantom-Monte Carlo Dosimetry for Late Effects in Wilms Tumor](https://www.scholars.northwestern.edu/en/projects/retrospective-nci-phantom-monte-carlo-dosimetry-for-late-effects--5)  
+Brannigan R (Co-Investigator), Kalapurakal J (PD/PI), Kazer R (Co-Investigator)
+
+*265 Patients*  
+DOI: [https://doi.org/10.1016/j.ijrobp.2019.06.2509](https://doi.org/10.1016/j.ijrobp.2019.06.2509)  
+Gross J, et al. "Determining the organ at risk for lymphedema after regional nodal irradiation in 
+breast cancer." International Journal of Radiation Oncology* Biology* Physics 105.3 (2019): 649-658.
