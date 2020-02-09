@@ -36,12 +36,12 @@ class Spreadsheet(wx.grid.Grid):
         self.add_history({"type": "add_cols", "cols": self.selected_cols})
 
     def delete_rows(self, event):
-        self.delete(event, 'rows')
+        self.delete_row_or_col(event, 'rows')
 
     def delete_cols(self, event):
-        self.delete(event, 'cols')
+        self.delete_row_or_col(event, 'cols')
 
-    def delete(self, event, del_type):
+    def delete_row_or_col(self, event, del_type):
         action = [self.DeleteRows, self.DeleteCols][del_type == 'cols']
         selected = [self.selected_rows, self.selected_cols][del_type == 'cols']
         self.delete(event)

@@ -1643,7 +1643,7 @@ class PlotMachineLearning(Plot):
         self.__add_plot_data()
         self.__do_layout()
         self.__add_hover()
-        self.add_legend()
+        self.add_legend_ml()
 
         self.set_figure_dimensions()
         self.update_bokeh_layout_in_wx_python()
@@ -1698,7 +1698,7 @@ class PlotMachineLearning(Plot):
                                                                           ('MVR', '@y_mvr{0.2f}')],
                                                                 formatters={'study_date': 'datetime'}))
 
-    def add_legend(self):
+    def add_legend_ml(self):
         legend = {}
         for data_type in self.plot_types:
             legend[data_type] = {'data': Legend(items=[("Data  ", [self.glyphs[data_type]['data']]),

@@ -756,7 +756,6 @@ class ImportDicomFrame(wx.Frame):
         orange = wx.Colour(255, 165, 0)
         yellow = wx.Colour(255, 255, 0)
         if self.is_all_data_parsed:
-            wait = wx.BusyCursor()
             if not uid:
                 nodes = self.dicom_importer.plan_nodes
             else:
@@ -782,8 +781,6 @@ class ImportDicomFrame(wx.Frame):
 
                 if node_uid is not None:
                     self.tree_ctrl_import.CheckItem(node, color != red)
-
-            del wait
 
     def update_warning_label(self):
         msg = ''
