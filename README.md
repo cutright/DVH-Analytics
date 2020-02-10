@@ -21,23 +21,6 @@ Executable versions of DVHA can be found [here](https://github.com/cutright/DVH-
 Please keep in mind this software is still in beta. If you have issues, compiling from source may be more informative. 
 
 
-Admin Rights No Longer Needed
----------
-As of v0.6.7, DVHA supports both SQLite and PostgreSQL.  
-  
-SQLite:  
-* No admin rights needed on your computer
-* No need to figure out how to make user logins and databases in SQL
-* Easier to share your database - just zip (and encrypt), send to colleague  
-  
-PostgreSQL:  
-* Supports multiple instances of DVHA accessing the same database at once
-* Database may be housed remotely (just need the accessible IP address)
-* Supports user login and password
-
-Additional SQLite vs PostgreSQL information can be found [here](https://tableplus.com/blog/2018/08/sqlite-vs-postgresql-which-database-to-use-and-why.html).
-
-
 About
 ---------
 DVH Analytics is a software application to help radiation oncology departments build an in-house database of treatment 
@@ -112,5 +95,21 @@ Cite
 DOI: [https://doi.org/10.1002/acm2.12401](https://doi.org/10.1002/acm2.12401)  
 Cutright D, Gopalakrishnan M, Roy A, Panchal A, and Mittal BB. "DVH Analytics: A DVH database for clinicians and researchers." Journal of Applied Clinical Medical Physics 19.5 (2018): 413-427.
 
+
+Related Publications
+---------  
 DOI: [https://doi.org/10.1016/j.adro.2019.11.006](https://doi.org/10.1016/j.adro.2019.11.006)  
 Roy A, Cutright D, Gopalakrishnan M, Yeh AB, and Mittal BB. "A Risk-Adjusted Control Chart to Evaluate IMRT Plan Quality." Advances in Radiation Oncology (2019).
+
+
+Selected Studies Using DVHA
+---------  
+*5,000 Patients*  
+National Cancer Institute (5R01CA219013-03): Active 8/1/17 → 7/31/22  
+[Retrospective NCI Phantom-Monte Carlo Dosimetry for Late Effects in Wilms Tumor](https://www.scholars.northwestern.edu/en/projects/retrospective-nci-phantom-monte-carlo-dosimetry-for-late-effects--5)  
+Brannigan R (Co-Investigator), Kalapurakal J (PD/PI), Kazer R (Co-Investigator)
+
+*265 Patients*  
+DOI: [https://doi.org/10.1016/j.ijrobp.2019.06.2509](https://doi.org/10.1016/j.ijrobp.2019.06.2509)  
+Gross J, et al. "Determining the organ at risk for lymphedema after regional nodal irradiation in 
+breast cancer." International Journal of Radiation Oncology* Biology* Physics 105.3 (2019): 649-658.

@@ -40,7 +40,8 @@ from dvha.tools.errors import MemoryErrorDialog, PlottingMemoryError
 from dvha.tools.roi_name_manager import DatabaseROIs
 from dvha.tools.stats import StatsData, sync_variables_in_stats_data_objects
 from dvha.tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux, is_mac, get_window_size, \
-    save_object_to_file, load_object_from_file, set_msw_background_color, initialize_directories_and_settings
+    save_object_to_file, load_object_from_file, set_msw_background_color, initialize_directories_and_settings, \
+    set_frame_icon
 from dvha.db.sql_columns import all_columns as sql_column_info
 
 
@@ -106,6 +107,7 @@ class DVHAMainFrame(wx.Frame):
         self.__disable_notebook_tabs()
 
         self.Bind(wx.EVT_CLOSE, self.on_quit)
+        self.tool_bar_windows = {key: None for key in ['import', 'database', 'roi_map']}
 
         wx.CallAfter(self.__catch_failed_sql_connection_on_app_launch)
 
@@ -574,20 +576,23 @@ class DVHAMainFrame(wx.Frame):
         self.on_pref()
 
     def on_toolbar_import(self, evt):
-        self.check_db_then_call(ImportDicomFrame, self.roi_map, self.options)
+        self.check_db_then_call(ImportDicomFrame, 'import', self.roi_map, self.options)
 
     def on_toolbar_database(self, evt):
-        self.check_db_then_call(DatabaseEditorFrame, self.roi_map, self.options)
+        self.check_db_then_call(DatabaseEditorFrame, 'database', self.roi_map, self.options)
 
     def on_toolbar_roi_map(self, evt):
-        self.check_db_then_call(ROIMapFrame, self.roi_map)
+        self.check_db_then_call(ROIMapFrame, 'roi_map', self.roi_map)
 
-    def check_db_then_call(self, func, *parameters):
+    def check_db_then_call(self, func, window_type, *parameters):
         if not echo_sql_db():
             self.on_sql()
 
         if echo_sql_db():
-            func(*parameters)
+            if self.tool_bar_windows[window_type]:
+                self.tool_bar_windows[window_type].Raise()
+            else:
+                self.tool_bar_windows[window_type] = func(*parameters)
         else:
             wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
@@ -640,7 +645,7 @@ class DVHAMainFrame(wx.Frame):
         self.exec_query()
 
     def exec_query(self, load_saved_dvh_data=False, group=None):
-        wait = wx.BusyCursor()
+        wx.BeginBusyCursor()
         if group is not None:
             self.radio_button_query_group.SetSelection(group - 1)
         group = self.selected_group
@@ -673,7 +678,7 @@ class DVHAMainFrame(wx.Frame):
                 self.endpoint.update_dvh(self.group_data)
                 self.set_summary_text(group)
                 self.plot.update_plot(self.group_data[1]['dvh'], dvh_2=self.group_data[2]['dvh'])
-                del wait
+                wx.EndBusyCursor()
                 self.update_data(load_saved_dvh_data=load_saved_dvh_data, group_2_only=bool(group-1))
 
                 if group == 1:
@@ -689,10 +694,10 @@ class DVHAMainFrame(wx.Frame):
                     self.update_stats_data_plots()
 
             except PlottingMemoryError as e:
-                del wait
+                wx.EndBusyCursor()
                 self.on_plotting_memory_error(str(e))
         else:
-            del wait
+            wx.EndBusyCursor()
             msg = "%s DVHs returned. Please modify query or import more data." % ['Less than 2', 'No'][count == 0]
             wx.MessageBox(msg, 'Query Error', wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
             self.group_data[group]['dvh'] = None
@@ -747,7 +752,7 @@ class DVHAMainFrame(wx.Frame):
         return uids, queries['DVHs']
 
     def update_data(self, load_saved_dvh_data=False, group_2_only=False):
-        wait = wx.BusyCursor()
+        wx.BeginBusyCursor()
         tables = ['Plans', 'Rxs', 'Beams']
         for grp, grp_data in self.group_data.items():
             if not(grp == 1 and group_2_only) or grp == 2:
@@ -770,7 +775,7 @@ class DVHAMainFrame(wx.Frame):
         self.regression.update_combo_box_choices()
         self.radbio.update_dvh_data(self.group_data)
 
-        del wait
+        wx.EndBusyCursor()
 
     # --------------------------------------------------------------------------------------------------------------
     # Menu bar event functions
@@ -782,6 +787,11 @@ class DVHAMainFrame(wx.Frame):
                     view.Destroy()
                 except RuntimeError:
                     pass
+
+        for window in self.tool_bar_windows.values():
+            if window and hasattr(window, 'Destroy'):
+                window.Destroy()
+
         self.regression.close_mvr_frames()
 
     def on_quit(self, evt):
@@ -1018,6 +1028,7 @@ class MainApp(wx.App):
 
         self.SetAppName('DVH Analytics')
         self.frame = DVHAMainFrame(None, wx.ID_ANY, "")
+        set_frame_icon(self.frame)
         self.SetTopWindow(self.frame)
         self.frame.Show()
         return True

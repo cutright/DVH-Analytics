@@ -183,21 +183,23 @@ def overlap_volume(oar, tv):
     all_z_values = [round(float(z), 2) for z in list(tv)]
     all_z_values = np.sort(all_z_values)
     thicknesses = np.abs(np.diff(all_z_values))
-    thicknesses = np.append(thicknesses, np.min(thicknesses))
-    all_z_values = all_z_values.tolist()
+    if len(thicknesses) > 0:
+        thicknesses = np.append(thicknesses, np.min(thicknesses))
+        all_z_values = all_z_values.tolist()
 
-    for z in list(tv):
-        # z in coord will not necessarily go in order of z, convert z to float to lookup thickness
-        # also used to check for top and bottom slices, to add area of those contours
+        for z in list(tv):
+            # z in coord will not necessarily go in order of z, convert z to float to lookup thickness
+            # also used to check for top and bottom slices, to add area of those contours
 
-        if z in list(oar):
-            thickness = thicknesses[all_z_values.index(round(float(z), 2))]
-            shapely_tv = points_to_shapely_polygon(tv[z])
-            shapely_oar = points_to_shapely_polygon(oar[z])
-            if shapely_oar and shapely_tv:
-                intersection_volume += shapely_tv.intersection(shapely_oar).area * thickness
+            if z in list(oar):
+                thickness = thicknesses[all_z_values.index(round(float(z), 2))]
+                shapely_tv = points_to_shapely_polygon(tv[z])
+                shapely_oar = points_to_shapely_polygon(oar[z])
+                if shapely_oar and shapely_tv:
+                    intersection_volume += shapely_tv.intersection(shapely_oar).area * thickness
 
-    return round(intersection_volume / 1000., 2)
+        return round(intersection_volume / 1000., 2)
+    return 0.
 
 
 def volume(roi):

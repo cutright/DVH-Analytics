@@ -14,6 +14,7 @@ from os.path import join, dirname, expanduser
 
 SCRIPT_DIR = dirname(__file__)
 ICONS_DIR = join(SCRIPT_DIR, 'icons')
+WIN_APP_ICON = join(ICONS_DIR, 'dvha.ico')
 LOGO_PATH = join(SCRIPT_DIR, 'logo.png')
 APPS_DIR = join(expanduser('~'), 'Apps')
 APP_DIR = join(APPS_DIR, 'dvh_analytics')

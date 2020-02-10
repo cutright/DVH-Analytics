@@ -18,7 +18,7 @@ from dvha.db.sql_to_python import get_database_tree
 from dvha.db.sql_connector import DVH_SQL, SQLError
 from dvha.models.data_table import DataTable
 from dvha.dialogs.export import save_data_to_file
-from dvha.tools.utilities import set_msw_background_color, get_window_size
+from dvha.tools.utilities import set_msw_background_color, get_window_size, set_frame_icon
 from dvha.models.roi_map import RemapROIFrame
 
 
@@ -32,6 +32,7 @@ class DatabaseEditorFrame(wx.Frame):
         :type roi_map: DatabaseROIs
         """
         wx.Frame.__init__(self, None, title='Database Administrator')
+        set_frame_icon(self)
 
         set_msw_background_color(self)  # If windows, change the background color
 

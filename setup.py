@@ -13,21 +13,9 @@ A setuptools setup file for DVH Analytics
 from setuptools import setup, find_packages
 from dvha.options import DefaultOptions
 
-requires = [
-    'wxpython',
-    'pypubsub',
-    'numpy',
-    'scipy',
-    'pydicom >= 1.0',
-    'dicompyler-core',
-    'bokeh >= 1.2',
-    'python-dateutil',
-    'psycopg2-binary',
-    'shapely[vectorized]',
-    'statsmodels',
-    'scikit-learn == 0.22',
-    'regressors'
-]
+
+with open('requirements.txt', 'r') as doc:
+    requires = [line.strip() for line in doc]
 
 with open('README.md', 'r') as doc:
     long_description = doc.read()

@@ -1,8 +1,11 @@
-recursive-include *.py
+include dvha_app.py
+recursive-include dvha/*.py
 include CHANGELOG.md
 include README.md
 include dvha/LICENSE.txt
 include dvha/logo.png
 include dvha/icons/*.png
+include dvha/icons/dvha.icns
+include dvha/icons/dvha.ico
 include dvha/db/*.sql
 include dvha/db/*.roi

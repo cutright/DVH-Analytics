@@ -104,11 +104,20 @@ class ControlChartFrame:
         dates = stats_data.sim_study_dates
         sort_index = sorted(range(len(dates)), key=lambda k: dates[k])
         dates_sorted = [dates[i] for i in sort_index]
+
         y_values_sorted = [stats_data.data[self.y_axis]['values'][i] for i in sort_index]
         mrn_sorted = [stats_data.mrns[i] for i in sort_index]
         uid_sorted = [stats_data.uids[i] for i in sort_index]
 
-        x = list(range(1, len(dates)+1))
+        # remove data with no date
+        if 'None' in dates_sorted:
+            final_index = dates_sorted.index('None')
+            dates_sorted = dates_sorted[:final_index]
+            y_values_sorted = y_values_sorted[:final_index]
+            mrn_sorted = mrn_sorted[:final_index]
+            uid_sorted = uid_sorted[:final_index]
+
+        x = list(range(1, len(dates_sorted)+1))
 
         self.plot.group = self.group
         self.plot.update_plot(x, y_values_sorted, mrn_sorted, uid_sorted, dates_sorted, y_axis_label=self.y_axis)

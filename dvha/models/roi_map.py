@@ -21,7 +21,8 @@ from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddVariationDial
 from dvha.models.data_table import DataTable
 from dvha.models.plot import PlotROIMap
 from dvha.tools.errors import ROIVariationError, ROIVariationErrorDialog
-from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_elapsed_time, get_window_size
+from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_elapsed_time, get_window_size,\
+    set_frame_icon
 from dvha.tools.roi_name_manager import clean_name
 
 
@@ -35,6 +36,7 @@ class ROIMapFrame(wx.Frame):
         :type roi_map: DatabaseROIs
         """
         wx.Frame.__init__(self, None, title='ROI Map')
+        set_frame_icon(self)
 
         self.roi_map = roi_map
 

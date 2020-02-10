@@ -425,8 +425,8 @@ class MultiVarResultsFrame(wx.Frame):
         self.button_back_elimination = wx.Button(self, wx.ID_ANY, 'Backward Elimination')
         self.button_export = wx.Button(self, wx.ID_ANY, 'Export Plot Data')
         self.button_save_plot = wx.Button(self, wx.ID_ANY, 'Save Plot')
-        self.button_save_model = wx.Button(self, wx.ID_ANY, 'Save Model')
-        self.button_load_mlr_model = wx.Button(self, wx.ID_ANY, 'Load Model')
+        self.button_save_model = wx.Button(self, wx.ID_ANY, 'Save MVR Model')
+        self.button_load_mlr_model = wx.Button(self, wx.ID_ANY, 'Load ML Model')
         algorithms = ['Random Forest', 'Support Vector Machine', 'Decision Tree', 'Gradient Boosting']
         self.button = {key: wx.Button(self, wx.ID_ANY, key) for key in algorithms}
         self.radiobox_include_back_elim = wx.RadioBox(self, wx.ID_ANY, 'Include all x-variables?', choices=['Yes', 'No'])

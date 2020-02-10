@@ -15,21 +15,21 @@ import wx.adv
 from wx.lib.agw.customtreectrl import CustomTreeCtrl, TR_AUTO_CHECK_CHILD, TR_AUTO_CHECK_PARENT, TR_DEFAULT_STYLE
 from datetime import date as datetime_obj, datetime
 from dateutil.parser import parse as parse_date
-from dicompylercore import dicomparser
 from os.path import isdir, join
 from pubsub import pub
 from threading import Thread
+from queue import Queue
 from dvha.db import update as db_update
 from dvha.db.sql_connector import DVH_SQL
-from dvha.db.dicom_importer import DicomImporter
-from dvha.db.dicom_parser import DICOM_Parser
+from dvha.models.dicom_tree_builder import DicomTreeBuilder, PreImportFileSetParserWorker
+from dvha.db.dicom_parser import DICOM_Parser, PreImportData
 from dvha.dialogs.main import DatePicker
 from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddROIType, RoiManager, ChangePlanROIName
-from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, IMPORTED_DIR, ICONS
-from dvha.tools.dicom_dose_sum import sum_dose_grids
+from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, ICONS
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
-    set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size
+    set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size,\
+    set_frame_icon
 
 
 # TODO: Provide methods to write over-rides to DICOM file
@@ -47,6 +47,7 @@ class ImportDicomFrame(wx.Frame):
         :type inbox: str
         """
         wx.Frame.__init__(self, None, title='Import DICOM')
+        set_frame_icon(self)
 
         set_msw_background_color(self)  # If windows, change the background color
 
@@ -104,7 +105,6 @@ class ImportDicomFrame(wx.Frame):
         self.checkbox_subfolders = wx.CheckBox(self, wx.ID_ANY, "Search within sub-folders")
         self.checkbox_keep_in_inbox = wx.CheckBox(self, wx.ID_ANY, "Leave files in inbox")
         self.panel_study_tree = wx.Panel(self, wx.ID_ANY, style=wx.BORDER_SUNKEN)
-        self.gauge = wx.Gauge(self, -1, 100)
         self.button_import = wx.Button(self, wx.ID_ANY, "Import")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
         self.button_save_roi_map = wx.Button(self, wx.ID_ANY, "Save ROI Map")
@@ -140,8 +140,6 @@ class ImportDicomFrame(wx.Frame):
 
         self.incomplete_studies = []
 
-        self.terminate = {'status': False}  # used to terminate thread on cancel in Import Dialog
-
         self.run()
 
     def __do_subscribe(self):
@@ -149,6 +147,8 @@ class ImportDicomFrame(wx.Frame):
         After DICOM directory is scanned and sorted, parse_dicom_data will be called
         """
         pub.subscribe(self.parse_dicom_data, "parse_dicom_data")
+        pub.subscribe(self.set_pre_import_parsed_dicom_data, 'set_pre_import_parsed_dicom_data')
+        pub.subscribe(self.pre_import_complete, "pre_import_complete")
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_browse, id=self.button_browse.GetId())
@@ -183,6 +183,8 @@ class ImportDicomFrame(wx.Frame):
 
         self.Bind(wx.EVT_BUTTON, self.on_roi_manager, id=self.button_roi_manager.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.on_physician_roi_change, id=self.input_roi['physician'].GetId())
+
+        self.Bind(wx.EVT_CLOSE, self.on_cancel)
 
     def __set_properties(self):
 
@@ -276,7 +278,6 @@ class ImportDicomFrame(wx.Frame):
         self.label_progress = wx.StaticText(self, wx.ID_ANY, "")
         self.label_progress.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         sizer_progress.Add(self.label_progress, 1, 0, 0)
-        sizer_progress.Add(self.gauge, 1, wx.LEFT | wx.EXPAND, 40)
         sizer_studies.Add(sizer_progress, 0, wx.EXPAND | wx.RIGHT, 5)
         sizer_browse_and_tree.Add(sizer_studies, 1, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
         sizer_main.Add(sizer_browse_and_tree, 1, wx.EXPAND, 0)
@@ -387,8 +388,6 @@ class ImportDicomFrame(wx.Frame):
         self.Layout()
         self.Center()
 
-        self.gauge.Hide()
-
     def run(self):
         self.Show()
         if self.initial_inbox is None or not isdir(self.initial_inbox):
@@ -400,21 +399,24 @@ class ImportDicomFrame(wx.Frame):
 
     def on_cancel(self, evt):
         self.roi_map.import_from_file()  # reload from file, ignore changes
+        # pub.unsubscribe(self.parse_dicom_data, "parse_dicom_data")
+        # pub.unsubscribe(self.set_pre_import_parsed_dicom_data, 'set_pre_import_parsed_dicom_data')
+        # pub.unsubscribe(self.pre_import_complete, "pre_import_complete")
+        self.do_unsubscribe()
         self.Destroy()
+
+    def do_unsubscribe(self):
+        pub.unsubAll(topicName="parse_dicom_data")
+        pub.unsubAll(topicName="set_pre_import_parsed_dicom_data")
+        pub.unsubAll(topicName="pre_import_complete")
 
     def on_save_roi_map(self, evt):
         self.roi_map.write_to_file()
 
     def on_browse(self, evt):
         """
-        Clear data, open a DirDialog, run a DicomImporter on selected directory
+        Clear data, open a DirDialog, run a DicomTreeBuilder on selected directory
         """
-        self.parsed_dicom_data = {}
-        for key in list(self.global_plan_over_rides):
-            self.global_plan_over_rides[key] = {'value': None, 'only_if_missing': False}
-        self.clear_plan_data()
-        if self.dicom_importer:
-            self.tree_ctrl_roi.DeleteChildren(self.dicom_importer.root_rois)
         starting_dir = self.text_ctrl_directory.GetValue()
         if starting_dir == '':
             starting_dir = self.start_path
@@ -423,13 +425,20 @@ class ImportDicomFrame(wx.Frame):
 
         dlg = wx.DirDialog(self, "Select inbox directory", starting_dir, wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:
+            self.parsed_dicom_data = {}
+            for key in list(self.global_plan_over_rides):
+                self.global_plan_over_rides[key] = {'value': None, 'only_if_missing': False}
+            self.clear_plan_data()
+            if self.dicom_importer:
+                self.tree_ctrl_roi.DeleteChildren(self.dicom_importer.root_rois)
+
             self.text_ctrl_directory.SetValue(dlg.GetPath())
             self.dicom_importer = self.get_importer()
 
     def get_importer(self):
-        return DicomImporter(self.text_ctrl_directory.GetValue(), self.tree_ctrl_import,
-                             self.tree_ctrl_roi, self.tree_ctrl_roi_root, self.tree_ctrl_images,
-                             self.roi_map, search_subfolders=self.checkbox_subfolders.GetValue())
+        return DicomTreeBuilder(self.text_ctrl_directory.GetValue(), self.tree_ctrl_import,
+                                self.tree_ctrl_roi, self.tree_ctrl_roi_root, self.tree_ctrl_images,
+                                self.roi_map, search_subfolders=self.checkbox_subfolders.GetValue())
 
     def on_file_tree_select(self, evt):
         """
@@ -440,16 +449,9 @@ class ImportDicomFrame(wx.Frame):
         if uid in list(self.parsed_dicom_data) and self.parsed_dicom_data[uid].validation['complete_file_set']:
             if uid != self.selected_uid:
                 self.selected_uid = uid
-                wait = wx.BusyCursor()
+                wx.BeginBusyCursor()
                 self.dicom_importer.rebuild_tree_ctrl_rois(uid)
                 self.tree_ctrl_roi.ExpandAll()
-                if uid not in list(self.parsed_dicom_data):
-                    file_paths = self.dicom_importer.dicom_file_paths[uid]
-                    self.parsed_dicom_data[uid] = DICOM_Parser(plan=file_paths['rtplan']['file_path'],
-                                                               structure=file_paths['rtstruct']['file_path'],
-                                                               dose=file_paths['rtdose']['file_path'],
-                                                               global_plan_over_rides=self.global_plan_over_rides,
-                                                               roi_map=self.roi_map)
                 data = self.parsed_dicom_data[uid]
 
                 self.input['mrn'].SetValue(data.mrn)
@@ -467,7 +469,7 @@ class ImportDicomFrame(wx.Frame):
                 self.input['tx_site'].SetValue(data.tx_site)
                 self.input['rx_dose'].SetValue(str(data.rx_dose))
                 self.dicom_importer.update_mapped_roi_status(data.physician)
-                del wait
+                wx.EndBusyCursor()
                 self.update_physician_roi_choices()
                 self.enable_inputs()
         else:
@@ -529,15 +531,12 @@ class ImportDicomFrame(wx.Frame):
         plan_node = None
         node_id, node_type = self.dicom_importer.get_id_of_tree_ctrl_node(item)
 
-        # if item is a plan node
         if node_type == 'plan':
             plan_node = item
 
-        # if item is a study node
         elif node_type == 'study':
             plan_node, valid = self.tree_ctrl_import.GetFirstChild(item)
 
-        # if item is a patient node
         elif node_type == 'patient':
             study_node, valid = self.tree_ctrl_import.GetFirstChild(item)
             plan_node, valid = self.tree_ctrl_import.GetFirstChild(study_node)
@@ -550,15 +549,12 @@ class ImportDicomFrame(wx.Frame):
         study_node = None
         node_id, node_type = self.dicom_importer.get_id_of_tree_ctrl_node(item)
 
-        # if selected item is a study node
         if node_type == 'study':
             study_node = item
 
-        # if selected item is plan node
         elif node_type == 'plan':
             study_node, valid = self.tree_ctrl_import.GetItemParent(item)
 
-        # if selected item is a patient node
         elif node_type == 'patient':
             study_node, valid = self.tree_ctrl_import.GetFirstChild(item)
 
@@ -639,7 +635,7 @@ class ImportDicomFrame(wx.Frame):
             self.input_roi['physician'].SetValue(physician_roi)
 
     def on_apply_plan(self, evt):
-        wait = wx.BusyCursor()
+        wx.BeginBusyCursor()
         self.on_physician_change()
         over_rides = self.parsed_dicom_data[self.selected_uid].plan_over_rides
         apply_all_selected = False
@@ -667,7 +663,7 @@ class ImportDicomFrame(wx.Frame):
         else:
             self.validate(uid=self.selected_uid)
         self.update_warning_label()
-        del wait
+        wx.EndBusyCursor()
 
     def on_apply_roi(self, evt):
         if self.allow_input_roi_apply:
@@ -723,9 +719,9 @@ class ImportDicomFrame(wx.Frame):
         if self.parsed_dicom_data and self.dicom_importer.checked_plans:
             self.roi_map.write_to_file()
             ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
-                         self.checkbox_include_uncategorized.GetValue(), self.terminate,
+                         self.checkbox_include_uncategorized.GetValue(),
                          self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue())
-            dlg = ImportStatusDialog(self.terminate)
+            dlg = ImportStatusDialog()
             # calling self.Close() below caused issues in Windows if Show() used instead of ShowModal()
             [dlg.Show, dlg.ShowModal][is_windows()]()
             self.Close()
@@ -735,55 +731,38 @@ class ImportDicomFrame(wx.Frame):
             dlg.ShowModal()
             dlg.Destroy()
 
+        self.do_unsubscribe()
+
     def parse_dicom_data(self):
-        self.button_cancel.Disable()
-        self.button_save_roi_map.Disable()
-        self.button_import.Disable()
-        wait = wx.BusyInfo("Parsing DICOM data\nPlease wait...")
-        parsed_uids = list(self.parsed_dicom_data)
-        plan_total = len(list(self.dicom_importer.plan_nodes))
-        self.gauge.SetValue(0)
-        self.gauge.Show()
-        for plan_counter, uid in enumerate(list(self.dicom_importer.plan_nodes)):
-            self.label_progress.SetLabelText("Parsing %s of %s studies" % (plan_counter+1, plan_total))
-            if uid not in parsed_uids:
-                file_paths = self.dicom_importer.dicom_file_paths[uid]
-                wx.Yield()
-                if file_paths['rtplan'] and file_paths['rtstruct'] and file_paths['rtdose']:
-                    self.parsed_dicom_data[uid] = DICOM_Parser(plan=file_paths['rtplan'][0],
-                                                               structure=file_paths['rtstruct'][0],
-                                                               dose=file_paths['rtdose'][0],
-                                                               global_plan_over_rides=self.global_plan_over_rides,
-                                                               roi_map=self.roi_map)
+        PreImportFileSetParserWorker(self.dicom_importer.dicom_file_paths)
 
-            wx.CallAfter(self.gauge.SetValue, int(100 * (plan_counter+1) / plan_total))
-        self.label_progress.SetLabelText("Auto-detecting plans missing PTV labels")
-        self.autodetect_target_for_plans_missing_targets()
-        self.gauge.Hide()
-        self.label_progress.SetLabelText("All %s plans parsed" % plan_total)
-
-        del wait
-
-        self.button_cancel.Enable()
-        self.button_save_roi_map.Enable()
-        self.button_import.Enable()
-
+    def pre_import_complete(self):
+        self.label_progress.SetLabelText("Plan count: %s" % len(list(self.dicom_importer.plan_nodes)))
         self.is_all_data_parsed = True
-        self.validate()
+        wx.CallAfter(self.validate)
+
+    def set_pre_import_parsed_dicom_data(self, msg):
+        uid = msg['uid']
+        self.parsed_dicom_data[uid] = PreImportData(**msg['init_params'])
+        self.parsed_dicom_data[uid].global_plan_over_rides = self.global_plan_over_rides
+        if not self.parsed_dicom_data[uid].ptv_exists:
+            self.parsed_dicom_data[uid].autodetect_target_roi_type()
+            self.validate(uid)
+        self.update_warning_label()
+        self.update_roi_inputs()
 
     def validate(self, uid=None):
         red = wx.Colour(255, 0, 0)
         orange = wx.Colour(255, 165, 0)
         yellow = wx.Colour(255, 255, 0)
         if self.is_all_data_parsed:
-            wait = wx.BusyCursor()
             if not uid:
                 nodes = self.dicom_importer.plan_nodes
             else:
                 nodes = {uid: self.dicom_importer.plan_nodes[uid]}
-            for uid, node in nodes.items():
-                if uid in list(self.parsed_dicom_data):
-                    validation = self.parsed_dicom_data[uid].validation
+            for node_uid, node in nodes.items():
+                if node_uid in list(self.parsed_dicom_data):
+                    validation = self.parsed_dicom_data[node_uid].validation
                     failed_keys = {key for key, value in validation.items() if not value['status']}
                 else:
                     failed_keys = {'complete_file_set'}
@@ -794,30 +773,23 @@ class ImportDicomFrame(wx.Frame):
                         color = orange
                     else:
                         color = yellow
-                elif uid in self.dicom_importer.incomplete_plans:
+                elif node_uid in self.dicom_importer.incomplete_plans:
                     color = red
                 else:
                     color = None
                 self.tree_ctrl_import.SetItemBackgroundColour(node, color)
 
-                if uid is not None:
+                if node_uid is not None:
                     self.tree_ctrl_import.CheckItem(node, color != red)
-
-            del wait
 
     def update_warning_label(self):
         msg = ''
         if self.selected_uid:
             if self.selected_uid in list(self.parsed_dicom_data):
-                validation = self.parsed_dicom_data[self.selected_uid].validation
-                failed_keys = {key for key, value in validation.items() if not value['status']}
-                if failed_keys:
-                    if 'complete_file_set' in failed_keys:
-                        msg = "ERROR: %s" % validation['complete_file_set']['message']
-                        if self.selected_uid not in self.incomplete_studies:
-                            self.incomplete_studies.append(self.selected_uid)
-                    else:
-                        msg = "WARNING: %s" % ' '.join([validation[key]['message'] for key in failed_keys])
+                warning = self.parsed_dicom_data[self.selected_uid].warning
+                msg = warning['label']
+                if warning['incomplete'] and self.selected_uid not in self.incomplete_studies:
+                    self.incomplete_studies.append(self.selected_uid)
             else:
                 msg = "ERROR: Incomplete Fileset. RT Plan, Dose, and Structure required."
         self.label_warning.SetLabelText(msg)
@@ -853,16 +825,8 @@ class ImportDicomFrame(wx.Frame):
                    title=key.replace('_', ' ').title(),
                    action=self.input[key].SetValue)
 
-        self.validate(self.selected_uid)
+        self.validate(uid=self.selected_uid)
         self.update_warning_label()
-
-    def autodetect_target_for_plans_missing_targets(self):
-        for uid, parsed_dicom_data in self.parsed_dicom_data.items():
-            if not parsed_dicom_data.ptv_exists:
-                parsed_dicom_data.autodetect_target_roi_type()
-                self.validate(uid)
-        self.update_warning_label()
-        self.update_roi_inputs()
 
     def on_roi_manager(self, evt):
         RoiManager(self, self.roi_map, self.input['physician'].GetValue(), self.input_roi['physician'].GetValue())
@@ -923,13 +887,7 @@ class ImportStatusDialog(wx.Dialog):
     """
     Dialog with progress information about DICOM import
     """
-    def __init__(self, terminate):
-        """
-        Terminate will be linked to ImportWorker, which will periodically check it's value, if true
-        the thread will gracefully terminate. This class can set terminate to true with the cancel button.
-        :param terminate: will cancel ImportWorker thread if set to True
-        :type terminate: dict
-        """
+    def __init__(self):
         wx.Dialog.__init__(self, None)
         self.gauge_study = wx.Gauge(self, wx.ID_ANY, 100)
         self.gauge_calculation = wx.Gauge(self, wx.ID_ANY, 100)
@@ -940,8 +898,6 @@ class ImportStatusDialog(wx.Dialog):
         # self.error_details_text = wx.StaticText(self.error_details_window, wx.ID_ANY,
         #                                         "Error details go here.\n"
         #                                         "Will add things soon.")
-
-        self.terminate = terminate
 
         self.__set_properties()
         self.__do_layout()
@@ -1019,9 +975,14 @@ class ImportStatusDialog(wx.Dialog):
         :type msg: dict
         """
         wx.CallAfter(self.label_calculation.SetLabelText, "Calculation: %s" % msg['calculation'])
-        wx.CallAfter(self.label_structure.SetLabelText, "Structure (%s of %s): %s" %
-                     (msg['roi_num'], msg['roi_total'], msg['roi_name']))
         wx.CallAfter(self.gauge_calculation.SetValue, msg['progress'])
+
+        if msg['roi_name']:
+            label_text = "Structure (%s of %s): %s" % \
+                         (msg['roi_num'], msg['roi_total'], msg['roi_name'])
+        else:
+            label_text = ''
+        wx.CallAfter(self.label_structure.SetLabelText, label_text)
 
     def update_elapsed_time(self):
         """
@@ -1031,152 +992,71 @@ class ImportStatusDialog(wx.Dialog):
         wx.CallAfter(self.label_elapsed_time.SetLabelText, "Elapsed Time: %s" % elapsed_time)
 
     def set_terminate(self, evt):
-        self.terminate['status'] = True  # Linked to ImportWorker
+        pub.sendMessage('terminate_import')
         self.close()
 
 
-class ImportWorker(Thread):
-    """
-    Create a thread separate from the GUI to perform the import calculations
-    """
-    def __init__(self, data, checked_uids, import_uncategorized, terminate, other_dicom_files, start_path,
-                 keep_in_inbox):
+class StudyImporter:
+    def __init__(self, init_params, msg, import_uncategorized, final_plan_in_study):
         """
-        :param data: parsed dicom data
-        :type data: dict
-        :param checked_uids: uids that were selected in the GUI for import
-        :type checked_uids: list
-        :param import_uncategorized: if True, import rois with names that that are not mapped
+        Intended to import a study on init, no use afterwards as no properties available
+        :param init_params: initial parameters to create DICOM_Parser object
+        :type init_params: dict
+        :param msg: initial pub message for update patient, includes plan counting and progress
+        :type msg: dict
+        :param import_uncategorized: import ROIs even if not in ROI map, if set to True
         :type import_uncategorized: bool
-        :param terminate: thread will periodically check this value, if true, gracefully terminate
-        :type terminate: dict
-        :param other_dicom_files: other dicom files found in the import directory
-        :type other_dicom_files: dict
-        :param keep_in_inbox: Set to False to move files, True to copy files to imported
-        :type keep_in_inbox: bool
-        """
-        Thread.__init__(self)
-
-        self.data = data
-        self.checked_uids = checked_uids
-        self.import_uncategorized = import_uncategorized
-        self.terminate = terminate
-        self.other_dicom_files = other_dicom_files
-        self.start_path = start_path
-        self.keep_in_inbox = keep_in_inbox
-
-        with DVH_SQL() as cnx:
-            self.last_import_time = cnx.now  # use pgsql time rather than CPU since time stamps in DB are based on psql
-
-        self.start()  # start the thread
-
-    def run(self):
-        try:
-            self.import_studies()
-
-        except MemoryError as mem_err:
-            # This usually occurs for DVHs of large ROIs or minimum distance calculations
-            print(mem_err)
-
-        except Exception as e:
-            print('Error: ', e)
-            print('Import incomplete. Any studies successfully imported were transferred to your imported folder:')
-            print('\t%s' % IMPORTED_DIR)
-            print('\tIf a study was partially imported, all data has been removed from the database '
-                  'and its DICOM files remain in your inbox.')
-            self.delete_partially_updated_plan()
-
-        remove_empty_sub_folders(self.start_path)
-        wx.CallAfter(pub.sendMessage, "close")
-
-    def get_study_uids(self):
-        """
-        This thread iterates through self.checked_uids which contains plan uids, but we need to iterate through
-        study instance uids so that plans on the same study are imported adjacently.
-        :return: a dictionary with study uids for the keys and a list of associated plan uids for values
-        :rtype: dict
-        """
-        study_uids = {}
-        for plan_uid in self.checked_uids:
-            study_uid = self.data[plan_uid].study_instance_uid_to_be_imported
-            if study_uid not in list(study_uids):
-                study_uids[study_uid] = []
-            study_uids[study_uid].append(plan_uid)
-        return study_uids
-
-    def import_studies(self):
-        """
-        Iterate through StudyInstanceUIDs that match plan SOPInstanceUIDs in self.checked_uids
-        Update dialog with status information
-        If there are multiple plans for a study uid, sum the dose grids
-        Import the study
-        """
-
-        study_uids = self.get_study_uids()
-        plan_total = len(self.checked_uids)
-        plan_counter = 0
-        for study_uid, plan_uid_set in study_uids.items():
-            if len(plan_uid_set) > 1:
-                dose_files = [self.data[plan_uid].dicompyler_data['dose'] for plan_uid in plan_uid_set]
-
-                wait = wx.BusyInfo('Summing grids for\n%s' % study_uid)
-                try:
-                    dose_sum = sum_dose_grids(dose_files)
-                    for plan_uid in plan_uid_set:
-                        self.data[plan_uid].import_dose_sum(dose_sum)
-                    del wait
-                except Exception as e:
-                    print(str(e))
-                    print('ERROR: Dose sum failed, this feature is currently under development. Skipping Import.')
-                    mrns = ', '.join(list(set([self.data[plan_uid].mrn for plan_uid in plan_uid_set])))
-                    print('\tMRNs: %s' % mrns)
-                    del wait
-                    continue
-
-            for i, plan_uid in enumerate(plan_uid_set):
-                if plan_uid in list(self.data):
-
-                    msg = {'patient_name': self.data[plan_uid].patient_name,
-                           'uid': self.data[plan_uid].study_instance_uid_to_be_imported,
-                           'progress': int(100 * plan_counter / plan_total),
-                           'study_number': plan_counter + 1,
-                           'study_total': plan_total}
-                    wx.CallAfter(pub.sendMessage, "update_patient", msg=msg)
-                    wx.CallAfter(pub.sendMessage, "update_elapsed_time")
-
-                    self.import_study(plan_uid, final_plan_in_study=plan_uid == plan_uid_set[-1])
-                    if self.terminate['status']:
-                        self.delete_partially_updated_plan()
-                        return
-                else:
-                    print('ERROR: This plan could not be parsed. Skipping import. '
-                          'Did you supply RT Structure, Dose, and Plan?')
-                    print('\tPlan UID: %s' % plan_uid)
-                    print('\tMRN: %s' % self.data[plan_uid].mrn)
-
-                plan_counter += 1
-
-    def import_study(self, plan_uid, final_plan_in_study=True):
-        """
-        Import DVHs and perform post-import calculations for a given plan uid (SOPInstanceUID from RTPlan)
-        :param plan_uid: the SOPInstanceUID from the DICOM RT Plan file
-        :type plan_uid: str
-        :param final_plan_in_study: indicates if post-import calculations should be performed and files moved
+        :param final_plan_in_study: prompts composite PTV calculations if True
         :type final_plan_in_study: bool
         """
-        dicom_rt_struct = dicomparser.DicomParser(self.data[plan_uid].structure_file)
-        study_uid = self.data[plan_uid].study_instance_uid_to_be_imported
-        structures = dicom_rt_struct.GetStructures()
+
+        # Store SQL time for deleting a partially imported plan
+        with DVH_SQL() as cnx:
+            self.last_import_time = cnx.now
+
+        self.init_params = init_params
+        self.msg = msg
+        self.import_uncategorized = import_uncategorized
+        self.final_plan_in_study = final_plan_in_study
+
+        self.terminate = False
+        pub.subscribe(self.set_terminate, 'terminate_import')
+
+        self.run()
+
+    def run(self):
+
+        wx.CallAfter(pub.sendMessage, "update_patient", msg=self.msg)
+        wx.CallAfter(pub.sendMessage, "update_elapsed_time")
+        msg = {'calculation': 'DICOM Parsing',
+               'roi_num': 1,
+               'roi_total': 1,
+               'roi_name': '',
+               'progress': 0}
+        wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+
+        parsed_data = DICOM_Parser(**self.init_params)
+
+        # Storing this now, parsed_data sometimes gets cleared prior storing actual values in this message when
+        # generating this immediately before pub.sendMessage
+        move_msg = {'files': [parsed_data.plan_file, parsed_data.structure_file, parsed_data.dose_file],
+                    'mrn': parsed_data.mrn,
+                    'uid': parsed_data.study_instance_uid_to_be_imported,
+                    'import_path': parsed_data.import_path}
+
+        mrn = parsed_data.mrn
+        study_uid = parsed_data.study_instance_uid_to_be_imported
+        structures = parsed_data.dicompyler_rt_structures
         roi_name_map = {key: structures[key]['name'] for key in list(structures) if structures[key]['type'] != 'MARKER'}
-        data_to_import = {'Plans': [self.data[plan_uid].get_plan_row()],
-                          'Rxs': self.data[plan_uid].get_rx_rows(),
-                          'Beams': self.data[plan_uid].get_beam_rows(),
-                          'DICOM_Files': [self.data[plan_uid].get_dicom_file_row()],
-                          'DVHs': []}
+        data_to_import = {'Plans': [parsed_data.get_plan_row()],
+                          'Rxs': parsed_data.get_rx_rows(),
+                          'Beams': parsed_data.get_beam_rows(),
+                          'DICOM_Files': [parsed_data.get_dicom_file_row()],
+                          'DVHs': []}  # DVHs will only include PTVs, others pushed en route
 
         if not self.import_uncategorized:  # remove uncategorized ROIs unless this is checked
             for roi_key in list(roi_name_map):
-                if self.data[plan_uid].get_physician_roi(roi_key) == 'uncategorized':
+                if parsed_data.get_physician_roi(roi_key) == 'uncategorized':
                     roi_name_map.pop(roi_key)
 
         post_import_rois = []
@@ -1184,11 +1064,11 @@ class ImportWorker(Thread):
         ptvs = {key: [] for key in ['dvh', 'volume', 'index']}
         with DVH_SQL() as cnx:
             for roi_counter, roi_key in enumerate(list(roi_name_map)):
-                if self.terminate['status']:
-                    return
 
+                if self.terminate:
+                    continue
                 # Skip dvh calculation if roi was already imported (e.g, from previous plan in this study)
-                if not cnx.is_roi_imported(roi_name_map[roi_key], study_uid):
+                elif not cnx.is_roi_imported(roi_name_map[roi_key], study_uid):
 
                     # Send messages to status dialog about progress
                     msg = {'calculation': 'DVH',
@@ -1199,7 +1079,13 @@ class ImportWorker(Thread):
                     wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
                     wx.CallAfter(pub.sendMessage, "update_elapsed_time")
 
-                    dvh_row = self.data[plan_uid].get_dvh_row(roi_key)
+                    try:
+                        dvh_row = parsed_data.get_dvh_row(roi_key)
+                    except MemoryError as e:
+                        print('Skipping roi: %s, for mrn: %s' % (roi_name_map[roi_key], mrn))
+                        print('Memory Error:\n%s' % e)
+                        dvh_row = None
+
                     if dvh_row:
                         roi_type = dvh_row['roi_type'][0]
                         roi_name = dvh_row['roi_name'][0]
@@ -1210,8 +1096,9 @@ class ImportWorker(Thread):
                             ptvs['dvh'].append(dvh_row['dvh_string'][0])
                             ptvs['volume'].append(dvh_row['volume'][0])
                             ptvs['index'].append(len(data_to_import['DVHs']))
-
-                        data_to_import['DVHs'].append(dvh_row)
+                            data_to_import['DVHs'].append(dvh_row)
+                        else:
+                            self.push({'DVHs': [dvh_row]})
 
                         # collect roi names for post-import calculations
                         if roi_type and roi_name and physician_roi:
@@ -1228,61 +1115,41 @@ class ImportWorker(Thread):
                 data_to_import['DVHs'][dvh_row_index]['roi_type'][0] = "PTV%s" % (ptv_order[ptv_row]+1)
 
         # Must push data to SQL before processing post import calculations since they rely on SQL
-        self.push(data_to_import)
+        if not self.terminate:
+            self.push(data_to_import)
 
         # Wait until entire study has been pushed since these values are based on entire PTV volume
-        if final_plan_in_study:
+        if self.final_plan_in_study:
             if ptvs['dvh']:
 
                 # Calculate the PTV overlap for each roi
                 tv = db_update.get_total_treatment_volume_of_study(study_uid)
                 self.post_import_calc('PTV Overlap Volume', study_uid, post_import_rois,
                                       db_update.treatment_volume_overlap, tv)
-                if self.terminate['status']:
-                    return
 
                 # Calculate the centroid distances of roi-to-PTV for each roi
                 tv_centroid = db_update.get_treatment_volume_centroid(tv)
                 self.post_import_calc('Centroid Distance to PTV', study_uid, post_import_rois,
                                       db_update.dist_to_ptv_centroids, tv_centroid)
-                if self.terminate['status']:
-                    return
 
                 # Calculate minimum, mean, median, and max distances and DTH
                 tv_coord = db_update.get_treatment_volume_coord(tv)
                 tv_coord = sample_roi(tv_coord)
                 self.post_import_calc('Distances to PTV', study_uid, post_import_rois,
                                       db_update.min_distances, tv_coord)
-                if self.terminate['status']:
-                    return
 
-                # Update progress dialog
-                msg = {'calculation': 'Total Treatment Volume Statistics',
-                       'roi_num': 0,
-                       'roi_total': 1,
-                       'roi_name': 'PTV',
-                       'progress': 0}
-                wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
-
-                # Update PTV geometric data
-                db_update.update_ptv_data(tv, study_uid)
-
-                # Update progress dialog
-                msg['roi_num'], msg['progress'] = 1, 100
-                wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+                self.update_ptv_data_in_db(tv, study_uid)
 
             else:
-                print("WARNING: No PTV found for %s" % plan_uid)
-                print("\tMRN: %s" % self.data[plan_uid].mrn)
+                print("WARNING: No PTV found for mrn: %s" % mrn)
                 print("\tSkipping PTV related calculations.")
 
-        # Move files to imported directory
-        if final_plan_in_study:
-            self.move_files(plan_uid, study_uid)
+        if self.terminate:
+            self.delete_partially_updated_plan()
 
-            # Record the time per SQL of last complete import for a study
-            with DVH_SQL() as cnx:
-                self.last_import_time = cnx.now
+        elif self.final_plan_in_study:
+            # could avoid needing pub if other_dicom_files were stored in init_params and DICOM_Parser
+            pub.sendMessage('dicom_import_move_files', msg=move_msg)
 
     @staticmethod
     def push(data_to_import):
@@ -1306,33 +1173,34 @@ class ImportWorker(Thread):
         :param func: the function from db.update called to process the data
         :param pre_calc: data related to total treatment volume for the specific func passed
         """
-        roi_total = len(rois)
-        for roi_counter, roi_name in enumerate(rois):
-            if self.terminate['status']:
-                return
-            msg = {'calculation': title,
-                   'roi_num': roi_counter + 1,
-                   'roi_total': roi_total,
-                   'roi_name': roi_name,
-                   'progress': int(100 * roi_counter / roi_total)}
+
+        if not self.terminate:
+            roi_total = len(rois)
+            for roi_counter, roi_name in enumerate(rois):
+                msg = {'calculation': title,
+                       'roi_num': roi_counter + 1,
+                       'roi_total': roi_total,
+                       'roi_name': roi_name,
+                       'progress': int(100 * roi_counter / roi_total)}
+                wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+                func(uid, roi_name, pre_calc=pre_calc)
+
+    def update_ptv_data_in_db(self, tv, study_uid):
+        if not self.terminate:
+            # Update progress dialog
+            msg = {'calculation': 'Total Treatment Volume Statistics',
+                   'roi_num': 0,
+                   'roi_total': 1,
+                   'roi_name': 'PTV',
+                   'progress': 0}
             wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
-            func(uid, roi_name, pre_calc=pre_calc)
 
-    def move_files(self, uid, study_uid):
-        files = [self.data[uid].plan_file,
-                 self.data[uid].structure_file,
-                 self.data[uid].dose_file]
-        if study_uid in self.other_dicom_files.keys():
-            files.extend(self.other_dicom_files[study_uid])
+            # Update PTV geometric data
+            db_update.update_ptv_data(tv, study_uid)
 
-        new_dir = join(self.data[uid].import_path, self.data[uid].mrn)
-        move_files_to_new_path(files, new_dir, copy_files=self.keep_in_inbox)
-
-        # remove old directory if empty
-        # for file in files:
-        #     old_dir = dirname(file)
-        #     if isdir(old_dir) and not listdir(old_dir):
-        #         rmdir(old_dir)
+            # Update progress dialog
+            msg['roi_num'], msg['progress'] = 1, 100
+            wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
 
     def delete_partially_updated_plan(self):
         """
@@ -1343,3 +1211,110 @@ class ImportWorker(Thread):
                 cnx.delete_rows("import_time_stamp > date(%s)" % self.last_import_time)
             else:
                 cnx.delete_rows("import_time_stamp > '%s'::date" % self.last_import_time)
+
+    def set_terminate(self):
+        self.terminate = True
+
+
+class ImportWorker(Thread):
+    """
+    Create a thread separate from the GUI to perform the import calculations
+    """
+    def __init__(self, data, checked_uids, import_uncategorized, other_dicom_files, start_path,
+                 keep_in_inbox):
+        """
+        :param data: parsed dicom data
+        :type data: dict
+        :param checked_uids: uids that were selected in the GUI for import
+        :type checked_uids: list
+        :param import_uncategorized: if True, import rois with names that that are not mapped
+        :type import_uncategorized: bool
+        :param other_dicom_files: other dicom files found in the import directory
+        :type other_dicom_files: dict
+        :param keep_in_inbox: Set to False to move files, True to copy files to imported
+        :type keep_in_inbox: bool
+        """
+        Thread.__init__(self)
+
+        self.data = data
+        self.checked_uids = checked_uids
+        self.import_uncategorized = import_uncategorized
+        self.other_dicom_files = other_dicom_files
+        self.start_path = start_path
+        self.keep_in_inbox = keep_in_inbox
+
+        pub.subscribe(self.move_files, 'dicom_import_move_files')
+
+        self.terminate = False
+        pub.subscribe(self.set_terminate, 'terminate_import')
+
+        self.start()  # start the thread
+
+    def run(self):
+        queue = self.get_queue()
+        worker = Thread(target=self.import_study, args=[queue])
+        worker.setDaemon(True)
+        worker.start()
+        queue.join()
+
+        remove_empty_sub_folders(self.start_path)
+        wx.CallAfter(pub.sendMessage, "close")
+
+    def import_study(self, queue):
+        while queue.qsize():
+            parameters = queue.get()
+            if not self.terminate:
+                StudyImporter(*parameters)
+            queue.task_done()
+
+    def get_study_uids(self):
+        """
+        This thread iterates through self.checked_uids which contains plan uids, but we need to iterate through
+        study instance uids so that plans on the same study are imported adjacently.
+        :return: a dictionary with study uids for the keys and a list of associated plan uids for values
+        :rtype: dict
+        """
+        study_uids = {}
+        for plan_uid in self.checked_uids:
+            study_uid = self.data[plan_uid].study_instance_uid_to_be_imported
+            if study_uid not in list(study_uids):
+                study_uids[study_uid] = []
+            study_uids[study_uid].append(plan_uid)
+        return study_uids
+
+    def get_queue(self):
+        study_uids = self.get_study_uids()
+        plan_total = len(self.checked_uids)
+        plan_counter = 0
+        queue = Queue()
+        for study_uid, plan_uid_set in study_uids.items():
+            for i, plan_uid in enumerate(plan_uid_set):
+                if plan_uid in list(self.data):
+
+                    msg = {'patient_name': self.data[plan_uid].patient_name,
+                           'uid': self.data[plan_uid].study_instance_uid_to_be_imported,
+                           'progress': int(100 * plan_counter / plan_total),
+                           'study_number': plan_counter + 1,
+                           'study_total': plan_total}
+                    init_param = self.data[plan_uid].init_param
+                    args = (init_param, msg, self.import_uncategorized, plan_uid == plan_uid_set[-1])
+                    queue.put(args)
+                else:
+                    print('ERROR: This plan could not be parsed. Skipping import.'
+                          'Did you supply RT Structure, Dose, and Plan?')
+                    print('\tPlan UID: %s' % plan_uid)
+                    print('\tMRN: %s' % self.data[plan_uid].mrn)
+
+                plan_counter += 1
+        return queue
+
+    def move_files(self, msg):
+        files = msg['files']
+        if msg['uid'] in self.other_dicom_files.keys():
+            files.extend(self.other_dicom_files[msg['uid']])
+
+        new_dir = join(msg['import_path'], msg['mrn'])
+        move_files_to_new_path(files, new_dir, copy_files=self.keep_in_inbox)
+
+    def set_terminate(self):
+        self.terminate = True

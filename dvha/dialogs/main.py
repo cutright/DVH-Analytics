@@ -47,7 +47,7 @@ class DatePicker(wx.Dialog):
         if initial_date and initial_date.lower() != 'none':
             self.calendar_ctrl.SetDate(parse_date(initial_date))
 
-        self.button = {'apply': wx.Button(self, wx.ID_OK, "Apply"),
+        self.button = {'ok': wx.Button(self, wx.ID_OK, "OK"),
                        'delete': wx.Button(self, wx.ID_ANY, "Delete"),
                        'cancel': wx.Button(self, wx.ID_CANCEL, "Cancel")}
 

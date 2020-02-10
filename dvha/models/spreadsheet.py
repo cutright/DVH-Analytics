@@ -30,38 +30,32 @@ class Spreadsheet(wx.grid.Grid):
             self.InsertRows(row)
         self.add_history({"type": "add_rows", "rows": self.selected_rows})
 
-    def delete_rows(self, event):
-        self.cut(event)
-        rows = []
-        for row in reversed(self.selected_rows):
-            rows.append((
-                row,
-                {  # More attributes can be added
-                    "label": self.GetRowLabelValue(row),
-                    "size": self.GetRowSize(row)
-                }
-            ))
-            self.DeleteRows(row)
-        self.add_history({"type": "delete_rows", "rows": rows})
-
     def add_cols(self, event):
         for col in self.selected_cols:
             self.InsertCols(col)
         self.add_history({"type": "add_cols", "cols": self.selected_cols})
 
+    def delete_rows(self, event):
+        self.delete_row_or_col(event, 'rows')
+
     def delete_cols(self, event):
+        self.delete_row_or_col(event, 'cols')
+
+    def delete_row_or_col(self, event, del_type):
+        action = [self.DeleteRows, self.DeleteCols][del_type == 'cols']
+        selected = [self.selected_rows, self.selected_cols][del_type == 'cols']
         self.delete(event)
-        cols = []
-        for col in reversed(self.selected_cols):
-            cols.append((
-                col,
+        data = []
+        for element in reversed(selected):
+            data.append((
+                element,
                 {  # More attributes can be added
-                    "label": self.GetColLabelValue(col),
-                    "size": self.GetColSize(col)
+                    "label": self.GetColLabelValue(element),
+                    "size": self.GetColSize(element)
                 }
             ))
-            self.DeleteCols(col)
-        self.add_history({"type": "delete_cols", "cols": cols})
+            action(element)
+        self.add_history({"type": "delete_%s" % del_type, "cols": data})
 
     def on_cell_right_click(self, event):
         menus = [(wx.NewId(), "Cut", self.cut),
