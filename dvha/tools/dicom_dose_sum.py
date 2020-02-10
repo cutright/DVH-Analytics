@@ -12,6 +12,7 @@ Functions for summing dose grids
 #    available at https://github.com/cutright/DVH-Analytics
 
 import numpy as np
+from copy import deepcopy
 
 
 def sum_dose_grids(dose_grids):
@@ -43,7 +44,7 @@ def sum_two_dose_grids(old, new):
         the dose objects could be directly summed.  Used for unit testing."""
 
     # Recycle the new Dicom object to store the summed dose values
-    sum_dcm = new
+    sum_dcm = deepcopy(new)
 
     # Test if dose grids are coincident.  If so, we can directly sum the
     # pixel arrays.
@@ -111,9 +112,9 @@ def sum_two_dose_grids(old, new):
         # Swap the x and z axes back
         dose_sum = np.swapaxes(dose_sum, 0, 2)
         sum_dcm.ImagePositionPatient = list(sum_ip)
-        sum_dcm.Rows = len(y_vals)
-        sum_dcm.Columns = len(x_vals)
-        sum_dcm.NumberOfFrames = len(z_vals)
+        sum_dcm.Rows = dose_sum.shape[2]
+        sum_dcm.Columns = dose_sum.shape[1]
+        sum_dcm.NumberOfFrames = dose_sum.shape[0]
         sum_dcm.PixelSpacing = [scale_sum[0], scale_sum[1]]
         sum_dcm.GridFrameOffsetVector = list(z_vals - sum_ip[2])
 
