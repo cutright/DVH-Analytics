@@ -5,6 +5,7 @@ include README.md
 include dvha/LICENSE.txt
 include dvha/logo.png
 include dvha/icons/*.png
+include dvha/icons/dvha.icns
+include dvha/icons/dvha.ico
 include dvha/db/*.sql
 include dvha/db/*.roi
-include dvha/dvha.ico
