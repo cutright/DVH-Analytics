@@ -15,8 +15,11 @@ import wx.adv
 from wx.lib.agw.customtreectrl import CustomTreeCtrl, TR_AUTO_CHECK_CHILD, TR_AUTO_CHECK_PARENT, TR_DEFAULT_STYLE
 from datetime import date as datetime_obj, datetime
 from dateutil.parser import parse as parse_date
+from os import listdir, remove
 from os.path import isdir, join
 from pubsub import pub
+import pydicom
+from multiprocessing import Pool
 from threading import Thread
 from queue import Queue
 from dvha.db import update as db_update
@@ -25,7 +28,8 @@ from dvha.models.dicom_tree_builder import DicomTreeBuilder, PreImportFileSetPar
 from dvha.db.dicom_parser import DICOM_Parser, PreImportData
 from dvha.dialogs.main import DatePicker
 from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddROIType, RoiManager, ChangePlanROIName
-from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, ICONS
+from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, ICONS, TEMP_DIR
+from dvha.tools.dicom_dose_sum import sum_two_dose_grids
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
     set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size,\
@@ -1243,6 +1247,8 @@ class ImportWorker(Thread):
         self.start_path = start_path
         self.keep_in_inbox = keep_in_inbox
 
+        self.dose_sum_save_file_names = self.get_dose_sum_save_file_names()
+
         pub.subscribe(self.move_files, 'dicom_import_move_files')
 
         self.terminate = False
@@ -1251,14 +1257,33 @@ class ImportWorker(Thread):
         self.start()  # start the thread
 
     def run(self):
+        # Sum dose grids
+        msg = {'calculation': 'Dose Grid Summation(s)... please wait',
+               'roi_num': 0,
+               'roi_total': 1,
+               'roi_name': '',
+               'progress': 0}
+        wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+
+        self.delete_dose_sum_files()
+        self.run_dose_sum()
+        self.run_import()
+        self.delete_dose_sum_files()
+
+        remove_empty_sub_folders(self.start_path)
+        wx.CallAfter(pub.sendMessage, "close")
+
+    def run_dose_sum(self):
+        pool = Pool(processes=1)
+        pool.starmap(self.sum_two_doses, self.get_dose_sum_args())
+        pool.close()
+
+    def run_import(self):
         queue = self.get_queue()
         worker = Thread(target=self.import_study, args=[queue])
         worker.setDaemon(True)
         worker.start()
         queue.join()
-
-        remove_empty_sub_folders(self.start_path)
-        wx.CallAfter(pub.sendMessage, "close")
 
     def import_study(self, queue):
         while queue.qsize():
@@ -1282,6 +1307,13 @@ class ImportWorker(Thread):
             study_uids[study_uid].append(plan_uid)
         return study_uids
 
+    def get_dose_file_sets(self):
+        study_uids = self.get_study_uids()
+        dose_file_sets = {}
+        for study_uid, plan_uid_set in study_uids.items():
+            dose_file_sets[study_uid] = [self.data[plan_uid].dose_file for plan_uid in plan_uid_set]
+        return dose_file_sets
+
     def get_queue(self):
         study_uids = self.get_study_uids()
         plan_total = len(self.checked_uids)
@@ -1297,6 +1329,8 @@ class ImportWorker(Thread):
                            'study_number': plan_counter + 1,
                            'study_total': plan_total}
                     init_param = self.data[plan_uid].init_param
+                    if study_uid in self.dose_sum_save_file_names.keys():
+                        init_param['dose_sum_file'] = self.dose_sum_save_file_names[study_uid]
                     args = (init_param, msg, self.import_uncategorized, plan_uid == plan_uid_set[-1])
                     queue.put(args)
                 else:
@@ -1318,3 +1352,42 @@ class ImportWorker(Thread):
 
     def set_terminate(self):
         self.terminate = True
+
+    def get_dose_sum_args(self):
+        pool_args = []
+        file_names = self.dose_sum_save_file_names
+        for uid, dose_file_set in self.get_dose_file_sets().items():
+            if len(dose_file_set) > 1:
+                args = (dose_file_set[0], dose_file_set[1], file_names[uid])
+                pool_args.append(args)
+            if len(dose_file_set) > 2:
+                for dose_file in dose_file_set[1:]:
+                    args = (file_names[uid], dose_file, file_names[uid])
+                    pool_args.append(args)
+        return pool_args
+
+    def get_dose_sum_save_file_names(self):
+        dose_file_sets = self.get_dose_file_sets()
+        current_temp_files = [f for f in listdir(TEMP_DIR) if 'temp_dose_sum' in f]
+        file_save_names = []
+        counter = 1
+        while len(file_save_names) < len(list(dose_file_sets)):
+            file_save_name = "temp_dose_sum_%s" % counter
+            if file_save_name not in current_temp_files:
+                file_save_names.append(file_save_name)
+
+        file_save_names_dict = {uid: join(TEMP_DIR, file_save_names[i]) for i, uid in enumerate(list(dose_file_sets))}
+
+        return file_save_names_dict
+
+    @staticmethod
+    def sum_two_doses(dose_file_1, dose_file2, save_to):
+        ds = [pydicom.read_file(f) for f in [dose_file_1, dose_file2]]
+        new_ds = sum_two_dose_grids(ds[0], ds[1])
+        new_ds.save_as(join(TEMP_DIR, save_to))
+
+    @staticmethod
+    def delete_dose_sum_files():
+        for f in listdir(TEMP_DIR):
+            if 'temp_dose_sum' in f:
+                remove(join(TEMP_DIR, f))

@@ -12,23 +12,6 @@ Functions for summing dose grids
 #    available at https://github.com/cutright/DVH-Analytics
 
 import numpy as np
-from copy import deepcopy
-
-
-def sum_dose_grids(dose_grids):
-    """
-    Sum all dose grids provided
-    :param dose_grids: dicompyler-core dose objects
-    :type dose_grids: list
-    :return: a summed dose grid
-    """
-    dose_sum = None
-    for i in range(len(dose_grids)-1):
-        if dose_sum is None:
-            dose_sum = sum_two_dose_grids(dose_grids[i], dose_grids[i+1])
-        else:
-            dose_sum = sum_two_dose_grids(dose_grids[i+1], dose_sum)
-    return dose_sum
 
 
 # Slightly modified from https://github.com/dicompyler/dicompyler-plugins/blob/master/plugins/plansum/plansum.py
@@ -44,7 +27,7 @@ def sum_two_dose_grids(old, new):
         the dose objects could be directly summed.  Used for unit testing."""
 
     # Recycle the new Dicom object to store the summed dose values
-    sum_dcm = deepcopy(new)
+    sum_dcm = new
 
     # Test if dose grids are coincident.  If so, we can directly sum the
     # pixel arrays.
