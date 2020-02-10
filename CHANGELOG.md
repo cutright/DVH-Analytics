@@ -1,6 +1,6 @@
 # Change log of DVH Analytics
 
-v0.7.1 (TBD)
+v0.7.1 (2020.02.10)
 --------------------
  - [Executable] Reduced file size by ~20MB, MS Windows icon now works (needs fine-tuning)
  - [Import] Ignore metacache.mim files on import, they throw a MemoryError in pydicom.read_file
