@@ -1063,54 +1063,57 @@ class StudyImporter:
                 if parsed_data.get_physician_roi(roi_key) == 'uncategorized':
                     roi_name_map.pop(roi_key)
 
+        # Remove previously imported roi's (e.g., when dose summations occur)
+        with DVH_SQL() as cnx:
+            for roi_key in list(roi_name_map):
+                if cnx.is_roi_imported(clean_name(roi_name_map[roi_key]), study_uid):
+                    roi_name_map.pop(roi_key)
+
         post_import_rois = []
         roi_total = len(roi_name_map)
         ptvs = {key: [] for key in ['dvh', 'volume', 'index']}
-        with DVH_SQL() as cnx:
-            for roi_counter, roi_key in enumerate(list(roi_name_map)):
 
-                if self.terminate:
-                    continue
-                # Skip dvh calculation if roi was already imported (e.g, from previous plan in this study)
-                elif not cnx.is_roi_imported(roi_name_map[roi_key], study_uid):
+        for roi_counter, roi_key in enumerate(list(roi_name_map)):
+            if self.terminate:
+                continue
+            else:
+                # Send messages to status dialog about progress
+                msg = {'calculation': 'DVH',
+                       'roi_num': roi_counter+1,
+                       'roi_total': roi_total,
+                       'roi_name': roi_name_map[roi_key],
+                       'progress': int(100 * (roi_counter+1) / roi_total)}
+                wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+                wx.CallAfter(pub.sendMessage, "update_elapsed_time")
 
-                    # Send messages to status dialog about progress
-                    msg = {'calculation': 'DVH',
-                           'roi_num': roi_counter+1,
-                           'roi_total': roi_total,
-                           'roi_name': roi_name_map[roi_key],
-                           'progress': int(100 * (roi_counter+1) / roi_total)}
-                    wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
-                    wx.CallAfter(pub.sendMessage, "update_elapsed_time")
+                try:
+                    dvh_row = parsed_data.get_dvh_row(roi_key)
+                except MemoryError as e:
+                    print('Skipping roi: %s, for mrn: %s' % (roi_name_map[roi_key], mrn))
+                    print('Memory Error:\n%s' % e)
+                    dvh_row = None
 
-                    try:
-                        dvh_row = parsed_data.get_dvh_row(roi_key)
-                    except MemoryError as e:
-                        print('Skipping roi: %s, for mrn: %s' % (roi_name_map[roi_key], mrn))
-                        print('Memory Error:\n%s' % e)
-                        dvh_row = None
+                if dvh_row:
+                    roi_type = dvh_row['roi_type'][0]
+                    roi_name = dvh_row['roi_name'][0]
+                    physician_roi = dvh_row['physician_roi'][0]
 
-                    if dvh_row:
-                        roi_type = dvh_row['roi_type'][0]
-                        roi_name = dvh_row['roi_name'][0]
-                        physician_roi = dvh_row['physician_roi'][0]
+                    # Collect dvh, volume, and index of ptvs to be used for post-import calculations
+                    if roi_type.startswith('PTV'):
+                        ptvs['dvh'].append(dvh_row['dvh_string'][0])
+                        ptvs['volume'].append(dvh_row['volume'][0])
+                        ptvs['index'].append(len(data_to_import['DVHs']))
+                        data_to_import['DVHs'].append(dvh_row)
+                    else:
+                        self.push({'DVHs': [dvh_row]})
 
-                        # Collect dvh, volume, and index of ptvs to be used for post-import calculations
-                        if roi_type.startswith('PTV'):
-                            ptvs['dvh'].append(dvh_row['dvh_string'][0])
-                            ptvs['volume'].append(dvh_row['volume'][0])
-                            ptvs['index'].append(len(data_to_import['DVHs']))
-                            data_to_import['DVHs'].append(dvh_row)
-                        else:
-                            self.push({'DVHs': [dvh_row]})
-
-                        # collect roi names for post-import calculations
-                        if roi_type and roi_name and physician_roi:
-                            if roi_type.lower() in ['organ', 'ctv', 'gtv']:
-                                if not (physician_roi.lower() in
-                                        ['uncategorized', 'ignored', 'external', 'skin', 'body']
-                                        or roi_name.lower() in ['external', 'skin', 'body']):
-                                    post_import_rois.append(clean_name(roi_name_map[roi_key]))
+                    # collect roi names for post-import calculations
+                    if roi_type and roi_name and physician_roi:
+                        if roi_type.lower() in ['organ', 'ctv', 'gtv']:
+                            if not (physician_roi.lower() in
+                                    ['uncategorized', 'ignored', 'external', 'skin', 'body']
+                                    or roi_name.lower() in ['external', 'skin', 'body']):
+                                post_import_rois.append(clean_name(roi_name_map[roi_key]))
 
         # Sort PTVs by their D_95% (applicable to SIBs)
         if ptvs['dvh']:
