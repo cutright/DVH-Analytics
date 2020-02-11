@@ -1,6 +1,6 @@
 # Change log of DVH Analytics
 
-v0.7.2 (TBD)
+v0.7.2 (2020.02.11)
 --------------------
  - [Import] Fix for [Issue #35](https://github.com/cutright/DVH-Analytics/issues/35)
  - [Import] Fixed bug that kept StudyInstanceUID error after deleting the plan in the DB 
