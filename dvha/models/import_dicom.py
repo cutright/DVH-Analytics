@@ -931,7 +931,7 @@ class ImportStatusDialog(wx.Dialog):
         # sizer_error_window = wx.BoxSizer(wx.HORIZONTAL)
         # sizer_error_text = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.label_study_counter = wx.StaticText(self, wx.ID_ANY, "Plan 1 of 1")
+        self.label_study_counter = wx.StaticText(self, wx.ID_ANY, "")
         sizer_study.Add(self.label_study_counter, 0, wx.ALIGN_CENTER, 0)
         self.label_patient = wx.StaticText(self, wx.ID_ANY, "Patient:")
         sizer_study.Add(self.label_patient, 0, 0, 0)
@@ -1267,12 +1267,23 @@ class ImportWorker(Thread):
                'roi_name': '',
                'progress': 0}
         wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
-
-        self.delete_dose_sum_files()
-        self.run_dose_sum()
-        self.run_import()
         self.delete_dose_sum_files()
 
+        error_raised = False
+        try:
+            self.run_dose_sum()
+        except MemoryError as e:
+            msg = 'DICOM Dose Summation Error\n%s' % e
+            pub.sendMessage("import_status_raise_error", msg=msg)
+            error_raised = True
+
+        if not error_raised:
+            self.run_import()
+
+        self.close()
+
+    def close(self):
+        self.delete_dose_sum_files()
         remove_empty_sub_folders(self.start_path)
         wx.CallAfter(pub.sendMessage, "close")
 

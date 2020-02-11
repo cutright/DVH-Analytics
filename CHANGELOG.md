@@ -1,11 +1,15 @@
 # Change log of DVH Analytics
 
+v0.7.2 (TBD)
+--------------------
+ - [Import] Fix for [Issue #35](https://github.com/cutright/DVH-Analytics/issues/35)
+
 v0.7.1 (2020.02.10)
 --------------------
  - [Executable] Reduced file size by ~20MB, MS Windows icon now works (needs fine-tuning)
  - [Import] Ignore metacache.mim files on import, they throw a MemoryError in pydicom.read_file
  - [Import] Fix for [Issue #26](https://github.com/cutright/DVH-Analytics/issues/26)
- - [Import] Fixed a bug that lost parsed data browsing for a new import directory, even when clicking cancel
+ - [Import] Fixed a bug that lost parsed data after browsing for a new import directory, even when clicking cancel
  - [Misc] Import, ROI Map, and Database windows now close on application quit
  - [Misc] Better window management, only one instance of Import, ROI Map, and Database at a time
  
