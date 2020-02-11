@@ -5,6 +5,7 @@ v0.7.2 (TBD)
  - [Import] Fix for [Issue #35](https://github.com/cutright/DVH-Analytics/issues/35)
  - [Import] Fixed bug that kept StudyInstanceUID error after deleting the plan in the DB 
  and multiple plans are attached to the same StudyInstanceUID in the import fileset
+ - [Import] Ensure all imported plans are moved when multiple plans are attached to the same StudyInstanceUID
 
 v0.7.1 (2020.02.10)
 --------------------
