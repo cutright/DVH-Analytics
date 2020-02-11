@@ -77,8 +77,8 @@ def sum_two_dose_grids(old, new):
                            0:int((y1 - y0) / scale_sum[1]),
                            0:int((z1 - z0) / scale_sum[2])]
 
-        x_vals = np.arange(x0, x1, scale_sum[0])
-        y_vals = np.arange(y0, y1, scale_sum[1])
+        # x_vals = np.arange(x0, x1, scale_sum[0])
+        # y_vals = np.arange(y0, y1, scale_sum[1])
         z_vals = np.arange(z0, z1, scale_sum[2])
 
         # Create a 3 x i x j x k array of xyz coordinates for the interpolation.
