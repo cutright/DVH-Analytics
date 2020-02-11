@@ -14,22 +14,6 @@ Functions for summing dose grids
 import numpy as np
 
 
-def sum_dose_grids(dose_grids):
-    """
-    Sum all dose grids provided
-    :param dose_grids: dicompyler-core dose objects
-    :type dose_grids: list
-    :return: a summed dose grid
-    """
-    dose_sum = None
-    for i in range(len(dose_grids)-1):
-        if dose_sum is None:
-            dose_sum = sum_two_dose_grids(dose_grids[i], dose_grids[i+1])
-        else:
-            dose_sum = sum_two_dose_grids(dose_grids[i+1], dose_sum)
-    return dose_sum
-
-
 # Slightly modified from https://github.com/dicompyler/dicompyler-plugins/blob/master/plugins/plansum/plansum.py
 def sum_two_dose_grids(old, new):
     """ Given two Dicom RTDose objects, returns a summed RTDose object"""
@@ -93,8 +77,8 @@ def sum_two_dose_grids(old, new):
                            0:int((y1 - y0) / scale_sum[1]),
                            0:int((z1 - z0) / scale_sum[2])]
 
-        x_vals = np.arange(x0, x1, scale_sum[0])
-        y_vals = np.arange(y0, y1, scale_sum[1])
+        # x_vals = np.arange(x0, x1, scale_sum[0])
+        # y_vals = np.arange(y0, y1, scale_sum[1])
         z_vals = np.arange(z0, z1, scale_sum[2])
 
         # Create a 3 x i x j x k array of xyz coordinates for the interpolation.
@@ -111,9 +95,9 @@ def sum_two_dose_grids(old, new):
         # Swap the x and z axes back
         dose_sum = np.swapaxes(dose_sum, 0, 2)
         sum_dcm.ImagePositionPatient = list(sum_ip)
-        sum_dcm.Rows = len(y_vals)
-        sum_dcm.Columns = len(x_vals)
-        sum_dcm.NumberOfFrames = len(z_vals)
+        sum_dcm.Rows = dose_sum.shape[2]
+        sum_dcm.Columns = dose_sum.shape[1]
+        sum_dcm.NumberOfFrames = dose_sum.shape[0]
         sum_dcm.PixelSpacing = [scale_sum[0], scale_sum[1]]
         sum_dcm.GridFrameOffsetVector = list(z_vals - sum_ip[2])
 

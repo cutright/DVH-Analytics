@@ -12,6 +12,8 @@ Script to start DVH Analytics
 
 
 import dvha.main
+import multiprocessing
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     dvha.main.start()

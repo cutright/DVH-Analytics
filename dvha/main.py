@@ -13,6 +13,7 @@ The main file DVH Analytics
 import wx
 from datetime import datetime
 import webbrowser
+from pubsub import pub
 from dvha.db import sql_columns
 from dvha.db.sql_to_python import QuerySQL
 from dvha.db.sql_connector import echo_sql_db, initialize_db
@@ -110,6 +111,8 @@ class DVHAMainFrame(wx.Frame):
         self.tool_bar_windows = {key: None for key in ['import', 'database', 'roi_map']}
 
         wx.CallAfter(self.__catch_failed_sql_connection_on_app_launch)
+
+        self.__do_subscribe()
 
     def __add_tool_bar(self):
         self.frame_toolbar = wx.ToolBar(self, -1, style=wx.TB_HORIZONTAL | wx.TB_TEXT)
@@ -468,6 +471,12 @@ class DVHAMainFrame(wx.Frame):
                 self.on_sql()
         else:  # if using sqlite
             initialize_db()
+
+    def __do_subscribe(self):
+        pub.subscribe(self.raise_error_dialog, "import_status_raise_error")
+
+    def raise_error_dialog(self, msg):
+        MemoryErrorDialog(self, msg)
 
     # --------------------------------------------------------------------------------------------------------------
     # Menu bar event functions
