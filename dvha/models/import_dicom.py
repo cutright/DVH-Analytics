@@ -1338,7 +1338,8 @@ class ImportWorker(Thread):
         study_uids = self.get_study_uids()
         dose_file_sets = {}
         for study_uid, plan_uid_set in study_uids.items():
-            dose_file_sets[study_uid] = [self.data[plan_uid].dose_file for plan_uid in plan_uid_set]
+            if len(plan_uid_set) > 1:
+                dose_file_sets[study_uid] = [self.data[plan_uid].dose_file for plan_uid in plan_uid_set]
         return dose_file_sets
 
     def get_queue(self):

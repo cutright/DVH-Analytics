@@ -5,3 +5,6 @@
 build/
 dist/
 *.egg-info
+*.spec
+.pip-master/
+.venv*
