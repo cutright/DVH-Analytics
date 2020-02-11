@@ -815,7 +815,7 @@ class ImportDicomFrame(wx.Frame):
 
         dlg.Destroy()
 
-        self.validate(uid=self.selected_uid)
+        self.validate()  # Eclipse plans may have multiple plan UIDs for the same case, re-validate all plans
         self.update_warning_label()
 
     def on_edit_birth_date(self, evt):
@@ -917,6 +917,11 @@ class ImportStatusDialog(wx.Dialog):
         pub.subscribe(self.update_elapsed_time, "update_elapsed_time")
         pub.subscribe(self.close, "close")
 
+    @staticmethod
+    def do_unsubscribe():
+        for topic in ['update_patient', 'update_calculation', 'update_elapsed_time', 'close']:
+            pub.unsubAll(topicName=topic)
+
     def __set_properties(self):
         self.SetTitle("Import Progress")
         self.SetSize((700, 260))
@@ -958,6 +963,7 @@ class ImportStatusDialog(wx.Dialog):
         self.Center()
 
     def close(self):
+        self.do_unsubscribe()
         self.Destroy()
 
     def update_patient(self, msg):
@@ -978,6 +984,7 @@ class ImportStatusDialog(wx.Dialog):
         :param msg: calculation type, roi_num, roi_total, roi_name, and progress values
         :type msg: dict
         """
+        wx.CallAfter(self.button_cancel.Enable, "Dose Grid Summation" not in msg['calculation'])
         wx.CallAfter(self.label_calculation.SetLabelText, "Calculation: %s" % msg['calculation'])
         wx.CallAfter(self.gauge_calculation.SetValue, msg['progress'])
 
@@ -1153,10 +1160,11 @@ class StudyImporter:
 
         if self.terminate:
             self.delete_partially_updated_plan()
+        else:
+            pub.sendMessage("dicom_import_move_files_queue", msg=move_msg)
 
-        elif self.final_plan_in_study:
-            # could avoid needing pub if other_dicom_files were stored in init_params and DICOM_Parser
-            pub.sendMessage('dicom_import_move_files', msg=move_msg)
+        if self.final_plan_in_study:
+            pub.sendMessage('dicom_import_move_files')
 
     @staticmethod
     def push(data_to_import):
@@ -1243,6 +1251,8 @@ class ImportWorker(Thread):
         """
         Thread.__init__(self)
 
+        self.delete_dose_sum_files()  # do this before starting the thread to avoid crash
+
         self.data = data
         self.checked_uids = checked_uids
         self.import_uncategorized = import_uncategorized
@@ -1251,13 +1261,15 @@ class ImportWorker(Thread):
         self.keep_in_inbox = keep_in_inbox
 
         self.dose_sum_save_file_names = self.get_dose_sum_save_file_names()
-
-        pub.subscribe(self.move_files, 'dicom_import_move_files')
-
+        self.move_msg_queue = []
         self.terminate = False
-        pub.subscribe(self.set_terminate, 'terminate_import')
 
         self.start()  # start the thread
+
+    def __do_subscribe(self):
+        pub.subscribe(self.move_files, 'dicom_import_move_files')
+        pub.subscribe(self.track_move_files_msg, 'dicom_import_move_files_queue')
+        pub.subscribe(self.set_terminate, 'terminate_import')
 
     def run(self):
         # Sum dose grids
@@ -1267,7 +1279,6 @@ class ImportWorker(Thread):
                'roi_name': '',
                'progress': 0}
         wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
-        self.delete_dose_sum_files()
 
         error_raised = False
         try:
@@ -1285,7 +1296,7 @@ class ImportWorker(Thread):
     def close(self):
         self.delete_dose_sum_files()
         remove_empty_sub_folders(self.start_path)
-        wx.CallAfter(pub.sendMessage, "close")
+        pub.sendMessage("close")
 
     def run_dose_sum(self):
         pool = Pool(processes=1)
@@ -1356,13 +1367,17 @@ class ImportWorker(Thread):
                 plan_counter += 1
         return queue
 
-    def move_files(self, msg):
-        files = msg['files']
-        if msg['uid'] in self.other_dicom_files.keys():
-            files.extend(self.other_dicom_files[msg['uid']])
+    def move_files(self):
+        for msg in self.move_msg_queue:
+            files = msg['files']
+            if msg['uid'] in self.other_dicom_files.keys():
+                files.extend(self.other_dicom_files[msg['uid']])
 
-        new_dir = join(msg['import_path'], msg['mrn'])
-        move_files_to_new_path(files, new_dir, copy_files=self.keep_in_inbox)
+            new_dir = join(msg['import_path'], msg['mrn'])
+            move_files_to_new_path(files, new_dir, copy_files=self.keep_in_inbox)
+
+    def track_move_files_msg(self, msg):
+        self.move_msg_queue.append(msg)
 
     def set_terminate(self):
         self.terminate = True
