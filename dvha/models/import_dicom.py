@@ -1264,6 +1264,8 @@ class ImportWorker(Thread):
         self.move_msg_queue = []
         self.terminate = False
 
+        self.__do_subscribe()
+
         self.start()  # start the thread
 
     def __do_subscribe(self):
