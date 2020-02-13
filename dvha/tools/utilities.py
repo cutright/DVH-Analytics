@@ -576,7 +576,10 @@ def get_dose_to_volume(dvhs, volumes, roi_fraction):
     for i, dvh in enumerate(dvhs):
         abs_volume = volumes[i] * roi_fraction
         dvh_np = np.array(dvh.split(','), dtype=np.float)
-        dose = next(x[0] for x in enumerate(dvh_np) if x[1] < abs_volume)
+        try:
+            dose = next(x[0] for x in enumerate(dvh_np) if x[1] < abs_volume)
+        except StopIteration:
+            dose = dvh_np[-1]
         doses.append(dose)
 
     return doses

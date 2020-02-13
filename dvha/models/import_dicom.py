@@ -1283,15 +1283,14 @@ class ImportWorker(Thread):
         wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
 
         error_raised = False
-        try:
-            self.run_dose_sum()
-        except MemoryError as e:
-            msg = 'DICOM Dose Summation Error\n%s' % e
-            pub.sendMessage("import_status_raise_error", msg=msg)
-            error_raised = True
+        self.run_dose_sum()
+        # except MemoryError as e:
+        #     msg = 'DICOM Dose Summation Error\n%s' % e
+        #     pub.sendMessage("import_status_raise_error", msg=msg)
+        #     error_raised = True
 
-        if not error_raised:
-            self.run_import()
+        # if not error_raised:
+        self.run_import()
 
         self.close()
 
