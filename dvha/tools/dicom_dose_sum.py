@@ -89,8 +89,11 @@ def sum_two_dose_grids(old, new):
         # Dicom pixel_array objects seem to have the z axis in the first index
         # (zyx).  The x and z axes are swapped before interpolation to coincide
         # with the xyz ordering of ImagePositionPatient
-        dose_sum = interpolate_image(np.swapaxes(old.pixel_array, 0, 2), scale_old, old.ImagePositionPatient, sum_xyz_coords) * old.DoseGridScaling + \
-                   interpolate_image(np.swapaxes(new.pixel_array, 0, 2), scale_new, new.ImagePositionPatient, sum_xyz_coords) * new.DoseGridScaling
+        dose_sum = interpolate_image(np.swapaxes(old.pixel_array, 0, 2), scale_old,
+                                     old.ImagePositionPatient, sum_xyz_coords) * old.DoseGridScaling
+        dose_interp_2 = interpolate_image(np.swapaxes(new.pixel_array, 0, 2), scale_new,
+                                          new.ImagePositionPatient, sum_xyz_coords) * new.DoseGridScaling
+        dose_sum += dose_interp_2
 
         # Swap the x and z axes back
         dose_sum = np.swapaxes(dose_sum, 0, 2)
@@ -157,22 +160,34 @@ def trilinear_interp(input_array, indices):
     x1 = x0 + 1
     y1 = y0 + 1
     z1 = z0 + 1
+    # Check if xyz0 is beyond array boundary:
+    x0[np.where(x0 >= input_array.shape[0])] = np.shape(input_array)[0] - 1
+    y0[np.where(y0 >= input_array.shape[1])] = np.shape(input_array)[1] - 1
+    z0[np.where(z0 >= input_array.shape[2])] = np.shape(input_array)[2] - 1
 
     # Check if xyz1 is beyond array boundary:
-    x1[np.where(x1 == input_array.shape[0])] = x0.max()
-    y1[np.where(y1 == input_array.shape[1])] = y0.max()
-    z1[np.where(z1 == input_array.shape[2])] = z0.max()
+    x1[np.where(x1 >= input_array.shape[0])] = x0.max()
+    y1[np.where(y1 >= input_array.shape[1])] = y0.max()
+    z1[np.where(z1 >= input_array.shape[2])] = z0.max()
 
     x = x_indices - x0
     y = y_indices - y0
     z = z_indices - z0
-    output = (input_array[x0, y0, z0] * (1 - x) * (1 - y) * (1 - z) +
-              input_array[x1, y0, z0] * x * (1 - y) * (1 - z) +
-              input_array[x0, y1, z0] * (1 - x) * y * (1 - z) +
-              input_array[x0, y0, z1] * (1 - x) * (1 - y) * z +
-              input_array[x1, y0, z1] * x * (1 - y) * z +
-              input_array[x0, y1, z1] * (1 - x) * y * z +
-              input_array[x1, y1, z0] * x * y * (1 - z) +
-              input_array[x1, y1, z1] * x * y * z)
+
+    output = input_array[x0, y0, z0] * get_tri_linear_factor(x, y, z, [-1, -1, -1])
+    output += input_array[x1, y0, z0] * get_tri_linear_factor(x, y, z, [1, -1, -1])
+    output += input_array[x0, y1, z0] * get_tri_linear_factor(x, y, z, [-1, 1, -1])
+    output += input_array[x0, y0, z1] * get_tri_linear_factor(x, y, z, [-1, -1, 1])
+    output += input_array[x1, y0, z1] * get_tri_linear_factor(x, y, z, [1, -1, -1])
+    output += input_array[x0, y1, z1] * get_tri_linear_factor(x, y, z, [-1, 1, -1])
+    output += input_array[x1, y1, z0] * get_tri_linear_factor(x, y, z, [1, 1, -1])
+    output += input_array[x1, y1, z1] * get_tri_linear_factor(x, y, z, [1, 1, 1])
 
     return output
+
+
+def get_tri_linear_factor(x, y, z, selection_vector):
+    ans = x if selection_vector[0] else (1 - x)
+    ans = ans * y if selection_vector[1] else ans * (1 - y)
+    ans = ans * z if selection_vector[2] else ans * (1 - z)
+    return ans
