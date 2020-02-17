@@ -174,13 +174,13 @@ def trilinear_interp(input_array, indices):
     y = y_indices - y0
     z = z_indices - z0
 
-    output = input_array[x0, y0, z0] * get_tri_linear_factor(x, y, z, [-1, -1, -1])
-    output += input_array[x1, y0, z0] * get_tri_linear_factor(x, y, z, [1, -1, -1])
-    output += input_array[x0, y1, z0] * get_tri_linear_factor(x, y, z, [-1, 1, -1])
-    output += input_array[x0, y0, z1] * get_tri_linear_factor(x, y, z, [-1, -1, 1])
-    output += input_array[x1, y0, z1] * get_tri_linear_factor(x, y, z, [1, -1, -1])
-    output += input_array[x0, y1, z1] * get_tri_linear_factor(x, y, z, [-1, 1, -1])
-    output += input_array[x1, y1, z0] * get_tri_linear_factor(x, y, z, [1, 1, -1])
+    output = input_array[x0, y0, z0] * get_tri_linear_factor(x, y, z, [0, 0, 0])
+    output += input_array[x1, y0, z0] * get_tri_linear_factor(x, y, z, [1, 0, 0])
+    output += input_array[x0, y1, z0] * get_tri_linear_factor(x, y, z, [0, 1, 0])
+    output += input_array[x0, y0, z1] * get_tri_linear_factor(x, y, z, [0, 0, 1])
+    output += input_array[x1, y0, z1] * get_tri_linear_factor(x, y, z, [1, 0, 1])
+    output += input_array[x0, y1, z1] * get_tri_linear_factor(x, y, z, [0, 1, 1])
+    output += input_array[x1, y1, z0] * get_tri_linear_factor(x, y, z, [1, 1, 0])
     output += input_array[x1, y1, z1] * get_tri_linear_factor(x, y, z, [1, 1, 1])
 
     return output
