@@ -395,7 +395,8 @@ class DICOM_Parser:
         except AttributeError as e:
             # print(str(e), 'for MRN: %s' % self.mrn)
             # print('Applying validate_transfer_syntax_uid() due to missing data in user provided DICOM')
-            dose = self.validate_transfer_syntax_uid(self.rt_data['dose'])
+            dose_file = self.dose_sum_file if self.dose_sum_file else self.rt_data['dose']
+            dose = self.validate_transfer_syntax_uid(dose_file)
             structure = self.validate_transfer_syntax_uid(self.rt_data['structure'])
             dvh = dvhcalc.get_dvh(structure, dose, dvh_index)
 
@@ -728,9 +729,6 @@ class DICOM_Parser:
     # ------------------------------------------------------------------------------
     # DVH table data
     # ------------------------------------------------------------------------------
-    def get_dvh(self, key):
-        dvhcalc.get_dvh(self.rt_data['structure'], self.dicompyler_data['dose'], key)
-
     def get_roi_type(self, key):
         """
         Get the ROI type as defined in DICOM (e.g., PTV, ORGAN, EXTERNAL, etc.)
