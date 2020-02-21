@@ -22,12 +22,14 @@ import pydicom
 from multiprocessing import Pool
 from threading import Thread
 from queue import Queue
+from functools import partial
 from dvha.db import update as db_update
 from dvha.db.sql_connector import DVH_SQL
 from dvha.models.dicom_tree_builder import DicomTreeBuilder, PreImportFileSetParserWorker
 from dvha.db.dicom_parser import DICOM_Parser, PreImportData
 from dvha.dialogs.main import DatePicker
-from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddROIType, RoiManager, ChangePlanROIName
+from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, DelPhysicianROI, AssignVariation, DelVariation,\
+    AddROIType, RoiManager, ChangePlanROIName
 from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, ICONS, TEMP_DIR
 from dvha.tools.dicom_dose_sum import sum_two_dose_grids
 from dvha.tools.roi_name_manager import clean_name
@@ -159,6 +161,7 @@ class ImportDicomFrame(wx.Frame):
 
         self.Bind(wx.EVT_TREE_SEL_CHANGED, self.on_file_tree_select, id=self.tree_ctrl_import.GetId())
         self.Bind(wx.EVT_TREE_SEL_CHANGED, self.on_roi_tree_select, id=self.tree_ctrl_roi.GetId())
+        self.Bind(wx.EVT_TREE_ITEM_RIGHT_CLICK, self.on_roi_tree_right_click, id=self.tree_ctrl_roi.GetId())
 
         for input_obj in self.input.values():
             self.Bind(wx.EVT_TEXT, self.on_text_change, id=input_obj.GetId())
@@ -489,6 +492,35 @@ class ImportDicomFrame(wx.Frame):
         self.selected_roi = self.get_roi_tree_item_name(evt.GetItem())
         self.update_roi_inputs()
         self.allow_input_roi_apply = True
+
+    def roi_tree_right_click_action(self, physician, roi_name, dlg, *evt):
+        dlg(self, physician, self.roi_map, roi_name)
+        self.update_roi_inputs()
+        self.dicom_importer.update_mapped_roi_status(physician)
+
+    def on_roi_tree_right_click(self, evt):
+        if evt.GetItem().GetParent() is not None:  # ignore right click on tree root node
+            roi_name = evt.GetItem().GetText().split(' ----- ')[0]  # remove PTV flags
+            physician = self.input['physician'].GetValue()
+            is_mapped = not evt.GetItem().GetImage()
+            msg_prepend = "%s %s as" % (['Add', 'Remove'][is_mapped], roi_name)
+            menu_msg = ["%s %s" % (msg_prepend, roi_type) for roi_type in ['Physician ROI', 'Variation']]
+            dlg = [[AddPhysicianROI, AssignVariation],
+                   [DelPhysicianROI, DelVariation]]
+
+            pre_func = partial(self.roi_tree_right_click_action, physician, roi_name)
+            menus = [{'id': wx.NewId(),
+                      'msg': menu_msg[i],
+                      'action': partial(pre_func, dlg[is_mapped][i])}
+                     for i in [0, 1]]
+
+            popup_menu = wx.Menu()
+            for menu in menus:
+                popup_menu.Append(menu['id'], menu['msg'])
+                self.Bind(wx.EVT_MENU, menu['action'], id=menu['id'])
+
+            self.PopupMenu(popup_menu)
+            popup_menu.Destroy()
 
     def update_input_roi_physician_enable(self):
         if self.selected_roi:

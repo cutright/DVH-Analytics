@@ -229,7 +229,7 @@ class DatabaseROIs:
     def get_unused_institutional_rois(self, physician):
         physician = clean_name(physician).upper()
         used_rois = []
-        if self.get_physician_rois(physician)[0] != '':
+        if self.get_physician_rois(physician):
             for physician_roi in self.get_physician_rois(physician):
                 used_rois.append(self.get_institutional_roi(physician, physician_roi))
 
@@ -374,9 +374,9 @@ class DatabaseROIs:
 
     def delete_variation(self, physician, physician_roi, variation):
         physician = clean_name(physician).upper()
-        physician_roi = clean_name(physician_roi)
+        physician_roi = clean_name(physician_roi) if physician_roi else self.get_physician_roi(physician, variation)
         variation = clean_name(variation)
-        if variation in self.get_variations(physician, physician_roi):
+        if variation in self.get_variations(physician, physician_roi) and variation != physician_roi:
             index = self.physicians[physician].physician_rois[physician_roi]['variations'].index(variation)
             self.physicians[physician].physician_rois[physician_roi]['variations'].pop(index)
             self.physicians[physician].physician_rois[physician_roi]['variations'].sort()
