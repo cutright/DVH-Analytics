@@ -14,6 +14,7 @@ import wx
 from functools import partial
 from dvha.models.data_table import DataTable
 from dvha.tools.errors import ROIVariationErrorDialog
+from dvha.tools.name_prediction import ROINamePredictor
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog
 from dvha.tools.roi_name_manager import ROIVariationError, clean_name
 
@@ -370,6 +371,7 @@ class AddVariationDlg(wx.Dialog):
         else:
             choices = roi_map.get_physician_rois(physician)
             self.user_input = wx.ComboBox(self, wx.ID_ANY, choices=choices,  style=wx.CB_DROPDOWN | wx.CB_READONLY)
+            self.predict_physician_roi()
 
         self.button_ok = wx.Button(self, wx.ID_OK, "Add")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
@@ -379,6 +381,12 @@ class AddVariationDlg(wx.Dialog):
         self.__do_layout()
 
         self.run()
+
+    def predict_physician_roi(self):
+        predictor = ROINamePredictor(self.roi_map)
+        prediction = predictor.get_best_roi_match(self.input_roi_name, self.physician)
+        if prediction:
+            self.user_input.SetValue(prediction)
 
     def __do_bind(self):
         self.Bind(wx.EVT_TEXT, self.enable_add_button, id=self.user_input.GetId())

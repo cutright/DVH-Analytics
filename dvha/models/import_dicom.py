@@ -35,7 +35,7 @@ from dvha.tools.dicom_dose_sum import sum_two_dose_grids
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
     set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size,\
-    set_frame_icon
+    set_frame_icon, PopupMenu
 
 
 # TODO: Provide methods to write over-rides to DICOM file
@@ -503,24 +503,18 @@ class ImportDicomFrame(wx.Frame):
             roi_name = evt.GetItem().GetText().split(' ----- ')[0]  # remove PTV flags
             physician = self.input['physician'].GetValue()
             is_mapped = not evt.GetItem().GetImage()
+
             msg_prepend = "%s %s as" % (['Add', 'Remove'][is_mapped], roi_name)
-            menu_msg = ["%s %s" % (msg_prepend, roi_type) for roi_type in ['Physician ROI', 'Variation']]
-            dlg = [[AddPhysicianROI, AssignVariation],
-                   [DelPhysicianROI, DelVariation]]
-
+            labels = ["%s %s" % (msg_prepend, roi_type) for roi_type in ['Physician ROI', 'Variation']]
+            dlg_objects = [DelPhysicianROI, DelVariation] if is_mapped else [AddPhysicianROI, AssignVariation]
             pre_func = partial(self.roi_tree_right_click_action, physician, roi_name)
-            menus = [{'id': wx.NewId(),
-                      'msg': menu_msg[i],
-                      'action': partial(pre_func, dlg[is_mapped][i])}
-                     for i in [0, 1]]
 
-            popup_menu = wx.Menu()
-            for menu in menus:
-                popup_menu.Append(menu['id'], menu['msg'])
-                self.Bind(wx.EVT_MENU, menu['action'], id=menu['id'])
-
-            self.PopupMenu(popup_menu)
-            popup_menu.Destroy()
+            popup = PopupMenu(self)
+            for i, label in enumerate(labels):
+                popup.add_menu_item(label, partial(pre_func, dlg_objects[i]))
+            if is_mapped:
+                popup.add_menu_item("Do Not Import", partial(pre_func, dlg_objects[0]))
+            popup.run()
 
     def update_input_roi_physician_enable(self):
         if self.selected_roi:

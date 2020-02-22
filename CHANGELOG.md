@@ -2,6 +2,8 @@
 
 v0.7.3 (2020.02.11)
 --------------------
+ - [Import] Users can right-click an ROI name for a pop-up menu to more easily edit the ROI map
+ - [Import] Adding an ROI variation with right-click menu will predict a physician ROI name using fuzzy logic
  - [Import] Further improvements for [Issue #35](https://github.com/cutright/DVH-Analytics/issues/35)
  - [Machine Learning] Bug fix in model viewer that could not properly load non-default hyper-parameter values
 

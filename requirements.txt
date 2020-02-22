@@ -11,3 +11,5 @@ python-dateutil
 statsmodels
 scikit-learn==0.21
 regressors
+fuzzywuzzy
+python-levenshtein
