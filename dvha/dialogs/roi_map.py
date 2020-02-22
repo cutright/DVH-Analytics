@@ -366,15 +366,19 @@ class AddVariationDlg(wx.Dialog):
         self.roi_map = roi_map
         self.mode = mode
 
+        self.label_input = wx.StaticText(self, wx.ID_ANY, ["Physician ROI:", "New variation:"][self.mode == 'add'])
         if mode == 'add':
             self.user_input = wx.TextCtrl(self, wx.ID_ANY, "")
         else:
             choices = roi_map.get_physician_rois(physician)
             self.user_input = wx.ComboBox(self, wx.ID_ANY, choices=choices,  style=wx.CB_DROPDOWN | wx.CB_READONLY)
-            self.predict_physician_roi()
+            self.prediction_label = wx.StaticText(self, wx.ID_ANY, "")
 
         self.button_ok = wx.Button(self, wx.ID_OK, "Add")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+
+        if mode == 'assign':
+            self.predict_physician_roi()
 
         self.__do_bind()
         self.__set_properties()
@@ -384,12 +388,15 @@ class AddVariationDlg(wx.Dialog):
 
     def predict_physician_roi(self):
         predictor = ROINamePredictor(self.roi_map)
-        prediction = predictor.get_best_roi_match(self.input_roi_name, self.physician)
+        prediction = predictor.get_best_roi_match(self.input_roi_name, self.physician, return_score=True)
         if prediction:
-            self.user_input.SetValue(prediction)
+            self.user_input.SetValue(prediction[0])
+            self.prediction_label.SetLabelText("Variation: %s\nPrediction: %s\nScore: %0.0f%%" %
+                                               (self.input_roi_name, prediction[0], prediction[1]))
 
     def __do_bind(self):
-        self.Bind(wx.EVT_TEXT, self.enable_add_button, id=self.user_input.GetId())
+        self.Bind([wx.EVT_COMBOBOX, wx.EVT_TEXT][self.mode == 'add'],
+                  self.enable_add_button, id=self.user_input.GetId())
 
     def __set_properties(self):
         self.SetTitle("%s %s as a variation for %s" % (self.mode.capitalize(), self.input_roi_name, self.physician))
@@ -401,10 +408,12 @@ class AddVariationDlg(wx.Dialog):
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_variation = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
 
-        label_input = wx.StaticText(self, wx.ID_ANY, ["Physician ROI:", "New variation:"][self.mode == 'add'])
-        sizer_variation.Add(label_input, 0, 0, 0)
+        sizer_variation.Add(self.label_input, 0, 0, 0)
         sizer_variation.Add(self.user_input, 0, wx.EXPAND, 0)
         sizer_frame.Add(sizer_variation, 0, wx.EXPAND, 0)
+
+        if self.mode == 'assign':
+            sizer_variation.Add(self.prediction_label, 0, 0, 0)
 
         sizer_buttons.Add(self.button_ok, 1, wx.ALL | wx.EXPAND, 5)
         sizer_buttons.Add(self.button_cancel, 1, wx.ALL | wx.EXPAND, 5)
