@@ -512,8 +512,8 @@ class ImportDicomFrame(wx.Frame):
             popup = PopupMenu(self)
             for i, label in enumerate(labels):
                 popup.add_menu_item(label, partial(pre_func, dlg_objects[i]))
-            if is_mapped:
-                popup.add_menu_item("Do Not Import", partial(pre_func, dlg_objects[0]))
+            # if is_mapped:
+            #     popup.add_menu_item("Do Not Import", partial(pre_func, dlg_objects[0]))
             popup.run()
 
     def update_input_roi_physician_enable(self):
@@ -1321,7 +1321,7 @@ class ImportWorker(Thread):
         self.close()
 
     def close(self):
-        self.delete_dose_sum_files()
+        # self.delete_dose_sum_files()
         remove_empty_sub_folders(self.start_path)
         pub.sendMessage("close")
 
