@@ -12,6 +12,7 @@ Functions for summing dose grids
 #    available at https://github.com/cutright/DVH-Analytics
 
 import numpy as np
+# from scipy.interpolate import RegularGridInterpolator
 
 
 # Slightly modified from https://github.com/dicompyler/dicompyler-plugins/blob/master/plugins/plansum/plansum.py
@@ -32,11 +33,10 @@ def sum_two_dose_grids(old, new):
     # Test if dose grids are coincident.  If so, we can directly sum the
     # pixel arrays.
 
-    #  For now, always do straight sum
     if (old.ImagePositionPatient == new.ImagePositionPatient and
-        old.pixel_array.shape == new.pixel_array.shape and
-        old.PixelSpacing == new.PixelSpacing and
-        old.GridFrameOffsetVector == new.GridFrameOffsetVector):
+            old.pixel_array.shape == new.pixel_array.shape and
+            old.PixelSpacing == new.PixelSpacing and
+            old.GridFrameOffsetVector == new.GridFrameOffsetVector):
         print("PlanSum: Using direct summation")
         dose_sum = old.pixel_array * old.DoseGridScaling + new.pixel_array * new.DoseGridScaling
 
@@ -144,6 +144,7 @@ def interpolate_image(input_array, scale, offset, xyz_coords):
     indices[2] = (xyz_coords[2] - offset[2]) / scale[2]
 
     return trilinear_interp(input_array, indices)
+    # return RegularGridInterpolator(indices, input_array)
 
 
 def trilinear_interp(input_array, indices):
@@ -157,14 +158,14 @@ def trilinear_interp(input_array, indices):
     x0 = x_indices.astype(np.integer)
     y0 = y_indices.astype(np.integer)
     z0 = z_indices.astype(np.integer)
-    x1 = x0 + 1
-    y1 = y0 + 1
-    z1 = z0 + 1
     # Check if xyz0 is beyond array boundary:
     x0[np.where(x0 >= input_array.shape[0])] = np.shape(input_array)[0] - 1
     y0[np.where(y0 >= input_array.shape[1])] = np.shape(input_array)[1] - 1
     z0[np.where(z0 >= input_array.shape[2])] = np.shape(input_array)[2] - 1
 
+    x1 = x0 + 1
+    y1 = y0 + 1
+    z1 = z0 + 1
     # Check if xyz1 is beyond array boundary:
     x1[np.where(x1 >= input_array.shape[0])] = x0.max()
     y1[np.where(y1 >= input_array.shape[1])] = y0.max()
@@ -174,20 +175,18 @@ def trilinear_interp(input_array, indices):
     y = y_indices - y0
     z = z_indices - z0
 
-    output = input_array[x0, y0, z0] * get_tri_linear_factor(x, y, z, [0, 0, 0])
-    output += input_array[x1, y0, z0] * get_tri_linear_factor(x, y, z, [1, 0, 0])
-    output += input_array[x0, y1, z0] * get_tri_linear_factor(x, y, z, [0, 1, 0])
-    output += input_array[x0, y0, z1] * get_tri_linear_factor(x, y, z, [0, 0, 1])
-    output += input_array[x1, y0, z1] * get_tri_linear_factor(x, y, z, [1, 0, 1])
-    output += input_array[x0, y1, z1] * get_tri_linear_factor(x, y, z, [0, 1, 1])
-    output += input_array[x1, y1, z0] * get_tri_linear_factor(x, y, z, [1, 1, 0])
-    output += input_array[x1, y1, z1] * get_tri_linear_factor(x, y, z, [1, 1, 1])
+    output = input_array[x0, y0, z0] * tri_linear_factor(x, y, z, 0, 0, 0)
+    for zi, zz in enumerate([z0, z1]):
+        for yi, yy in enumerate([y0, y1]):
+            for xi, xx in enumerate([x0, x1]):
+                if xi + yi + zi:  # ignore 0 0 0 since it was created before loops
+                    output += input_array[xx, yy, zz] * tri_linear_factor(x, y, z, xi, yi, zi)
 
     return output
 
 
-def get_tri_linear_factor(x, y, z, selection_vector):
-    ans = x if selection_vector[0] else (1 - x)
-    ans = ans * y if selection_vector[1] else ans * (1 - y)
-    ans = ans * z if selection_vector[2] else ans * (1 - z)
+def tri_linear_factor(x, y, z, xi, yi, zi):
+    ans = x if xi else (1 - x)
+    ans = ans * y if yi else ans * (1 - y)
+    ans = ans * z if zi else ans * (1 - z)
     return ans
