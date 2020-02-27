@@ -115,6 +115,8 @@ def sum_two_dose_grids(old, new):
     sum_dcm.PixelData = dose_sum.tostring()
     sum_dcm.DoseGridScaling = sum_scaling
 
+    return sum_dcm
+
 
 def interpolate_image(input_array, scale, offset, xyz_coords):
     """Interpolates an array at the xyz coordinates given"""
@@ -141,7 +143,6 @@ def interpolate_image(input_array, scale, offset, xyz_coords):
     indices[2] = (xyz_coords[2] - offset[2]) / scale[2]
 
     return trilinear_interp(input_array, indices)
-    # return RegularGridInterpolator(indices, input_array)
 
 
 def trilinear_interp(input_array, indices):
@@ -207,7 +208,7 @@ class DoseGrid:
 
     def is_point_inside_grid(self, xyz):
         for a, axis in enumerate(self.axes):
-            if not (np.min(axis) <= xyz[a] <= np.max(axis)):
+            if not (axis[0] <= xyz[a] <= axis[-1]):
                 return False
         return True
 
@@ -229,8 +230,9 @@ class DoseGrid:
         return [int(np.interp(xyz[a], axis, np.arange(self.grid_size[a]))) for a, axis in enumerate(self.axes)]
 
     def add_dose(self, xyz, dose):
-        ijk = self.get_ijk(xyz)
-        self.dose_grid[ijk[0], ijk[1], ijk[2]] += dose
+        if self.is_point_inside_grid(xyz):
+            ijk = self.get_ijk(xyz)
+            self.dose_grid[ijk[0], ijk[1], ijk[2]] += dose
 
     def update_pixel_array(self):
         scaling = 1 / np.max(self.dose_grid)
@@ -251,32 +253,54 @@ class DoseInterpolator(DoseGrid):
         self.interpolator = RegularGridInterpolator(points=self.axes, values=self.dose_grid, bounds_error=False)
 
     def get_dose(self, xyz):
-        return self.get_doses([xyz])[0]
+        return self.interpolator([xyz])[0]
 
     def get_doses(self, list_of_xyz):
         list_of_xyz = [xyz for xyz in list_of_xyz if self.is_point_inside_grid(xyz)]
-        return self.interpolator(list_of_xyz)
+        return self.interpolator(list_of_xyz), list_of_xyz
 
 
-def add_dose_grids(ds1, ds2, file_path='dose_sum.dcm'):
+def add_dose_grids(ds1, ds2):
     if type(ds1) is not pydicom.FileDataset:
         ds1 = pydicom.read_file(ds1)
     if type(ds2) is not pydicom.FileDataset:
         ds2 = pydicom.read_file(ds2)
 
-    dose_1 = DoseGrid(ds1)
-    dose_2 = DoseInterpolator(ds2)
+    if (ds1.ImagePositionPatient == ds2.ImagePositionPatient and
+            ds1.pixel_array.shape == ds2.pixel_array.shape and
+            ds1.PixelSpacing == ds2.PixelSpacing and
+            ds1.GridFrameOffsetVector == ds2.GridFrameOffsetVector):
+        print("PlanSum: Using direct summation")
+        dose_sum = ds1.pixel_array * ds1.DoseGridScaling + ds2.pixel_array * ds2.DoseGridScaling
 
-    for zz, z in enumerate(dose_1.z_axis):
-        print("%0.1f%%" % (100 * float(zz) / float(len(dose_1.z_axis))))
-        points = []
-        for x in dose_1.x_axis:
-            for y in dose_1.y_axis:
-                points.append([x, y, z])
-        doses = dose_2.get_doses(points)
-        for p, point in enumerate(points):
-            dose_1.add_dose(point, doses[p])
+        sum_scaling = ds1.DoseGridScaling + ds2.DoseGridScaling
 
-    dose_1.update_pixel_array()
+        dose_sum = dose_sum / sum_scaling
+        dose_sum = np.uint32(dose_sum)
 
-    return dose_1.ds
+        # sum_dcm.pixel_array = sum
+        ds1.BitsAllocated = 32
+        ds1.BitsStored = 32
+        ds1.HighBit = 31
+        ds1.PixelData = dose_sum.tostring()
+        ds1.DoseGridScaling = sum_scaling
+
+        return ds1
+
+    else:
+        dose_1 = DoseGrid(ds1)
+        dose_2 = DoseInterpolator(ds2)
+
+        for zz, z in enumerate(dose_1.z_axis):
+            print("%0.1f%%" % (100 * float(zz) / float(len(dose_1.z_axis))))
+            points = []
+            for x in dose_1.x_axis:
+                for y in dose_1.y_axis:
+                    points.append([x, y, z])
+            doses, points = dose_2.get_doses(points)
+            for p, point in enumerate(points):
+                dose_1.add_dose(point, doses[p])
+
+        dose_1.update_pixel_array()
+
+        return dose_1.ds
