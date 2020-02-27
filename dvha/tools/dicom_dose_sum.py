@@ -12,9 +12,8 @@ Functions for summing dose grids
 #    available at https://github.com/cutright/DVH-Analytics
 
 import numpy as np
-import pydicom
-from scipy.interpolate import RegularGridInterpolator
-# from dolo.numeric.interpolation.smolyak import SmolyakGrid
+# import pydicom
+# from scipy.interpolate import RegularGridInterpolator
 
 
 # Slightly modified from https://github.com/dicompyler/dicompyler-plugins/blob/master/plugins/plansum/plansum.py
@@ -43,6 +42,7 @@ def sum_two_dose_grids(old, new):
         dose_sum = old.pixel_array * old.DoseGridScaling + new.pixel_array * new.DoseGridScaling
 
     else:
+        print("PlanSum: Using interpolation")
         # Compute mapping from xyz (physical) space to ijk (index) space
         scale_old = np.array([old.PixelSpacing[0], old.PixelSpacing[1],
                               old.GridFrameOffsetVector[1] - old.GridFrameOffsetVector[0]])
@@ -190,117 +190,112 @@ def tri_linear_factor(x, y, z, xi, yi, zi):
     return ans
 
 
-class DoseGrid:
-    def __init__(self, ds):
-        self.ds = ds
-        self.__set_axes()
-
-        # x and z are swapped in the pixel_array
-        self.dose_grid = np.swapaxes(self.ds.pixel_array * self.ds.DoseGridScaling, 0, 2)
-
-    def __set_axes(self):
-        pixel_spacing = self.ds.PixelSpacing
-        image_position = self.ds.ImagePositionPatient
-
-        self.x_axis = np.arange(self.ds.Columns) * pixel_spacing[0] + image_position[0]
-        self.y_axis = np.arange(self.ds.Rows) * pixel_spacing[1] + image_position[1]
-        self.z_axis = np.array(self.ds.GridFrameOffsetVector) + image_position[2]
-
-    def is_point_inside_grid(self, xyz):
-        for a, axis in enumerate(self.axes):
-            if not (axis[0] <= xyz[a] <= axis[-1]):
-                return False
-        return True
-
-    @property
-    def grid_size(self):
-        return [self.ds.Columns, self.ds.Rows, len(self.ds.GridFrameOffsetVector)]
-
-    @property
-    def axes(self):
-        return [self.x_axis, self.y_axis, self.z_axis]
-
-    def get_xyz(self, ijk):
-        """Convert an ijk coordinate into xyz space"""
-        i, j, k = ijk[0], ijk[1], ijk[2]
-        return np.array([self.x_axis[i], self.y_axis[j], self.z_axis[k]])
-
-    def get_ijk(self, xyz):
-        """Convert an xyz coordinate into ijk space"""
-        return [int(np.interp(xyz[a], axis, np.arange(self.grid_size[a]))) for a, axis in enumerate(self.axes)]
-
-    def add_dose(self, xyz, dose):
-        if self.is_point_inside_grid(xyz):
-            ijk = self.get_ijk(xyz)
-            self.dose_grid[ijk[0], ijk[1], ijk[2]] += dose
-
-    def update_pixel_array(self):
-        scaling = 1 / np.max(self.dose_grid)
-
-        self.ds.BitsAllocated = 32
-        self.ds.BitsStored = 32
-        self.ds.HighBit = 31
-        self.ds.DoseGridScaling = scaling
-
-        # swap x and z back
-        self.ds.PixelData = np.uint32(np.swapaxes(self.dose_grid, 0, 2) / scaling).tostring()
-
-
-class DoseInterpolator(DoseGrid):
-    """Inherit DoseGrid, separate class so a RegularGridInterpolator isn't created for every DoseGrid"""
-    def __init__(self, ds):
-        DoseGrid.__init__(self, ds)
-        self.interpolator = RegularGridInterpolator(points=self.axes, values=self.dose_grid, bounds_error=False)
-
-    def get_dose(self, xyz):
-        return self.interpolator([xyz])[0]
-
-    def get_doses(self, list_of_xyz):
-        list_of_xyz = [xyz for xyz in list_of_xyz if self.is_point_inside_grid(xyz)]
-        return self.interpolator(list_of_xyz), list_of_xyz
-
-
-def add_dose_grids(ds1, ds2):
-    if type(ds1) is not pydicom.FileDataset:
-        ds1 = pydicom.read_file(ds1)
-    if type(ds2) is not pydicom.FileDataset:
-        ds2 = pydicom.read_file(ds2)
-
-    if (ds1.ImagePositionPatient == ds2.ImagePositionPatient and
-            ds1.pixel_array.shape == ds2.pixel_array.shape and
-            ds1.PixelSpacing == ds2.PixelSpacing and
-            ds1.GridFrameOffsetVector == ds2.GridFrameOffsetVector):
-        print("PlanSum: Using direct summation")
-        dose_sum = ds1.pixel_array * ds1.DoseGridScaling + ds2.pixel_array * ds2.DoseGridScaling
-
-        sum_scaling = ds1.DoseGridScaling + ds2.DoseGridScaling
-
-        dose_sum = dose_sum / sum_scaling
-        dose_sum = np.uint32(dose_sum)
-
-        # sum_dcm.pixel_array = sum
-        ds1.BitsAllocated = 32
-        ds1.BitsStored = 32
-        ds1.HighBit = 31
-        ds1.PixelData = dose_sum.tostring()
-        ds1.DoseGridScaling = sum_scaling
-
-        return ds1
-
-    else:
-        dose_1 = DoseGrid(ds1)
-        dose_2 = DoseInterpolator(ds2)
-
-        for zz, z in enumerate(dose_1.z_axis):
-            print("%0.1f%%" % (100 * float(zz) / float(len(dose_1.z_axis))))
-            points = []
-            for x in dose_1.x_axis:
-                for y in dose_1.y_axis:
-                    points.append([x, y, z])
-            doses, points = dose_2.get_doses(points)
-            for p, point in enumerate(points):
-                dose_1.add_dose(point, doses[p])
-
-        dose_1.update_pixel_array()
-
-        return dose_1.ds
+# class DoseGrid:
+#     def __init__(self, ds):
+#         self.ds = ds
+#         self.__set_axes()
+#
+#         # x and z are swapped in the pixel_array
+#         self.dose_grid = np.swapaxes(self.ds.pixel_array * self.ds.DoseGridScaling, 0, 2)
+#
+#     def __set_axes(self):
+#         pixel_spacing = self.ds.PixelSpacing
+#         image_position = self.ds.ImagePositionPatient
+#
+#         self.x_axis = np.arange(self.ds.Columns) * pixel_spacing[0] + image_position[0]
+#         self.y_axis = np.arange(self.ds.Rows) * pixel_spacing[1] + image_position[1]
+#         self.z_axis = np.array(self.ds.GridFrameOffsetVector) + image_position[2]
+#
+#     def is_point_inside_grid(self, xyz):
+#         for a, axis in enumerate(self.axes):
+#             if not (axis[0] <= xyz[a] <= axis[-1]):
+#                 return False
+#         return True
+#
+#     def is_coincident(self, other):
+#         return self.ds.ImagePositionPatient == other.ds.ImagePositionPatient and \
+#                self.ds.pixel_array.shape == other.ds.pixel_array.shape and \
+#                self.ds.PixelSpacing == other.ds.PixelSpacing and \
+#                self.ds.GridFrameOffsetVector == other.ds.GridFrameOffsetVector
+#
+#     def direct_sum(self, other):
+#         dose_sum = self.ds.pixel_array * self.ds.DoseGridScaling + other.ds.pixel_array * other.ds.DoseGridScaling
+#         sum_scaling = self.ds.DoseGridScaling + other.ds.DoseGridScaling
+#         self.set_pixel_array(dose_sum, sum_scaling)
+#
+#     def set_pixel_array(self, pixel_data, scaling):
+#
+#         self.ds.BitsAllocated = 32
+#         self.ds.BitsStored = 32
+#         self.ds.HighBit = 31
+#         self.ds.PixelData = np.uint32(pixel_data / scaling).tostring()
+#         self.ds.DoseGridScaling = scaling
+#
+#     def update_pixel_array(self):
+#         scaling = 1 / np.max(self.dose_grid)
+#         self.set_pixel_array(np.swapaxes(self.dose_grid, 0, 2), scaling)
+#
+#     @property
+#     def grid_size(self):
+#         return [self.ds.Columns, self.ds.Rows, len(self.ds.GridFrameOffsetVector)]
+#
+#     @property
+#     def axes(self):
+#         return [self.x_axis, self.y_axis, self.z_axis]
+#
+#     def get_xyz(self, ijk):
+#         """Convert an ijk coordinate into xyz space"""
+#         i, j, k = ijk[0], ijk[1], ijk[2]
+#         return np.array([self.x_axis[i], self.y_axis[j], self.z_axis[k]])
+#
+#     def get_ijk(self, xyz):
+#         """Convert an xyz coordinate into ijk space"""
+#         return [int(np.interp(xyz[a], axis, np.arange(self.grid_size[a]))) for a, axis in enumerate(self.axes)]
+#
+#     def add_dose(self, xyz, dose):
+#         if self.is_point_inside_grid(xyz):
+#             ijk = self.get_ijk(xyz)
+#             self.dose_grid[ijk[0], ijk[1], ijk[2]] += dose
+#
+#
+# class DoseInterpolator(DoseGrid):
+#     """Inherit DoseGrid, separate class so a RegularGridInterpolator isn't created for every DoseGrid"""
+#     def __init__(self, ds):
+#         DoseGrid.__init__(self, ds)
+#         self.interpolator = RegularGridInterpolator(points=self.axes, values=self.dose_grid, bounds_error=False)
+#
+#     def get_dose(self, xyz):
+#         return self.interpolator([xyz])[0]
+#
+#     def get_doses(self, list_of_xyz):
+#         list_of_xyz = [xyz for xyz in list_of_xyz if self.is_point_inside_grid(xyz)]
+#         return self.interpolator(list_of_xyz), list_of_xyz
+#
+#
+# def add_dose_grids(ds1, ds2):
+#     if type(ds1) is not pydicom.FileDataset:
+#         ds1 = pydicom.read_file(ds1)
+#     if type(ds2) is not pydicom.FileDataset:
+#         ds2 = pydicom.read_file(ds2)
+#
+#     dose_1 = DoseGrid(ds1)
+#     dose_2 = DoseInterpolator(ds2)
+#
+#     if dose_1.is_coincident(dose_2):
+#         print("PlanSum: Using direct summation")
+#         dose_1.direct_sum(dose_2)
+#
+#     else:
+#         for zz, z in enumerate(dose_1.z_axis):
+#             print("%0.1f%%" % (100 * float(zz) / float(len(dose_1.z_axis))))
+#             points = []
+#             for x in dose_1.x_axis:
+#                 for y in dose_1.y_axis:
+#                     points.append([x, y, z])
+#             doses, points = dose_2.get_doses(points)
+#             for p, point in enumerate(points):
+#                 dose_1.add_dose(point, doses[p])
+#
+#         dose_1.update_pixel_array()
+#
+#     return dose_1.ds

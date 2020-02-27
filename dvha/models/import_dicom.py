@@ -31,7 +31,7 @@ from dvha.dialogs.main import DatePicker
 from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, DelPhysicianROI, AssignVariation, DelVariation,\
     AddROIType, RoiManager, ChangePlanROIName
 from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, ICONS, TEMP_DIR
-from dvha.tools.dicom_dose_sum import sum_two_dose_grids, add_dose_grids
+from dvha.tools.dicom_dose_sum import sum_two_dose_grids
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
     set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size,\
@@ -1437,8 +1437,7 @@ class ImportWorker(Thread):
     @staticmethod
     def sum_two_doses(dose_file_1, dose_file2, save_to):
         ds = [pydicom.read_file(f) for f in [dose_file_1, dose_file2]]
-        # new_ds = sum_two_dose_grids(ds[0], ds[1])
-        new_ds = add_dose_grids(ds[0], ds[1])
+        new_ds = sum_two_dose_grids(ds[0], ds[1])
         new_ds.save_as(join(TEMP_DIR, save_to))
 
     @staticmethod

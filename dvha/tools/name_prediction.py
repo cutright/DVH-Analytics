@@ -25,7 +25,7 @@ class ROINamePredictor:
                     return prediction, score
                 return prediction
 
-    def get_combined_fuzz_score(self, a, b, mode='sqrt'):
+    def get_combined_fuzz_score(self, a, b, mode='geom_mean'):
         a, b = clean_name(a), clean_name(b)
 
         simple = float(fuzz.ratio(a, b) * self.weight['simple'])
@@ -35,7 +35,7 @@ class ROINamePredictor:
 
     @staticmethod
     def combine_scores(score_1, score_2, mode='average'):
-        if mode == 'sqrt':
+        if mode == 'geom_mean':
             return (score_1 * score_2) ** 0.5
         elif mode == 'product':
             return score_1 * score_2 / 100.
