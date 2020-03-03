@@ -12,8 +12,8 @@ Class for summing dose grids
 import numpy as np
 from os.path import isfile
 import pydicom
-from scipy.ndimage import map_coordinates
 from scipy.interpolate import RegularGridInterpolator
+from copy import deepcopy
 
 
 class DoseGrid:
@@ -23,24 +23,32 @@ class DoseGrid:
     Example: Add two dose grids
         grid_1 = DoseGrid(dose_file_1)
         grid_2 = DoseGrid(dose_file_2)
-        grid_1.add(grid_2)
-        grid_1.save_dcm(some_file_path)
+        grid_sum = grid_1 + grid_2
+        grid_sum.save_dcm(some_file_path)
 
     """
-    def __init__(self, rt_dose):
+    def __init__(self, rt_dose, try_full_interp=True):
         """
         :param rt_dose: an RT Dose dicom dataset or file_path
         :type rt_dose: pydicom.FileDataset
+        :param try_full_interp: If true, will attempt to interpolate the entire grid at once before calculating one
+                                block at a time (block size defined in self.interp_by_block)
+        :type try_full_interp: bool
         """
 
         self.ds = self.__validate_input(rt_dose)
-        if self.ds:
-            self.x_axis = np.arange(self.ds.Columns) * self.ds.PixelSpacing[0] + self.ds.ImagePositionPatient[0]
-            self.y_axis = np.arange(self.ds.Rows) * self.ds.PixelSpacing[1] + self.ds.ImagePositionPatient[1]
-            self.z_axis = np.array(self.ds.GridFrameOffsetVector) + self.ds.ImagePositionPatient[2]
+        self.try_full_interp = try_full_interp
 
-            # x and z are swapped in the pixel_array
-            self.dose_grid = np.swapaxes(self.ds.pixel_array * self.ds.DoseGridScaling, 0, 2)
+        if self.ds:
+            self.__set_axes()
+
+    def __set_axes(self):
+        self.x_axis = np.arange(self.ds.Columns) * self.ds.PixelSpacing[0] + self.ds.ImagePositionPatient[0]
+        self.y_axis = np.arange(self.ds.Rows) * self.ds.PixelSpacing[1] + self.ds.ImagePositionPatient[1]
+        self.z_axis = np.array(self.ds.GridFrameOffsetVector) + self.ds.ImagePositionPatient[2]
+
+        # x and z are swapped in the pixel_array
+        self.dose_grid = np.swapaxes(self.ds.pixel_array * self.ds.DoseGridScaling, 0, 2)
 
     @staticmethod
     def __validate_input(rt_dose):
@@ -89,14 +97,6 @@ class DoseGrid:
     @property
     def points(self):
         """Get all of the points in the dose grid"""
-        # points = []
-        # for x in self.x_axis:
-        #     for y in self.y_axis:
-        #         for z in self.z_axis:
-        #             points.append([x, y, z])
-        # return points
-
-        # This is equivalent to above, but more memory efficient
         y, x, z = np.meshgrid(self.y_axis, self.x_axis, self.z_axis)
         points = np.vstack((x.ravel(), y.ravel(), z.ravel()))
         return points.transpose()
@@ -104,6 +104,12 @@ class DoseGrid:
     ####################################################
     # Tools
     ####################################################
+    def __add__(self, other):
+        """Addition in this fashion will not alter either DoseGrid, but it is more expensive with memory"""
+        new = deepcopy(self)
+        new.add(other)
+        return new
+
     def is_coincident(self, other):
         """Check dose grid coincidence, if True a direct summation is appropriate"""
         return self.ds.ImagePositionPatient == other.ds.ImagePositionPatient and \
@@ -111,16 +117,15 @@ class DoseGrid:
                self.ds.PixelSpacing == other.ds.PixelSpacing and \
                self.ds.GridFrameOffsetVector == other.ds.GridFrameOffsetVector
 
-    def set_pixel_data(self, pixel_data):
+    def set_pixel_data(self):
         """
-        Update the PixelData in the pydicom.FileDataset
-        :param pixel_data: a 3D numpy array with the same dimensions as self.ds.pixel_array
-        :type pixel_data: np.array
+        Update the PixelData in the pydicom.FileDataset with the current self.dose_grid
         """
         self.ds.BitsAllocated = 32
         self.ds.BitsStored = 32
         self.ds.HighBit = 31
-        self.ds.PixelData = np.uint32(pixel_data / self.ds.DoseGridScaling).tostring()
+        pixel_data = np.swapaxes(self.dose_grid, 0, 2) / self.ds.DoseGridScaling
+        self.ds.PixelData = np.uint32(pixel_data).tostring()
 
     def save_dcm(self, file_path):
         """Save the pydicom.FileDataset to file"""
@@ -138,12 +143,12 @@ class DoseGrid:
         if self.is_coincident(other):
             self.direct_sum(other)
         else:
-            self.interp_sum_by_chunk(other)
+            self.interp_sum(other)
 
-    def direct_sum(self, other):
+    def direct_sum(self, other, other_factor=1):
         """Directly sum two dose grids (only works if both are coincident)"""
-        dose_sum = self.ds.pixel_array * self.ds.DoseGridScaling + other.ds.pixel_array * other.ds.DoseGridScaling
-        self.set_pixel_data(dose_sum)
+        self.dose_grid += other.dose_grid * other_factor
+        self.set_pixel_data()
 
     def interp_sum(self, other):
         """
@@ -153,27 +158,39 @@ class DoseGrid:
         """
         interpolator = RegularGridInterpolator(points=other.axes, values=other.dose_grid,
                                                bounds_error=False, fill_value=0)
-        other_grid = interpolator(self.points).reshape(self.shape)
-        self.dose_grid += other_grid
-        self.set_pixel_data(np.swapaxes(self.dose_grid, 0, 2))
 
-    def interp_sum_by_chunk(self, other):
+        other_grid = None
+        if self.try_full_interp:
+            try:
+                other_grid = self.interp_entire_grid(interpolator)
+            except MemoryError as e:
+                pass
+        if other_grid is None:
+            other_grid = self.interp_by_block(interpolator)
+
+        self.dose_grid += other_grid
+        self.set_pixel_data()
+
+    def interp_entire_grid(self, interpolator):
+        return interpolator(self.points).reshape(self.shape)
+
+    def interp_by_block(self, interpolator, block_size=50000):
         """
         Interpolate the other dose grid to this dose grid's axes, then directly sum
-        :param other: another DoseGrid
-        :type other: DoseGrid
+        :param interpolator: object to perform interpolation
+        :type interpolator: RegularGridInterpolator
+        :param block_size: calculate this many points at a time
+        :type block_size: int
         """
-        interpolator = RegularGridInterpolator(points=other.axes, values=other.dose_grid,
-                                               bounds_error=False, fill_value=0)
         points = self.points
         point_count = np.product(self.shape)
         other_grid = np.zeros(point_count)
-        patch_count = 100
-        patch_len = int(np.floor(point_count / float(patch_count)))
-        for i in range(patch_count):
-            start = i * patch_len
-            end = (i+1) * patch_len if i + 1 < patch_count else -1
+
+        block_count = int(np.floor(point_count / block_size))
+
+        for i in range(block_count):
+            start = i * block_size
+            end = (i+1) * block_size if i + 1 < block_count else -1
             other_grid[start:end] = interpolator(points[start:end])
-        other_grid = other_grid.reshape(self.shape)
-        self.dose_grid += other_grid
-        self.set_pixel_data(np.swapaxes(self.dose_grid, 0, 2))
+
+        return other_grid.reshape(self.shape)

@@ -1320,7 +1320,7 @@ class ImportWorker(Thread):
         self.close()
 
     def close(self):
-        # self.delete_dose_sum_files()
+        self.delete_dose_sum_files()
         remove_empty_sub_folders(self.start_path)
         pub.sendMessage("close")
 
