@@ -27,17 +27,20 @@ class DoseGrid:
         grid_sum.save_dcm(some_file_path)
 
     """
-    def __init__(self, rt_dose, try_full_interp=True):
+    def __init__(self, rt_dose, try_full_interp=True, interp_block_size=50000):
         """
-        :param rt_dose: an RT Dose dicom dataset or file_path
+        :param rt_dose: an RT Dose DICOM dataset or file_path
         :type rt_dose: pydicom.FileDataset
         :param try_full_interp: If true, will attempt to interpolate the entire grid at once before calculating one
                                 block at a time (block size defined in self.interp_by_block)
         :type try_full_interp: bool
+        :param interp_block_size: calculate this many points at a time if not try_full_interp or MemoryError
+        :type interp_block_size: int
         """
 
         self.ds = self.__validate_input(rt_dose)
         self.try_full_interp = try_full_interp
+        self.interp_block_size = interp_block_size
 
         if self.ds:
             self.__set_axes()
@@ -172,25 +175,25 @@ class DoseGrid:
         self.set_pixel_data()
 
     def interp_entire_grid(self, interpolator):
+        """Interpolate the other dose grid to this dose grid's axes"""
         return interpolator(self.points).reshape(self.shape)
 
-    def interp_by_block(self, interpolator, block_size=50000):
+    def interp_by_block(self, interpolator):
         """
-        Interpolate the other dose grid to this dose grid's axes, then directly sum
+        Interpolate the other dose grid to this dose grid's axes, calculating one block at a time
+        The block is defined at the init of this class, default is 50,000 points at a time
         :param interpolator: object to perform interpolation
         :type interpolator: RegularGridInterpolator
-        :param block_size: calculate this many points at a time
-        :type block_size: int
         """
         points = self.points
         point_count = np.product(self.shape)
         other_grid = np.zeros(point_count)
 
-        block_count = int(np.floor(point_count / block_size))
+        block_count = int(np.floor(point_count / self.interp_block_size))
 
         for i in range(block_count):
-            start = i * block_size
-            end = (i+1) * block_size if i + 1 < block_count else -1
+            start = i * self.interp_block_size
+            end = (i+1) * self.interp_block_size if i + 1 < block_count else -1
             other_grid[start:end] = interpolator(points[start:end])
 
         return other_grid.reshape(self.shape)
