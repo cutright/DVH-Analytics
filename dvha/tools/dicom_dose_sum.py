@@ -13,6 +13,7 @@ import numpy as np
 from os.path import isfile
 import pydicom
 from scipy.ndimage import map_coordinates
+from scipy.interpolate import RegularGridInterpolator
 
 
 class DoseGrid:
@@ -88,8 +89,11 @@ class DoseGrid:
     @property
     def points(self):
         """Get all of the points in the dose grid"""
-        y, z, x = np.meshgrid(self.y_axis, self.z_axis, self.x_axis)  # iterate through x, then y, then z
-        points = np.vstack((x.ravel(), y.ravel(), z.ravel()))
+        points = []
+        for x in self.x_axis:
+            for y in self.y_axis:
+                for z in self.z_axis:
+                    points.append([x, y, z])
         return points
 
     ####################################################
@@ -117,46 +121,33 @@ class DoseGrid:
         """Save the pydicom.FileDataset to file"""
         self.ds.save_as(file_path)
 
-    def xyz_to_ijk(self, xyz):
-        """Convert xyz points (e.g., self.points) into ijk space"""
-        for dim in range(3):
-            xyz[dim] = (xyz[dim] - self.offset[dim]) / self.scale[dim]
-        return xyz
-
     ####################################################
     # Dose Summation
     ####################################################
-    def add(self, other, interp_order=1):
+    def add(self, other):
         """
         Add another 3D dose grid to this 3D dose grid, with interpolation if needed
         :param other: another DoseGrid
         :type other: DoseGrid
-        :param interp_order: the order to be passed to scipy.ndimage.map_coordinates, default is trilinear interpolation
-        :type interp_order: int
         """
         if self.is_coincident(other):
             self.direct_sum(other)
         else:
-            self.interp_sum(other, order=interp_order)
+            self.interp_sum(other)
 
     def direct_sum(self, other):
         """Directly sum two dose grids (only works if both are coincident)"""
         dose_sum = self.ds.pixel_array * self.ds.DoseGridScaling + other.ds.pixel_array * other.ds.DoseGridScaling
         self.set_pixel_data(dose_sum)
 
-    def interp_sum(self, other, order=1):
+    def interp_sum(self, other):
         """
         Interpolate the other dose grid to this dose grid's axes, then directly sum
         :param other: another DoseGrid
         :type other: DoseGrid
-        :param order: interpolation order: default 0: nearest point
-                                                   1: linear
-                                                   2 to 5: spline
-        :type order: int
         """
-        ijk_points = other.xyz_to_ijk(self.points)
-        other_grid = map_coordinates(input=other.dose_grid,
-                                     coordinates=ijk_points,
-                                     order=order).reshape(self.shape)
+        interpolator = RegularGridInterpolator(points=other.axes, values=other.dose_grid,
+                                               bounds_error=False, fill_value=0)
+        other_grid = interpolator(self.points).reshape(self.shape)
         self.dose_grid += other_grid
         self.set_pixel_data(np.swapaxes(self.dose_grid, 0, 2))
