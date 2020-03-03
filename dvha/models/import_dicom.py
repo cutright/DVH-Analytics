@@ -1414,8 +1414,11 @@ class ImportWorker(Thread):
         file_names = self.dose_sum_save_file_names
         for uid, dose_file_set in self.get_dose_file_sets().items():
             if len(dose_file_set) > 1:
-                for dose_file in dose_file_set[1:]:
-                    args = (dose_file_set[0], dose_file, file_names[uid])
+                args = (dose_file_set[0], dose_file_set[1], file_names[uid])
+                pool_args.append(args)
+            if len(dose_file_set) > 2:
+                for dose_file in dose_file_set[2:]:
+                    args = (file_names[uid], dose_file, file_names[uid])
                     pool_args.append(args)
         return pool_args
 
