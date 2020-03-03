@@ -89,12 +89,17 @@ class DoseGrid:
     @property
     def points(self):
         """Get all of the points in the dose grid"""
-        points = []
-        for x in self.x_axis:
-            for y in self.y_axis:
-                for z in self.z_axis:
-                    points.append([x, y, z])
-        return points
+        # points = []
+        # for x in self.x_axis:
+        #     for y in self.y_axis:
+        #         for z in self.z_axis:
+        #             points.append([x, y, z])
+        # return points
+
+        # This is equivalent to above, but more memory efficient
+        y, x, z = np.meshgrid(self.y_axis, self.x_axis, self.z_axis)
+        points = np.vstack((x.ravel(), y.ravel(), z.ravel()))
+        return points.transpose()
 
     ####################################################
     # Tools
@@ -133,7 +138,7 @@ class DoseGrid:
         if self.is_coincident(other):
             self.direct_sum(other)
         else:
-            self.interp_sum(other)
+            self.interp_sum_by_chunk(other)
 
     def direct_sum(self, other):
         """Directly sum two dose grids (only works if both are coincident)"""
@@ -149,5 +154,26 @@ class DoseGrid:
         interpolator = RegularGridInterpolator(points=other.axes, values=other.dose_grid,
                                                bounds_error=False, fill_value=0)
         other_grid = interpolator(self.points).reshape(self.shape)
+        self.dose_grid += other_grid
+        self.set_pixel_data(np.swapaxes(self.dose_grid, 0, 2))
+
+    def interp_sum_by_chunk(self, other):
+        """
+        Interpolate the other dose grid to this dose grid's axes, then directly sum
+        :param other: another DoseGrid
+        :type other: DoseGrid
+        """
+        interpolator = RegularGridInterpolator(points=other.axes, values=other.dose_grid,
+                                               bounds_error=False, fill_value=0)
+        points = self.points
+        point_count = np.product(self.shape)
+        other_grid = np.zeros(point_count)
+        patch_count = 100
+        patch_len = int(np.floor(point_count / float(patch_count)))
+        for i in range(patch_count):
+            start = i * patch_len
+            end = (i+1) * patch_len if i + 1 < patch_count else -1
+            other_grid[start:end] = interpolator(points[start:end])
+        other_grid = other_grid.reshape(self.shape)
         self.dose_grid += other_grid
         self.set_pixel_data(np.swapaxes(self.dose_grid, 0, 2))
