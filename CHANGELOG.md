@@ -5,7 +5,7 @@ v0.7.3 (TBD)
  - [Import] Users can right-click an ROI name for a pop-up menu to more easily edit the ROI map
  - [Import] Adding an ROI variation with right-click menu will predict a physician ROI name using fuzzy logic. 
  *NOTE: that python-Levenshtein is an optional pip install for fuzzywuzzy speed improvements, but may require non-python 
- libraries to be installed (depending on your system/OS). python-Levenshtein is not required.*
+ libraries to be installed. python-Levenshtein is not required for DVHA.*
  - [Import] Fix for [Issue #43](https://github.com/cutright/DVH-Analytics/issues/43) (DICOM Dose Summation)
  - [Machine Learning] Bug fix in model viewer that could not properly load non-default hyper-parameter values
 

@@ -198,7 +198,10 @@ class ImportDicomFrame(wx.Frame):
                                                  wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         self.checkbox_subfolders.SetValue(1)
 
-        self.checkbox_keep_in_inbox.SetValue(0)
+        if hasattr(self.options, 'KEEP_IN_INBOX'):
+            self.checkbox_keep_in_inbox.SetValue(self.options.KEEP_IN_INBOX)
+        else:
+            self.checkbox_keep_in_inbox.SetValue(0)
         self.checkbox_keep_in_inbox.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
                                                     wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         self.checkbox_keep_in_inbox.SetToolTip("Successfully imported DICOM files will either be copied or moved into "
@@ -747,6 +750,7 @@ class ImportDicomFrame(wx.Frame):
     def on_import(self, evt):
         if self.parsed_dicom_data and self.dicom_importer.checked_plans:
             self.roi_map.write_to_file()
+            self.options.set_option('KEEP_IN_INBOX', self.checkbox_keep_in_inbox.GetValue())
             ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
                          self.checkbox_include_uncategorized.GetValue(),
                          self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue())
@@ -1307,14 +1311,9 @@ class ImportWorker(Thread):
                'progress': 0}
         wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
 
-        error_raised = False
+        # TODO: try run_dose_sum with threading for pubsub, may work with new dose sum algorithm?
         self.run_dose_sum()
-        # except MemoryError as e:
-        #     msg = 'DICOM Dose Summation Error\n%s' % e
-        #     pub.sendMessage("import_status_raise_error", msg=msg)
-        #     error_raised = True
 
-        # if not error_raised:
         self.run_import()
 
         self.close()
