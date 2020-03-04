@@ -1148,7 +1148,6 @@ class StudyImporter:
 
                 if dvh_row:
                     roi_type = dvh_row['roi_type'][0]
-                    physician_roi = dvh_row['physician_roi'][0]
 
                     # Collect dvh, volume, and index of ptvs to be used for post-import calculations
                     if roi_type.startswith('PTV'):

@@ -1,5 +1,5 @@
 from fuzzywuzzy import fuzz
-from dvha.tools.roi_name_manager import clean_name, DatabaseROIs
+from dvha.tools.roi_name_manager import clean_name
 
 
 class ROINamePredictor:
