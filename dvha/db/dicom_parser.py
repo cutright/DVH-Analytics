@@ -606,7 +606,10 @@ class DICOM_Parser:
     @property
     def patient_orientation(self):
         seq = self.get_attribute('plan', 'PatientSetupSequence')
-        return ','.join([setup.PatientPosition for setup in seq])
+        if seq is not None:
+            return ','.join([setup.PatientPosition for setup in seq])
+        else:
+            return 'None'
 
     @property
     def plan_time_stamp(self):
