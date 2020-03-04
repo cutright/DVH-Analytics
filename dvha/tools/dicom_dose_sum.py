@@ -160,6 +160,8 @@ class DoseGrid:
         :param other: another DoseGrid
         :type other: DoseGrid
         """
+
+        # TODO: Try scipy.ndimage.map_coordinates again, may be faster?
         interpolator = RegularGridInterpolator(points=other.axes, values=other.dose_grid,
                                                bounds_error=False, fill_value=0)
 
