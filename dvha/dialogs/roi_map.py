@@ -425,10 +425,10 @@ class AddVariationDlg(wx.Dialog):
         self.Center()
 
     def enable_add_button(self, evt):
-        if self.roi_map.is_variation_used(self.physician, self.user_input.GetValue()):
-            self.button_ok.Disable()
-        else:
-            self.button_ok.Enable()
+        # TODO: No need to toggle in assign mode?
+        if self.mode == 'add':
+            status = not self.roi_map.is_variation_used(self.physician, self.user_input.GetValue())
+            self.button_ok.Enable(status)
 
     def run(self):
         res = self.ShowModal()
