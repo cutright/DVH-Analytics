@@ -491,7 +491,9 @@ class DicomDirectoryParserWorker(Thread):
                                                     'study_instance_uid': ds.StudyInstanceUID,
                                                     'sop_instance_uid': ds.SOPInstanceUID,
                                                     'patient_name': ds.PatientName,
-                                                    'mrn': ds.PatientID}
+                                                    'mrn': ds.PatientID,
+                                                    'modality': modality,
+                                                    'matched': False}
                 if modality not in self.file_types:
                     if ds.StudyInstanceUID not in self.other_dicom_files.keys():
                         self.other_dicom_files[ds.StudyInstanceUID] = []
@@ -542,6 +544,7 @@ class DicomDirectoryParserWorker(Thread):
             for plan_file_set in self.plan_file_sets[mrn][study_uid].values():
                 plan_uid = plan_file_set['rtplan']['sop_instance_uid']
                 if plan_uid == ref_plan_uid:
+                    self.dicom_tag_values[dose_file]['matched'] = True
                     plan_file_set['rtdose'] = {'file_path': dose_file,
                                                'sop_instance_uid': dose_tag_values['sop_instance_uid']}
                     if 'rtdose' in self.dicom_file_paths[plan_uid].keys():
@@ -558,12 +561,26 @@ class DicomDirectoryParserWorker(Thread):
                     for struct_file in self.dicom_files['rtstruct']:
                         struct_uid = self.dicom_tag_values[struct_file]['sop_instance_uid']
                         if struct_uid == ref_struct_uid:
+                            self.dicom_tag_values[plan_file]['matched'] = True
                             plan_file_set['rtstruct'] = {'file_path': struct_file,
                                                          'sop_instance_uid': struct_uid}
                             if 'rtstruct' in self.dicom_file_paths[plan_uid].keys():
                                 self.dicom_file_paths[plan_uid]['rtstruct'].append(struct_file)
                             else:
                                 self.dicom_file_paths[plan_uid]['rtstruct'] = [struct_file]
+
+        # find unmatched structure and dose files, pair by StudyInstanceUID to plan if plan doesn't have struct/dose
+        for dcm_file, tags in self.dicom_tag_values.items():
+            modality = tags['modality']
+            if not tags['matched'] and modality in {'rtstruct', 'rtdose'}:
+                for mrn_index, mrn in enumerate(list(self.plan_file_sets)):
+                    for study_uid in list(self.plan_file_sets[mrn]):
+                        for plan_uid, plan_file_set in self.plan_file_sets[mrn][study_uid].items():
+                            if study_uid == tags['study_instance_uid']:
+                                if modality not in plan_file_set.keys():
+                                    self.dicom_file_paths[plan_uid][modality] = [dcm_file]
+                                else:
+                                    self.dicom_file_paths[plan_uid][modality].append(dcm_file)
 
     def is_data_set_valid(self, ds):
         for tag in self.req_tags:

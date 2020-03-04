@@ -18,22 +18,23 @@ from dateutil.parser import parse as parse_date
 from os import listdir, remove
 from os.path import isdir, join
 from pubsub import pub
-import pydicom
 from multiprocessing import Pool
 from threading import Thread
 from queue import Queue
+from functools import partial
 from dvha.db import update as db_update
 from dvha.db.sql_connector import DVH_SQL
 from dvha.models.dicom_tree_builder import DicomTreeBuilder, PreImportFileSetParserWorker
 from dvha.db.dicom_parser import DICOM_Parser, PreImportData
 from dvha.dialogs.main import DatePicker
-from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddROIType, RoiManager, ChangePlanROIName
+from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, DelPhysicianROI, AssignVariation, DelVariation,\
+    AddROIType, RoiManager, ChangePlanROIName
 from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, ICONS, TEMP_DIR
-from dvha.tools.dicom_dose_sum import sum_two_dose_grids
+from dvha.tools.dicom_dose_sum import DoseGrid
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
     set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size,\
-    set_frame_icon
+    set_frame_icon, PopupMenu
 
 
 # TODO: Provide methods to write over-rides to DICOM file
@@ -159,6 +160,7 @@ class ImportDicomFrame(wx.Frame):
 
         self.Bind(wx.EVT_TREE_SEL_CHANGED, self.on_file_tree_select, id=self.tree_ctrl_import.GetId())
         self.Bind(wx.EVT_TREE_SEL_CHANGED, self.on_roi_tree_select, id=self.tree_ctrl_roi.GetId())
+        self.Bind(wx.EVT_TREE_ITEM_RIGHT_CLICK, self.on_roi_tree_right_click, id=self.tree_ctrl_roi.GetId())
 
         for input_obj in self.input.values():
             self.Bind(wx.EVT_TEXT, self.on_text_change, id=input_obj.GetId())
@@ -194,18 +196,21 @@ class ImportDicomFrame(wx.Frame):
 
         self.checkbox_subfolders.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
                                                  wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
-        self.checkbox_subfolders.SetValue(1)
+        value = self.options.SEARCH_SUBFOLDERS if hasattr(self.options, 'SEARCH_SUBFOLDERS') else 1
+        self.checkbox_subfolders.SetValue(value)
 
-        self.checkbox_keep_in_inbox.SetValue(0)
         self.checkbox_keep_in_inbox.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
                                                     wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         self.checkbox_keep_in_inbox.SetToolTip("Successfully imported DICOM files will either be copied or moved into "
                                                "your Imported Directory. Check this box to copy. Uncheck this box to "
                                                "remove these files from the inbox.")
+        value = self.options.KEEP_IN_INBOX if hasattr(self.options, 'KEEP_IN_INBOX') else 0
+        self.checkbox_keep_in_inbox.SetValue(value)
 
         self.checkbox_include_uncategorized.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
                                                             wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
-        self.checkbox_include_uncategorized.SetValue(0)
+        value = self.options.IMPORT_UNCATEGORIZED if hasattr(self.options, 'IMPORT_UNCATEGORIZED') else 0
+        self.checkbox_include_uncategorized.SetValue(value)
 
         for checkbox in self.checkbox.values():
             checkbox.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
@@ -490,6 +495,29 @@ class ImportDicomFrame(wx.Frame):
         self.update_roi_inputs()
         self.allow_input_roi_apply = True
 
+    def roi_tree_right_click_action(self, physician, roi_name, dlg, *evt):
+        dlg(self, physician, self.roi_map, roi_name)
+        self.update_roi_inputs()
+        self.dicom_importer.update_mapped_roi_status(physician)
+
+    def on_roi_tree_right_click(self, evt):
+        if evt.GetItem().GetParent() is not None:  # ignore right click on tree root node
+            roi_name = evt.GetItem().GetText().split(' ----- ')[0]  # remove PTV flags
+            physician = self.input['physician'].GetValue()
+            is_mapped = not evt.GetItem().GetImage()
+
+            msg_prepend = "%s %s as" % (['Add', 'Remove'][is_mapped], roi_name)
+            labels = ["%s %s" % (msg_prepend, roi_type) for roi_type in ['Physician ROI', 'Variation']]
+            dlg_objects = [DelPhysicianROI, DelVariation] if is_mapped else [AddPhysicianROI, AssignVariation]
+            pre_func = partial(self.roi_tree_right_click_action, physician, roi_name)
+
+            popup = PopupMenu(self)
+            for i, label in enumerate(labels):
+                popup.add_menu_item(label, partial(pre_func, dlg_objects[i]))
+            # if is_mapped:
+            #     popup.add_menu_item("Do Not Import", partial(pre_func, dlg_objects[0]))
+            popup.run()
+
     def update_input_roi_physician_enable(self):
         if self.selected_roi:
             if self.input_roi['physician'].GetValue() == 'uncategorized':
@@ -722,9 +750,12 @@ class ImportDicomFrame(wx.Frame):
     def on_import(self, evt):
         if self.parsed_dicom_data and self.dicom_importer.checked_plans:
             self.roi_map.write_to_file()
+            self.options.set_option('KEEP_IN_INBOX', self.checkbox_keep_in_inbox.GetValue())
+            self.options.save()
             ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
                          self.checkbox_include_uncategorized.GetValue(),
-                         self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue())
+                         self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue(),
+                         self.roi_map)
             dlg = ImportStatusDialog()
             # calling self.Close() below caused issues in Windows if Show() used instead of ShowModal()
             [dlg.Show, dlg.ShowModal][is_windows()]()
@@ -914,6 +945,7 @@ class ImportStatusDialog(wx.Dialog):
     def __do_subscribe(self):
         pub.subscribe(self.update_patient, "update_patient")
         pub.subscribe(self.update_calculation, "update_calculation")
+        pub.subscribe(self.update_dvh_progress, "update_dvh_progress")
         pub.subscribe(self.update_elapsed_time, "update_elapsed_time")
         pub.subscribe(self.close, "close")
 
@@ -977,6 +1009,7 @@ class ImportStatusDialog(wx.Dialog):
         wx.CallAfter(self.label_patient.SetLabelText, "Patient: %s" % msg['patient_name'])
         wx.CallAfter(self.label_study.SetLabelText, "Plan SOP Instance UID: %s" % msg['uid'])
         wx.CallAfter(self.gauge_study.SetValue, msg['progress'])
+        self.update_elapsed_time()
 
     def update_calculation(self, msg):
         """
@@ -994,6 +1027,15 @@ class ImportStatusDialog(wx.Dialog):
         else:
             label_text = ''
         wx.CallAfter(self.label_structure.SetLabelText, label_text)
+        self.update_elapsed_time()
+
+    def update_dvh_progress(self, msg):
+        label = self.label_structure.GetLabelText()
+        if '[' in label and label.endswith('%]'):
+            label = label[:label.rfind('[')].strip()
+        label = "%s [%0.0f%%]" % (label, msg*100)
+        wx.CallAfter(self.label_structure.SetLabelText, label)
+        self.update_elapsed_time()
 
     def update_elapsed_time(self):
         """
@@ -1048,6 +1090,8 @@ class StudyImporter:
 
         parsed_data = DICOM_Parser(**self.init_params)
 
+        wx.CallAfter(pub.sendMessage, "update_elapsed_time")
+
         # Storing this now, parsed_data sometimes gets cleared prior storing actual values in this message when
         # generating this immediately before pub.sendMessage
         move_msg = {'files': [parsed_data.plan_file, parsed_data.structure_file, parsed_data.dose_file],
@@ -1076,7 +1120,6 @@ class StudyImporter:
                 if cnx.is_roi_imported(clean_name(roi_name_map[roi_key]), study_uid):
                     roi_name_map.pop(roi_key)
 
-        post_import_rois = []
         roi_total = len(roi_name_map)
         ptvs = {key: [] for key in ['dvh', 'volume', 'index']}
 
@@ -1102,8 +1145,6 @@ class StudyImporter:
 
                 if dvh_row:
                     roi_type = dvh_row['roi_type'][0]
-                    roi_name = dvh_row['roi_name'][0]
-                    physician_roi = dvh_row['physician_roi'][0]
 
                     # Collect dvh, volume, and index of ptvs to be used for post-import calculations
                     if roi_type.startswith('PTV'):
@@ -1114,16 +1155,8 @@ class StudyImporter:
                     else:
                         self.push({'DVHs': [dvh_row]})
 
-                    # collect roi names for post-import calculations
-                    if roi_type and roi_name and physician_roi:
-                        if roi_type.lower() in ['organ', 'ctv', 'gtv']:
-                            if not (physician_roi.lower() in
-                                    ['uncategorized', 'ignored', 'external', 'skin', 'body']
-                                    or roi_name.lower() in ['external', 'skin', 'body']):
-                                post_import_rois.append(clean_name(roi_name_map[roi_key]))
-
         # Sort PTVs by their D_95% (applicable to SIBs)
-        if ptvs['dvh']:
+        if ptvs['dvh'] and not self.terminate:
             ptv_order = rank_ptvs_by_D95(ptvs)
             for ptv_row, dvh_row_index in enumerate(ptvs['index']):
                 data_to_import['DVHs'][dvh_row_index]['roi_type'][0] = "PTV%s" % (ptv_order[ptv_row]+1)
@@ -1133,8 +1166,27 @@ class StudyImporter:
             self.push(data_to_import)
 
         # Wait until entire study has been pushed since these values are based on entire PTV volume
-        if self.final_plan_in_study:
-            if ptvs['dvh']:
+        if self.final_plan_in_study and not self.terminate:
+            if db_update.uid_has_ptvs(study_uid):
+
+                # collect roi names for post-import calculations
+                # This block moved here since patient's with multiple plans use multiple threads, calculate this
+                # on import of final plan import
+                post_import_rois = []
+                roi_name_map = {key: structures[key]['name'] for key in list(structures) if
+                                structures[key]['type'] != 'MARKER'}
+                for roi_counter, roi_key in enumerate(list(roi_name_map)):
+                    roi_name = clean_name(roi_name_map[roi_key])
+                    with DVH_SQL() as cnx:
+                        condition = "roi_name = '%s' and study_instance_uid = '%s'" % (roi_name, study_uid)
+                        query_return = cnx.query('DVHs', 'roi_type, physician_roi', condition)
+                    if query_return:
+                        roi_type, physician_roi = tuple(query_return[0])
+                        if roi_type.lower() in ['organ', 'ctv', 'gtv']:
+                            if not (physician_roi.lower() in
+                                    ['uncategorized', 'ignored', 'external', 'skin', 'body']
+                                    or roi_name.lower() in ['external', 'skin', 'body']):
+                                post_import_rois.append(clean_name(roi_name_map[roi_key]))
 
                 # Calculate the PTV overlap for each roi
                 tv = db_update.get_total_treatment_volume_of_study(study_uid)
@@ -1236,7 +1288,7 @@ class ImportWorker(Thread):
     Create a thread separate from the GUI to perform the import calculations
     """
     def __init__(self, data, checked_uids, import_uncategorized, other_dicom_files, start_path,
-                 keep_in_inbox):
+                 keep_in_inbox, roi_map):
         """
         :param data: parsed dicom data
         :type data: dict
@@ -1248,6 +1300,7 @@ class ImportWorker(Thread):
         :type other_dicom_files: dict
         :param keep_in_inbox: Set to False to move files, True to copy files to imported
         :type keep_in_inbox: bool
+        :param roi_map: pass the latest roi_map
         """
         Thread.__init__(self)
 
@@ -1259,6 +1312,7 @@ class ImportWorker(Thread):
         self.other_dicom_files = other_dicom_files
         self.start_path = start_path
         self.keep_in_inbox = keep_in_inbox
+        self.roi_map = roi_map
 
         self.dose_sum_save_file_names = self.get_dose_sum_save_file_names()
         self.move_msg_queue = []
@@ -1282,17 +1336,8 @@ class ImportWorker(Thread):
                'progress': 0}
         wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
 
-        error_raised = False
-        try:
-            self.run_dose_sum()
-        except MemoryError as e:
-            msg = 'DICOM Dose Summation Error\n%s' % e
-            pub.sendMessage("import_status_raise_error", msg=msg)
-            error_raised = True
-
-        if not error_raised:
-            self.run_import()
-
+        self.run_dose_sum()
+        self.run_import()
         self.close()
 
     def close(self):
@@ -1301,18 +1346,19 @@ class ImportWorker(Thread):
         pub.sendMessage("close")
 
     def run_dose_sum(self):
+        """Could not implement with threading due to memory allocation issues"""
         pool = Pool(processes=1)
-        pool.starmap(self.sum_two_doses, self.get_dose_sum_args())
+        pool.starmap(self.sum_two_doses, self.dose_sum_args)
         pool.close()
 
     def run_import(self):
-        queue = self.get_queue()
-        worker = Thread(target=self.import_study, args=[queue])
+        queue = self.import_queue
+        worker = Thread(target=self.import_target, args=[queue])
         worker.setDaemon(True)
         worker.start()
         queue.join()
 
-    def import_study(self, queue):
+    def import_target(self, queue):
         while queue.qsize():
             parameters = queue.get()
             if not self.terminate:
@@ -1342,7 +1388,8 @@ class ImportWorker(Thread):
                 dose_file_sets[study_uid] = [self.data[plan_uid].dose_file for plan_uid in plan_uid_set]
         return dose_file_sets
 
-    def get_queue(self):
+    @property
+    def import_queue(self):
         study_uids = self.get_study_uids()
         plan_total = len(self.checked_uids)
         plan_counter = 0
@@ -1357,6 +1404,7 @@ class ImportWorker(Thread):
                            'study_number': plan_counter + 1,
                            'study_total': plan_total}
                     init_param = self.data[plan_uid].init_param
+                    init_param['roi_map'] = self.roi_map
                     if study_uid in self.dose_sum_save_file_names.keys():
                         init_param['dose_sum_file'] = self.dose_sum_save_file_names[study_uid]
                     args = (init_param, msg, self.import_uncategorized, plan_uid == plan_uid_set[-1])
@@ -1385,7 +1433,8 @@ class ImportWorker(Thread):
     def set_terminate(self):
         self.terminate = True
 
-    def get_dose_sum_args(self):
+    @property
+    def dose_sum_args(self):
         pool_args = []
         file_names = self.dose_sum_save_file_names
         for uid, dose_file_set in self.get_dose_file_sets().items():
@@ -1393,7 +1442,7 @@ class ImportWorker(Thread):
                 args = (dose_file_set[0], dose_file_set[1], file_names[uid])
                 pool_args.append(args)
             if len(dose_file_set) > 2:
-                for dose_file in dose_file_set[1:]:
+                for dose_file in dose_file_set[2:]:
                     args = (file_names[uid], dose_file, file_names[uid])
                     pool_args.append(args)
         return pool_args
@@ -1413,10 +1462,11 @@ class ImportWorker(Thread):
         return file_save_names_dict
 
     @staticmethod
-    def sum_two_doses(dose_file_1, dose_file2, save_to):
-        ds = [pydicom.read_file(f) for f in [dose_file_1, dose_file2]]
-        new_ds = sum_two_dose_grids(ds[0], ds[1])
-        new_ds.save_as(join(TEMP_DIR, save_to))
+    def sum_two_doses(dose_file_1, dose_file_2, save_to):
+        grid_1 = DoseGrid(dose_file_1)
+        grid_2 = DoseGrid(dose_file_2)
+        grid_1.add(grid_2)
+        grid_1.save_dcm(join(TEMP_DIR, save_to))
 
     @staticmethod
     def delete_dose_sum_files():

@@ -16,13 +16,12 @@ from datetime import datetime
 from threading import Thread
 from pubsub import pub
 from dvha.db.sql_connector import DVH_SQL, echo_sql_db
-from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddVariationDialog, MoveVariationDialog,\
+from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddVariation, MoveVariationDialog,\
     RenamePhysicianDialog, RenamePhysicianROIDialog, RenameInstitutionalROIDialog, LinkPhysicianROI
 from dvha.models.data_table import DataTable
 from dvha.models.plot import PlotROIMap
-from dvha.tools.errors import ROIVariationError, ROIVariationErrorDialog
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_elapsed_time, get_window_size,\
-    set_frame_icon
+    set_frame_icon, set_msw_background_color
 from dvha.tools.roi_name_manager import clean_name
 
 
@@ -454,15 +453,8 @@ class ROIMapFrame(wx.Frame):
         self.update_variations()
 
     def add_variation(self, evt):
-        dlg = AddVariationDialog(self, self.physician, self.physician_roi, self.roi_map)
-        res = dlg.ShowModal()
-        if res == wx.ID_OK:
-            try:
-                self.roi_map.add_variation(self.physician, self.physician_roi, dlg.text_ctrl_variation.GetValue())
-                self.update_variations()
-            except ROIVariationError as e:
-                ROIVariationErrorDialog(self, e)
-        dlg.Destroy()
+        AddVariation(self, self.physician, self.roi_map, self.physician_roi)
+        self.update_variations()
 
     def move_variations(self, evt):
         choices = [roi for roi in self.roi_map.get_physician_rois(self.physician) if roi != self.physician_roi]
@@ -728,6 +720,7 @@ class RemapROIFrame(wx.Frame):
         :type remap_all: bool
         """
         wx.Frame.__init__(self, None, title='Updating Database with ROI Map Changes')
+        set_msw_background_color(self)
 
         self.roi_map = roi_map
 

@@ -3,176 +3,200 @@
 
 # tools.dicom_dose_sum.py
 """
-Functions for summing dose grids
+Class for summing dose grids
 """
-# Largely borrowed from https://github.com/dicompyler/dicompyler-plugins/blob/master/plugins/plansum/plansum.py
-# Original code written by Stephen Terry
 # This file is part of DVH Analytics, released under a BSD license.
 #    See the file LICENSE included with this distribution, also
 #    available at https://github.com/cutright/DVH-Analytics
 
 import numpy as np
+from os.path import isfile
+import pydicom
+from scipy.interpolate import RegularGridInterpolator
+from copy import deepcopy
 
 
-# Slightly modified from https://github.com/dicompyler/dicompyler-plugins/blob/master/plugins/plansum/plansum.py
-def sum_two_dose_grids(old, new):
-    """ Given two Dicom RTDose objects, returns a summed RTDose object"""
-    """The summed RTDose object will consist of pixels inside the region of 
-    overlap between the two pixel_arrays.  The pixel spacing will be the 
-    coarser of the two objects in each direction.  The new DoseGridScaling
-    tag will be the sum of the tags of the two objects.
+class DoseGrid:
+    """
+    Class to easily access commonly used attributes of a DICOM dose grid and perform summations
 
-    interp_method: A string that is one of ['scipy','weave','python'].  
-        This forces SumPlan to use a particular interpolation method, even if 
-        the dose objects could be directly summed.  Used for unit testing."""
+    Example: Add two dose grids
+        grid_1 = DoseGrid(dose_file_1)
+        grid_2 = DoseGrid(dose_file_2)
+        grid_sum = grid_1 + grid_2
+        grid_sum.save_dcm(some_file_path)
 
-    # Recycle the new Dicom object to store the summed dose values
-    sum_dcm = new
+    """
+    def __init__(self, rt_dose, try_full_interp=True, interp_block_size=50000):
+        """
+        :param rt_dose: an RT Dose DICOM dataset or file_path
+        :type rt_dose: pydicom.FileDataset
+        :param try_full_interp: If true, will attempt to interpolate the entire grid at once before calculating one
+                                block at a time (block size defined in self.interp_by_block)
+        :type try_full_interp: bool
+        :param interp_block_size: calculate this many points at a time if not try_full_interp or MemoryError
+        :type interp_block_size: int
+        """
 
-    # Test if dose grids are coincident.  If so, we can directly sum the
-    # pixel arrays.
+        self.ds = self.__validate_input(rt_dose)
+        self.try_full_interp = try_full_interp
+        self.interp_block_size = interp_block_size
 
-    #  For now, always do straight sum
-    if (old.ImagePositionPatient == new.ImagePositionPatient and
-        old.pixel_array.shape == new.pixel_array.shape and
-        old.PixelSpacing == new.PixelSpacing and
-        old.GridFrameOffsetVector == new.GridFrameOffsetVector):
-        print("PlanSum: Using direct summation")
-        dose_sum = old.pixel_array * old.DoseGridScaling + new.pixel_array * new.DoseGridScaling
+        if self.ds:
+            self.__set_axes()
 
-    else:
-        # Compute mapping from xyz (physical) space to ijk (index) space
-        scale_old = np.array([old.PixelSpacing[0], old.PixelSpacing[1],
-                              old.GridFrameOffsetVector[1] - old.GridFrameOffsetVector[0]])
+    def __set_axes(self):
+        self.x_axis = np.arange(self.ds.Columns) * self.ds.PixelSpacing[0] + self.ds.ImagePositionPatient[0]
+        self.y_axis = np.arange(self.ds.Rows) * self.ds.PixelSpacing[1] + self.ds.ImagePositionPatient[1]
+        self.z_axis = np.array(self.ds.GridFrameOffsetVector) + self.ds.ImagePositionPatient[2]
 
-        scale_new = np.array([new.PixelSpacing[0], new.PixelSpacing[1],
-                              new.GridFrameOffsetVector[1] - new.GridFrameOffsetVector[0]])
+        # x and z are swapped in the pixel_array
+        self.dose_grid = np.swapaxes(self.ds.pixel_array * self.ds.DoseGridScaling, 0, 2)
 
-        scale_sum = np.maximum(scale_old, scale_new)
+    @staticmethod
+    def __validate_input(rt_dose):
+        """Ensure provided input is either an RT Dose pydicom.FileDataset or a file_path to one"""
+        if type(rt_dose) is pydicom.FileDataset:
+            if rt_dose.Modality.lower() == 'rtdose':
+                return rt_dose
+            print("The provided pydicom.FileDataset is not RTDOSE")
+            return
+        elif isfile(rt_dose):
+            try:
+                rt_dose_ds = pydicom.read_file(rt_dose)
+                if rt_dose_ds.Modality.lower() == 'rtdose':
+                    return rt_dose_ds
+                print('The provided file_path points to a DICOM file, but it is not an RT Dose file.')
+            except Exception as e:
+                print(e)
+                print('The provided input is neither a pydicom.FileDataset nor could it be read by pydicom.')
+        return
 
-        # Find region of overlap
-        xmin = np.array([old.ImagePositionPatient[0],
-                         new.ImagePositionPatient[0]])
-        ymin = np.array([old.ImagePositionPatient[1],
-                         new.ImagePositionPatient[1]])
-        zmin = np.array([old.ImagePositionPatient[2],
-                         new.ImagePositionPatient[2]])
-        xmax = np.array([old.ImagePositionPatient[0] + old.PixelSpacing[0] * old.Columns,
-                         new.ImagePositionPatient[0] + new.PixelSpacing[0] * new.Columns])
-        ymax = np.array([old.ImagePositionPatient[1] + old.PixelSpacing[1] * old.Rows,
-                         new.ImagePositionPatient[1] + new.PixelSpacing[1] * new.Rows])
-        zmax = np.array([old.ImagePositionPatient[2] + scale_old[2] * len(old.GridFrameOffsetVector),
-                         new.ImagePositionPatient[2] + scale_new[2] * len(new.GridFrameOffsetVector)])
-        x0 = xmin[np.argmin(abs(xmin))]
-        x1 = xmax[np.argmin(abs(xmax))]
-        y0 = ymin[np.argmin(abs(ymin))]
-        y1 = ymax[np.argmin(abs(ymax))]
-        z0 = zmin[np.argmin(abs(zmin))]
-        z1 = zmax[np.argmin(abs(zmax))]
+    ####################################################
+    # Basic properties
+    ####################################################
+    @property
+    def shape(self):
+        """Get the x, y, z dimensions of the dose grid"""
+        return tuple([self.ds.Columns, self.ds.Rows, len(self.ds.GridFrameOffsetVector)])
 
-        sum_ip = np.array([x0, y0, z0])
+    @property
+    def axes(self):
+        """Get the x, y, z axes of the dose grid (in mm)"""
+        return [self.x_axis, self.y_axis, self.z_axis]
 
-        # Create index grid for the sum array
-        i, j, k = np.mgrid[0:int((x1 - x0) / scale_sum[0]),
-                           0:int((y1 - y0) / scale_sum[1]),
-                           0:int((z1 - z0) / scale_sum[2])]
+    @property
+    def scale(self):
+        """Get the dose grid resolution (xyz)"""
+        return np.array([self.ds.PixelSpacing[0],
+                         self.ds.PixelSpacing[1],
+                         self.ds.GridFrameOffsetVector[1] - self.ds.GridFrameOffsetVector[0]])
 
-        # x_vals = np.arange(x0, x1, scale_sum[0])
-        # y_vals = np.arange(y0, y1, scale_sum[1])
-        z_vals = np.arange(z0, z1, scale_sum[2])
+    @property
+    def offset(self):
+        """Get the coordinates of the dose grid origin (mm)"""
+        return np.array(self.ds.ImagePositionPatient, dtype='float')
 
-        # Create a 3 x i x j x k array of xyz coordinates for the interpolation.
-        sum_xyz_coords = np.array([i * scale_sum[0] + sum_ip[0],
-                                   j * scale_sum[1] + sum_ip[1],
-                                   k * scale_sum[2] + sum_ip[2]])
+    @property
+    def points(self):
+        """Get all of the points in the dose grid"""
+        y, x, z = np.meshgrid(self.y_axis, self.x_axis, self.z_axis)
+        points = np.vstack((x.ravel(), y.ravel(), z.ravel()))
+        return points.transpose()
 
-        # Dicom pixel_array objects seem to have the z axis in the first index
-        # (zyx).  The x and z axes are swapped before interpolation to coincide
-        # with the xyz ordering of ImagePositionPatient
-        dose_sum = interpolate_image(np.swapaxes(old.pixel_array, 0, 2), scale_old, old.ImagePositionPatient, sum_xyz_coords) * old.DoseGridScaling + \
-                   interpolate_image(np.swapaxes(new.pixel_array, 0, 2), scale_new, new.ImagePositionPatient, sum_xyz_coords) * new.DoseGridScaling
+    ####################################################
+    # Tools
+    ####################################################
+    def __add__(self, other):
+        """Addition in this fashion will not alter either DoseGrid, but it is more expensive with memory"""
+        new = deepcopy(self)
+        new.add(other)
+        return new
 
-        # Swap the x and z axes back
-        dose_sum = np.swapaxes(dose_sum, 0, 2)
-        sum_dcm.ImagePositionPatient = list(sum_ip)
-        sum_dcm.Rows = dose_sum.shape[2]
-        sum_dcm.Columns = dose_sum.shape[1]
-        sum_dcm.NumberOfFrames = dose_sum.shape[0]
-        sum_dcm.PixelSpacing = [scale_sum[0], scale_sum[1]]
-        sum_dcm.GridFrameOffsetVector = list(z_vals - sum_ip[2])
+    def is_coincident(self, other):
+        """Check dose grid coincidence, if True a direct summation is appropriate"""
+        return self.ds.ImagePositionPatient == other.ds.ImagePositionPatient and \
+               self.ds.pixel_array.shape == other.ds.pixel_array.shape and \
+               self.ds.PixelSpacing == other.ds.PixelSpacing and \
+               self.ds.GridFrameOffsetVector == other.ds.GridFrameOffsetVector
 
-    sum_scaling = old.DoseGridScaling + new.DoseGridScaling
+    def set_pixel_data(self):
+        """
+        Update the PixelData in the pydicom.FileDataset with the current self.dose_grid
+        """
+        self.ds.BitsAllocated = 32
+        self.ds.BitsStored = 32
+        self.ds.HighBit = 31
+        self.ds.DoseGridScaling = 1. / np.max(self.dose_grid)
+        pixel_data = np.swapaxes(self.dose_grid, 0, 2) / self.ds.DoseGridScaling
+        self.ds.PixelData = np.uint32(pixel_data).tostring()
 
-    dose_sum = dose_sum / sum_scaling
-    dose_sum = np.uint32(dose_sum)
+    def save_dcm(self, file_path):
+        """Save the pydicom.FileDataset to file"""
+        self.ds.save_as(file_path)
 
-    # sum_dcm.pixel_array = sum
-    sum_dcm.BitsAllocated = 32
-    sum_dcm.BitsStored = 32
-    sum_dcm.HighBit = 31
-    sum_dcm.PixelData = dose_sum.tostring()
-    sum_dcm.DoseGridScaling = sum_scaling
+    ####################################################
+    # Dose Summation
+    ####################################################
+    def add(self, other):
+        """
+        Add another 3D dose grid to this 3D dose grid, with interpolation if needed
+        :param other: another DoseGrid
+        :type other: DoseGrid
+        """
+        if self.is_coincident(other):
+            self.direct_sum(other)
+        else:
+            self.interp_sum(other)
 
-    return sum_dcm
+    def direct_sum(self, other, other_factor=1):
+        """Directly sum two dose grids (only works if both are coincident)"""
+        self.dose_grid += other.dose_grid * other_factor
+        self.set_pixel_data()
 
+    def interp_sum(self, other):
+        """
+        Interpolate the other dose grid to this dose grid's axes, then directly sum
+        :param other: another DoseGrid
+        :type other: DoseGrid
+        """
 
-def interpolate_image(input_array, scale, offset, xyz_coords):
-    """Interpolates an array at the xyz coordinates given"""
-    """Parameters:
-        input_array: a 3D numpy array
+        # TODO: Try scipy.ndimage.map_coordinates again, may be faster?
+        interpolator = RegularGridInterpolator(points=other.axes, values=other.dose_grid,
+                                               bounds_error=False, fill_value=0)
 
-        scale: a list of 3 floats which give the pixel spacing in xyz
+        other_grid = None
+        if self.try_full_interp:
+            try:
+                other_grid = self.interp_entire_grid(interpolator)
+            except MemoryError as e:
+                pass
+        if other_grid is None:
+            other_grid = self.interp_by_block(interpolator)
 
-        offset: the xyz coordinates of the origin of the input_array
+        self.dose_grid += other_grid
+        self.set_pixel_data()
 
-        xyz_coordinates: the coordinates at which the input is evaluated. 
+    def interp_entire_grid(self, interpolator):
+        """Interpolate the other dose grid to this dose grid's axes"""
+        return interpolator(self.points).reshape(self.shape)
 
+    def interp_by_block(self, interpolator):
+        """
+        Interpolate the other dose grid to this dose grid's axes, calculating one block at a time
+        The block is defined at the init of this class, default is 50,000 points at a time
+        :param interpolator: object to perform interpolation
+        :type interpolator: RegularGridInterpolator
+        """
+        points = self.points
+        point_count = np.product(self.shape)
+        other_grid = np.zeros(point_count)
 
-    The purpose of this function is to convert the xyz coordinates to
-    index space, which trilinear_interp
-    requires.  Following the scipy convention, the xyz_coordinates array is
-    an array of three  i x j x k element arrays.  The first element contains 
-    the x axis value for each of the i x j x k elements, the second contains
-    the y axis value, etc."""
+        block_count = int(np.floor(point_count / self.interp_block_size))
 
-    indices = np.empty(xyz_coords.shape)
-    indices[0] = (xyz_coords[0] - offset[0]) / scale[0]
-    indices[1] = (xyz_coords[1] - offset[1]) / scale[1]
-    indices[2] = (xyz_coords[2] - offset[2]) / scale[2]
+        for i in range(block_count):
+            start = i * self.interp_block_size
+            end = (i+1) * self.interp_block_size if i + 1 < block_count else -1
+            other_grid[start:end] = interpolator(points[start:end])
 
-    return trilinear_interp(input_array, indices)
-
-
-def trilinear_interp(input_array, indices):
-    """Evaluate the input_array data at the indices given"""
-
-    # output = np.empty(indices[0].shape)
-    x_indices = indices[0]
-    y_indices = indices[1]
-    z_indices = indices[2]
-
-    x0 = x_indices.astype(np.integer)
-    y0 = y_indices.astype(np.integer)
-    z0 = z_indices.astype(np.integer)
-    x1 = x0 + 1
-    y1 = y0 + 1
-    z1 = z0 + 1
-
-    # Check if xyz1 is beyond array boundary:
-    x1[np.where(x1 == input_array.shape[0])] = x0.max()
-    y1[np.where(y1 == input_array.shape[1])] = y0.max()
-    z1[np.where(z1 == input_array.shape[2])] = z0.max()
-
-    x = x_indices - x0
-    y = y_indices - y0
-    z = z_indices - z0
-    output = (input_array[x0, y0, z0] * (1 - x) * (1 - y) * (1 - z) +
-              input_array[x1, y0, z0] * x * (1 - y) * (1 - z) +
-              input_array[x0, y1, z0] * (1 - x) * y * (1 - z) +
-              input_array[x0, y0, z1] * (1 - x) * (1 - y) * z +
-              input_array[x1, y0, z1] * x * (1 - y) * z +
-              input_array[x0, y1, z1] * (1 - x) * y * z +
-              input_array[x1, y1, z0] * x * y * (1 - z) +
-              input_array[x1, y1, z1] * x * y * z)
-
-    return output
+        return other_grid.reshape(self.shape)

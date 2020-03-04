@@ -153,7 +153,7 @@ class MachineLearningFrame(wx.Frame):
                 if self.get_param(variable) != self.defaults[variable]}
 
     def set_input_parameters(self, input_parameters):
-        for variable, value in input_parameters.keys():
+        for variable, value in input_parameters.items():
             self.input[variable].SetValue(str(value))
 
     @property

@@ -576,7 +576,10 @@ def get_dose_to_volume(dvhs, volumes, roi_fraction):
     for i, dvh in enumerate(dvhs):
         abs_volume = volumes[i] * roi_fraction
         dvh_np = np.array(dvh.split(','), dtype=np.float)
-        dose = next(x[0] for x in enumerate(dvh_np) if x[1] < abs_volume)
+        try:
+            dose = next(x[0] for x in enumerate(dvh_np) if x[1] < abs_volume)
+        except StopIteration:
+            dose = dvh_np[-1]
         doses.append(dose)
 
     return doses
@@ -742,3 +745,21 @@ def trace_memory_alloc_simple_stats(snapshot, key_type='lineno'):
     top_stats = snapshot.statistics(key_type)
     for stat in top_stats[:10]:
         print(stat)
+
+
+class PopupMenu:
+    def __init__(self, parent):
+        self.parent = parent
+        self.menus = []
+
+    def add_menu_item(self, label, action):
+        self.menus.append({'id': wx.NewId(), 'label': label, 'action': action})
+
+    def run(self):
+        popup_menu = wx.Menu()
+        for menu in self.menus:
+            popup_menu.Append(menu['id'], menu['label'])
+            self.parent.Bind(wx.EVT_MENU, menu['action'], id=menu['id'])
+
+        self.parent.PopupMenu(popup_menu)
+        popup_menu.Destroy()

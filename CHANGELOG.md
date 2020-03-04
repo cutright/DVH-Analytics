@@ -1,5 +1,19 @@
 # Change log of DVH Analytics
 
+v0.7.3 (2020.03.04)
+--------------------
+ - [Import] Users can right-click an ROI name for a pop-up menu to more easily edit the ROI map
+ - [Import] Adding an ROI variation with right-click menu will predict a physician ROI name using fuzzy logic.   
+ *NOTE: python-Levenshtein is an optional pip install for fuzzywuzzy speed improvements, but may require non-python 
+ libraries to be installed. python-Levenshtein is not required for DVHA and makes no noticeable speed 
+ improvements for these purposes.*
+ - [Import] Fix for [Issue #43](https://github.com/cutright/DVH-Analytics/issues/43) (DICOM Dose Summation)
+ - [Import] Fix for bug that ignored PTV related calculation for patients with multiple plans on one CT
+ - [Import] Fix for bug where importing did not use ROI Map edits during import screen
+ - [Import] Import window checkbox statuses default to previous import statuses
+ - [Machine Learning] Bug fix in model viewer that could not properly load non-default hyper-parameter values
+ - [Misc] Google user group now created [here](https://groups.google.com/forum/#!forum/dvh-analytics)
+
 v0.7.2 (2020.02.11)
 --------------------
  - [Import] Fix for [Issue #35](https://github.com/cutright/DVH-Analytics/issues/35)

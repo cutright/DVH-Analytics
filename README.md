@@ -82,6 +82,7 @@ Dependencies
 * [Statsmodels](https://github.com/statsmodels/statsmodels) 0.8.0
 * [Scikit-learn](http://scikit-learn.org)
 * [regressors](https://pypi.org/project/regressors/)
+* [FuzzyWuzzy](https://github.com/seatgeek/fuzzywuzzy)
 
 
 Support

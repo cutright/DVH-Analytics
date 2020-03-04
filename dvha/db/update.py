@@ -375,3 +375,9 @@ def query(table, column, condition):
         ans = cnx.query(table, column, condition)
     return ans
 
+
+def uid_has_ptvs(study_instance_uid):
+    with DVH_SQL() as cnx:
+        ans = cnx.query('DVHs', 'roi_type', "study_instance_uid = '%s' and roi_type LIKE 'PTV%%'" % study_instance_uid)
+    return bool(ans)
+

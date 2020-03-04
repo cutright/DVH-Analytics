@@ -48,6 +48,8 @@ class Plan:
         self.study_instance_uid = rt_plan.StudyInstanceUID
         self.tps = '%s %s' % (rt_plan.Manufacturer, rt_plan.ManufacturerModelName)
 
+        self.complexity_scores = [fx_grp.complexity_score for fx_grp in self.fx_group]
+
     def __str__(self):
         summary = ['Patient Name:       %s' % self.patient_name,
                    'Patient MRN:        %s' % self.patient_id,
@@ -95,6 +97,8 @@ class FxGroup:
         self.beam_names = [b.name for b in self.beam]
 
         self.beam = update_missing_jaws(self.beam)
+
+        self.complexity_score = np.sum(np.array([np.sum(beam.complexity_scores) for beam in self.beam]))
 
     def __eq__(self, other):
         for i, beam in enumerate(self.beam):
@@ -152,7 +156,7 @@ class Beam:
         y_paths = np.array([get_xy_path_lengths(cp)[1] for cp in self.aperture])
         area = [cp.area for cp in self.aperture]
         c1, c2 = options.COMPLEXITY_SCORE_X_WEIGHT, options.COMPLEXITY_SCORE_Y_WEIGHT
-        complexity_scores = np.divide(np.multiply(np.add(c1*x_paths, c2*y_paths), cp_mu), area) / self.meter_set
+        self.complexity_scores = np.divide(np.multiply(np.add(c1*x_paths, c2*y_paths), cp_mu), area) / self.meter_set
         # Complexity score based on:
         # Younge KC, Matuszak MM, Moran JM, McShan DL, Fraass BA, Roberts DA. Penalization of aperture
         # complexity in inversely planned volumetric modulated arc therapy. Med Phys. 2012;39(11):7160–70.
@@ -172,7 +176,7 @@ class Beam:
                         'x_perim': np.divide(x_paths, 10.).tolist(),
                         'y_perim': np.divide(y_paths, 10.).tolist(),
                         'perim': np.divide(np.add(x_paths, y_paths), 10.).tolist(),
-                        'cmp_score': complexity_scores.tolist()}
+                        'cmp_score': self.complexity_scores.tolist()}
 
         for key in self.summary:
             if len(self.summary[key]) == 1:

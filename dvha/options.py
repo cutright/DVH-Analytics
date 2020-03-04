@@ -23,7 +23,7 @@ class DefaultOptions:
     Create default options, to be inherited by Options class
     """
     def __init__(self):
-        self.VERSION = '0.7.2post2'
+        self.VERSION = '0.7.3'
 
         self.DB_TYPE = 'sqlite'
         self.SQL_PGSQL_IP_HIST = []
@@ -156,6 +156,10 @@ class DefaultOptions:
         self.ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV', 'EXTERNAL',
                           'FIDUCIAL', 'IMPLANT', 'OPTIMIZATION', 'PRV', 'SUPPORT', 'NONE']
 
+        self.KEEP_IN_INBOX = 0
+        self.SEARCH_SUBFOLDERS = 1
+        self.IMPORT_UNCATEGORIZED = 0
+
 
 class Options(DefaultOptions):
     def __init__(self):
@@ -196,6 +200,14 @@ class Options(DefaultOptions):
         self.save_checksum()
 
     def set_option(self, attr, value):
+        """
+        Change or create an option value
+        :param attr: name of option
+        :type attr: str
+        :param value: value of option
+        """
+        if not hasattr(self, attr):
+            print('WARNING: This option did not previously exist!')
         setattr(self, attr, value)
 
     def save_checksum(self):
