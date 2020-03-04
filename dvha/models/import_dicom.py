@@ -1030,15 +1030,12 @@ class ImportStatusDialog(wx.Dialog):
         self.update_elapsed_time()
 
     def update_dvh_progress(self, msg):
-        try:
-            label = self.label_structure.GetLabelText()
-            if '[' in label and label.endswith('%]'):
-                label = label[:label.rfind('[')].strip()
-            label = "%s [%0.0f%%]" % (label, msg*100)
-            wx.CallAfter(self.label_structure.SetLabelText, label)
-            self.update_elapsed_time()
-        except RuntimeError:  # Can happen if user cancels the import
-            pass
+        label = self.label_structure.GetLabelText()
+        if '[' in label and label.endswith('%]'):
+            label = label[:label.rfind('[')].strip()
+        label = "%s [%0.0f%%]" % (label, msg*100)
+        wx.CallAfter(self.label_structure.SetLabelText, label)
+        self.update_elapsed_time()
 
     def update_elapsed_time(self):
         """
@@ -1159,7 +1156,7 @@ class StudyImporter:
                         self.push({'DVHs': [dvh_row]})
 
         # Sort PTVs by their D_95% (applicable to SIBs)
-        if ptvs['dvh']:
+        if ptvs['dvh'] and not self.terminate:
             ptv_order = rank_ptvs_by_D95(ptvs)
             for ptv_row, dvh_row_index in enumerate(ptvs['index']):
                 data_to_import['DVHs'][dvh_row_index]['roi_type'][0] = "PTV%s" % (ptv_order[ptv_row]+1)
@@ -1169,7 +1166,7 @@ class StudyImporter:
             self.push(data_to_import)
 
         # Wait until entire study has been pushed since these values are based on entire PTV volume
-        if self.final_plan_in_study:
+        if self.final_plan_in_study and not self.terminate:
             if db_update.uid_has_ptvs(study_uid):
 
                 # collect roi names for post-import calculations

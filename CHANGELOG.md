@@ -12,6 +12,7 @@ v0.7.3 (2020.03.04)
  - [Import] Fix for bug where importing did not use ROI Map edits during import screen
  - [Import] Import window checkbox statuses default to previous import statuses
  - [Machine Learning] Bug fix in model viewer that could not properly load non-default hyper-parameter values
+ - [Misc] Google user group now created [here](https://groups.google.com/forum/#!forum/dvh-analytics)
 
 v0.7.2 (2020.02.11)
 --------------------
