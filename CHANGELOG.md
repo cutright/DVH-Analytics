@@ -7,6 +7,7 @@ v0.7.3 (TBD)
  *NOTE: that python-Levenshtein is an optional pip install for fuzzywuzzy speed improvements, but may require non-python 
  libraries to be installed. python-Levenshtein is not required for DVHA.*
  - [Import] Fix for [Issue #43](https://github.com/cutright/DVH-Analytics/issues/43) (DICOM Dose Summation)
+ - [Import] Fix of bug that ignored PTV related calculation for patients with multiple plans on one CT
  - [Machine Learning] Bug fix in model viewer that could not properly load non-default hyper-parameter values
 
 v0.7.2 (2020.02.11)

@@ -751,6 +751,7 @@ class ImportDicomFrame(wx.Frame):
         if self.parsed_dicom_data and self.dicom_importer.checked_plans:
             self.roi_map.write_to_file()
             self.options.set_option('KEEP_IN_INBOX', self.checkbox_keep_in_inbox.GetValue())
+            self.options.save()
             ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
                          self.checkbox_include_uncategorized.GetValue(),
                          self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue())
@@ -1105,7 +1106,6 @@ class StudyImporter:
                 if cnx.is_roi_imported(clean_name(roi_name_map[roi_key]), study_uid):
                     roi_name_map.pop(roi_key)
 
-        post_import_rois = []
         roi_total = len(roi_name_map)
         ptvs = {key: [] for key in ['dvh', 'volume', 'index']}
 
@@ -1131,7 +1131,6 @@ class StudyImporter:
 
                 if dvh_row:
                     roi_type = dvh_row['roi_type'][0]
-                    roi_name = dvh_row['roi_name'][0]
                     physician_roi = dvh_row['physician_roi'][0]
 
                     # Collect dvh, volume, and index of ptvs to be used for post-import calculations
@@ -1142,14 +1141,6 @@ class StudyImporter:
                         data_to_import['DVHs'].append(dvh_row)
                     else:
                         self.push({'DVHs': [dvh_row]})
-
-                    # collect roi names for post-import calculations
-                    if roi_type and roi_name and physician_roi:
-                        if roi_type.lower() in ['organ', 'ctv', 'gtv']:
-                            if not (physician_roi.lower() in
-                                    ['uncategorized', 'ignored', 'external', 'skin', 'body']
-                                    or roi_name.lower() in ['external', 'skin', 'body']):
-                                post_import_rois.append(clean_name(roi_name_map[roi_key]))
 
         # Sort PTVs by their D_95% (applicable to SIBs)
         if ptvs['dvh']:
@@ -1163,7 +1154,26 @@ class StudyImporter:
 
         # Wait until entire study has been pushed since these values are based on entire PTV volume
         if self.final_plan_in_study:
-            if ptvs['dvh']:
+            if db_update.uid_has_ptvs(study_uid):
+
+                # collect roi names for post-import calculations
+                # This block moved here since patient's with multiple plans use multiple threads, calculate this
+                # on import of final plan import
+                post_import_rois = []
+                roi_name_map = {key: structures[key]['name'] for key in list(structures) if
+                                structures[key]['type'] != 'MARKER'}
+                for roi_counter, roi_key in enumerate(list(roi_name_map)):
+                    roi_name = clean_name(roi_name_map[roi_key])
+                    with DVH_SQL() as cnx:
+                        condition = "roi_name = '%s' and study_instance_uid = '%s'" % (roi_name, study_uid)
+                        query_return = cnx.query('DVHs', 'roi_type, physician_roi', condition)
+                    if query_return:
+                        roi_type, physician_roi = tuple(query_return[0])
+                        if roi_type.lower() in ['organ', 'ctv', 'gtv']:
+                            if not (physician_roi.lower() in
+                                    ['uncategorized', 'ignored', 'external', 'skin', 'body']
+                                    or roi_name.lower() in ['external', 'skin', 'body']):
+                                post_import_rois.append(clean_name(roi_name_map[roi_key]))
 
                 # Calculate the PTV overlap for each roi
                 tv = db_update.get_total_treatment_volume_of_study(study_uid)
