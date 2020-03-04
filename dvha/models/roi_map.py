@@ -20,9 +20,8 @@ from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddVariation, Mo
     RenamePhysicianDialog, RenamePhysicianROIDialog, RenameInstitutionalROIDialog, LinkPhysicianROI
 from dvha.models.data_table import DataTable
 from dvha.models.plot import PlotROIMap
-from dvha.tools.errors import ROIVariationError, ROIVariationErrorDialog
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_elapsed_time, get_window_size,\
-    set_frame_icon
+    set_frame_icon, set_msw_background_color
 from dvha.tools.roi_name_manager import clean_name
 
 
@@ -721,6 +720,7 @@ class RemapROIFrame(wx.Frame):
         :type remap_all: bool
         """
         wx.Frame.__init__(self, None, title='Updating Database with ROI Map Changes')
+        set_msw_background_color(self)
 
         self.roi_map = roi_map
 

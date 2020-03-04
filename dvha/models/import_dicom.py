@@ -1009,6 +1009,7 @@ class ImportStatusDialog(wx.Dialog):
         wx.CallAfter(self.label_patient.SetLabelText, "Patient: %s" % msg['patient_name'])
         wx.CallAfter(self.label_study.SetLabelText, "Plan SOP Instance UID: %s" % msg['uid'])
         wx.CallAfter(self.gauge_study.SetValue, msg['progress'])
+        self.update_elapsed_time()
 
     def update_calculation(self, msg):
         """
@@ -1026,6 +1027,7 @@ class ImportStatusDialog(wx.Dialog):
         else:
             label_text = ''
         wx.CallAfter(self.label_structure.SetLabelText, label_text)
+        self.update_elapsed_time()
 
     def update_dvh_progress(self, msg):
         try:
@@ -1034,6 +1036,7 @@ class ImportStatusDialog(wx.Dialog):
                 label = label[:label.rfind('[')].strip()
             label = "%s [%0.0f%%]" % (label, msg*100)
             wx.CallAfter(self.label_structure.SetLabelText, label)
+            self.update_elapsed_time()
         except RuntimeError:  # Can happen if user cancels the import
             pass
 
@@ -1089,6 +1092,8 @@ class StudyImporter:
         wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
 
         parsed_data = DICOM_Parser(**self.init_params)
+
+        wx.CallAfter(pub.sendMessage, "update_elapsed_time")
 
         # Storing this now, parsed_data sometimes gets cleared prior storing actual values in this message when
         # generating this immediately before pub.sendMessage
@@ -1335,11 +1340,8 @@ class ImportWorker(Thread):
                'progress': 0}
         wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
 
-        # TODO: try run_dose_sum with threading for pubsub, may work with new dose sum algorithm?
         self.run_dose_sum()
-
         self.run_import()
-
         self.close()
 
     def close(self):
@@ -1348,18 +1350,19 @@ class ImportWorker(Thread):
         pub.sendMessage("close")
 
     def run_dose_sum(self):
+        """Could not implement with threading due to memory allocation issues"""
         pool = Pool(processes=1)
-        pool.starmap(self.sum_two_doses, self.get_dose_sum_args())
+        pool.starmap(self.sum_two_doses, self.dose_sum_args)
         pool.close()
 
     def run_import(self):
-        queue = self.get_queue()
-        worker = Thread(target=self.import_study, args=[queue])
+        queue = self.import_queue
+        worker = Thread(target=self.import_target, args=[queue])
         worker.setDaemon(True)
         worker.start()
         queue.join()
 
-    def import_study(self, queue):
+    def import_target(self, queue):
         while queue.qsize():
             parameters = queue.get()
             if not self.terminate:
@@ -1389,7 +1392,8 @@ class ImportWorker(Thread):
                 dose_file_sets[study_uid] = [self.data[plan_uid].dose_file for plan_uid in plan_uid_set]
         return dose_file_sets
 
-    def get_queue(self):
+    @property
+    def import_queue(self):
         study_uids = self.get_study_uids()
         plan_total = len(self.checked_uids)
         plan_counter = 0
@@ -1433,7 +1437,8 @@ class ImportWorker(Thread):
     def set_terminate(self):
         self.terminate = True
 
-    def get_dose_sum_args(self):
+    @property
+    def dose_sum_args(self):
         pool_args = []
         file_names = self.dose_sum_save_file_names
         for uid, dose_file_set in self.get_dose_file_sets().items():

@@ -127,6 +127,7 @@ class DoseGrid:
         self.ds.BitsAllocated = 32
         self.ds.BitsStored = 32
         self.ds.HighBit = 31
+        self.ds.DoseGridScaling = 1. / np.max(self.dose_grid)
         pixel_data = np.swapaxes(self.dose_grid, 0, 2) / self.ds.DoseGridScaling
         self.ds.PixelData = np.uint32(pixel_data).tostring()
 
