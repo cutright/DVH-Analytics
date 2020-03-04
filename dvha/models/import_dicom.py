@@ -196,21 +196,21 @@ class ImportDicomFrame(wx.Frame):
 
         self.checkbox_subfolders.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
                                                  wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
-        self.checkbox_subfolders.SetValue(1)
+        value = self.options.SEARCH_SUBFOLDERS if hasattr(self.options, 'SEARCH_SUBFOLDERS') else 1
+        self.checkbox_subfolders.SetValue(value)
 
-        if hasattr(self.options, 'KEEP_IN_INBOX'):
-            self.checkbox_keep_in_inbox.SetValue(self.options.KEEP_IN_INBOX)
-        else:
-            self.checkbox_keep_in_inbox.SetValue(0)
         self.checkbox_keep_in_inbox.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
                                                     wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         self.checkbox_keep_in_inbox.SetToolTip("Successfully imported DICOM files will either be copied or moved into "
                                                "your Imported Directory. Check this box to copy. Uncheck this box to "
                                                "remove these files from the inbox.")
+        value = self.options.KEEP_IN_INBOX if hasattr(self.options, 'KEEP_IN_INBOX') else 0
+        self.checkbox_keep_in_inbox.SetValue(value)
 
         self.checkbox_include_uncategorized.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
                                                             wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
-        self.checkbox_include_uncategorized.SetValue(0)
+        value = self.options.IMPORT_UNCATEGORIZED if hasattr(self.options, 'IMPORT_UNCATEGORIZED') else 0
+        self.checkbox_include_uncategorized.SetValue(value)
 
         for checkbox in self.checkbox.values():
             checkbox.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
@@ -754,7 +754,8 @@ class ImportDicomFrame(wx.Frame):
             self.options.save()
             ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
                          self.checkbox_include_uncategorized.GetValue(),
-                         self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue())
+                         self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue(),
+                         self.roi_map)
             dlg = ImportStatusDialog()
             # calling self.Close() below caused issues in Windows if Show() used instead of ShowModal()
             [dlg.Show, dlg.ShowModal][is_windows()]()
@@ -944,6 +945,7 @@ class ImportStatusDialog(wx.Dialog):
     def __do_subscribe(self):
         pub.subscribe(self.update_patient, "update_patient")
         pub.subscribe(self.update_calculation, "update_calculation")
+        pub.subscribe(self.update_dvh_progress, "update_dvh_progress")
         pub.subscribe(self.update_elapsed_time, "update_elapsed_time")
         pub.subscribe(self.close, "close")
 
@@ -1024,6 +1026,16 @@ class ImportStatusDialog(wx.Dialog):
         else:
             label_text = ''
         wx.CallAfter(self.label_structure.SetLabelText, label_text)
+
+    def update_dvh_progress(self, msg):
+        try:
+            label = self.label_structure.GetLabelText()
+            if '[' in label and label.endswith('%]'):
+                label = label[:label.rfind('[')].strip()
+            label = "%s [%0.0f%%]" % (label, msg*100)
+            wx.CallAfter(self.label_structure.SetLabelText, label)
+        except RuntimeError:  # Can happen if user cancels the import
+            pass
 
     def update_elapsed_time(self):
         """
@@ -1275,7 +1287,7 @@ class ImportWorker(Thread):
     Create a thread separate from the GUI to perform the import calculations
     """
     def __init__(self, data, checked_uids, import_uncategorized, other_dicom_files, start_path,
-                 keep_in_inbox):
+                 keep_in_inbox, roi_map):
         """
         :param data: parsed dicom data
         :type data: dict
@@ -1287,6 +1299,7 @@ class ImportWorker(Thread):
         :type other_dicom_files: dict
         :param keep_in_inbox: Set to False to move files, True to copy files to imported
         :type keep_in_inbox: bool
+        :param roi_map: pass the latest roi_map
         """
         Thread.__init__(self)
 
@@ -1298,6 +1311,7 @@ class ImportWorker(Thread):
         self.other_dicom_files = other_dicom_files
         self.start_path = start_path
         self.keep_in_inbox = keep_in_inbox
+        self.roi_map = roi_map
 
         self.dose_sum_save_file_names = self.get_dose_sum_save_file_names()
         self.move_msg_queue = []
@@ -1390,6 +1404,7 @@ class ImportWorker(Thread):
                            'study_number': plan_counter + 1,
                            'study_total': plan_total}
                     init_param = self.data[plan_uid].init_param
+                    init_param['roi_map'] = self.roi_map
                     if study_uid in self.dose_sum_save_file_names.keys():
                         init_param['dose_sum_file'] = self.dose_sum_save_file_names[study_uid]
                     args = (init_param, msg, self.import_uncategorized, plan_uid == plan_uid_set[-1])

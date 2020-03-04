@@ -14,6 +14,7 @@ from dateutil.relativedelta import relativedelta  # python-dateutil
 from dateutil.parser import parse as date_parser
 import numpy as np
 from os.path import basename, join
+from pubsub import pub
 from dvha.tools.roi_name_manager import clean_name, DatabaseROIs
 from dvha.tools.utilities import change_angle_origin, calc_stats, is_date
 from dvha.tools.roi_formatter import dicompyler_roi_coord_to_db_string, get_planes_from_string
@@ -391,14 +392,16 @@ class DICOM_Parser:
         """
 
         try:
-            dvh = dvhcalc.get_dvh(self.rt_data['structure'], self.dicompyler_data['dose'], dvh_index)
+            dvh = dvhcalc.get_dvh(self.rt_data['structure'], self.dicompyler_data['dose'], dvh_index,
+                                  callback=self.send_dvh_progress)
         except AttributeError as e:
             # print(str(e), 'for MRN: %s' % self.mrn)
             # print('Applying validate_transfer_syntax_uid() due to missing data in user provided DICOM')
             dose_file = self.dose_sum_file if self.dose_sum_file else self.rt_data['dose']
             dose = self.validate_transfer_syntax_uid(dose_file)
             structure = self.validate_transfer_syntax_uid(self.rt_data['structure'])
-            dvh = dvhcalc.get_dvh(structure, dose, dvh_index)
+            dvh = dvhcalc.get_dvh(structure, dose, dvh_index,
+                                  callback=self.send_dvh_progress)
 
         if dvh.volume > 0:  # ignore points and empty ROIs
             geometries = self.get_dvh_geometries(dvh_index)
@@ -964,6 +967,17 @@ class DICOM_Parser:
             return {key: {'type': drts[key]['type'],
                           'name': drts[key]['name']} for key in list(drts)}
         return {}
+
+    def send_dvh_progress(self, current_plane, plane_count):
+        """
+        Callback for dicompyler-core dvh calculation
+        :param current_plane: the plane to be calculated
+        :type current_plane: int
+        :param plane_count: total number of planes to be calculated
+        :type plane_count: int
+        """
+        progress = float(current_plane) / float(plane_count)
+        pub.sendMessage('update_dvh_progress', msg=progress)
 
 
 class BeamParser:

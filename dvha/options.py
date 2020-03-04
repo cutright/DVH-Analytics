@@ -157,6 +157,8 @@ class DefaultOptions:
                           'FIDUCIAL', 'IMPLANT', 'OPTIMIZATION', 'PRV', 'SUPPORT', 'NONE']
 
         self.KEEP_IN_INBOX = 0
+        self.SEARCH_SUBFOLDERS = 1
+        self.IMPORT_UNCATEGORIZED = 0
 
 
 class Options(DefaultOptions):
@@ -198,8 +200,15 @@ class Options(DefaultOptions):
         self.save_checksum()
 
     def set_option(self, attr, value):
-        if hasattr(self, attr):
-            setattr(self, attr, value)
+        """
+        Change or create an option value
+        :param attr: name of option
+        :type attr: str
+        :param value: value of option
+        """
+        if not hasattr(self, attr):
+            print('WARNING: This option did not previously exist!')
+        setattr(self, attr, value)
 
     def save_checksum(self):
         check_sum = self.calculate_checksum()
