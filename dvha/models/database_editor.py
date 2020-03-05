@@ -192,7 +192,6 @@ class DatabaseEditorFrame(wx.Frame):
 
         condition = self.text_ctrl_condition.GetValue()
 
-        wait = wx.BusyInfo("Querying data\nPlease wait...")
         with DVH_SQL() as cnx:
             try:
                 data = cnx.query(table, ','.join(columns), condition, bokeh_cds=True)
@@ -200,7 +199,6 @@ class DatabaseEditorFrame(wx.Frame):
             except SQLError as e:
                 SQLErrorDialog(self, e)
                 self.data_query_results.clear()
-        del wait
 
     def on_clear(self, evt):
         self.data_query_results.clear()
