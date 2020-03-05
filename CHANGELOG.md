@@ -4,6 +4,7 @@ v0.7.4 (TBD)
 --------------------
  - [Import] Plan complexity calculation corrected, now is direct sum of all CP complexities
  - [Import] Catch PatientSetupSequence error to allow for brachytherapy plan import
+ - [Import] Implement scipy.nd_image.map_coordinates for ~2.5x faster dose interpolation
  - [PyPI] scikit-learn changed 0.21 to 0.21.0, updated requirements.txt (as of v0.7.3.post1)
 
 v0.7.3 (2020.03.04)
