@@ -215,7 +215,7 @@ class AddEndpointDialog(wx.Dialog):
 
     @property
     def short_hand_label(self):
-        return self.text_short_hand.GetLabel().replace('\tShort-hand: ', '').strip()
+        return self.text_short_hand.GetLabel().replace('Short-hand: ', '').strip()
 
     @property
     def output_type(self):
