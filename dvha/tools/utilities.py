@@ -25,6 +25,8 @@ from dvha.paths import IMPORT_SETTINGS_PATH, SQL_CNF_PATH, INBOX_DIR, IMPORTED_D
     APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR, MODELS_DIR, WIN_APP_ICON
 import tracemalloc
 import linecache
+import pydicom
+from pydicom.uid import ImplicitVRLittleEndian
 
 
 IGNORED_FILES = ['.ds_store']
@@ -763,3 +765,15 @@ class PopupMenu:
 
         self.parent.PopupMenu(popup_menu)
         popup_menu.Destroy()
+
+
+def validate_transfer_syntax_uid(data_set):
+    meta = pydicom.Dataset()
+    meta.ImplementationClassUID = pydicom.uid.generate_uid()
+    meta.TransferSyntaxUID = ImplicitVRLittleEndian
+    new_data_set = pydicom.FileDataset(filename_or_obj=None, dataset=data_set, is_little_endian=True,
+                                       file_meta=meta)
+    new_data_set.is_little_endian = True
+    new_data_set.is_implicit_VR = True
+
+    return new_data_set
