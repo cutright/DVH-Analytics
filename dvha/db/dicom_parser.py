@@ -721,16 +721,13 @@ class DICOM_Parser:
     @property
     def plan_complexity(self):
         plan_complexity = 0
-        mu = 0
         for fx in self.beam_data.values():
             for beam in fx:
                 complexity = beam.mlc_stat_data['complexity']
-                beam_mu = beam.beam_mu
-                if beam_mu and complexity:
-                    mu += beam_mu
-                    plan_complexity += complexity * beam_mu
-        if mu:
-            return plan_complexity / mu
+                if complexity:
+                    plan_complexity += complexity
+        if plan_complexity:
+            return plan_complexity
 
     # ------------------------------------------------------------------------------
     # DVH table data
