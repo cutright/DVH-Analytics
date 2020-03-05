@@ -751,9 +751,6 @@ class DICOM_Parser:
         """
         return clean_name(self.dicompyler_rt_structures[key]['name'])
 
-    def set_roi_name(self, key, name):
-        self.dicompyler_rt_structures[key]['name'] = clean_name(name)
-
     def get_physician_roi(self, key):
         """
         Look up the physician roi of the specified roi for this plan
@@ -1485,6 +1482,9 @@ class PreImportData:
         :rtype: str
         """
         return clean_name(self.dicompyler_rt_structures[key]['name'])
+
+    def set_roi_name(self, key, name):
+        self.dicompyler_rt_structures[key]['name'] = clean_name(name)
 
     def get_physician_roi(self, key):
         """

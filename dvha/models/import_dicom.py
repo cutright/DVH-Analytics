@@ -516,7 +516,19 @@ class ImportDicomFrame(wx.Frame):
                 popup.add_menu_item(label, partial(pre_func, dlg_objects[i]))
             # if is_mapped:
             #     popup.add_menu_item("Do Not Import", partial(pre_func, dlg_objects[0]))
+
+            popup.add_menu_item('Edit ROI Name', partial(self.change_plan_roi_name, evt))
+
             popup.run()
+
+    def change_plan_roi_name(self, evt_tree, *evt):
+        ChangePlanROIName(self.tree_ctrl_roi,
+                          evt_tree.GetItem(),
+                          self.input['mrn'].GetValue(),
+                          self.input['study_instance_uid'].GetValue(),
+                          self.parsed_dicom_data[self.selected_uid])
+        # self.dicom_dir = self.parsed_dicom_data[self.input['study_instance_uid'].GetValue()]
+        # self.dicom_dir.update_mapped_roi_status(self.input['physician'].GetValue())
 
     def update_input_roi_physician_enable(self):
         if self.selected_roi:
@@ -907,15 +919,6 @@ class ImportDicomFrame(wx.Frame):
 
         self.dicom_importer.update_mapped_roi_status(physician)
         self.update_input_roi_physician_enable()
-
-    def on_roi_tree_double_click(self, evt):
-        ChangePlanROIName(self.tree_ctrl_roi,
-                          evt.GetItem(),
-                          self.input['mrn'].GetValue(),
-                          self.input['study_instance_uid'].GetValue(),
-                          self.parsed_dicom_data[self.input['study_instance_uid'].GetValue()])
-        # self.dicom_dir = self.parsed_dicom_data[self.input['study_instance_uid'].GetValue()]
-        # self.dicom_dir.update_mapped_roi_status(self.input['physician'].GetValue())
 
 
 class ImportStatusDialog(wx.Dialog):
