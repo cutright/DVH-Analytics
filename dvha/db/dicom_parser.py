@@ -190,7 +190,6 @@ class DICOM_Parser:
         :return: treatment site name
         :rtype: str
         """
-        # TODO: Update tx site extraction to handle multiple prescriptions
 
         if self.structure_file:
             struct_seq = self.rt_data['structure'].StructureSetROISequence
@@ -846,7 +845,6 @@ class DICOM_Parser:
         :rtype: dict
         """
 
-        # TODO: GetStructureCoordinates can throw memory error for large Structures
         structure_coord = self.dicompyler_data['structure'].GetStructureCoordinates(key)
 
         try:
