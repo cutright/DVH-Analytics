@@ -736,27 +736,27 @@ class ChangePlanROIName(wx.Dialog):
     """
     Change the roi name of a parsed plan in the DICOM importer
     """
-    # TODO: implement ChangePlanROIName
-    def __init__(self, tree_ctrl_roi, tree_item, mrn, study_instance_uid, parsed_dicom_data):
+    def __init__(self, tree_ctrl_roi, tree_item, plan_uid, parsed_dicom_data, dicom_importer):
         """
         :param tree_ctrl_roi: the roi tree from the DICOM importer view
         :param tree_item: the tree_ctrl_roi item to be edited
-        :param mrn: the patient's mrn for the plan of interest
-        :type mrn: str
-        :param study_instance_uid: the study instance uid of the plan of interest (should be plan_uid now?)
-        :type study_instance_uid: str
+        :param plan_uid: the study instance uid of the plan of interest
+        :type plan_uid: str
         :param parsed_dicom_data: parsed dicom data object for plan of interest
         :type parsed_dicom_data: DICOM_Parser
+        :param dicom_importer: Needed to edit tree
+        :type dicom_importer: DicomTreeBuilder
         """
         wx.Dialog.__init__(self, None, title='Edit %s' % tree_ctrl_roi.GetItemText(tree_item))
 
         self.tree_ctrl_roi = tree_ctrl_roi
         self.tree_item = tree_item
         self.roi = tree_ctrl_roi.GetItemText(tree_item)
-        self.initial_mrn = mrn
-        self.initial_study_instance_uid = study_instance_uid
+
+        self.plan_uid = plan_uid
 
         self.parsed_dicom_data = parsed_dicom_data
+        self.dicom_importer = dicom_importer
 
         invalid_options = [''] + parsed_dicom_data.roi_names
         self.invalid_options = [clean_name(name) for name in invalid_options]
@@ -817,10 +817,10 @@ class ChangePlanROIName(wx.Dialog):
         self.Destroy()
 
     def action(self):
-        # TODO: data doesn't propagate everywhere needed?
         key = self.parsed_dicom_data.get_roi_key(self.roi)
         self.parsed_dicom_data.set_roi_name(key, self.new_name)
         self.tree_ctrl_roi.SetItemText(self.tree_item, self.new_name)
+        self.dicom_importer.set_roi_name_over_ride(self.plan_uid, self.roi, self.new_name)
 
 
 class RenamerBaseClass(wx.Dialog):

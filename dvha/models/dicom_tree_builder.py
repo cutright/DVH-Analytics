@@ -72,6 +72,7 @@ class DicomTreeBuilder:
         self.file_tree = {}
         self.roi_name_map = {}
         self.roi_nodes = {}
+        self.roi_name_over_ride = {}
 
         self.__do_subscribe()
         self.__set_images()
@@ -159,7 +160,8 @@ class DicomTreeBuilder:
             self.tree_ctrl_rois.SetItemBackgroundColour(self.root_rois, None)
             dicom_rt_struct = dicomparser.DicomParser(self.dicom_file_paths[plan_uid]['rtstruct'][0])
             structures = dicom_rt_struct.GetStructures()
-            self.roi_name_map = {structures[key]['name']: {'key': key, 'type': structures[key]['type']}
+            self.roi_name_map = {structures[key]['name']: {'key': key,
+                                                           'type': structures[key]['type']}
                                  for key in list(structures) if structures[key]['type'] != 'MARKER'}
             self.roi_nodes = {}
             rois = list(self.roi_name_map)
@@ -168,6 +170,7 @@ class DicomTreeBuilder:
                 self.roi_nodes[roi] = self.tree_ctrl_rois.AppendItem(self.root_rois, roi, ct_type=0)
                 roi_type = [None, 'PTV'][self.roi_name_map[roi]['type'] == 'PTV']
                 self.update_tree_ctrl_roi_with_roi_type(roi, roi_type=roi_type)
+            self.apply_roi_name_over_rides(plan_uid)
         else:
             self.tree_ctrl_rois.SetItemBackgroundColour(self.root_rois, wx.Colour(255, 0, 0))
 
@@ -177,6 +180,21 @@ class DicomTreeBuilder:
         else:
             text = roi
         self.tree_ctrl_rois.SetItemText(self.roi_nodes[roi], text)
+
+    def apply_roi_name_over_rides(self, plan_uid):
+        if plan_uid in list(self.roi_name_over_ride):
+            for roi_name, over_ride in self.roi_name_over_ride[plan_uid].items():
+                if roi_name in list(self.roi_name_map):
+                    self.roi_name_map[over_ride] = self.roi_name_map.pop(roi_name)
+                if roi_name in list(self.roi_nodes):
+                    self.roi_nodes[over_ride] = self.roi_nodes.pop(roi_name)
+                    self.tree_ctrl_rois.SetItemText(self.roi_nodes[over_ride], over_ride)
+
+    def set_roi_name_over_ride(self, plan_uid, roi_name, roi_name_over_ride):
+        if plan_uid not in list(self.roi_name_over_ride):
+            self.roi_name_over_ride[plan_uid] = {}
+        self.roi_name_over_ride[plan_uid][roi_name] = roi_name_over_ride
+        self.apply_roi_name_over_rides(plan_uid)
 
     def add_patient_node(self, mrn):
         """

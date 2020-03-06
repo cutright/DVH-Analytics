@@ -3,6 +3,7 @@
 v0.7.4 (TBD)
 --------------------
  - [Endpoints] Fixed a bug where endpoint short-hand would not display on MS Windows
+ - [Import] Users can edit ROI Names with a right-click, rather than editing ROI Map
  - [Import] Plan complexity calculation corrected, now is direct sum of all CP complexities
  - [Import] Catch PatientSetupSequence error to allow for brachytherapy plan import
  - [Import] Implement scipy.nd_image.map_coordinates for ~2.5x faster dose interpolation

@@ -524,11 +524,10 @@ class ImportDicomFrame(wx.Frame):
     def change_plan_roi_name(self, evt_tree, *evt):
         ChangePlanROIName(self.tree_ctrl_roi,
                           evt_tree.GetItem(),
-                          self.input['mrn'].GetValue(),
-                          self.input['study_instance_uid'].GetValue(),
-                          self.parsed_dicom_data[self.selected_uid])
-        # self.dicom_dir = self.parsed_dicom_data[self.input['study_instance_uid'].GetValue()]
-        # self.dicom_dir.update_mapped_roi_status(self.input['physician'].GetValue())
+                          self.selected_uid,
+                          self.parsed_dicom_data[self.selected_uid],
+                          self.dicom_importer)
+        self.dicom_importer.update_mapped_roi_status(self.input['physician'].GetValue())
 
     def update_input_roi_physician_enable(self):
         if self.selected_roi:
@@ -1304,6 +1303,7 @@ class ImportWorker(Thread):
         :param keep_in_inbox: Set to False to move files, True to copy files to imported
         :type keep_in_inbox: bool
         :param roi_map: pass the latest roi_map
+
         """
         Thread.__init__(self)
 

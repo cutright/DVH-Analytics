@@ -30,7 +30,7 @@ class DICOM_Parser:
     Parse a set of DICOM files for database
     """
     def __init__(self, plan_file=None, structure_file=None, dose_file=None, dose_sum_file=None, plan_over_rides=None,
-                 global_plan_over_rides=None, roi_type_over_ride=None, roi_map=DatabaseROIs()):
+                 global_plan_over_rides=None, roi_type_over_ride=None, roi_name_over_ride=None, roi_map=DatabaseROIs()):
         """
         :param plan_file: absolute path of DICOM RT Plan file
         :type plan_file: str
@@ -44,6 +44,8 @@ class DICOM_Parser:
         :type plan_over_rides: dict
         :param global_plan_over_rides: Values from import GUI to override DICOM file data
         :type global_plan_over_rides: dict
+        :param roi_name_over_ride: lookup up for roi_name overrides
+        :type roi_name_over_ride: dict
         :param roi_map: roi name map
         :type roi_map: DatabaseROIs
         """
@@ -90,7 +92,8 @@ class DICOM_Parser:
         self.plan_over_rides = [plan_over_rides, {key: None for key in keys}][plan_over_rides is None]
         self.global_plan_over_rides = global_plan_over_rides
 
-        self.roi_type_over_ride = [roi_type_over_ride, {}][roi_type_over_ride is None]
+        self.roi_type_over_ride = roi_type_over_ride if roi_type_over_ride is not None else {}
+        self.roi_name_over_ride = roi_name_over_ride if roi_name_over_ride is not None else {}
 
     def update_stored_values(self):
         keys = ['study_instance_uid_to_be_imported', 'patient_name', 'mrn', 'sim_study_date', 'birth_date',
@@ -749,6 +752,8 @@ class DICOM_Parser:
         :return: roi name to be used in the database
         :rtype: str
         """
+        if key in list(self.roi_name_over_ride):
+            return clean_name(self.roi_name_over_ride[key])
         return clean_name(self.dicompyler_rt_structures[key]['name'])
 
     def get_physician_roi(self, key):
@@ -1370,6 +1375,7 @@ class PreImportData:
         self.global_plan_over_rides = None
 
         self.roi_type_over_ride = {}
+        self.roi_name_over_ride = {}
 
     @property
     def mrn(self):
@@ -1481,10 +1487,12 @@ class PreImportData:
         :return: roi name to be used in the database
         :rtype: str
         """
+        if key in list(self.roi_name_over_ride):
+            return clean_name(self.roi_name_over_ride[key])
         return clean_name(self.dicompyler_rt_structures[key]['name'])
 
     def set_roi_name(self, key, name):
-        self.dicompyler_rt_structures[key]['name'] = clean_name(name)
+        self.roi_name_over_ride[key] = clean_name(name)
 
     def get_physician_roi(self, key):
         """
@@ -1553,7 +1561,7 @@ class PreImportData:
     @property
     def init_param(self):
         params = ['plan_file', 'structure_file', 'dose_file',
-                  'plan_over_rides', 'global_plan_over_rides', 'roi_type_over_ride']
+                  'plan_over_rides', 'global_plan_over_rides', 'roi_type_over_ride', 'roi_name_over_ride']
         return {key: getattr(self, key) for key in params}
 
     @property
