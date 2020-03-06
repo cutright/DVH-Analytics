@@ -191,9 +191,19 @@ class DicomTreeBuilder:
                     self.tree_ctrl_rois.SetItemText(self.roi_nodes[over_ride], over_ride)
 
     def set_roi_name_over_ride(self, plan_uid, roi_name, roi_name_over_ride):
-        if plan_uid not in list(self.roi_name_over_ride):
-            self.roi_name_over_ride[plan_uid] = {}
-        self.roi_name_over_ride[plan_uid][roi_name] = roi_name_over_ride
+
+        # get all plan_uids with this struct file (e.g., Eclipse plans with multiple Rxs)
+        rt_file_path = self.dicom_file_paths[plan_uid]['rtstruct'][0]
+        plan_uids = []
+        for uid, file_paths in self.dicom_file_paths.items():
+            if file_paths['rtstruct'] and file_paths['rtstruct'][0] == rt_file_path:
+                plan_uids.append(uid)
+
+        for uid in plan_uids:
+            if uid not in list(self.roi_name_over_ride):
+                self.roi_name_over_ride[uid] = {}
+            self.roi_name_over_ride[uid][roi_name] = roi_name_over_ride
+
         self.apply_roi_name_over_rides(plan_uid)
 
     def add_patient_node(self, mrn):
