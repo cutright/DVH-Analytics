@@ -64,8 +64,7 @@ class DICOM_Parser:
         self.rt_data = {key: None for key in ['plan', 'structure', 'dose']}
         self.dicompyler_data = {key: None for key in ['plan', 'structure', 'dose']}
         self.dicompyler_rt_plan = None
-        self.dicompyler_rt_structures = None
-
+        self.structure_name_and_type = None
         if self.plan_file:
             self.dicompyler_data['plan'] = dicompylerParser(self.plan_file)
             self.rt_data['plan'] = self.dicompyler_data['plan'].ds
@@ -73,7 +72,7 @@ class DICOM_Parser:
         if self.structure_file:
             self.dicompyler_data['structure'] = dicompylerParser(self.structure_file)
             self.rt_data['structure'] = self.dicompyler_data['structure'].ds
-            self.dicompyler_rt_structures = self.dicompyler_data['structure'].GetStructures()
+            self.structure_name_and_type = self.get_structure_name_and_type(self.rt_data['structure'])
         if self.dose_file:
             if self.dose_sum_file is None:
                 self.rt_data['dose'] = dicompylerParser(self.dose_file).ds
@@ -740,7 +739,7 @@ class DICOM_Parser:
         """
         if key in list(self.roi_type_over_ride):
             return self.roi_type_over_ride[key]
-        return self.dicompyler_rt_structures[key]['type'].upper()
+        return self.structure_name_and_type[key]['type'].upper()
 
     def reset_roi_type_over_ride(self, key):
         self.roi_type_over_ride[key] = None
@@ -754,7 +753,7 @@ class DICOM_Parser:
         """
         if key in list(self.roi_name_over_ride):
             return clean_name(self.roi_name_over_ride[key])
-        return clean_name(self.dicompyler_rt_structures[key]['name'])
+        return clean_name(self.structure_name_and_type[key]['name'])
 
     def get_physician_roi(self, key):
         """
@@ -790,8 +789,8 @@ class DICOM_Parser:
         Check if the plan has at least one PTV assigned
         :rtype: bool
         """
-        if self.dicompyler_rt_structures:
-            for key in list(self.dicompyler_rt_structures):
+        if self.structure_name_and_type:
+            for key in list(self.structure_name_and_type):
                 if self.get_roi_type(key) == 'PTV':
                     return True
         return False
@@ -802,7 +801,7 @@ class DICOM_Parser:
         :return: roi_names for this plan per the plan (clean_name not applied)
         :rtype: list
         """
-        return [self.get_roi_name(key) for key in list(self.dicompyler_rt_structures)]
+        return [self.get_roi_name(key) for key in list(self.structure_name_and_type)]
 
     def get_roi_key(self, roi_name):
         """
@@ -812,7 +811,7 @@ class DICOM_Parser:
         :rtype: int
         """
         roi_name = clean_name(roi_name)
-        for key in list(self.dicompyler_rt_structures):
+        for key in list(self.structure_name_and_type):
             if roi_name == clean_name(self.get_roi_name(key)):
                 return key
 
@@ -823,8 +822,8 @@ class DICOM_Parser:
         :return: PTV names
         :rtype: list
         """
-        if self.dicompyler_rt_structures:
-            return [self.get_roi_name(x) for x in list(self.dicompyler_rt_structures) if self.get_roi_type(x) == 'PTV']
+        if self.structure_name_and_type:
+            return [self.get_roi_name(x) for x in list(self.structure_name_and_type) if self.get_roi_type(x) == 'PTV']
         return self.stored_values['ptv_names']
 
     def get_surface_area(self, key):
@@ -940,19 +939,34 @@ class DICOM_Parser:
         self.update_stored_values()
         return {'file_set': {'plan': self.plan_file, 'dose': self.dose_file, 'structure': self.structure_file},
                 'stored_values': self.stored_values,
-                'dicompyler_rt_structures': self.light_weight_dicompyler_rt_structures,
+                'dicompyler_rt_structures': self.structure_name_and_type,
                 'roi_map': self.database_rois}
 
-    @property
-    def light_weight_dicompyler_rt_structures(self):
-        """Return only type and name of ROIs"""
-        drts = self.dicompyler_rt_structures
-        if drts:
-            return {key: {'type': drts[key]['type'],
-                          'name': drts[key]['name']} for key in list(drts)}
-        return {}
+    @staticmethod
+    def get_structure_name_and_type(rt_struct_ds):
+        """Stripped down version of dicompylercore.dicomparser.GetStructures"""
+        structures = {}
 
-    def send_dvh_progress(self, current_plane, plane_count):
+        # Locate the name and number of each ROI
+        if 'StructureSetROISequence' in rt_struct_ds:
+            for item in rt_struct_ds.StructureSetROISequence:
+                data = {}
+                number = int(item.ROINumber)
+                data['id'] = number
+                data['name'] = item.ROIName
+                structures[number] = data
+
+        # Determine the type of each structure (PTV, organ, external, etc)
+        if 'RTROIObservationsSequence' in rt_struct_ds:
+            for item in rt_struct_ds.RTROIObservationsSequence:
+                number = item.ReferencedROINumber
+                if number in structures:
+                    structures[number]['type'] = item.RTROIInterpretedType
+
+        return structures
+
+    @staticmethod
+    def send_dvh_progress(current_plane, plane_count):
         """
         Callback for dicompyler-core dvh calculation
         :param current_plane: the plane to be calculated

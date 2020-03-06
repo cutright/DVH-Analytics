@@ -37,7 +37,6 @@ from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move
     set_frame_icon, PopupMenu
 
 
-# TODO: Provide methods to write over-rides to DICOM file
 class ImportDicomFrame(wx.Frame):
     """
     Class used to generate the DICOM import GUI
@@ -414,7 +413,8 @@ class ImportDicomFrame(wx.Frame):
         self.do_unsubscribe()
         self.Destroy()
 
-    def do_unsubscribe(self):
+    @staticmethod
+    def do_unsubscribe():
         pub.unsubAll(topicName="parse_dicom_data")
         pub.unsubAll(topicName="set_pre_import_parsed_dicom_data")
         pub.unsubAll(topicName="pre_import_complete")
@@ -1103,7 +1103,7 @@ class StudyImporter:
 
         mrn = parsed_data.mrn
         study_uid = parsed_data.study_instance_uid_to_be_imported
-        structures = parsed_data.dicompyler_rt_structures
+        structures = parsed_data.structure_name_and_type
         roi_name_map = {key: structures[key]['name'] for key in list(structures) if structures[key]['type'] != 'MARKER'}
         data_to_import = {'Plans': [parsed_data.get_plan_row()],
                           'Rxs': parsed_data.get_rx_rows(),
