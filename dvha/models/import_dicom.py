@@ -710,7 +710,7 @@ class ImportDicomFrame(wx.Frame):
 
     def on_apply_roi(self, evt):
         if self.allow_input_roi_apply:
-            roi_type_over_ride = self.parsed_dicom_data[self.selected_uid].roi_type_over_ride
+            roi_type_over_ride = self.parsed_dicom_data[self.selected_uid].roi_over_ride['type']
             key = self.dicom_importer.roi_name_map[self.selected_roi]['key']
             roi_type_over_ride[key] = self.input_roi['type'].GetValue()
             self.validate(uid=self.selected_uid)

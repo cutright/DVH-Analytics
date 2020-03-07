@@ -30,7 +30,7 @@ class DICOM_Parser:
     Parse a set of DICOM files for database
     """
     def __init__(self, plan_file=None, structure_file=None, dose_file=None, dose_sum_file=None, plan_over_rides=None,
-                 global_plan_over_rides=None, roi_type_over_ride=None, roi_name_over_ride=None, roi_map=DatabaseROIs()):
+                 global_plan_over_rides=None, roi_over_ride=None, roi_map=None):
         """
         :param plan_file: absolute path of DICOM RT Plan file
         :type plan_file: str
@@ -44,13 +44,13 @@ class DICOM_Parser:
         :type plan_over_rides: dict
         :param global_plan_over_rides: Values from import GUI to override DICOM file data
         :type global_plan_over_rides: dict
-        :param roi_name_over_ride: lookup up for roi_name overrides
-        :type roi_name_over_ride: dict
+        :param roi_over_ride: lookup up for roi name and type overrides
+        :type roi_over_ride: dict
         :param roi_map: roi name map
         :type roi_map: DatabaseROIs
         """
 
-        self.database_rois = roi_map
+        self.database_rois = DatabaseROIs() if roi_map is None else roi_map
         self.import_path = parse_settings_file(IMPORT_SETTINGS_PATH)['imported']
 
         self.plan_file = plan_file
@@ -91,8 +91,7 @@ class DICOM_Parser:
         self.plan_over_rides = [plan_over_rides, {key: None for key in keys}][plan_over_rides is None]
         self.global_plan_over_rides = global_plan_over_rides
 
-        self.roi_type_over_ride = roi_type_over_ride if roi_type_over_ride is not None else {}
-        self.roi_name_over_ride = roi_name_over_ride if roi_name_over_ride is not None else {}
+        self.roi_over_ride = roi_over_ride if roi_over_ride is not None else {'name': {}, 'type': {}}
 
     def update_stored_values(self):
         keys = ['study_instance_uid_to_be_imported', 'patient_name', 'mrn', 'sim_study_date', 'birth_date',
@@ -392,9 +391,7 @@ class DICOM_Parser:
         try:
             dvh = dvhcalc.get_dvh(self.rt_data['structure'], self.rt_data['dose'], dvh_index,
                                   callback=self.send_dvh_progress)
-        except AttributeError as e:
-            # print(str(e), 'for MRN: %s' % self.mrn)
-            # print('Applying validate_transfer_syntax_uid() due to missing data in user provided DICOM')
+        except AttributeError:
             dose = validate_transfer_syntax_uid(self.rt_data['dose'])
             structure = validate_transfer_syntax_uid(self.rt_data['structure'])
             dvh = dvhcalc.get_dvh(structure, dose, dvh_index,
@@ -431,7 +428,6 @@ class DICOM_Parser:
                     'cross_section_max': [geometries['cross_sections']['max'], 'real'],
                     'cross_section_median': [geometries['cross_sections']['median'], 'real'],
                     'toxicity_grade': [None, 'smallint']}
-        return None
 
     def get_dicom_file_row(self):
         """
@@ -737,12 +733,12 @@ class DICOM_Parser:
         :return: the roi type
         :rtype: str
         """
-        if key in list(self.roi_type_over_ride):
-            return self.roi_type_over_ride[key]
+        if key in list(self.roi_over_ride['type']):
+            return self.roi_over_ride['type'][key]
         return self.structure_name_and_type[key]['type'].upper()
 
     def reset_roi_type_over_ride(self, key):
-        self.roi_type_over_ride[key] = None
+        self.roi_over_ride['type'][key] = None
 
     def get_roi_name(self, key):
         """
@@ -751,8 +747,8 @@ class DICOM_Parser:
         :return: roi name to be used in the database
         :rtype: str
         """
-        if key in list(self.roi_name_over_ride):
-            return clean_name(self.roi_name_over_ride[key])
+        if key in list(self.roi_over_ride['name']):
+            return clean_name(self.roi_over_ride['name'][key])
         return clean_name(self.structure_name_and_type[key]['name'])
 
     def get_physician_roi(self, key):
@@ -872,7 +868,7 @@ class DICOM_Parser:
     @property
     def init_param(self):
         params = ['plan_file', 'structure_file', 'dose_file', 'dose_sum_file',
-                  'plan_over_rides', 'global_plan_over_rides', 'roi_type_over_ride']
+                  'plan_over_rides', 'global_plan_over_rides', 'roi_over_ride']
         return {key: getattr(self, key) for key in params}
 
     def get_attribute(self, rt_type, pydicom_attribute):
@@ -1372,7 +1368,7 @@ class PreImportData:
     """
     Light-weight object for the DICOM Importer GUI to avoid memory allocation issues
     """
-    def __init__(self, file_set, stored_values, dicompyler_rt_structures, roi_map=DatabaseROIs()):
+    def __init__(self, file_set, stored_values, dicompyler_rt_structures, roi_map=None):
 
         self.plan_file = file_set['plan']
         self.dose_file = file_set['dose']
@@ -1381,15 +1377,14 @@ class PreImportData:
 
         self.stored_values = stored_values
         self.dicompyler_rt_structures = dicompyler_rt_structures
-        self.database_rois = roi_map
+        self.database_rois = DatabaseROIs() if roi_map is None else roi_map
 
         # over ride objects
         keys = ['mrn', 'study_instance_uid', 'birth_date', 'sim_study_date', 'physician', 'tx_site', 'rx_dose']
         self.plan_over_rides = {key: None for key in keys}
         self.global_plan_over_rides = None
 
-        self.roi_type_over_ride = {}
-        self.roi_name_over_ride = {}
+        self.roi_over_ride = {'name': {}, 'type': {}}
 
     @property
     def mrn(self):
@@ -1487,12 +1482,12 @@ class PreImportData:
         :return: the roi type
         :rtype: str
         """
-        if key in list(self.roi_type_over_ride):
-            return self.roi_type_over_ride[key]
+        if key in list(self.roi_over_ride['type']):
+            return self.roi_over_ride['type'][key]
         return self.dicompyler_rt_structures[key]['type'].upper()
 
     def reset_roi_type_over_ride(self, key):
-        self.roi_type_over_ride[key] = None
+        self.roi_over_ride['type'][key] = None
 
     def get_roi_name(self, key):
         """
@@ -1501,12 +1496,12 @@ class PreImportData:
         :return: roi name to be used in the database
         :rtype: str
         """
-        if key in list(self.roi_name_over_ride):
-            return clean_name(self.roi_name_over_ride[key])
+        if key in list(self.roi_over_ride['name']):
+            return clean_name(self.roi_over_ride['name'][key])
         return clean_name(self.dicompyler_rt_structures[key]['name'])
 
     def set_roi_name(self, key, name):
-        self.roi_name_over_ride[key] = clean_name(name)
+        self.roi_over_ride['name'][key] = clean_name(name)
 
     def get_physician_roi(self, key):
         """
@@ -1575,7 +1570,7 @@ class PreImportData:
     @property
     def init_param(self):
         params = ['plan_file', 'structure_file', 'dose_file',
-                  'plan_over_rides', 'global_plan_over_rides', 'roi_type_over_ride', 'roi_name_over_ride']
+                  'plan_over_rides', 'global_plan_over_rides', 'roi_over_ride']
         return {key: getattr(self, key) for key in params}
 
     @property
@@ -1641,10 +1636,11 @@ class PreImportData:
 
         for key, roi_name in roi_names.items():
             roi_name_len = len(roi_name)
-            if self.get_physician_roi(key).lower() in {'gtv', 'ctv', 'itv', 'ptv'}:
-                self.roi_type_over_ride[key] = self.get_physician_roi(key).upper()
-            elif (roi_name_len > 2 and roi_name[0:3] in {'gtv', 'ctv', 'itv', 'ptv'}) and \
+            targets = {'gtv', 'ctv', 'itv', 'ptv'}
+            if self.get_physician_roi(key).lower() in targets:
+                self.roi_over_ride['type'][key] = self.get_physician_roi(key).upper()
+            elif (roi_name_len > 2 and roi_name[0:3] in targets) and \
                     ((roi_name_len == 3) or
                      (roi_name_len == 4 and roi_name[3].isdigit()) or
                      (roi_name_len == 5 and not roi_name[3].isdigit() and roi_name[4].isdigit())):
-                self.roi_type_over_ride[key] = roi_name[0:3].upper()
+                self.roi_over_ride['type'][key] = roi_name[0:3].upper()
