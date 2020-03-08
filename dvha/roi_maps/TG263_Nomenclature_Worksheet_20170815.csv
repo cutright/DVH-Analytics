@@ -27,7 +27,7 @@ Anatomic,Artery,Iliac,Pelvis,13,A_Iliac_Int_L,L_Int_Iliac_A,Internal iliac arter
 Anatomic,Artery,Iliac,Pelvis,13,A_Iliac_Int_R,R_Int_Iliac_A,Internal iliac artery Right,18809
 Anatomic,Artery,Iliac,Pelvis,9,A_Iliac_L,L_Iliac_A,Common iliac artery Left,14766
 Anatomic,Artery,Iliac,Pelvis,9,A_Iliac_R,R_Iliac_A,Common iliac artery Right,14765
-Anatomic,Artery,LAD,Thorax,5,A_LAD,LAD_A,"Anterior interventricular branch of LCA (left anterior descending artery)",3862
+Anatomic,Artery,LAD,Thorax,5,A_LAD,LAD_A,Anterior interventricular branch of LCA (left anterior descending artery),3862
 Anatomic,Artery,Mesenteric,Abdomen,14,A_Mesenteric_I,I_Mesenteric_A,Inferior mesenteric artery,14750
 Anatomic,Artery,Mesenteric,Abdomen,14,A_Mesenteric_S,S_Mesenteric_A,Superior mesenteric artery,14749
 Anatomic,Artery,Pulmonary,Thorax,11,A_Pulmonary,Pulmonary_A,Pulmonary Artery,66326
@@ -59,7 +59,7 @@ Derived,Bladder,,Pelvis,11,Bladder-CTV,Bladder-CTV,Bladder minus CTV,None
 Anatomic,Body,,Body,4,Body,Body,Only the body,256135
 Derived,Body,,Body,8,Body-PTV,Body-PTV,Body minus PTV,None
 Non_Anatomic,Bolus,,Body,5,Bolus,Bolus,None,None
-Non_Anatomic,Bolus,,Body,10,Bolus_xxmm,xxmm_Bolus,"Bolus that is xx millimeters thick e.g. Bolus_03mm,Bolus_10mm"
+Non_Anatomic,Bolus,,Body,10,Bolus_xxmm,xxmm_Bolus,Bolus that is xx millimeters thick e.g. Bolus_03mm^Bolus_10mm,None
 Anatomic,Bone,,Body,4,Bone,Bone,Bone,30317
 Anatomic,Bone,Ethmoid,Head and Neck,12,Bone_Ethmoid,Ethmoid_Bone,Ethmoid Bone,52740
 Anatomic,Bone,Frontal,Head and Neck,12,Bone_Frontal,Frontal_Bone,Frontal Bone,52734
