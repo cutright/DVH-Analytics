@@ -153,8 +153,12 @@ class DefaultOptions:
         self.COMPLEXITY_SCORE_X_WEIGHT = 1.
         self.COMPLEXITY_SCORE_Y_WEIGHT = 1.
 
-        self.ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV', 'EXTERNAL',
-                          'FIDUCIAL', 'IMPLANT', 'OPTIMIZATION', 'PRV', 'SUPPORT', 'NONE']
+        # Per TG-263 (plus ITV)
+        self.ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV',
+                          'AVOIDANCE', 'BOLUS', 'CAVITY', 'CONTRAST_AGENT', 'EXTERNAL',
+                          'IRRAD_VOLUME', 'REGISTRATION', 'TREATED_VOLUME']
+
+
 
         self.KEEP_IN_INBOX = 0
         self.SEARCH_SUBFOLDERS = 1
