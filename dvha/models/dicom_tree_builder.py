@@ -213,7 +213,6 @@ class DicomTreeBuilder:
         :type mrn: str
         """
         if mrn not in list(self.patient_nodes):
-            # TODO: get patient name for tree item title
             self.patient_nodes[mrn] = self.tree_ctrl_files.AppendItem(self.root_files, mrn, ct_type=1)
             # self.patient_nodes[mrn].Set3State(True)
             self.tree_ctrl_files.SetPyData(self.patient_nodes[mrn], None)

@@ -158,8 +158,6 @@ class DefaultOptions:
                           'AVOIDANCE', 'BOLUS', 'CAVITY', 'CONTRAST_AGENT', 'EXTERNAL',
                           'IRRAD_VOLUME', 'REGISTRATION', 'TREATED_VOLUME']
 
-
-
         self.KEEP_IN_INBOX = 0
         self.SEARCH_SUBFOLDERS = 1
         self.IMPORT_UNCATEGORIZED = 0

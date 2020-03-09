@@ -220,7 +220,6 @@ class DatabaseEditorFrame(wx.Frame):
         self.change_or_delete_dlg(ChangePatientIdentifierDialog)
 
     def on_delete_study(self, evt):
-        # TODO: Needs an Are you sure? dialog
         self.change_or_delete_dlg(DeletePatientDialog)
 
     def change_or_delete_dlg(self, class_type):
@@ -241,9 +240,9 @@ class DatabaseEditorFrame(wx.Frame):
     def on_edit_db(evt):
         EditDatabaseDialog()
 
-    @staticmethod
-    def on_calculations(evt):
-        CalculationsDialog()
+    # @staticmethod
+    # def on_calculations(evt):
+    #     CalculationsDialog()
 
     def on_rebuild_db(self, evt):
         RebuildDB(self, self.roi_map, self.options)
