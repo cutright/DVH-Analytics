@@ -15,7 +15,7 @@ class ROIMapGenerator:
                         self.tg_263[keys[col]].append(value.strip().replace('^', ','))
             self.keys = keys
 
-    def create_map(self, map_file_name, body_sites=None, data_filter=None, roi_uid_type='primary'):
+    def __call__(self, map_file_name, body_sites=None, data_filter=None, roi_uid_type='primary'):
         """
         Create a new ROI map file based on TG263
         :param map_file_name: save the file in PREF_DIR with this name
@@ -26,6 +26,7 @@ class ROIMapGenerator:
         :type data_filter: dict
         :param roi_uid_type: either 'primary', 'reverse', or 'fmaid'
         :type roi_uid_type: str
+        :return: file_path of new map file
         """
         if body_sites is not None:
             if type(body_sites) is not list:
@@ -38,9 +39,11 @@ class ROIMapGenerator:
                   'fmaid': 'FMAID'}
         roi_uids = self.get_unique_values(lookup[roi_uid_type], data)
 
-        with open(join(PREF_DIR, map_file_name), 'w') as doc:
+        file_path = join(PREF_DIR, map_file_name)
+        with open(file_path, 'w') as doc:
             for roi_uid in roi_uids:
                 doc.write(": ".join([roi_uid] * 3) + '\n')
+        return file_path
 
     ##########################################################
     # Generalized Tools
@@ -69,7 +72,7 @@ class ROIMapGenerator:
         :return: list of unique values for the provided column
         """
         data = self.tg_263 if data is None else data
-        values = list(set(data[column]))
+        values = [value for value in set(data[column]) if value]
         values.sort()
         return values
 

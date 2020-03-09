@@ -18,6 +18,7 @@ import difflib
 from dvha.db.sql_to_python import QuerySQL
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import PREF_DIR, SCRIPT_DIR
+from dvha.tools.roi_map_generator import ROIMapGenerator
 from dvha.tools.utilities import flatten_list_of_lists, initialize_directories_and_settings
 from dvha.tools.errors import ROIVariationError
 
@@ -65,11 +66,8 @@ class DatabaseROIs:
         self.physicians = {}
         self.institutional_rois = []
 
-        # Copy default ROI files to user folder if they do not exist
-        if not os.path.isfile(os.path.join(PREF_DIR, 'institutional.roi')):
+        if not os.path.isdir(PREF_DIR):
             initialize_directories_and_settings()
-            initialize_roi_preference_file('institutional.roi')
-            initialize_roi_preference_file('physician_BBM.roi')
 
         self.branched_institutional_rois = {}
         self.import_from_file()
@@ -77,18 +75,11 @@ class DatabaseROIs:
     def import_from_file(self):
         self.physicians = {}
         self.institutional_rois = []
-        # Import institutional roi names
-        abs_file_path = os.path.join(PREF_DIR, 'institutional.roi')
-        if os.path.isfile(abs_file_path):
-            with open(abs_file_path, 'r') as document:
-                for line in document:
-                    if not line:
-                        continue
-                    line = clean_name(str(line))
-                    self.institutional_rois.append(line)
 
-        physicians = get_physicians_from_roi_files()
-        for physician in physicians:
+        for roi in ROIMapGenerator().primary_names:
+            self.institutional_rois.append(clean_name(roi))
+
+        for physician in get_physicians_from_roi_files():
             self.add_physician(physician, add_institutional_rois=(physician == 'DEFAULT'))
 
         self.import_physician_roi_maps()
@@ -109,7 +100,13 @@ class DatabaseROIs:
             if os.path.isfile(abs_file_path):
                 self.import_physician_roi_map(abs_file_path, physician)
 
-    def import_physician_roi_map(self, abs_file_path, physician):
+    def import_physician_roi_map(self, abs_file_path, physician=None):
+
+        if physician is None:
+            physician = abs_file_path.split('physician_')[1].split('.roi')[0]
+
+        if physician not in self.get_physicians():
+            self.add_physician(physician)
 
         with open(abs_file_path, 'r') as document:
             for line in document:
@@ -123,15 +120,15 @@ class DatabaseROIs:
                 self.add_physician_roi(physician, institutional_roi, physician_roi)
 
                 for i in range(2, len(line)):
-                    variation = clean_name(line[i])
-                    if variation != physician_roi:
+                    variation = line[i]
+                    if clean_name(variation) != clean_name(physician_roi):
                         self.add_variation(physician, physician_roi, variation)
 
     ###################################
     # Physician functions
     ###################################
     def add_physician(self, physician, add_institutional_rois=True):
-        physician = clean_name(physician).upper()
+        physician = clean_name(physician, physician=True)
         if physician not in self.get_physicians():
             self.physicians[physician] = Physician(physician)
 
@@ -140,7 +137,7 @@ class DatabaseROIs:
                 self.add_physician_roi(physician, institutional_roi, institutional_roi)
 
     def copy_physician(self, new_physician, copy_from=None, include_variations=True):
-        new_physician = clean_name(new_physician).upper()
+        new_physician = clean_name(new_physician, physician=True)
         if copy_from is None or copy_from == 'DEFAULT':
             self.add_physician(new_physician)
         elif copy_from in self.get_physicians():
@@ -149,7 +146,7 @@ class DatabaseROIs:
                 self.physicians[new_physician].delete_all_physician_roi_variations()
 
     def delete_physician(self, physician):
-        physician = clean_name(physician).upper()
+        physician = clean_name(physician, physician=True)
         self.physicians.pop(physician, None)
 
     def get_physicians(self):
@@ -164,15 +161,15 @@ class DatabaseROIs:
         return self.physicians[physician]
 
     def is_physician(self, physician):
-        physician = clean_name(physician).upper()
+        physician = clean_name(physician, physician=True)
         for initials in self.get_physicians():
             if physician == initials:
                 return True
         return False
 
     def rename_physician(self, new_physician, physician):
-        new_physician = clean_name(new_physician).upper()
-        physician = clean_name(physician).upper()
+        new_physician = clean_name(new_physician, physician=True)
+        physician = clean_name(physician, physician=True)
         self.physicians[new_physician] = self.physicians.pop(physician)
 
     def rebuild_default_physician(self):
@@ -186,7 +183,7 @@ class DatabaseROIs:
         return self.institutional_rois
 
     def get_institutional_roi(self, physician, physician_roi):
-        physician = clean_name(physician).upper()
+        physician = clean_name(physician, physician=True)
         physician_roi = clean_name(physician_roi)
         if physician == 'DEFAULT':
             return physician_roi
@@ -227,7 +224,7 @@ class DatabaseROIs:
         return False
 
     def get_unused_institutional_rois(self, physician):
-        physician = clean_name(physician).upper()
+        physician = clean_name(physician, physician=True)
         used_rois = []
         if self.get_physician_rois(physician):
             for physician_roi in self.get_physician_rois(physician):
@@ -246,7 +243,7 @@ class DatabaseROIs:
     # Physician ROI functions
     ########################################
     def get_physician_rois(self, physician):
-        physician = clean_name(physician).upper()
+        physician = clean_name(physician, physician=True)
         if self.is_physician(physician):
             physician_rois = list(self.physicians[physician].physician_rois)
             if physician_rois:
@@ -257,7 +254,7 @@ class DatabaseROIs:
         return []
 
     def get_physician_roi(self, physician, roi):
-        physician = clean_name(physician).upper()
+        physician = clean_name(physician, physician=True)
         roi = clean_name(roi)
         for physician_roi in self.get_physician_rois(physician):
             for variation in self.get_variations(physician, physician_roi):
@@ -266,7 +263,7 @@ class DatabaseROIs:
         return 'uncategorized'
 
     def get_physician_roi_from_institutional_roi(self, physician, institutional_roi):
-        physician = clean_name(physician).upper()
+        physician = clean_name(physician, physician=True)
         institutional_roi = clean_name(institutional_roi)
         if institutional_roi == 'uncategorized':
             return institutional_roi
@@ -276,7 +273,7 @@ class DatabaseROIs:
         return institutional_roi
 
     def add_physician_roi(self, physician, institutional_roi, physician_roi):
-        physician = clean_name(physician).upper()
+        physician = clean_name(physician, physician=True)
         institutional_roi = clean_name(institutional_roi)
         physician_roi = clean_name(physician_roi)
         if physician_roi not in self.get_physician_rois(physician):
@@ -285,7 +282,7 @@ class DatabaseROIs:
 
     def rename_physician_roi(self, new_physician_roi, physician, physician_roi):
         new_physician_roi = clean_name(new_physician_roi)
-        physician = clean_name(physician).upper()
+        physician = clean_name(physician, physician=True)
         physician_roi = clean_name(physician_roi)
         if new_physician_roi != physician_roi:
             self.physicians[physician].physician_rois[new_physician_roi] = \
@@ -294,7 +291,7 @@ class DatabaseROIs:
         # self.delete_variation(physician, new_physician_roi, physician_roi)
 
     def delete_physician_roi(self, physician, physician_roi):
-        physician = clean_name(physician).upper()
+        physician = clean_name(physician, physician=True)
         physician_roi = clean_name(physician_roi)
         if physician_roi in self.get_physician_rois(physician):
             self.physicians[physician].physician_rois.pop(physician_roi, None)
@@ -307,7 +304,7 @@ class DatabaseROIs:
         return False
 
     def get_unused_physician_rois(self, physician):
-        physician = clean_name(physician).upper()
+        physician = clean_name(physician, physician=True)
 
         unused_rois = []
         for physician_roi in self.get_physician_rois(physician):
@@ -333,7 +330,7 @@ class DatabaseROIs:
     # Variation-of-Physician-ROI functions
     ###################################################
     def get_variations(self, physician, physician_roi):
-        physician = clean_name(physician).upper()
+        physician = clean_name(physician, physician=True)
         physician_roi = clean_name(physician_roi)
         if physician_roi == 'uncategorized':
             return ['uncategorized']
@@ -345,7 +342,7 @@ class DatabaseROIs:
         return []
 
     def get_all_variations_of_physician(self, physician):
-        physician = clean_name(physician).upper()
+        physician = clean_name(physician, physician=True)
         variations = []
         for physician_roi in self.get_physician_rois(physician):
             for variation in self.get_variations(physician, physician_roi):
@@ -361,7 +358,7 @@ class DatabaseROIs:
         return variation in self.get_all_variations_of_physician(physician)
 
     def add_variation(self, physician, physician_roi, variation, force=False):
-        physician = clean_name(physician).upper()
+        physician = clean_name(physician, physician=True)
         physician_roi = clean_name(physician_roi)
         variation = clean_name(variation)
 
@@ -373,7 +370,7 @@ class DatabaseROIs:
                                     (variation, current_physician_roi, physician))
 
     def delete_variation(self, physician, physician_roi, variation):
-        physician = clean_name(physician).upper()
+        physician = clean_name(physician, physician=True)
         physician_roi = clean_name(physician_roi) if physician_roi else self.get_physician_roi(physician, variation)
         variation = clean_name(variation)
         if variation in self.get_variations(physician, physician_roi) and variation != physician_roi:
@@ -389,7 +386,7 @@ class DatabaseROIs:
 
     def set_variation(self, new_variation, physician, physician_roi, variation):
         new_variation = clean_name(new_variation)
-        physician = clean_name(physician).upper()
+        physician = clean_name(physician, physician=True)
         physician_roi = clean_name(physician_roi)
         variation = clean_name(variation)
         if new_variation != variation:
@@ -698,8 +695,11 @@ class DatabaseROIs:
                 'Unlinked to Institutional ROI': unlinked_phys_roi_tree}
 
 
-def clean_name(name):
-    return str(name).lower().strip().replace('\'', '`').replace('_', ' ')
+def clean_name(name, physician=False):
+    ans = str(name).strip().replace('\'', '`')
+    if physician:
+        return ans.replace(' ', '_').upper()
+    return ans.replace('_', ' ').lower()
 
 
 def get_physicians_from_roi_files():
@@ -708,7 +708,7 @@ def get_physicians_from_roi_files():
     for file_name in os.listdir(PREF_DIR):
         if file_name.startswith("physician_") and file_name.endswith(".roi"):
             physician = file_name.replace('physician_', '').replace('.roi', '')
-            physician = clean_name(physician).upper()
+            physician = clean_name(physician, physician=True)
             physicians.append(physician)
 
     return physicians
@@ -748,6 +748,6 @@ def update_uncategorized_rois_in_database():
 def initialize_roi_preference_file(rel_file_name):
     roi_files_user = [f for f in os.listdir(PREF_DIR) if '.roi' in f]
     if rel_file_name not in roi_files_user:
-        src = os.path.join(SCRIPT_DIR, 'db', rel_file_name)
+        src = os.path.join(SCRIPT_DIR, 'roi_maps', rel_file_name)
         dest = os.path.join(PREF_DIR, rel_file_name)
         copyfile(src, dest)

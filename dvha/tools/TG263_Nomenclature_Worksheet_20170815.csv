@@ -9,14 +9,14 @@ Anatomic,Artery,Celiac,Abdomen,8,A_Celiac,Celiac_A,Celiac Artery,50737
 Anatomic,Artery,Coronary,Head and Neck,10,A_Coronary,Coronary_A,Coronary Artery,49893
 Anatomic,Artery,Coronary,Thorax,12,A_Coronary_L,L_Coronary_A,Coronary Artery Left,50040
 Anatomic,Artery,Coronary,Thorax,12,A_Coronary_R,R_Coronary_A,Coronary Artery Right,50039
-Anatomic,Artery,Femoral,Limb,16,A_Femoral_Cflx_L,L_Cflx_Femoral_A,Circumflex Left Femoral Artery,None
-Anatomic,Artery,Femoral,Limb,16,A_Femoral_Cflx_R,R_Cflx_Femoral_A,Circumflex Right Femoral Artery,None
-Anatomic,Artery,Femoral,Limb,11,A_Femoral_L,L_Femoral_A,Femoral Artery Left,70250
-Anatomic,Artery,Femoral,Limb,11,A_Femoral_R,R_Femoral_A,Femoral Artery Right,70249
-Anatomic,Artery,Humeral,Limb,16,A_Humeral_Cflx_L,L_Cflx_Humeral_A,Circumflex Humeral Artery Left,None
-Anatomic,Artery,Humeral,Limb,16,A_Humeral_Cflx_R,R_Cflx_Humeral_A,Circumflex Humeral Artery Right,None
-Anatomic,Artery,Humeral,Limb,11,A_Humeral_L,L_Humeral_A,Humeral Artery Left,None
-Anatomic,Artery,Humeral,Limb,11,A_Humeral_R,R_Humeral_A,Humeral Artery Right,None
+Anatomic,Artery,Femoral,Limbs,16,A_Femoral_Cflx_L,L_Cflx_Femoral_A,Circumflex Left Femoral Artery,None
+Anatomic,Artery,Femoral,Limbs,16,A_Femoral_Cflx_R,R_Cflx_Femoral_A,Circumflex Right Femoral Artery,None
+Anatomic,Artery,Femoral,Limbs,11,A_Femoral_L,L_Femoral_A,Femoral Artery Left,70250
+Anatomic,Artery,Femoral,Limbs,11,A_Femoral_R,R_Femoral_A,Femoral Artery Right,70249
+Anatomic,Artery,Humeral,Limbs,16,A_Humeral_Cflx_L,L_Cflx_Humeral_A,Circumflex Humeral Artery Left,None
+Anatomic,Artery,Humeral,Limbs,16,A_Humeral_Cflx_R,R_Cflx_Humeral_A,Circumflex Humeral Artery Right,None
+Anatomic,Artery,Humeral,Limbs,11,A_Humeral_L,L_Humeral_A,Humeral Artery Left,None
+Anatomic,Artery,Humeral,Limbs,11,A_Humeral_R,R_Humeral_A,Humeral Artery Right,None
 Anatomic,Artery,Hypophyseal,Head and Neck,15,A_Hypophyseal_I,I_Hypophyseal_A,Hypophyseal Artery Inferior,49846
 Anatomic,Artery,Hypophyseal,Head and Neck,15,A_Hypophyseal_S,S_Hypophyseal_A,Hypophyseal Artery Superior,49849
 Anatomic,Artery,Iliac,Pelvis,14,A_Iliac_Cflx_L,L_Cflx_Iliac_A,Circumflex Left Iliac Artery,None
@@ -221,13 +221,13 @@ Anatomic,Bone,Femur,Pelvis,12,Femur_Head_L,L_Head_Femur,Femur Head & Neck Left,3
 Anatomic,Bone,Femur,Pelvis,12,Femur_Head_R,R_Head_Femur,Femur Head & Neck Right,32842
 Anatomic,Joint,Femur,Pelvis,13,Femur_Joint_L,L_Joint_Femur,Femoral Joint Left,35180
 Anatomic,Joint,Femur,Pelvis,13,Femur_Joint_R,R_Joint_Femur,Femoral Joint Right,35179
-Anatomic,Bone,Femur,Limb,7,Femur_L,L_Femur,Femur  Whole Left,24475
+Anatomic,Bone,Femur,Limbs,7,Femur_L,L_Femur,Femur  Whole Left,24475
 Anatomic,Bone,Femur,Pelvis,12,Femur_Neck_L,L_Neck_Femur,Femur Neck Right,42386
 Anatomic,Bone,Femur,Pelvis,12,Femur_Neck_R,R_Neck_Femur,Femur Neck Left,42387
-Anatomic,Bone,Femur,Limb,7,Femur_R,R_Femur,Femur Whole Right,24474
+Anatomic,Bone,Femur,Limbs,7,Femur_R,R_Femur,Femur Whole Right,24474
 Anatomic,Bone,Femur,Pelvis,13,Femur_Shaft_L,L_Shaft_Femur,Femur Shaft Left,32849
 Anatomic,Bone,Femur,Pelvis,13,Femur_Shaft_R,R_Shaft_Femur,Femur Shaft Right,32848
-Anatomic,Bone,Femur,Limb,6,Femurs,Femurs,Both Femurs,9611
+Anatomic,Bone,Femur,Limbs,6,Femurs,Femurs,Both Femurs,9611
 Anatomic,Bone,Fibula,Limbs,6,Fibula,Fibula,Fibula,24479
 Anatomic,Bone,Fibula,Limbs,8,Fibula_L,L_Fibula,Fibula Left,24481
 Anatomic,Bone,Fibula,Limbs,8,Fibula_R,R_Fibula,Fibula Right,24480
@@ -523,8 +523,8 @@ Target,PTV,,Body,3,PTV,PTV,Planning Target Volume,None
 Anatomic,Bone,Pubic,Pelvis,12,PubicSymphys,PubicSymphys,Pubic Symphysis,16950
 Anatomic,Bone,Pubic,Pelvis,14,PubicSymphys_L,L_PubicSymphys,Pubic bone Left,16597
 Anatomic,Bone,Pubic,Pelvis,14,PubicSymphys_R,R_PubicSymphys,Pubic bone Right,16596
-Anatomic,Bone,Radius,Limb,8,Radius_L,L_Radius,Radius Left,23465
-Anatomic,Bone,Radius,Limb,8,Radius_R,R_Radius,Radius Right,23464
+Anatomic,Bone,Radius,Limbs,8,Radius_L,L_Radius,Radius Left,23465
+Anatomic,Bone,Radius,Limbs,8,Radius_R,R_Radius,Radius Right,23464
 Anatomic,Rectum,,Pelvis,11,Rectal_Wall,Rectal_Wall,Rectal Wall,14626
 Anatomic,Rectum,,Pelvis,6,Rectum,Rectum,Large bowel - Rectum,14544
 Anatomic,Eye,Retina,Head and Neck,8,Retina_L,L_Retina,Retina Left,58303
@@ -613,12 +613,12 @@ Anatomic,Ear,Stapes,Head and Neck,8,Stapes_R,R_Stapes,Stapes Right,74048
 Anatomic,Stomach,,Abdomen,7,Stomach,Stomach,Stomach,7148
 PRV,Stomach,,Abdomen,13,Stomach_PRVxx,PRVxx_Stomach,PRV created with xx mm expansion on the stomach,None
 Anatomic,Body,,Body,6,Strct,Strct,Structure,None
-Anatomic,Joint,,Limb,16,Strct_Suprapatel,Suprapatel_Strct,Suprapatellar Structures,None
+Anatomic,Joint,,Limbs,16,Strct_Suprapatel,Suprapatel_Strct,Suprapatellar Structures,None
 Anatomic,Eye,,,8,Surf_Eye,Eye_Surf,None,None
 Anatomic,Surgery,,Body,11,SurgicalBed,SurgicalBed,None,None
 Anatomic,Brain,,Head and Neck,15,Sys_Ventricular,Ventricular_Sys,,242787
-Anatomic,Tendon,,Limb,7,Tendon,Tendon,,9721
-Anatomic,Tendon,,Limb,11,Tendon_Quad,Quad_Tendon,,46900
+Anatomic,Tendon,,Limbs,7,Tendon,Tendon,,9721
+Anatomic,Tendon,,Limbs,11,Tendon_Quad,Quad_Tendon,,46900
 Anatomic,Reproductive,Testis,Pelvis,6,Testis,Testis,Testis,7210
 Anatomic,Reproductive,Testis,Pelvis,8,Testis_L,L_Testis,Testis Left,7212
 Anatomic,Reproductive,Testis,Pelvis,8,Testis_R,R_Testis,Testis Right,7211

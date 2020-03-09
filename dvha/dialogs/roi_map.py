@@ -16,6 +16,7 @@ from dvha.models.data_table import DataTable
 from dvha.tools.errors import ROIVariationErrorDialog
 from dvha.tools.name_prediction import ROINamePredictor
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog
+from dvha.tools.roi_map_generator import ROIMapGenerator
 from dvha.tools.roi_name_manager import ROIVariationError, clean_name
 
 
@@ -95,7 +96,11 @@ class AddPhysician(wx.Dialog):
 
     def action(self):
         if self.combo_box_copy_from.GetValue().lower() == 'none':
-            self.roi_map.add_physician(self.text_ctrl_physician.GetValue(), add_institutional_rois=False)
+            # self.roi_map.add_physician(self.text_ctrl_physician.GetValue(), add_institutional_rois=False)
+            physician = self.text_ctrl_physician.GetValue()
+            dlg = TG263Dialog(physician, self.roi_map)
+            self.roi_map.import_physician_roi_map(dlg.map_file_path)
+
         else:
             self.roi_map.copy_physician(self.text_ctrl_physician.GetValue(),
                                         copy_from=self.combo_box_copy_from.GetValue(),
@@ -113,6 +118,84 @@ class AddPhysician(wx.Dialog):
         self.button_ok.Enable(new not in invalid_choices)
         disable = self.text_ctrl_physician.GetValue() == '' or self.combo_box_copy_from.GetValue().lower() == 'none'
         self.checkbox_variations.Enable(not disable)
+
+
+class TG263Dialog(wx.Dialog):
+    def __init__(self, physician, roi_map):
+        wx.Dialog.__init__(self, None)
+
+        self.physician = physician
+        self.roi_map = roi_map
+        self.generator = ROIMapGenerator()
+
+        self.map_file_path = None
+
+        self.checkbox_keys = self.generator.anatomic_groups
+        self.checkbox = {key: wx.CheckBox(self, wx.ID_ANY, key) for key in self.checkbox_keys}
+
+        self.button_keys = ['Select All', 'Deselect All', 'OK', 'Cancel']
+        button_ids = [wx.ID_ANY, wx.ID_ANY, wx.ID_OK, wx.ID_CANCEL]
+        self.button = {key: wx.Button(self, button_ids[i], key) for i, key in enumerate(self.button_keys)}
+
+        self.__set_properties()
+        self.__do_bind()
+        self.__do_layout()
+
+        self.run()
+
+    def __set_properties(self):
+        self.SetTitle("Create ROI Map")
+        self.SetMinSize((300, 100))
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_BUTTON, self.on_select_all, id=self.button['Select All'].GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_deselect_all, id=self.button['Deselect All'].GetId())
+
+    def __do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_main = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_body_site = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Body Sites"), wx.VERTICAL)
+        sizer_buttons = wx.BoxSizer(wx.VERTICAL)
+
+        for key in self.checkbox_keys:
+            sizer_body_site.Add(self.checkbox[key], 1, wx.EXPAND, 0)
+
+        sizer_buttons.Add((20, 20), 0, 0, 0)
+        for key in self.button_keys:
+            sizer_buttons.Add(self.button[key], 1, wx.EXPAND | wx.ALL, 5)
+
+        sizer_main.Add(sizer_body_site, 0, wx.ALL, 5)
+        sizer_main.Add(sizer_buttons, 0, wx.LEFT, 10)
+
+        title = wx.StaticText(self, wx.ID_ANY, "Create ROI Map for %s with selected body sites" % self.physician)
+        sizer_wrapper.Add(title, 0, wx.EXPAND | wx.ALL, 10)
+        sizer_wrapper.Add(sizer_main, 1, wx.ALL, 10)
+
+        self.SetSizer(sizer_wrapper)
+        self.Layout()
+        self.Fit()
+        self.Center()
+
+    def set_checkbox_values(self, value):
+        for checkbox in self.checkbox.values():
+            checkbox.SetValue(value)
+
+    def on_select_all(self, *evt):
+        self.set_checkbox_values(True)
+
+    def on_deselect_all(self, *evt):
+        self.set_checkbox_values(False)
+
+    def run(self):
+        res = self.ShowModal()
+        if res == wx.ID_OK:
+            map_file_name = "physician_%s.roi" % clean_name(self.physician, physician=True)
+            self.map_file_path = self.generator(map_file_name, body_sites=self.checked_values)
+        self.Destroy()
+
+    @property
+    def checked_values(self):
+        return [key for key, checkbox in self.checkbox.items() if checkbox.GetValue()]
 
 
 # TODO: Disable ability to use Variation Manager on 'DEFAULT' physician
@@ -237,7 +320,7 @@ class RoiManager(wx.Dialog):
         self.Destroy()
 
     def update_physicians(self, old_physicians=None):
-
+        print('update_physicians')
         choices = self.roi_map.get_physicians()
         if choices:
             new = choices[0]
