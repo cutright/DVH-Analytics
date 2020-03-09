@@ -606,14 +606,12 @@ class DatabaseROIs:
     ################
     # Plotting tools
     ################
-    def get_physician_roi_visual_coordinates(self, physician, physician_roi):
+    def get_physician_roi_visual_coordinates(self, physician, physician_roi, institutional_roi):
 
         # All 0.5 subtractions due to a workaround of a Bokeh 0.12.9 bug
 
-        institutional_roi = self.get_institutional_roi(physician, physician_roi)
-
         # x and y are coordinates for the circles
-        # x0, y0 is beggining of line segment, x1, y1 is end of line-segment
+        # x0, y0 is beginning of line segment, x1, y1 is end of line-segment
         if institutional_roi == 'uncategorized':
             table = {'name': [physician_roi],
                      'x': [2 - 0.5],
@@ -650,34 +648,34 @@ class DatabaseROIs:
         return table
 
     def get_all_institutional_roi_visual_coordinates(self, physician, ignored_physician_rois=None):
-        if ignored_physician_rois is None:
-            ignored_physician_rois = []
+        ignored_physician_rois = [] if ignored_physician_rois is None else ignored_physician_rois
+        p_and_i = [(roi.physician_roi, roi.institutional_roi) for roi in self.physicians[physician].rois.values()
+                   if roi.physician_roi not in ignored_physician_rois]
 
-        p_rois = [roi for roi in self.get_physician_rois(physician) if roi not in ignored_physician_rois]
-        i_rois = [self.get_institutional_roi(physician, p_roi) for p_roi in p_rois]
+        i_rois = self.physicians[physician].institutional_rois
+        i_rois.sort()
         for i, i_roi in enumerate(i_rois):
             if i_roi == 'uncategorized':
                 i_rois[i] = 'zzzzzzzzzzzzzzzzzzz'
         sorted_indices = [i[0] for i in sorted(enumerate(i_rois), key=lambda x:x[1])]
-        p_rois_sorted = [p_rois[i] for i in sorted_indices]
-        p_rois = p_rois_sorted
+        p_and_i = [p_and_i[i] for i in sorted_indices]
 
-        tables = {p_roi: self.get_physician_roi_visual_coordinates(physician, p_roi) for p_roi in p_rois}
-        heights = [3 - min(tables[p_roi]['y']) for p_roi in p_rois]
-
+        tables = {roi[0]: self.get_physician_roi_visual_coordinates(physician, roi[0], roi[1])
+                  for roi in p_and_i}
+        heights = [3 - min(tables[p_roi[0]]['y']) for p_roi in p_and_i]
         max_y_delta = sum(heights) + 2  # include 2 buffer to give space to read labels on plot
-        for i, p_roi in enumerate(p_rois):
+        for i, roi in enumerate(p_and_i):
             y_delta = sum(heights[i:])
 
             for key in ['y', 'y0', 'y1']:
-                for j in range(len(tables[p_roi][key])):
-                    tables[p_roi][key][j] += y_delta - max_y_delta
+                for j in range(len(tables[roi[0]][key])):
+                    tables[roi[0]][key][j] += y_delta - max_y_delta
 
-        if p_rois and p_rois[0] in tables:
-            table = tables[p_rois[0]]
-            for i in range(1, len(p_rois)):
+        if p_and_i and p_and_i[0][0] in tables:
+            table = tables[p_and_i[0][0]]
+            for i in range(1, len(p_and_i)):
                 for key in list(table):
-                    table[key].extend(tables[p_rois[i]][key])
+                    table[key].extend(tables[p_and_i[i][0]][key])
 
             return self.update_duplicate_y_entries(table, physician)
         return None
