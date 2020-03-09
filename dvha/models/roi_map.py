@@ -51,7 +51,7 @@ class ROIMapFrame(wx.Frame):
         self.plot = PlotROIMap(self.window_tree, roi_map)
         self.window_editor = wx.Panel(self.window, wx.ID_ANY, style=wx.BORDER_SUNKEN)
 
-        self.combo_box_physician = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=self.roi_map.get_physicians(),
+        self.combo_box_physician = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=list(self.roi_map.physicians),
                                                style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_physician_roi = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=[],
                                                    style=wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -386,7 +386,7 @@ class ROIMapFrame(wx.Frame):
 
     def update_physicians(self, old_physicians=None):
 
-        choices = self.roi_map.get_physicians()
+        choices = list(self.roi_map.physicians)
         new = choices[0]
         if old_physicians:
             new = list(set(choices) - set(old_physicians))
@@ -425,7 +425,7 @@ class ROIMapFrame(wx.Frame):
             self.update_all(old_physician_rois=old_physician_rois)
 
     def add_physician(self, evt):
-        old_physicians = self.roi_map.get_physicians()
+        old_physicians = list(self.roi_map.physicians)
         dlg = AddPhysician(self.roi_map)
         if dlg.res == wx.ID_OK:
             self.update_all(old_physicians=old_physicians)
@@ -525,7 +525,7 @@ class ROIMapFrame(wx.Frame):
         self.update_roi_map()
 
     def on_edit_physician(self, evt):
-        current_physicians = self.roi_map.get_physicians()
+        current_physicians = list(self.roi_map.get_physicians)
         dlg = RenamePhysicianDialog(self.physician, self.roi_map)
         if dlg.res == wx.ID_OK:
             self.update_all(old_physicians=current_physicians)

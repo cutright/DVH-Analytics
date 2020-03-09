@@ -914,7 +914,7 @@ class ImportDicomFrame(wx.Frame):
         if physician_roi not in self.roi_map.get_physician_rois(physician):
             self.roi_map.add_physician_roi(physician, physician_roi)
         if variation not in self.roi_map.get_variations(physician, physician_roi):
-            self.roi_map.add_variation(physician, physician_roi, variation)
+            self.roi_map.add_variations(physician, physician_roi, variation)
 
         self.dicom_importer.update_mapped_roi_status(physician)
         self.update_input_roi_physician_enable()

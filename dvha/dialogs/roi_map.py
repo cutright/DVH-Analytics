@@ -34,7 +34,7 @@ class AddPhysician(wx.Dialog):
         wx.Dialog.__init__(self, None)
 
         self.roi_map = roi_map
-        physicians = ['NONE'] + self.roi_map.get_physicians()
+        physicians = ['NONE'] + [p for p in list(self.roi_map.physicians) if p != 'DEFAULT']
         if initial_physician and initial_physician.lower() not in {'default'}:
             self.initial_physician = initial_physician
         else:
@@ -113,8 +113,8 @@ class AddPhysician(wx.Dialog):
         self.Destroy()
 
     def update_enable(self, *evt):
-        invalid_choices = list(set(self.roi_map.get_physicians())) + ['']
-        new = clean_name(self.text_ctrl_physician.GetValue()).upper()
+        invalid_choices = list(self.roi_map.physicians) + ['']
+        new = self.text_ctrl_physician.GetValue()
         self.button_ok.Enable(new not in invalid_choices)
         disable = self.text_ctrl_physician.GetValue() == '' or self.combo_box_copy_from.GetValue().lower() == 'none'
         self.checkbox_variations.Enable(not disable)
@@ -219,7 +219,7 @@ class RoiManager(wx.Dialog):
         self.initial_physician = physician
         self.initial_physician_roi = physician_roi
 
-        self.combo_box_physician = wx.ComboBox(self, wx.ID_ANY, choices=self.roi_map.get_physicians(),
+        self.combo_box_physician = wx.ComboBox(self, wx.ID_ANY, choices=list(self.roi_map.physcians),
                                                style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_physician_roi = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.list_ctrl_variations = wx.ListCtrl(self, wx.ID_ANY, style=wx.LC_NO_HEADER | wx.LC_REPORT | wx.BORDER_SUNKEN)
@@ -321,13 +321,11 @@ class RoiManager(wx.Dialog):
 
     def update_physicians(self, old_physicians=None):
         print('update_physicians')
-        choices = self.roi_map.get_physicians()
+        choices = list(self.roi_map.physicians)
         if choices:
             new = choices[0]
             if old_physicians:
                 new = list(set(choices) - set(old_physicians))
-                if new:
-                    new = clean_name(new[0]).upper()
 
             self.update_combo_box_choices(self.combo_box_physician, choices, new)
 
@@ -337,8 +335,6 @@ class RoiManager(wx.Dialog):
             new = choices[0]
             if old_physician_rois:
                 new = list(set(choices) - set(old_physician_rois))
-                if new:
-                    new = clean_name(new[0])
 
             self.update_combo_box_choices(self.combo_box_physician_roi, choices, new)
 
@@ -432,7 +428,7 @@ class RoiManager(wx.Dialog):
         self.update_physician_rois(old_physician_rois=old_physician_rois)
 
     def add_physician(self, evt):
-        old_physicians = self.roi_map.get_physicians()
+        old_physicians = list(self.roi_map.physicians)
         AddPhysician(self.roi_map)
         self.update_physicians(old_physicians=old_physicians)
 
@@ -517,7 +513,7 @@ class AddVariationDlg(wx.Dialog):
         res = self.ShowModal()
         if res == wx.ID_OK:
             try:
-                self.roi_map.add_variation(self.physician, self.user_input.GetValue(), self.input_roi_name)
+                self.roi_map.add_variations(self.physician, self.input_roi_name, self.user_input.GetValue())
             except ROIVariationError as e:
                 ROIVariationErrorDialog(self.parent, e)
         self.Destroy()
@@ -601,7 +597,7 @@ class MoveVariationDialog(wx.Dialog):
     def action(self):
         for variation in self.variations:
             self.roi_map.delete_variation(self.physician, self.old_physician_roi, variation)
-            self.roi_map.add_variation(self.physician, self.combo_box.GetValue(), variation)
+            self.roi_map.add_variations(self.physician, self.combo_box.GetValue(), variation)
 
 
 class AddPhysicianROI(wx.Dialog):
@@ -721,7 +717,7 @@ class AddPhysicianROI(wx.Dialog):
             invalid_choices = set(self.roi_map.get_physician_rois(self.physician) +
                                   self.roi_map.get_all_variations_of_physician(self.physician))
         else:
-            invalid_choices = self.roi_map.get_institutional_rois()
+            invalid_choices = self.roi_map.institutional_rois
 
         new = clean_name(self.text_ctrl_physician_roi.GetValue())
         self.button_ok.Enable(new not in invalid_choices)
@@ -891,7 +887,7 @@ class ChangePlanROIName(wx.Dialog):
 
     @property
     def new_name(self):
-        return clean_name(self.text_ctrl.GetValue())
+        return self.text_ctrl.GetValue()
 
     def run(self):
         res = self.ShowModal()
@@ -1001,7 +997,7 @@ class RenamePhysicianDialog(RenamerBaseClass):
         self.physician = physician
         self.roi_map = roi_map
         RenamerBaseClass.__init__(self, 'Rename %s' % physician,
-                                  'New Physician Name:', roi_map.get_physicians(), lower_case=False)
+                                  'New Physician Name:', list(roi_map.physicians), lower_case=False)
 
     def action(self):
         self.roi_map.rename_physician(self.new_name, self.physician)
@@ -1044,7 +1040,7 @@ class RenameInstitutionalROIDialog(RenamerBaseClass):
         self.institutional_roi = institutional_roi
         self.roi_map = roi_map
         RenamerBaseClass.__init__(self, 'Rename %s' % institutional_roi,
-                                  'New Institutional ROI name:', roi_map.get_institutional_rois())
+                                  'New Institutional ROI name:', roi_map.institutional_rois)
 
     def action(self):
         self.roi_map.rename_institutional_roi(self.new_name, self.institutional_roi)
@@ -1070,7 +1066,7 @@ class LinkPhysicianROI(wx.Dialog):
         self.physician = physician
         self.physician_roi = physician_roi
         self.roi_map = roi_map
-        self.institutional_rois = self.roi_map.get_institutional_rois()
+        self.institutional_rois = self.roi_map.institutional_rois
         self.institutional_roi = self.roi_map.get_institutional_roi(self.physician, self.physician_roi)
         choices = self.roi_map.get_unused_institutional_rois(self.physician)
         if self.institutional_roi not in choices:
