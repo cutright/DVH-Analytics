@@ -462,15 +462,18 @@ class ROIMapFrame(wx.Frame):
     def delete_variations(self, evt):
         self.roi_map.delete_variations(self.physician, self.physician_roi, self.selected_values)
         self.update_variations()
+        self.update_roi_map()
 
     def add_variation(self, evt):
         AddVariation(self, self.physician, self.roi_map, self.physician_roi)
         self.update_variations()
+        self.update_roi_map()
 
     def move_variations(self, evt):
         choices = [roi for roi in self.roi_map.get_physician_rois(self.physician) if roi != self.physician_roi]
         MoveVariationDialog(self, self.selected_values, self.physician, self.physician_roi, choices, self.roi_map)
         self.update_variations()
+        self.update_roi_map()
 
     def on_delete_physician(self, evt):
         MessageDialog(self, 'Delete Physician %s?' % self.physician, action_yes_func=self.delete_physician)

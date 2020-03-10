@@ -19,11 +19,9 @@ from dvha.paths import OPTIONS_PATH, OPTIONS_CHECKSUM_PATH
 
 
 class DefaultOptions:
-    """
-    Create default options, to be inherited by Options class
-    """
+    """Create default options, to be inherited by Options class"""
     def __init__(self):
-        self.VERSION = '0.7.4dev2'
+        self.VERSION = '0.7.4dev3'
 
         self.DB_TYPE = 'sqlite'
         self.SQL_PGSQL_IP_HIST = []
@@ -241,9 +239,8 @@ class Options(DefaultOptions):
             if current_checksum == stored_checksum:
                 return True
         except Exception:
-            pass
-        print('Corrupted options file detected. Loading default options.')
-        return False
+            print('Corrupted options file detected. Loading default options.')
+            return False
 
     def restore_defaults(self):
         if isfile(OPTIONS_PATH):

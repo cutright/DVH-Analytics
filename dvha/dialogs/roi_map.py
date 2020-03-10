@@ -450,7 +450,8 @@ class AddVariationDlg(wx.Dialog):
             self.user_input = wx.TextCtrl(self, wx.ID_ANY, "")
         else:
             choices = roi_map.get_physician_rois(physician)
-            self.user_input = wx.ComboBox(self, wx.ID_ANY, choices=choices,  style=wx.CB_DROPDOWN | wx.CB_READONLY)
+            self.user_input = wx.ComboBox(self, wx.ID_ANY, choices=choices,
+                                          style=wx.CB_DROPDOWN | wx.CB_READONLY | wx.CB_SORT)
             self.prediction_label = wx.StaticText(self, wx.ID_ANY, "")
 
         self.button_ok = wx.Button(self, wx.ID_OK, "Add")
@@ -513,7 +514,7 @@ class AddVariationDlg(wx.Dialog):
         res = self.ShowModal()
         if res == wx.ID_OK:
             try:
-                self.roi_map.add_variations(self.physician, self.input_roi_name, self.user_input.GetValue())
+                self.roi_map.add_variations(self.physician, self.user_input.GetValue(), self.input_roi_name,)
             except ROIVariationError as e:
                 ROIVariationErrorDialog(self.parent, e)
         self.Destroy()
@@ -596,7 +597,7 @@ class MoveVariationDialog(wx.Dialog):
 
     def action(self):
         for variation in self.variations:
-            self.roi_map.delete_variation(self.physician, self.old_physician_roi, variation)
+            self.roi_map.delete_variations(self.physician, self.old_physician_roi, variation)
             self.roi_map.add_variations(self.physician, self.combo_box.GetValue(), variation)
 
 
@@ -756,7 +757,7 @@ class DelVariation:
         """
         physician_roi = roi_map.get_physician_roi(physician, variation)
         caption = "Delete %s from %s's %s?" % (physician_roi, physician, variation)
-        action = partial(roi_map.delete_variation, physician, physician_roi, variation)
+        action = partial(roi_map.delete_variations, physician, physician_roi, variation)
         MessageDialog(parent, caption, action_yes_func=action)
 
 
