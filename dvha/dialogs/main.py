@@ -831,7 +831,7 @@ class UserSettings(wx.Dialog):
         self.Destroy()
 
     def inbox_dir_dlg(self, evt):
-        self.dir_dlg('inbox', self.text_ctrl_imported)
+        self.dir_dlg('inbox', self.text_ctrl_inbox)
 
     def imported_dir_dlg(self, evt):
         self.dir_dlg('imported', self.text_ctrl_imported)
