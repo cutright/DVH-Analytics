@@ -91,8 +91,10 @@ class Physician:
     def __contains__(self, variation):
         return clean_name(variation) in self.all_clean_variations
 
-    def add_physician_roi(self, institutional_roi, physician_roi):
+    def add_physician_roi(self, institutional_roi, physician_roi, variations=None):
         self.rois[physician_roi] = PhysicianROI(physician_roi, institutional_roi)
+        if variations is not None:
+            self.add_variations(physician_roi, variations)
 
     def del_physician_roi(self, physician_roi):
         clean_roi = clean_name(physician_roi)
@@ -244,11 +246,9 @@ class DatabaseROIs:
                 line = str(line).strip().replace(':', ',').split(',')
                 institutional_roi = line.pop(0)
                 physician_roi = line.pop(0)
-
-                self.add_physician_roi(physician, institutional_roi.strip(), physician_roi.strip())
-
                 variations = [v.strip() for v in line]
-                self.add_variations(physician, physician_roi, variations)
+
+                self.add_physician_roi(physician, institutional_roi.strip(), physician_roi.strip(), variations)
 
     ###################################
     # Physician functions
@@ -357,9 +357,9 @@ class DatabaseROIs:
         if physician in list(self.physicians):
             return self.physicians[physician].get_physician_roi(institutional_roi)
 
-    def add_physician_roi(self, physician, institutional_roi, physician_roi):
+    def add_physician_roi(self, physician, institutional_roi, physician_roi, variations=None):
         if physician in list(self.physicians):
-            self.physicians[physician].add_physician_roi(institutional_roi, physician_roi)
+            self.physicians[physician].add_physician_roi(institutional_roi, physician_roi, variations)
 
     def rename_physician_roi(self, new_physician_roi, physician, physician_roi):
         if physician in list(self.physicians):
@@ -389,8 +389,7 @@ class DatabaseROIs:
 
         variation_lists = [self.get_variations(physician, physician_roi) for physician_roi in physician_rois]
         variations = flatten_list_of_lists(variation_lists, remove_duplicates=True)
-        for variation in variations:
-            self.add_variations(physician, final_physician_roi, variation)
+        self.add_variations(physician, final_physician_roi, variations)
 
         for physician_roi in physician_rois:
             if physician_roi != final_physician_roi:
@@ -425,6 +424,7 @@ class DatabaseROIs:
         return False
 
     def add_variations(self, physician, physician_roi, variation):
+        # TODO: verify this function (didn't work import_from_file when used?)
         physician = clean_name(physician, physician=True)
 
         current_physician_roi = self.get_physician_roi(physician, variation)
@@ -629,7 +629,7 @@ class DatabaseROIs:
                      'x1': [2 - 0.5, 1 - 0.5],
                      'y1': [0, 0]}
 
-        variations = self.get_variations(physician, physician_roi)
+        variations = self.physicians[physician].rois[physician_roi].variations
         for i, variation in enumerate(variations):
             y = -i
             table['name'].append(variation)
@@ -649,6 +649,7 @@ class DatabaseROIs:
 
     def get_all_institutional_roi_visual_coordinates(self, physician, ignored_physician_rois=None):
         # TODO: Although functional and faster, hard to follow
+        # Still slowest part of ROI Map plot generation
         ignored_physician_rois = [] if ignored_physician_rois is None else ignored_physician_rois
         p_and_i = [(roi.physician_roi, roi.institutional_roi) for roi in self.physicians[physician].rois.values()
                    if roi.physician_roi not in ignored_physician_rois]
