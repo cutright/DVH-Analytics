@@ -310,7 +310,8 @@ class ROIMapFrame(wx.Frame):
         combo_box.SetValue(value)
 
     def update_roi_map(self):
-        self.plot.update_roi_map_source_data(self.physician, plot_type=self.plot_data_type)
+        self.plot.update_roi_map_source_data(self.physician, plot_type=self.plot_data_type,
+                                             y_shift=self.combo_box_physician_roi.GetValue())
 
     @property
     def physician(self):
@@ -392,6 +393,7 @@ class ROIMapFrame(wx.Frame):
 
     def physician_roi_ticker(self, evt):
         self.update_variations()
+        self.update_roi_map()
 
     def update_physicians(self, old_physicians=None):
 
