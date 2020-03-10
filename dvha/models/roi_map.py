@@ -21,7 +21,7 @@ from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddVariation, Mo
 from dvha.models.data_table import DataTable
 from dvha.models.plot import PlotROIMap
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_elapsed_time, get_window_size,\
-    set_frame_icon, set_msw_background_color
+    set_frame_icon, set_msw_background_color, is_windows
 from dvha.tools.roi_name_manager import clean_name
 
 
@@ -126,6 +126,15 @@ class ROIMapFrame(wx.Frame):
 
         self.update_physician_enable()
         self.update_merge_physician_rois()
+
+        if is_windows():  # combo_boxes here display a doubled bottom border on MSW
+            combo_boxes = [self.combo_box_physician, self.combo_box_physician_roi,
+                           self.combo_box_uncategorized_ignored, self.combo_box_uncategorized_ignored_roi,
+                           self.combo_box_physician_roi_merge['a'], self.combo_box_physician_roi_merge['b']]
+            for combo_box in combo_boxes:
+                combo_box.SetMinSize((combo_box.GetSize()[0], 26))
+            self.button_uncategorized_ignored_ignore.SetMinSize((self.button_uncategorized_ignored_ignore.GetSize()[0],
+                                                                 self.button_uncategorized_ignored_delete.GetSize()[1]))
 
     def __do_bind(self):
         self.window_tree.Bind(wx.EVT_COMBOBOX, self.on_plot_data_type_change, id=self.combo_box_tree_plot_data.GetId())
