@@ -18,8 +18,7 @@ from dvha.db.sql_to_python import QuerySQL
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import PREF_DIR
 from dvha.tools.roi_map_generator import ROIMapGenerator
-from dvha.tools.utilities import flatten_list_of_lists, initialize_directories_and_settings
-from dvha.tools.errors import ROIVariationError
+from dvha.tools.utilities import flatten_list_of_lists, initialize_directories
 
 
 class PhysicianROI:
@@ -198,7 +197,7 @@ class DatabaseROIs:
         self.institutional_rois = []
 
         if not os.path.isdir(PREF_DIR):
-            initialize_directories_and_settings()
+            initialize_directories()
 
         self.branched_institutional_rois = {}
         self.import_from_file()

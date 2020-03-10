@@ -16,13 +16,13 @@ from dateutil.parser import parse as date_parser
 import numpy as np
 from os.path import basename, join
 from pubsub import pub
+from dvha.options import Options
 from dvha.tools.roi_name_manager import clean_name, DatabaseROIs
 from dvha.tools.utilities import change_angle_origin, calc_stats, is_date, validate_transfer_syntax_uid
 from dvha.tools.roi_formatter import dicompyler_roi_coord_to_db_string, get_planes_from_string
 from dvha.tools import roi_geometry as roi_calc
 from dvha.tools.mlc_analyzer import Beam as mlca
 from dvha.db.sql_connector import DVH_SQL
-from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file
 
 
 class DICOM_Parser:
@@ -51,7 +51,7 @@ class DICOM_Parser:
         """
 
         self.database_rois = DatabaseROIs() if roi_map is None else roi_map
-        self.import_path = parse_settings_file(IMPORT_SETTINGS_PATH)['imported']
+        self.import_path = Options().IMPORTED_DIR
 
         self.plan_file = plan_file
         self.structure_file = structure_file

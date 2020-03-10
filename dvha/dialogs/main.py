@@ -851,6 +851,8 @@ class UserSettings(wx.Dialog):
                            wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:
             text_ctrl.SetValue(dlg.GetPath())
+            option_attr = 'INBOX_DIR' if dir_type == 'inbox' else 'IMPORTED_DIR'
+            self.options.set_option(option_attr, dlg.GetPath())
         dlg.Destroy()
 
     def get_option_choices(self, category):
@@ -980,9 +982,8 @@ class UserSettings(wx.Dialog):
         self.update_size_var()
 
     def load_paths(self):
-        paths = parse_settings_file(IMPORT_SETTINGS_PATH)
-        self.text_ctrl_inbox.SetValue(paths['inbox'])
-        self.text_ctrl_imported.SetValue(paths['imported'])
+        self.text_ctrl_inbox.SetValue(self.options.INBOX_DIR)
+        self.text_ctrl_imported.SetValue(self.options.IMPORTED_DIR)
 
     def restore_defaults(self, *args):
         MessageDialog(self, "Restore default preferences?", action_yes_func=self.options.restore_defaults)

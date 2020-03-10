@@ -21,7 +21,7 @@ import shutil
 import pydicom as dicom
 import pickle
 from dvha.db.sql_connector import DVH_SQL
-from dvha.paths import IMPORT_SETTINGS_PATH, SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
+from dvha.paths import SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
     APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR, MODELS_DIR, WIN_APP_ICON
 import tracemalloc
 import linecache
@@ -49,15 +49,6 @@ def is_mac():
     return wx.Platform == '__WXMAC__'
 
 
-def initialize_directories_and_settings():
-    """
-    Various methods of DVHA expect certain directories and files to be available, this will check for their existence
-    and create if needed
-    """
-    initialize_directories()
-    initialize_default_import_settings_file()
-
-
 def initialize_directories():
     """
     Based on paths.py, create required directories if they do not exist
@@ -68,33 +59,6 @@ def initialize_directories():
     for directory in directories:
         if not isdir(directory):
             mkdir(directory)
-
-
-def initialize_default_import_settings_file():
-    """
-    Create default import settings file
-    """
-    if not isfile(IMPORT_SETTINGS_PATH):
-        write_import_settings({'inbox': INBOX_DIR,
-                               'imported': IMPORTED_DIR,
-                               'review': REVIEW_DIR})
-
-
-def write_import_settings(directories):
-    """
-    Create a file defining the location of inbox, imported, and review directories.  This file can be edited
-    through the DVHA GUI in user settings.
-    :param directories: absolute directory paths for inbox, imported, and review
-    :type directories: dict
-    """
-
-    import_text = ['inbox ' + directories['inbox'],
-                   'imported ' + directories['imported'],
-                   'review ' + directories['review']]
-    import_text = '\n'.join(import_text)
-
-    with open(IMPORT_SETTINGS_PATH, "w") as text_file:
-        text_file.write(import_text)
 
 
 def write_sql_connection_settings(config):

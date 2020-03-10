@@ -13,11 +13,11 @@ GUI tools to edit the ROI Name map
 import wx
 from functools import partial
 from dvha.models.data_table import DataTable
-from dvha.tools.errors import ROIVariationErrorDialog
+from dvha.tools.errors import ROIVariationErrorDialog, ROIVariationError
 from dvha.tools.name_prediction import ROINamePredictor
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog
 from dvha.tools.roi_map_generator import ROIMapGenerator
-from dvha.tools.roi_name_manager import ROIVariationError, clean_name
+from dvha.tools.roi_name_manager import clean_name
 
 
 class AddPhysician(wx.Dialog):

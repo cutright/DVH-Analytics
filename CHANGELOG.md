@@ -8,7 +8,9 @@ v0.7.4 (TBD)
  - [Import] Catch PatientSetupSequence error to allow for brachytherapy plan import
  - [Import] Implement scipy.nd_image.map_coordinates for ~2.5x faster dose interpolation
  - [PyPI] scikit-learn changed 0.21 to 0.21.0, updated requirements.txt (as of v0.7.3.post1)
+ - [Settings] Inbox and Imported directory settings were not sticking: fixed per [issue #48](https://github.com/cutright/DVH-Analytics/issues/48)
  - [ROI Name Map] Implementation of TG-263 compliance
+ - [ROI Name Map] Fixes for [issue #48](https://github.com/cutright/DVH-Analytics/issues/48)
 
 v0.7.3 (2020.03.04)
 --------------------

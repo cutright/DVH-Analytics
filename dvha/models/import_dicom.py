@@ -29,7 +29,7 @@ from dvha.db.dicom_parser import DICOM_Parser, PreImportData
 from dvha.dialogs.main import DatePicker
 from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, DelPhysicianROI, AssignVariation, DelVariation,\
     AddROIType, RoiManager, ChangePlanROIName
-from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, ICONS, TEMP_DIR
+from dvha.paths import ICONS, TEMP_DIR
 from dvha.tools.dicom_dose_sum import DoseGrid
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
@@ -41,21 +41,18 @@ class ImportDicomFrame(wx.Frame):
     """
     Class used to generate the DICOM import GUI
     """
-    def __init__(self, roi_map, options, inbox=None, auto_parse=False):
+    def __init__(self, roi_map, options, auto_parse=False):
         """
         :param roi_map: roi_map object
         :type roi_map: DatabaseROIs
         :param options: user options object
         :type options: Options
-        :param inbox: optional initial directory
-        :type inbox: str
         """
         wx.Frame.__init__(self, None, title='Import DICOM')
         set_frame_icon(self)
 
         set_msw_background_color(self)  # If windows, change the background color
 
-        self.initial_inbox = inbox
         self.options = options
         self.auto_parse = auto_parse
 
@@ -70,7 +67,7 @@ class ImportDicomFrame(wx.Frame):
         self.roi_map = roi_map
         self.selected_roi = None
 
-        self.start_path = parse_settings_file(IMPORT_SETTINGS_PATH)['inbox']
+        self.start_path = self.options.INBOX_DIR
 
         self.checkbox = {}
         keys = ['birth_date', 'sim_study_date', 'physician', 'tx_site', 'rx_dose']
@@ -398,9 +395,10 @@ class ImportDicomFrame(wx.Frame):
 
     def run(self):
         self.Show()
-        if self.initial_inbox is None or not isdir(self.initial_inbox):
-            self.initial_inbox = ''
-        self.text_ctrl_directory.SetValue(self.initial_inbox)
+        initial_inbox = self.options.INBOX_DIR
+        if initial_inbox is None or not isdir(initial_inbox):
+            initial_inbox = ''
+        self.text_ctrl_directory.SetValue(initial_inbox)
 
         if self.auto_parse:
             self.dicom_importer = self.get_importer()

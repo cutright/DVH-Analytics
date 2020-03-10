@@ -15,13 +15,13 @@ from os.path import isfile
 from os import unlink
 import hashlib
 from copy import deepcopy
-from dvha.paths import OPTIONS_PATH, OPTIONS_CHECKSUM_PATH
+from dvha.paths import OPTIONS_PATH, OPTIONS_CHECKSUM_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR
 
 
 class DefaultOptions:
     """Create default options, to be inherited by Options class"""
     def __init__(self):
-        self.VERSION = '0.7.4dev3'
+        self.VERSION = '0.7.4rc1'
 
         self.DB_TYPE = 'sqlite'
         self.SQL_PGSQL_IP_HIST = []
@@ -159,6 +159,10 @@ class DefaultOptions:
         self.KEEP_IN_INBOX = 0
         self.SEARCH_SUBFOLDERS = 1
         self.IMPORT_UNCATEGORIZED = 0
+
+        self.INBOX_DIR = INBOX_DIR
+        self.IMPORTED_DIR = IMPORTED_DIR
+        self.REVIEW_DIR = REVIEW_DIR
 
 
 class Options(DefaultOptions):

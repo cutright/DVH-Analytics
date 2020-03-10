@@ -41,7 +41,7 @@ from dvha.tools.errors import MemoryErrorDialog, PlottingMemoryError
 from dvha.tools.roi_name_manager import DatabaseROIs
 from dvha.tools.stats import StatsData, sync_variables_in_stats_data_objects
 from dvha.tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux, is_mac, get_window_size, \
-    save_object_to_file, load_object_from_file, set_msw_background_color, initialize_directories_and_settings, \
+    save_object_to_file, load_object_from_file, set_msw_background_color, initialize_directories, \
     set_frame_icon
 from dvha.db.sql_columns import all_columns as sql_column_info
 
@@ -1029,7 +1029,7 @@ class DVHAMainFrame(wx.Frame):
 class MainApp(wx.App):
     def OnInit(self):
 
-        initialize_directories_and_settings()
+        initialize_directories()
         if is_windows():
             from dvha.tools.windows_reg_edit import set_ie_emulation_level, set_ie_lockdown_level
             set_ie_emulation_level()
