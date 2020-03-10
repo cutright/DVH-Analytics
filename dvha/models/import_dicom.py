@@ -41,12 +41,13 @@ class ImportDicomFrame(wx.Frame):
     """
     Class used to generate the DICOM import GUI
     """
-    def __init__(self, roi_map, options, auto_parse=False):
+    def __init__(self, roi_map, options, inbox=None, auto_parse=False):
         """
         :param roi_map: roi_map object
         :type roi_map: DatabaseROIs
         :param options: user options object
         :type options: Options
+        :param inbox: set the inbox, defaults to value in options if None
         """
         wx.Frame.__init__(self, None, title='Import DICOM')
         set_frame_icon(self)
@@ -55,6 +56,7 @@ class ImportDicomFrame(wx.Frame):
 
         self.options = options
         self.auto_parse = auto_parse
+        self.inbox = inbox
 
         with DVH_SQL() as cnx:
             cnx.initialize_database()
@@ -395,10 +397,13 @@ class ImportDicomFrame(wx.Frame):
 
     def run(self):
         self.Show()
-        initial_inbox = self.options.INBOX_DIR
-        if initial_inbox is None or not isdir(initial_inbox):
-            initial_inbox = ''
-        self.text_ctrl_directory.SetValue(initial_inbox)
+        if self.inbox is not None and isdir(self.inbox):
+            inbox = self.inbox
+        elif isdir(self.options.INBOX_DIR):
+            inbox = self.options.INBOX_DIR
+        else:
+            inbox = ''
+        self.text_ctrl_directory.SetValue(inbox)
 
         if self.auto_parse:
             self.dicom_importer = self.get_importer()

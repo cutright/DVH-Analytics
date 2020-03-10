@@ -240,15 +240,15 @@ class DatabaseEditorFrame(wx.Frame):
     def on_edit_db(evt):
         EditDatabaseDialog()
 
-    # @staticmethod
-    # def on_calculations(evt):
-    #     CalculationsDialog()
+    @staticmethod
+    def on_calculations(evt):
+        CalculationsDialog()
 
     def on_rebuild_db(self, evt):
         RebuildDB(self, self.roi_map, self.options)
 
     def on_delete_all_data(self, evt):
-        DeleteAllData(self)
+        DeleteAllData(self, self.options)
 
     def on_export_csv(self, evt):
         save_data_to_file(self, "Export Data Table to CSV", self.data_query_results.get_csv())
