@@ -648,6 +648,7 @@ class DatabaseROIs:
         return table
 
     def get_all_institutional_roi_visual_coordinates(self, physician, ignored_physician_rois=None):
+        # TODO: Although functional and faster, hard to follow
         ignored_physician_rois = [] if ignored_physician_rois is None else ignored_physician_rois
         p_and_i = [(roi.physician_roi, roi.institutional_roi) for roi in self.physicians[physician].rois.values()
                    if roi.physician_roi not in ignored_physician_rois]
@@ -671,43 +672,43 @@ class DatabaseROIs:
                 for j in range(len(tables[roi[0]][key])):
                     tables[roi[0]][key][j] += y_delta - max_y_delta
 
+        i_roi_map = {p_i[0]: p_i[1] for p_i in p_and_i}
         if p_and_i and p_and_i[0][0] in tables:
             table = tables[p_and_i[0][0]]
             for i in range(1, len(p_and_i)):
                 for key in list(table):
                     table[key].extend(tables[p_and_i[i][0]][key])
 
-            return self.update_duplicate_y_entries(table, physician)
+            return self.update_duplicate_y_entries(table, physician, i_roi_map)
         return None
 
     @staticmethod
     def get_roi_visual_y_values(table):
         y_values = {}
         for i, x in enumerate(table['x']):
-            if x == 1 - 0.5:
+            if x == 0.5:
                 name = table['name'][i]
-                y = table['y'][i]
                 if name not in list(y_values):
                     y_values[name] = []
-                y_values[name].append(y)
+                y_values[name].append(table['y'][i])
         for name in list(y_values):
             y_values[name] = sum(y_values[name]) / len(y_values[name])
         return y_values
 
-    def update_duplicate_y_entries(self, table, physician):
+    def update_duplicate_y_entries(self, table, physician, inst_map):
 
         y_values = self.get_roi_visual_y_values(table)
 
         self.branched_institutional_rois[physician] = []
 
         for i, name in enumerate(table['name']):
-            if table['x'][i] == 1 - 0.5 and table['y'][i] != y_values[name]:
+            if table['x'][i] == 0.5 and table['y'][i] != y_values[name]:
                 table['y'][i] = y_values[name]
                 table['y0'][i] = y_values[name]
                 table['color'][i] = 'red'
                 self.branched_institutional_rois[physician].append(name)
-            if table['x'][i] == 2 - 0.5:
-                inst_name = self.get_institutional_roi(physician, name)
+            if table['x'][i] == 1.5:
+                inst_name = inst_map[name]
                 if inst_name != 'uncategorized':
                     table['y1'][i] = y_values[inst_name]
 
