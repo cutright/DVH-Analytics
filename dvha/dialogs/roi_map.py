@@ -320,7 +320,6 @@ class RoiManager(wx.Dialog):
         self.Destroy()
 
     def update_physicians(self, old_physicians=None):
-        print('update_physicians')
         choices = list(self.roi_map.physicians)
         if choices:
             new = choices[0]
@@ -514,7 +513,11 @@ class AddVariationDlg(wx.Dialog):
         res = self.ShowModal()
         if res == wx.ID_OK:
             try:
-                self.roi_map.add_variations(self.physician, self.user_input.GetValue(), self.input_roi_name,)
+                physician_roi = self.input_roi_name if self.mode == 'add' else self.user_input.GetValue()
+                variation = self.user_input.GetValue() if self.mode == 'add' else self.input_roi_name
+                self.roi_map.add_variations(physician=self.physician,
+                                            physician_roi=physician_roi,
+                                            variation=variation)
             except ROIVariationError as e:
                 ROIVariationErrorDialog(self.parent, e)
         self.Destroy()
@@ -596,9 +599,8 @@ class MoveVariationDialog(wx.Dialog):
         self.Destroy()
 
     def action(self):
-        for variation in self.variations:
-            self.roi_map.delete_variations(self.physician, self.old_physician_roi, variation)
-            self.roi_map.add_variations(self.physician, self.combo_box.GetValue(), variation)
+        self.roi_map.delete_variations(self.physician, self.old_physician_roi, self.variations)
+        self.roi_map.add_variations(self.physician, self.combo_box.GetValue(), self.variations)
 
 
 class AddPhysicianROI(wx.Dialog):

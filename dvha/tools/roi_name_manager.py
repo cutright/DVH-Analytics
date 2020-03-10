@@ -56,12 +56,15 @@ class PhysicianROI:
     def clean_top_level(self):
         return [clean_name(v) for v in [self.institutional_roi, self.physician_roi]]
 
-    def del_variation(self, variation):
-        if variation in self.variations and \
-                clean_name(variation) not in self.clean_top_level:
-            self.variations.pop(self.variations.index(variation))
+    def del_variation(self, variations):
+        if type(variations) is not list:
+            variations = list(variations)
+        for variation in variations:
+            if variation in self.variations and \
+                    clean_name(variation) not in self.clean_top_level:
+                self.variations.pop(self.variations.index(variation))
 
-    def del_variations(self):
+    def del_all_variations(self):
         self.variations = [self.physician_roi]
         if self.institutional_roi.lower() != 'uncategorized' and \
                 clean_name(self.institutional_roi) != clean_name(self.physician_roi):
@@ -106,17 +109,14 @@ class Physician:
         if physician_roi in list(self.rois):
             self.rois[physician_roi].add_variations(variations)
 
-    def del_variations(self, physician_roi):
+    def del_variations(self, physician_roi, variations):
         if physician_roi in list(self.rois):
-            self.rois[physician_roi].del_variations()
+            self.rois[physician_roi].del_variation(variations)
 
-    def del_variation(self, physician_roi, variation):
-        if physician_roi in list(self.rois):
-            self.rois[physician_roi].del_variation(variation)
-
-    def delete_all_variations(self):
-        for physician_roi in list(self.rois):
-            self.del_variations(physician_roi)
+    def delete_all_variations(self, physician_roi=None):
+        physician_rois = [physician_roi] if physician_roi is None else list(self.rois)
+        for physician_roi in physician_rois:
+            self.rois[physician_roi].del_all_variations()
 
     @property
     def all_variations(self):
@@ -424,23 +424,16 @@ class DatabaseROIs:
         return False
 
     def add_variations(self, physician, physician_roi, variation):
-        # TODO: verify this function (didn't work import_from_file when used?)
         physician = clean_name(physician, physician=True)
-
-        current_physician_roi = self.get_physician_roi(physician, variation)
-        if current_physician_roi == 'uncategorized':
+        if physician in list(self.physicians):
             self.physicians[physician].add_variations(physician_roi, variation)
-        else:
-            raise ROIVariationError("'%s' is already a variation of %s for %s" %
-                                    (variation, current_physician_roi, physician))
 
     def delete_variations(self, physician, physician_roi, variations):
         physician = clean_name(physician, physician=True)
         if physician in list(self.physicians):
             if type(variations) is not list:
                 variations = [variations]
-            for variation in variations:
-                self.physicians[physician].del_variation(physician_roi, variation)
+            self.physicians[physician].del_variations(physician_roi, variations)
 
     def set_variation(self, new_variation, physician, physician_roi, variation):
         physician = clean_name(physician, physician=True)
