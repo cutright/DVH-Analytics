@@ -614,31 +614,30 @@ class DatabaseROIs:
         # x0, y0 is beginning of line segment, x1, y1 is end of line-segment
         if institutional_roi == 'uncategorized':
             table = {'name': [physician_roi],
-                     'x': [2 - 0.5],
+                     'x': [1.5],
                      'y': [0],
-                     'x0': [2 - 0.5],
+                     'x0': [1.5],
                      'y0': [0],
-                     'x1': [2 - 0.5],
+                     'x1': [1.5],
                      'y1': [0]}
         else:
             table = {'name': [institutional_roi, physician_roi],
-                     'x': [1 - 0.5, 2 - 0.5],
+                     'x': [0.5, 1.5],
                      'y': [0, 0],
-                     'x0': [1 - 0.5, 2 - 0.5],
+                     'x0': [0.5, 1.5],
                      'y0': [0, 0],
-                     'x1': [2 - 0.5, 1 - 0.5],
+                     'x1': [1.5, 0.5],
                      'y1': [0, 0]}
 
         variations = self.physicians[physician].rois[physician_roi].variations
         for i, variation in enumerate(variations):
-            y = -i
             table['name'].append(variation)
-            table['x'].append(3 - 0.5)
-            table['y'].append(y)
-            table['x0'].append(2 - 0.5)
+            table['x'].append(2.5)
+            table['y'].append(-i)
+            table['x0'].append(1.5)
             table['y0'].append(0)
-            table['x1'].append(3 - 0.5)
-            table['y1'].append(y)
+            table['x1'].append(2.5)
+            table['y1'].append(-i)
 
         table_length = len(table['name'])
         table['color'] = ['#1F77B4'] * table_length
@@ -651,10 +650,11 @@ class DatabaseROIs:
         # TODO: Although functional and faster, hard to follow
         # Still slowest part of ROI Map plot generation
         ignored_physician_rois = [] if ignored_physician_rois is None else ignored_physician_rois
-        p_and_i = [(roi.physician_roi, roi.institutional_roi) for roi in self.physicians[physician].rois.values()
+        p_and_i = [(roi.physician_roi, roi.institutional_roi)
+                   for roi in self.physicians[physician].rois.values()
                    if roi.physician_roi not in ignored_physician_rois]
 
-        i_rois = self.physicians[physician].institutional_rois
+        i_rois = [roi[1] for roi in p_and_i]
         i_rois.sort()
         for i, i_roi in enumerate(i_rois):
             if i_roi == 'uncategorized':
