@@ -100,7 +100,7 @@ class Physician:
 
     def del_physician_roi(self, physician_roi):
         clean_roi = clean_name(physician_roi)
-        clean_rois_map = self.clean_institutional_rois_map
+        clean_rois_map = self.clean_physician_rois_map
         if clean_roi in list(clean_rois_map):
             self.rois.pop(clean_rois_map[clean_roi], None)
 

@@ -509,9 +509,18 @@ class ImportDicomFrame(wx.Frame):
             physician = self.input['physician'].GetValue()
             is_mapped = not evt.GetItem().GetImage()
 
+            # TODO: This block of code, but is overly complicated
             msg_prepend = "%s %s as" % (['Add', 'Remove'][is_mapped], roi_name)
             labels = ["%s %s" % (msg_prepend, roi_type) for roi_type in ['Physician ROI', 'Variation']]
-            dlg_objects = [DelPhysicianROI, DelVariation] if is_mapped else [AddPhysicianROI, AssignVariation]
+            if is_mapped:
+                if self.roi_map.is_physician_roi(roi_name, physician):
+                    dlg_objects = [DelPhysicianROI]
+                    labels = [labels[0]]
+                else:
+                    dlg_objects = [DelVariation]
+                    labels = [labels[1]]
+            else:
+                dlg_objects = [AddPhysicianROI, AssignVariation]
             pre_func = partial(self.roi_tree_right_click_action, physician, roi_name)
 
             popup = PopupMenu(self)
@@ -531,6 +540,7 @@ class ImportDicomFrame(wx.Frame):
                           self.parsed_dicom_data[self.selected_uid],
                           self.dicom_importer)
         self.dicom_importer.update_mapped_roi_status(self.input['physician'].GetValue())
+        self.update_physician_roi_choices()
 
     def update_input_roi_physician_enable(self):
         if self.selected_roi:
