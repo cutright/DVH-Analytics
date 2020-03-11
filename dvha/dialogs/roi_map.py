@@ -219,7 +219,7 @@ class RoiManager(wx.Dialog):
         self.initial_physician = physician
         self.initial_physician_roi = physician_roi
 
-        self.combo_box_physician = wx.ComboBox(self, wx.ID_ANY, choices=list(self.roi_map.physcians),
+        self.combo_box_physician = wx.ComboBox(self, wx.ID_ANY, choices=list(self.roi_map.physicians),
                                                style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_physician_roi = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.list_ctrl_variations = wx.ListCtrl(self, wx.ID_ANY, style=wx.LC_NO_HEADER | wx.LC_REPORT | wx.BORDER_SUNKEN)
