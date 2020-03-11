@@ -1963,11 +1963,14 @@ class PlotROIMap(Plot):
                                                                              ignored_physician_rois=ignored_roi)
         # Shift coordinates so plot is initially viewing the provided shift or physician_roi
         if y_shift is not None:
-            if type(y_shift) is str:
-                index = new_data['name'].index(y_shift)
-                y_shift = new_data['y'][index] + 3
-            for key in ['y', 'y0', 'y1']:
-                new_data[key] = (np.array(new_data[key]) - y_shift).tolist()
+            try:
+                if type(y_shift) is str:
+                    index = new_data['name'].index(y_shift)
+                    y_shift = new_data['y'][index] + 3
+                for key in ['y', 'y0', 'y1']:
+                    new_data[key] = (np.array(new_data[key]) - y_shift).tolist()
+            except ValueError:
+                pass
 
         self.figure.title.text = 'ROI Map for %s' % physician
         if new_data:

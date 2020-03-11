@@ -577,6 +577,12 @@ class ImportDicomFrame(wx.Frame):
         roi_type_for_tree_text = [None, 'PTV'][roi_type == 'PTV']
         self.dicom_importer.update_tree_ctrl_roi_with_roi_type(roi, roi_type=roi_type_for_tree_text)
 
+    def update_all_roi_text_with_roi_type(self):
+        for roi in list(self.dicom_importer.roi_name_map):
+            roi_key = self.dicom_importer.roi_name_map[roi]['key']
+            roi_type = self.parsed_dicom_data[self.selected_uid].get_roi_type(roi_key)
+            self.update_roi_text_with_roi_type(roi, roi_type)
+
     def clear_plan_data(self):
         for input_obj in self.input.values():
             input_obj.SetValue('')
@@ -692,6 +698,7 @@ class ImportDicomFrame(wx.Frame):
 
     def on_apply_plan(self, evt):
         wx.BeginBusyCursor()
+        current_physician = self.input['physician'].GetValue()
         self.on_physician_change()
         over_rides = self.parsed_dicom_data[self.selected_uid].plan_over_rides
         apply_all_selected = False
@@ -718,6 +725,11 @@ class ImportDicomFrame(wx.Frame):
             self.validate()
         else:
             self.validate(uid=self.selected_uid)
+
+        if current_physician != self.input['physician']:
+            self.parsed_dicom_data[self.selected_uid].autodetect_target_roi_type()
+            self.update_all_roi_text_with_roi_type()
+
         self.update_warning_label()
         wx.EndBusyCursor()
 
