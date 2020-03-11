@@ -52,9 +52,9 @@ class ROIMapFrame(wx.Frame):
         self.window_editor = wx.Panel(self.window, wx.ID_ANY, style=wx.BORDER_SUNKEN)
 
         self.combo_box_physician = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=list(self.roi_map.physicians),
-                                               style=wx.CB_DROPDOWN | wx.CB_READONLY)
+                                               style=wx.CB_DROPDOWN | wx.CB_READONLY | wx.CB_SORT)
         self.combo_box_physician_roi = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=[],
-                                                   style=wx.CB_DROPDOWN | wx.CB_READONLY)
+                                                   style=wx.CB_DROPDOWN | wx.CB_READONLY | wx.CB_SORT)
         self.list_ctrl_variations = wx.ListCtrl(self.window_editor, wx.ID_ANY,
                                                 style=wx.LC_NO_HEADER | wx.LC_REPORT | wx.BORDER_SUNKEN)
         self.button_variation_select_all = wx.Button(self.window_editor, wx.ID_ANY, "Select All")

@@ -1965,14 +1965,15 @@ class PlotROIMap(Plot):
         if y_shift is not None:
             if type(y_shift) is str:
                 index = new_data['name'].index(y_shift)
-                y_shift = -new_data['y'][index] - 3
+                y_shift = new_data['y'][index] + 3
             for key in ['y', 'y0', 'y1']:
-                new_data[key] = (np.array(new_data[key]) + y_shift).tolist()
+                new_data[key] = (np.array(new_data[key]) - y_shift).tolist()
 
         self.figure.title.text = 'ROI Map for %s' % physician
         if new_data:
             self.source['map'].data = new_data
-            self.figure.y_range.bounds = (min(self.source['map'].data['y']) - 3, max(self.source['map'].data['y']) + 3)
+            self.figure.y_range.bounds = (min(self.source['map'].data['y1']) - 6,
+                                          max(self.source['map'].data['y1']) + 6)
             self.update_bokeh_layout_in_wx_python()
         else:
             self.clear_source('map')
