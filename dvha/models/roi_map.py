@@ -434,7 +434,7 @@ class ROIMapFrame(wx.Frame):
         old_physician_rois = self.roi_map.get_physician_rois(self.physician)
         dlg = AddPhysicianROI(self, self.physician, self.roi_map, institutional_mode=self.physician == 'DEFAULT')
         if dlg.res == wx.ID_OK:
-            self.update_all(old_physician_rois=old_physician_rois)
+            self.update_all(old_physician_rois=old_physician_rois, skip_physicians=True)
 
     def add_physician(self, evt):
         old_physicians = list(self.roi_map.physicians)
