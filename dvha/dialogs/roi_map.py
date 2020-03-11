@@ -674,8 +674,7 @@ class AddPhysicianROI(wx.Dialog):
         sizer_main = wx.BoxSizer(wx.VERTICAL)
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_input = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.HORIZONTAL)
-        if not self.institutional_mode:
-            sizer_institutional_roi = wx.BoxSizer(wx.VERTICAL)
+
         sizer_physician_roi = wx.BoxSizer(wx.VERTICAL)
 
         label_physician_roi = wx.StaticText(self, wx.ID_ANY, "New %s ROI:" %
@@ -685,6 +684,7 @@ class AddPhysicianROI(wx.Dialog):
         sizer_input.Add(sizer_physician_roi, 1, wx.ALL | wx.EXPAND, 5)
 
         if not self.institutional_mode:
+            sizer_institutional_roi = wx.BoxSizer(wx.VERTICAL)
             label_institutional_roi = wx.StaticText(self, wx.ID_ANY, "Linked Institutional ROI:")
             sizer_institutional_roi.Add(label_institutional_roi, 0, 0, 0)
             sizer_institutional_roi.Add(self.combo_box_institutional_roi, 0, wx.EXPAND, 0)

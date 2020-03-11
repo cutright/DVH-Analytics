@@ -301,6 +301,7 @@ class DatabaseROIs:
     def add_institutional_roi(self, roi):
         if roi not in self.institutional_rois:
             self.institutional_rois.append(roi)
+            self.add_physician_roi('DEFAULT', roi, roi)
 
     def rename_institutional_roi(self, new, old):
         if old in self.institutional_rois:
@@ -308,11 +309,12 @@ class DatabaseROIs:
             self.institutional_rois.pop(index)
             for physician in self.physicians.values():
                 physician.rename_institutional_roi(new, old)
-
-            self.add_institutional_roi(new)
+            if new != 'uncategorized':
+                self.add_institutional_roi(new)
 
     def set_linked_institutional_roi(self, new_institutional_roi, physician, physician_roi):
-        self.physicians[physician].physician_rois[physician_roi].institutional_roi = new_institutional_roi
+        if physician in list(self.physicians) and physician_roi in list(self.physicians[physician].rois):
+            self.physicians[physician].rois[physician_roi].set_institutional_roi(new_institutional_roi)
 
     def delete_institutional_roi(self, roi):
         self.rename_institutional_roi('uncategorized', roi)
