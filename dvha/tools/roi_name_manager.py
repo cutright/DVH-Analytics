@@ -200,6 +200,8 @@ class DatabaseROIs:
         if not os.path.isdir(PREF_DIR):
             initialize_directories()
 
+        self.physicians_from_file = get_physicians_from_roi_files()
+
         self.branched_institutional_rois = {}
         self.import_from_file()
 
@@ -207,10 +209,14 @@ class DatabaseROIs:
         self.physicians = {}
         self.institutional_rois = []
 
-        self.institutional_rois = ROIMapGenerator().primary_names
-        self.add_physician('DEFAULT')
+        if 'DEFAULT' in self.physicians_from_file:
+            abs_file_path = os.path.join(PREF_DIR, 'physician_DEFAULT.roi')
+            self.import_physician_roi_map(abs_file_path, 'DEFAULT', institutional_mode=True)
+        else:
+            self.institutional_rois = ROIMapGenerator().primary_names
+            self.add_physician('DEFAULT')
 
-        for physician in get_physicians_from_roi_files():
+        for physician in self.physicians_from_file:
             self.add_physician(physician)
 
         self.import_physician_roi_maps()
@@ -231,7 +237,7 @@ class DatabaseROIs:
             if os.path.isfile(abs_file_path):
                 self.import_physician_roi_map(abs_file_path, physician)
 
-    def import_physician_roi_map(self, abs_file_path, physician=None):
+    def import_physician_roi_map(self, abs_file_path, physician=None, institutional_mode=False):
 
         if physician is None:
             physician = os.path.splitext(os.path.basename(abs_file_path))[0].split('physician_')[1]
@@ -245,10 +251,13 @@ class DatabaseROIs:
                     continue
                 line = str(line).strip().replace(':', ',').split(',')
                 institutional_roi = line.pop(0)
-                physician_roi = line.pop(0)
-                variations = [v.strip() for v in line]
+                if institutional_mode:
+                    self.add_institutional_roi(institutional_roi)
+                else:
+                    physician_roi = line.pop(0)
+                    variations = [v.strip() for v in line]
 
-                self.add_physician_roi(physician, institutional_roi.strip(), physician_roi.strip(), variations)
+                    self.add_physician_roi(physician, institutional_roi.strip(), physician_roi.strip(), variations)
 
     ###################################
     # Physician functions
@@ -360,6 +369,7 @@ class DatabaseROIs:
             return self.physicians[physician].get_physician_roi(institutional_roi)
 
     def add_physician_roi(self, physician, institutional_roi, physician_roi, variations=None):
+        self.add_institutional_roi(institutional_roi)  # will skip if already exists
         if physician in list(self.physicians):
             self.physicians[physician].add_physician_roi(institutional_roi, physician_roi, variations)
 
@@ -462,7 +472,7 @@ class DatabaseROIs:
     @property
     def physician_roi_file_data(self):
         physicians_file_data = {}
-        for physician in list(self.physicians):
+        for physician in list(self.physicians) + ['DEFAULT']:
             lines = []
             for physician_roi in self.get_physician_rois(physician):
                 institutional_roi = self.get_institutional_roi(physician, physician_roi)
