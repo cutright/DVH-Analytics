@@ -509,7 +509,7 @@ class ImportDicomFrame(wx.Frame):
             physician = self.input['physician'].GetValue()
             is_mapped = not evt.GetItem().GetImage()
 
-            # TODO: This block of code, but is overly complicated
+            # TODO: This block of code works, but is overly complicated
             msg_prepend = "%s %s as" % (['Add', 'Remove'][is_mapped], roi_name)
             labels = ["%s %s" % (msg_prepend, roi_type) for roi_type in ['Physician ROI', 'Variation']]
             if is_mapped:

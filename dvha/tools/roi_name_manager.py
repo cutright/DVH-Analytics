@@ -181,6 +181,7 @@ class Physician:
             actual_old = clean_rois[clean_old]
             self.rois[new] = self.rois.pop(actual_old)
             self.rois[new].add_variations(new)
+            self.rois[new].physician_roi = new
 
     def get_variation(self, variation):
         for physician_roi in self.rois.values():

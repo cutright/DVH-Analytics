@@ -909,7 +909,7 @@ class RenamerBaseClass(wx.Dialog):
     """
     Simple base class used for renaming (e.g., renaming a physician in the roi map)
     """
-    def __init__(self, title, text_input_label, invalid_options, lower_case=True):
+    def __init__(self, title, text_input_label, invalid_options):
         """
         :param title: title of the dialog window
         :type title: str
@@ -917,13 +917,10 @@ class RenamerBaseClass(wx.Dialog):
         :type text_input_label: str
         :param invalid_options: if text_ctrl is in invalid options, OK button will be disabled
         :type invalid_options: list
-        :param lower_case: final value of text_input_label will be forced to either all lower or upper case
-        :type lower_case: bool
         """
         wx.Dialog.__init__(self, None, title=title)
 
-        self.invalid_options = invalid_options
-        self.lower_case = lower_case
+        self.invalid_options = [clean_name(option) for option in invalid_options]
 
         self.text_input_label = text_input_label
 
@@ -966,15 +963,11 @@ class RenamerBaseClass(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self.text_ticker, id=self.text_ctrl.GetId())
 
     def text_ticker(self, evt):
-        [self.button_ok.Disable, self.button_ok.Enable][self.new_name not in self.invalid_options]()
+        [self.button_ok.Disable, self.button_ok.Enable][clean_name(self.new_name) not in self.invalid_options]()
 
     @property
     def new_name(self):
-        new = clean_name(self.text_ctrl.GetValue())  # clean name will result in lower-case
-        if self.lower_case:
-            return new
-        else:
-            return new.upper()
+        return self.text_ctrl.GetValue()
 
     def run(self):
         self.res = self.ShowModal()
@@ -1000,7 +993,7 @@ class RenamePhysicianDialog(RenamerBaseClass):
         self.physician = physician
         self.roi_map = roi_map
         RenamerBaseClass.__init__(self, 'Rename %s' % physician,
-                                  'New Physician Name:', list(roi_map.physicians), lower_case=False)
+                                  'New Physician Name:', list(roi_map.physicians))
 
     def action(self):
         self.roi_map.rename_physician(self.new_name, self.physician)

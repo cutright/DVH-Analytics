@@ -84,8 +84,10 @@ class ROIMapFrame(wx.Frame):
                                                                style=wx.CB_DROPDOWN)
         self.button_uncategorized_ignored_delete = wx.Button(self.window_editor, wx.ID_ANY, "Delete DVH")
         self.button_uncategorized_ignored_ignore = wx.Button(self.window_editor, wx.ID_ANY, "Ignore DVH")
-        self.combo_box_physician_roi_merge = {'a': wx.ComboBox(self.window_editor, wx.ID_ANY, style=wx.CB_DROPDOWN),
-                                              'b': wx.ComboBox(self.window_editor, wx.ID_ANY, style=wx.CB_DROPDOWN)}
+        self.combo_box_physician_roi_merge = {'a': wx.ComboBox(self.window_editor, wx.ID_ANY,
+                                                               style=wx.CB_DROPDOWN | wx.CB_SORT | wx.CB_READONLY),
+                                              'b': wx.ComboBox(self.window_editor, wx.ID_ANY,
+                                                               style=wx.CB_DROPDOWN | wx.CB_SORT | wx.CB_READONLY)}
         self.button_merge = wx.Button(self.window_editor, wx.ID_ANY, "Merge")
 
         self.button_save_and_update = wx.Button(self.window_editor, wx.ID_ANY, "Save and Update Database")
@@ -359,7 +361,7 @@ class ROIMapFrame(wx.Frame):
                 cursor_rtn = cnx.query('dvhs', 'roi_name, study_instance_uid', condition)
                 new_variations = {}
                 for row in cursor_rtn:
-                    variation = clean_name(str(row[0]))
+                    variation = str(row[0])
                     study_instance_uid = str(row[1])
                     physician_db = cnx.get_unique_values('Plans', 'physician',
                                                          "study_instance_uid = '%s'" % study_instance_uid)
@@ -414,8 +416,7 @@ class ROIMapFrame(wx.Frame):
         if old_physician_rois:
             new = list(set(choices) - set(old_physician_rois))
             if new:
-                new = clean_name(new[0])
-
+                new = new[0]
         self.update_combo_box_choices(self.combo_box_physician_roi, choices, new)
 
     @property
