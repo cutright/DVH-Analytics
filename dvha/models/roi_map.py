@@ -607,7 +607,6 @@ class ROIMapFrame(wx.Frame):
 
     def save_and_update(self, evt):
         RemapROIFrame(self.roi_map)
-        self.Destroy()
 
     def on_cancel(self, *args):
         self.roi_map.import_from_file()
