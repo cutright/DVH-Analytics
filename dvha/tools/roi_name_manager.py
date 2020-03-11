@@ -211,7 +211,7 @@ class DatabaseROIs:
 
         if 'DEFAULT' in self.physicians_from_file:
             abs_file_path = os.path.join(PREF_DIR, 'physician_DEFAULT.roi')
-            self.import_physician_roi_map(abs_file_path, 'DEFAULT', institutional_mode=True)
+            self.import_physician_roi_map(abs_file_path, 'DEFAULT')
         else:
             self.institutional_rois = ROIMapGenerator().primary_names
             self.add_physician('DEFAULT')
@@ -237,7 +237,9 @@ class DatabaseROIs:
             if os.path.isfile(abs_file_path):
                 self.import_physician_roi_map(abs_file_path, physician)
 
-    def import_physician_roi_map(self, abs_file_path, physician=None, institutional_mode=False):
+    def import_physician_roi_map(self, abs_file_path, physician=None):
+
+        institutional_mode = physician == 'DEFAULT'
 
         if physician is None:
             physician = os.path.splitext(os.path.basename(abs_file_path))[0].split('physician_')[1]
@@ -327,6 +329,7 @@ class DatabaseROIs:
 
     def delete_institutional_roi(self, roi):
         self.rename_institutional_roi('uncategorized', roi)
+        self.delete_physician_roi('DEFAULT', roi)
 
     def is_institutional_roi(self, roi):
         return clean_name(roi) in self.clean_institutional_rois
