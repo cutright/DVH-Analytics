@@ -730,13 +730,13 @@ class DatabaseROIs:
 
 
 def clean_name(name, physician=False):
-    ans = str(name).strip().replace('\'', '`').replace(' ', '_')
-    while '__' in ans:
-        ans = ans.replace('__', '_')
+    ans = str(name).replace('\'', '`').replace('_', ' ').strip()
+    while '  ' in ans:
+        ans = ans.replace('  ', ' ')
 
     if physician:
-        return ans.upper()
-    return ans.replace('_', ' ').strip().lower()
+        return ans.replace(' ', '_').upper()
+    return ans.lower()
 
 
 def get_physicians_from_roi_files():
