@@ -4,11 +4,11 @@ pypubsub
 numpy
 scipy
 pydicom>1.0
-bokeh>=1.2.0
+bokeh>=1.2.0,<2.0.0
 psycopg2-binary
 shapely[vectorized]<1.7.0
 python-dateutil
-statsmodels
+statsmodels >= 0.8.0
 scikit-learn>=0.21.0
 regressors
 fuzzywuzzy

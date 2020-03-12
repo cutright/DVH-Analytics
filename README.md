@@ -73,14 +73,14 @@ Dependencies
 * [wxPython Phoenix](https://github.com/wxWidgets/Phoenix) >= 4.0.4
 * [Pydicom](https://github.com/darcymason/pydicom) >=1.0
 * [dicompyler-core](https://pypi.python.org/pypi/dicompyler-core) 0.5.3
-* [Bokeh](http://bokeh.pydata.org/en/latest/index.html) >= 1.2.0
+* [Bokeh](http://bokeh.pydata.org/en/latest/index.html) >= 1.2.0, < 2.0.0
 * [PostgreSQL](https://www.postgresql.org/) (optional) and [psycopg2](http://initd.org/psycopg/)
 * [SQLite3](https://docs.python.org/2/library/sqlite3.html)
 * [SciPy](https://scipy.org)
 * [NumPy](http://numpy.org)
 * [Shapely](https://github.com/Toblerity/Shapely)
-* [Statsmodels](https://github.com/statsmodels/statsmodels) 0.8.0
-* [Scikit-learn](http://scikit-learn.org)
+* [Statsmodels](https://github.com/statsmodels/statsmodels) >=0.8.0
+* [Scikit-learn](http://scikit-learn.org) >= 0.21.0
 * [regressors](https://pypi.org/project/regressors/)
 * [FuzzyWuzzy](https://github.com/seatgeek/fuzzywuzzy)
 
