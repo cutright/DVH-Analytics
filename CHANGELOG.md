@@ -4,6 +4,7 @@ v0.7.4 (TBD)
 --------------------
  - [Endpoints] Fixed a bug where endpoint short-hand would not display on MS Windows
  - [Import] Users can edit ROI Names with a right-click, rather than editing ROI Map
+ - [Import] Other right-click menu bug fixes on ROI tree
  - [Import] Plan complexity calculation corrected, now is direct sum of all CP complexities
  - [Import] Catch PatientSetupSequence error to allow for brachytherapy plan import
  - [Import] Implement scipy.nd_image.map_coordinates for ~2.5x faster dose interpolation
@@ -11,6 +12,7 @@ v0.7.4 (TBD)
  - [Settings] Inbox and Imported directory settings were not sticking: fixed per [issue #48](https://github.com/cutright/DVH-Analytics/issues/48)
  - [ROI Name Map] Implementation of TG-263 compliance
  - [ROI Name Map] Fixes for [issue #48](https://github.com/cutright/DVH-Analytics/issues/48)
+ - [ROI Name Map] Fixes for [issue #50](https://github.com/cutright/DVH-Analytics/issues/50)
 
 v0.7.3 (2020.03.04)
 --------------------
