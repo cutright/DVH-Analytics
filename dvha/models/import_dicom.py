@@ -127,7 +127,7 @@ class ImportDicomFrame(wx.Frame):
 
         self.tree_ctrl_roi = CustomTreeCtrl(self.panel_roi_tree, wx.ID_ANY, agwStyle=TR_DEFAULT_STYLE)
         self.tree_ctrl_roi.SetBackgroundColour(wx.WHITE)
-        self.tree_ctrl_roi_root = self.tree_ctrl_roi.AddRoot('RT Structures', ct_type=0)
+        self.tree_ctrl_roi_root = self.tree_ctrl_roi.AddRoot('RT Structures (right-click an ROI to edit)', ct_type=0)
 
         self.checkbox_include_uncategorized = wx.CheckBox(self, wx.ID_ANY, "Import uncategorized ROIs")
 
@@ -223,7 +223,11 @@ class ImportDicomFrame(wx.Frame):
         self.button_save_roi_map.SetToolTip("Save ROI Map changes.")
 
     def __do_layout(self):
-        self.label = {}
+        labels = {'mrn': 'MRN:', 'study_instance_uid': "Study Instance UID:", 'birth_date': "Birthdate:",
+                  'sim_study_date': "Sim Study Date:", 'physician': "Physician:", 'tx_site': "Tx Site:",
+                  'rx_dose': "Rx Dose (Gy):", 'physician_roi': "Physician's ROI Label:", 'roi_type': "ROI Type:"}
+        self.label = {key: wx.StaticText(self, wx.ID_ANY, label) for key, label in labels.items()}
+
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_warning = wx.BoxSizer(wx.HORIZONTAL)
@@ -289,18 +293,15 @@ class ImportDicomFrame(wx.Frame):
         sizer_browse_and_tree.Add(sizer_studies, 1, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
         sizer_main.Add(sizer_browse_and_tree, 1, wx.EXPAND, 0)
 
-        self.label['mrn'] = wx.StaticText(self, wx.ID_ANY, "MRN:")
         sizer_mrn.Add(self.label['mrn'], 0, 0, 0)
         sizer_mrn.Add(self.input['mrn'], 0, wx.EXPAND, 0)
 
         sizer_plan_data.Add(sizer_mrn, 1, wx.ALL | wx.EXPAND, 5)
-        self.label['study_instance_uid'] = wx.StaticText(self, wx.ID_ANY, "Study Instance UID:")
         sizer_uid.Add(self.label['study_instance_uid'], 0, 0, 0)
         sizer_uid.Add(self.input['study_instance_uid'], 0, wx.EXPAND, 0)
         sizer_uid.Add(self.button_delete_study, 0, wx.ALL | wx.ALIGN_CENTER, 5)
 
         sizer_plan_data.Add(sizer_uid, 1, wx.ALL | wx.EXPAND, 5)
-        self.label['birth_date'] = wx.StaticText(self, wx.ID_ANY, "Birthdate:")
         sizer_birth_date.Add(self.label['birth_date'], 0, 0, 0)
         sizer_birth_date_text_button.Add(self.input['birth_date'], 0, 0, 0)
         sizer_birth_date_text_button.Add(self.button_edit_birth_date, 0, wx.LEFT, 10)
@@ -310,7 +311,6 @@ class ImportDicomFrame(wx.Frame):
         sizer_birth_date.Add(sizer_birth_date_checkbox, 1, wx.EXPAND, 0)
         sizer_plan_data.Add(sizer_birth_date, 1, wx.ALL | wx.EXPAND, 5)
 
-        self.label['sim_study_date'] = wx.StaticText(self, wx.ID_ANY, "Sim Study Date:")
         sizer_sim_study_date.Add(self.label['sim_study_date'], 0, 0, 0)
         sizer_sim_study_date_text_button.Add(self.input['sim_study_date'], 0, 0, 0)
         sizer_sim_study_date_text_button.Add(self.button_edit_sim_study_date, 0, wx.LEFT, 10)
@@ -320,7 +320,6 @@ class ImportDicomFrame(wx.Frame):
         sizer_sim_study_date.Add(sizer_sim_study_date_checkbox, 1, wx.EXPAND, 0)
         sizer_plan_data.Add(sizer_sim_study_date, 1, wx.ALL | wx.EXPAND, 5)
 
-        self.label['physician'] = wx.StaticText(self, wx.ID_ANY, "Physician:")
         sizer_physician_input.Add(self.label['physician'], 0, 0, 0)
         sizer_physician_input_and_button.Add(self.input['physician'], 0, 0, 0)
         sizer_physician_input_and_button.Add(self.button_add_physician, 0, wx.LEFT, 5)
@@ -331,7 +330,6 @@ class ImportDicomFrame(wx.Frame):
         sizer_physician.Add(sizer_physician_checkbox, 1, wx.EXPAND, 0)
         sizer_plan_data.Add(sizer_physician, 1, wx.ALL | wx.EXPAND, 5)
 
-        self.label['tx_site'] = wx.StaticText(self, wx.ID_ANY, "Tx Site:")
         sizer_tx_site.Add(self.label['tx_site'], 0, 0, 0)
         sizer_tx_site.Add(self.input['tx_site'], 0, wx.EXPAND, 0)
         sizer_tx_site_checkbox.Add(self.checkbox['tx_site_1'], 0, wx.RIGHT, 20)
@@ -339,7 +337,6 @@ class ImportDicomFrame(wx.Frame):
         sizer_tx_site.Add(sizer_tx_site_checkbox, 1, wx.EXPAND, 0)
         sizer_plan_data.Add(sizer_tx_site, 1, wx.ALL | wx.EXPAND, 5)
 
-        self.label['rx_dose'] = wx.StaticText(self, wx.ID_ANY, "Rx Dose (Gy):")
         # self.label['fx_grp'] = wx.StaticText(self, wx.ID_ANY, "Fx Group:")
         sizer_rx_input.Add(self.label['rx_dose'], 0, 0, 0)
         sizer_rx_input.Add(self.input['rx_dose'], 0, 0, 0)
@@ -360,13 +357,11 @@ class ImportDicomFrame(wx.Frame):
         sizer_roi_map.Add(self.panel_roi_tree, 1, wx.EXPAND, 0)
         sizer_roi_map.Add(self.button_roi_manager, 0, wx.EXPAND | wx.ALL, 5)
 
-        self.label['physician_roi'] = wx.StaticText(self, wx.ID_ANY, "Physician's ROI Label:")
         sizer_physician_roi_with_add = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician_roi.Add(self.label['physician_roi'], 0, 0, 0)
         sizer_physician_roi.Add(self.input_roi['physician'], 0, wx.EXPAND, 0)
         sizer_physician_roi_with_add.Add(sizer_physician_roi, 1, wx.EXPAND, 0)
 
-        self.label['roi_type'] = wx.StaticText(self, wx.ID_ANY, "ROI Type:")
         sizer_roi_type_with_add = wx.BoxSizer(wx.HORIZONTAL)
         sizer_roi_type.Add(self.label['roi_type'], 0, 0, 0)
         sizer_roi_type.Add(self.input_roi['type'], 0, wx.EXPAND, 0)
