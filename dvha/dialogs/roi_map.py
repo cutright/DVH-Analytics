@@ -450,7 +450,7 @@ class AddVariationDlg(wx.Dialog):
         else:
             choices = roi_map.get_physician_rois(physician)
             self.user_input = wx.ComboBox(self, wx.ID_ANY, choices=choices,
-                                          style=wx.CB_DROPDOWN | wx.CB_READONLY | wx.CB_SORT)
+                                          style=wx.CB_DROPDOWN | wx.CB_READONLY)
             self.prediction_label = wx.StaticText(self, wx.ID_ANY, "")
 
         self.button_ok = wx.Button(self, wx.ID_OK, "Add")
@@ -727,9 +727,7 @@ class AddPhysicianROI(wx.Dialog):
 
 
 class DelPhysicianROI:
-    """
-    Delete a physician roi of the specified physician
-    """
+    """Delete a physician roi of the specified physician"""
     def __init__(self, parent, physician, roi_map, physician_roi):
         """
         :param parent: wx parent object
@@ -739,15 +737,13 @@ class DelPhysicianROI:
         :type physician_roi: str
         :param roi_map: roi_map to be edited
         """
-        caption = "Delete %s from %s's ROI map?" % (physician_roi, physician)
+        caption = "Delete %s (Physician ROI) from %s's ROI map?" % (physician_roi, physician)
         action = partial(roi_map.delete_physician_roi, physician, physician_roi)
         MessageDialog(parent, caption, action_yes_func=action)
 
 
 class DelVariation:
-    """
-    Delete a physician roi variation of the specified physician
-    """
+    """Delete a physician roi variation of the specified physician"""
     def __init__(self, parent, physician, roi_map, variation):
         """
         :param parent: wx parent object
@@ -758,7 +754,7 @@ class DelVariation:
         :type variation: str
         """
         physician_roi = roi_map.get_physician_roi(physician, variation)
-        caption = "Delete %s from %s's %s?" % (physician_roi, physician, variation)
+        caption = "Delete %s (Variation) from %s's %s (Physician ROI)?" % (variation, physician, physician_roi)
         action = partial(roi_map.delete_variations, physician, physician_roi, variation)
         MessageDialog(parent, caption, action_yes_func=action)
 

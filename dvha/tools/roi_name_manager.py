@@ -58,10 +58,12 @@ class PhysicianROI:
     def del_variation(self, variations):
         if type(variations) is not list:
             variations = list(variations)
+        clean_variations = self.clean_variations
         for variation in variations:
-            if variation in self.variations and \
-                    clean_name(variation) not in self.clean_top_level:
-                self.variations.pop(self.variations.index(variation))
+            clean_variation = clean_name(variation)
+            if clean_variation in clean_variations and clean_variation not in self.clean_top_level:
+                index = clean_variations.index(clean_variation)
+                self.variations.pop(index)
 
     def del_all_variations(self):
         self.variations = [self.physician_roi]
@@ -355,7 +357,7 @@ class DatabaseROIs:
     def get_physician_rois(self, physician):
         physician = clean_name(physician, physician=True)
         if physician in list(self.physicians):
-            return list(self.physicians[physician].rois)
+            return sorted(list(self.physicians[physician].rois))
         return []
 
     def get_physician_roi(self, physician, roi):
