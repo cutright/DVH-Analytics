@@ -265,7 +265,7 @@ class DatabaseROIs:
     # Physician functions
     ###################################
     def get_physicians(self):
-        return list(self.physicians)
+        return ['DEFAULT'] + sorted(set(self.physicians) - {'DEFAULT'})
 
     def add_physician(self, physician):
         physician = clean_name(physician, physician=True)

@@ -51,10 +51,10 @@ class ROIMapFrame(wx.Frame):
         self.plot = PlotROIMap(self.window_tree, roi_map)
         self.window_editor = wx.Panel(self.window, wx.ID_ANY, style=wx.BORDER_SUNKEN)
 
-        self.combo_box_physician = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=list(self.roi_map.physicians),
-                                               style=wx.CB_DROPDOWN | wx.CB_READONLY | wx.CB_SORT)
+        self.combo_box_physician = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=self.roi_map.get_physicians(),
+                                               style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_physician_roi = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=[],
-                                                   style=wx.CB_DROPDOWN | wx.CB_READONLY | wx.CB_SORT)
+                                                   style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.list_ctrl_variations = wx.ListCtrl(self.window_editor, wx.ID_ANY,
                                                 style=wx.LC_NO_HEADER | wx.LC_REPORT | wx.BORDER_SUNKEN)
         self.button_variation_select_all = wx.Button(self.window_editor, wx.ID_ANY, "Select All")
@@ -85,9 +85,9 @@ class ROIMapFrame(wx.Frame):
         self.button_uncategorized_ignored_delete = wx.Button(self.window_editor, wx.ID_ANY, "Delete DVH")
         self.button_uncategorized_ignored_ignore = wx.Button(self.window_editor, wx.ID_ANY, "Ignore DVH")
         self.combo_box_physician_roi_merge = {'a': wx.ComboBox(self.window_editor, wx.ID_ANY,
-                                                               style=wx.CB_DROPDOWN | wx.CB_SORT | wx.CB_READONLY),
+                                                               style=wx.CB_DROPDOWN | wx.CB_READONLY),
                                               'b': wx.ComboBox(self.window_editor, wx.ID_ANY,
-                                                               style=wx.CB_DROPDOWN | wx.CB_SORT | wx.CB_READONLY)}
+                                                               style=wx.CB_DROPDOWN | wx.CB_READONLY)}
         self.button_merge = wx.Button(self.window_editor, wx.ID_ANY, "Merge")
 
         self.button_save_and_update = wx.Button(self.window_editor, wx.ID_ANY, "Save and Update Database")
@@ -308,7 +308,7 @@ class ROIMapFrame(wx.Frame):
         if not value:
             value = combo_box.GetValue()
         combo_box.Clear()
-        combo_box.AppendItems(choices)
+        combo_box.AppendItems(sorted(choices))
         combo_box.SetValue(value)
 
     def update_roi_map(self):
