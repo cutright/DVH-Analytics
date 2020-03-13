@@ -1053,6 +1053,11 @@ class PythonLibraries(wx.Dialog):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_main = wx.BoxSizer(wx.VERTICAL)
 
+        note = wx.StaticText(self, wx.ID_ANY, "NOTE: If running from source, this might reflect global packages.\n"
+                                              "If running from an executable, this should be accurate.")
+        note.Wrap(500)
+
+        sizer_main.Add(note, 0, wx.EXPAND | wx.ALL, 5)
         sizer_main.Add(self.list_ctrl, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_main, 1, wx.EXPAND | wx.ALL, 10)
 

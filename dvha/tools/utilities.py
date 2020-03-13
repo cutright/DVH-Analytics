@@ -748,7 +748,7 @@ def get_installed_python_libraries():
     """Use pip command line function 'list' to extract the currently installed libraries"""
 
     try:
-        output = str(check_output(['pip', 'list']), 'utf-8').split('\n')
+        output = str(check_output(['pip', 'list', '--local']), 'utf-8').split('\n')
     except Exception:
         # If running from PyInstaller, this will fail, pickle a file prior to freezing with save_pip_list
         return load_object_from_file(PIP_LIST_PATH)
