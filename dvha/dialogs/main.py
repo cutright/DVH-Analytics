@@ -1063,7 +1063,7 @@ class PythonLibraries(wx.Dialog):
 
         self.SetBackgroundColour(wx.WHITE)
         self.SetSizer(sizer_wrapper)
-        self.SetSize(get_window_size(0.25, 0.8))
+        self.SetSize(get_window_size(0.3, 0.8))
         self.Center()
 
     def run(self):
