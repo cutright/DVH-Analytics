@@ -17,10 +17,12 @@ import matplotlib.colors as plot_colors
 import numpy as np
 import time
 from os.path import isdir
-from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_window_size
+from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_window_size,\
+    get_installed_python_libraries
 from dvha.db import sql_columns
 from dvha.db.sql_connector import DVH_SQL
-from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, LICENSE_PATH
+from dvha.models.data_table import DataTable
+from dvha.paths import LICENSE_PATH
 from dvha.options import DefaultOptions
 
 
@@ -115,6 +117,7 @@ class AddEndpointDialog(wx.Dialog):
         self.radio_box_units = wx.RadioBox(self, wx.ID_ANY, "", choices=["cc ", "% "], majorDimension=1,
                                            style=wx.RA_SPECIFY_ROWS)
         self.button_ok = wx.Button(self, wx.ID_OK, "OK")
+        self.button_ok.Disable()
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
         self.__do_bind()
@@ -155,8 +158,7 @@ class AddEndpointDialog(wx.Dialog):
         sizer_input.Add(sizer_input_units, 1, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_input, 0, wx.ALL | wx.EXPAND, 10)
 
-        # TODO: Short-hand not updating? At least not on MSW?
-        self.text_short_hand = wx.StaticText(self, wx.ID_ANY, "\tShort-hand: ")
+        self.text_short_hand = wx.StaticText(self, wx.ID_ANY, "Short-hand: ")
         sizer_wrapper.Add(self.text_short_hand, 0, wx.ALL, 5)
         sizer_buttons.Add(self.button_ok, 0, wx.ALL, 5)
         sizer_buttons.Add(self.button_cancel, 0, wx.ALL | wx.EXPAND, 5)
@@ -182,7 +184,7 @@ class AddEndpointDialog(wx.Dialog):
 
     def update_label_input(self):
         new_label = "%s (%s):" % (['Input Dose', 'Input Volume']['Dose' in self.combo_box_output.GetValue()],
-                                  self.radio_box_units.GetItemLabel(self.radio_box_units.GetSelection()))
+                                  self.radio_box_units.GetItemLabel(self.radio_box_units.GetSelection()).strip())
         self.label_input_value.SetLabelText(new_label)
 
     def update_radio_box_choices(self):
@@ -190,16 +192,24 @@ class AddEndpointDialog(wx.Dialog):
         self.radio_box_units.SetItemLabel(0, choice_1)
 
     def update_short_hand(self):
-        short_hand = ['\tShort-hand: ']
-        if self.text_input.GetValue():
-            try:
-                str(float(self.text_input.GetValue()))
-                short_hand.extend([['V_', 'D_']['Dose' in self.combo_box_output.GetValue()],
-                                   self.text_input.GetValue(),
-                                   self.radio_box_units.GetItemLabel(self.radio_box_units.GetSelection()).strip()])
-            except ValueError:
-                pass
-        self.text_short_hand.SetLabelText(''.join(short_hand))
+        short_hand = 'Short-hand: '
+        value = self.text_input.GetValue()
+        if value:
+            prepend = ['V_', 'D_']['Dose' in self.combo_box_output.GetValue()]
+            units = self.radio_box_units.GetItemLabel(self.radio_box_units.GetSelection()).strip()
+            short_hand = short_hand + prepend + value + units
+        self.text_short_hand.SetLabelText(short_hand)
+        self.set_button_ok_enable(value)
+
+    def set_button_ok_enable(self, value):
+        try:
+            if value.isdigit():
+                value = int(value)
+            else:
+                value = float(value)
+        except ValueError:
+            self.text_short_hand.SetLabelText('Short-hand: ')
+        self.button_ok.Enable(type(value) in [int, float])
 
     @property
     def is_endpoint_valid(self):
@@ -207,7 +217,7 @@ class AddEndpointDialog(wx.Dialog):
 
     @property
     def short_hand_label(self):
-        return self.text_short_hand.GetLabel().replace('\tShort-hand: ', '').strip()
+        return self.text_short_hand.GetLabel().replace('Short-hand: ', '').strip()
 
     @property
     def output_type(self):
@@ -823,7 +833,7 @@ class UserSettings(wx.Dialog):
         self.Destroy()
 
     def inbox_dir_dlg(self, evt):
-        self.dir_dlg('inbox', self.text_ctrl_imported)
+        self.dir_dlg('inbox', self.text_ctrl_inbox)
 
     def imported_dir_dlg(self, evt):
         self.dir_dlg('imported', self.text_ctrl_imported)
@@ -843,6 +853,8 @@ class UserSettings(wx.Dialog):
                            wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:
             text_ctrl.SetValue(dlg.GetPath())
+            option_attr = 'INBOX_DIR' if dir_type == 'inbox' else 'IMPORTED_DIR'
+            self.options.set_option(option_attr, dlg.GetPath())
         dlg.Destroy()
 
     def get_option_choices(self, category):
@@ -972,9 +984,8 @@ class UserSettings(wx.Dialog):
         self.update_size_var()
 
     def load_paths(self):
-        paths = parse_settings_file(IMPORT_SETTINGS_PATH)
-        self.text_ctrl_inbox.SetValue(paths['inbox'])
-        self.text_ctrl_imported.SetValue(paths['imported'])
+        self.text_ctrl_inbox.SetValue(self.options.INBOX_DIR)
+        self.text_ctrl_imported.SetValue(self.options.IMPORTED_DIR)
 
     def restore_defaults(self, *args):
         MessageDialog(self, "Restore default preferences?", action_yes_func=self.options.restore_defaults)
@@ -1012,5 +1023,49 @@ class About(wx.Dialog):
         self.SetSize((750, 900))
         self.Center()
 
+        self.ShowModal()
+        self.Destroy()
+
+
+class PythonLibraries(wx.Dialog):
+    """Simple dialog to display the installed python libraries"""
+    def __init__(self):
+        wx.Dialog.__init__(self, None, title='Installed Python Libraries')
+
+        self.list_ctrl = wx.ListCtrl(self, wx.ID_ANY,
+                                     style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
+        self.data_table = DataTable(self.list_ctrl, widths=[200, 150])
+
+        self.__set_data()
+        self.__do_layout()
+
+        self.run()
+
+    def __set_data(self):
+        columns = ['Library', 'Version']
+        try:
+            libraries = get_installed_python_libraries()
+        except Exception:
+            libraries = {'Library': ['pip list failed'], 'Version': [' ']}
+        self.data_table.set_data(libraries, columns)
+
+    def __do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_main = wx.BoxSizer(wx.VERTICAL)
+
+        note = wx.StaticText(self, wx.ID_ANY, "NOTE: If running from source, this might reflect global packages.\n"
+                                              "If running from an executable, this should be accurate.")
+        note.Wrap(500)
+
+        sizer_main.Add(note, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_main.Add(self.list_ctrl, 1, wx.EXPAND, 0)
+        sizer_wrapper.Add(sizer_main, 1, wx.EXPAND | wx.ALL, 10)
+
+        self.SetBackgroundColour(wx.WHITE)
+        self.SetSizer(sizer_wrapper)
+        self.SetSize(get_window_size(0.25, 0.8))
+        self.Center()
+
+    def run(self):
         self.ShowModal()
         self.Destroy()

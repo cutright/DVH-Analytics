@@ -21,7 +21,7 @@ from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddVariation, Mo
 from dvha.models.data_table import DataTable
 from dvha.models.plot import PlotROIMap
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_elapsed_time, get_window_size,\
-    set_frame_icon, set_msw_background_color
+    set_frame_icon, set_msw_background_color, is_windows
 from dvha.tools.roi_name_manager import clean_name
 
 
@@ -84,8 +84,10 @@ class ROIMapFrame(wx.Frame):
                                                                style=wx.CB_DROPDOWN)
         self.button_uncategorized_ignored_delete = wx.Button(self.window_editor, wx.ID_ANY, "Delete DVH")
         self.button_uncategorized_ignored_ignore = wx.Button(self.window_editor, wx.ID_ANY, "Ignore DVH")
-        self.combo_box_physician_roi_merge = {'a': wx.ComboBox(self.window_editor, wx.ID_ANY, style=wx.CB_DROPDOWN),
-                                              'b': wx.ComboBox(self.window_editor, wx.ID_ANY, style=wx.CB_DROPDOWN)}
+        self.combo_box_physician_roi_merge = {'a': wx.ComboBox(self.window_editor, wx.ID_ANY,
+                                                               style=wx.CB_DROPDOWN | wx.CB_READONLY),
+                                              'b': wx.ComboBox(self.window_editor, wx.ID_ANY,
+                                                               style=wx.CB_DROPDOWN | wx.CB_READONLY)}
         self.button_merge = wx.Button(self.window_editor, wx.ID_ANY, "Merge")
 
         self.button_save_and_update = wx.Button(self.window_editor, wx.ID_ANY, "Save and Update Database")
@@ -126,6 +128,15 @@ class ROIMapFrame(wx.Frame):
 
         self.update_physician_enable()
         self.update_merge_physician_rois()
+
+        if is_windows():  # combo_boxes here display a doubled bottom border on MSW
+            combo_boxes = [self.combo_box_physician, self.combo_box_physician_roi,
+                           self.combo_box_uncategorized_ignored, self.combo_box_uncategorized_ignored_roi,
+                           self.combo_box_physician_roi_merge['a'], self.combo_box_physician_roi_merge['b']]
+            for combo_box in combo_boxes:
+                combo_box.SetMinSize((combo_box.GetSize()[0], 26))
+            self.button_uncategorized_ignored_ignore.SetMinSize((self.button_uncategorized_ignored_ignore.GetSize()[0],
+                                                                 self.button_uncategorized_ignored_delete.GetSize()[1]))
 
     def __do_bind(self):
         self.window_tree.Bind(wx.EVT_COMBOBOX, self.on_plot_data_type_change, id=self.combo_box_tree_plot_data.GetId())
@@ -297,11 +308,12 @@ class ROIMapFrame(wx.Frame):
         if not value:
             value = combo_box.GetValue()
         combo_box.Clear()
-        combo_box.AppendItems(choices)
+        combo_box.AppendItems(sorted(choices))
         combo_box.SetValue(value)
 
     def update_roi_map(self):
-        self.plot.update_roi_map_source_data(self.physician, plot_type=self.plot_data_type)
+        self.plot.update_roi_map_source_data(self.physician, plot_type=self.plot_data_type,
+                                             y_shift=self.combo_box_physician_roi.GetValue())
 
     @property
     def physician(self):
@@ -349,7 +361,7 @@ class ROIMapFrame(wx.Frame):
                 cursor_rtn = cnx.query('dvhs', 'roi_name, study_instance_uid', condition)
                 new_variations = {}
                 for row in cursor_rtn:
-                    variation = clean_name(str(row[0]))
+                    variation = str(row[0])
                     study_instance_uid = str(row[1])
                     physician_db = cnx.get_unique_values('Plans', 'physician',
                                                          "study_instance_uid = '%s'" % study_instance_uid)
@@ -383,10 +395,11 @@ class ROIMapFrame(wx.Frame):
 
     def physician_roi_ticker(self, evt):
         self.update_variations()
+        self.update_roi_map()
 
     def update_physicians(self, old_physicians=None):
 
-        choices = self.roi_map.get_physicians()
+        choices = list(self.roi_map.physicians)
         new = choices[0]
         if old_physicians:
             new = list(set(choices) - set(old_physicians))
@@ -403,8 +416,7 @@ class ROIMapFrame(wx.Frame):
         if old_physician_rois:
             new = list(set(choices) - set(old_physician_rois))
             if new:
-                new = clean_name(new[0])
-
+                new = new[0]
         self.update_combo_box_choices(self.combo_box_physician_roi, choices, new)
 
     @property
@@ -422,10 +434,10 @@ class ROIMapFrame(wx.Frame):
         old_physician_rois = self.roi_map.get_physician_rois(self.physician)
         dlg = AddPhysicianROI(self, self.physician, self.roi_map, institutional_mode=self.physician == 'DEFAULT')
         if dlg.res == wx.ID_OK:
-            self.update_all(old_physician_rois=old_physician_rois)
+            self.update_all(old_physician_rois=old_physician_rois, skip_physicians=True)
 
     def add_physician(self, evt):
-        old_physicians = self.roi_map.get_physicians()
+        old_physicians = list(self.roi_map.physicians)
         dlg = AddPhysician(self.roi_map)
         if dlg.res == wx.ID_OK:
             self.update_all(old_physicians=old_physicians)
@@ -451,15 +463,18 @@ class ROIMapFrame(wx.Frame):
     def delete_variations(self, evt):
         self.roi_map.delete_variations(self.physician, self.physician_roi, self.selected_values)
         self.update_variations()
+        self.update_roi_map()
 
     def add_variation(self, evt):
         AddVariation(self, self.physician, self.roi_map, self.physician_roi)
         self.update_variations()
+        self.update_roi_map()
 
     def move_variations(self, evt):
         choices = [roi for roi in self.roi_map.get_physician_rois(self.physician) if roi != self.physician_roi]
         MoveVariationDialog(self, self.selected_values, self.physician, self.physician_roi, choices, self.roi_map)
         self.update_variations()
+        self.update_roi_map()
 
     def on_delete_physician(self, evt):
         MessageDialog(self, 'Delete Physician %s?' % self.physician, action_yes_func=self.delete_physician)
@@ -525,7 +540,7 @@ class ROIMapFrame(wx.Frame):
         self.update_roi_map()
 
     def on_edit_physician(self, evt):
-        current_physicians = self.roi_map.get_physicians()
+        current_physicians = list(self.roi_map.get_physicians)
         dlg = RenamePhysicianDialog(self.physician, self.roi_map)
         if dlg.res == wx.ID_OK:
             self.update_all(old_physicians=current_physicians)
@@ -592,7 +607,6 @@ class ROIMapFrame(wx.Frame):
 
     def save_and_update(self, evt):
         RemapROIFrame(self.roi_map)
-        self.Destroy()
 
     def on_cancel(self, *args):
         self.roi_map.import_from_file()

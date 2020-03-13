@@ -1,0 +1,718 @@
+Target Type,Major Category,Minor Category,Anatomic Group,N Characters,TG263-Primary Name,TG-263-Reverse Order Name,Description,FMAID
+Anatomic,Artery,Aorta,Thorax,7,A_Aorta,Aorta_A,Aorta,3734
+Anatomic,Artery,Aorta,Thorax,11,A_Aorta_Asc,Asc_Aorta_A,Ascending Aorta,3736
+Anatomic,Artery,Brachiocephalic,Thorax,15,A_Brachiocephls,Brachiocephls_A,Brachiocephalic Artery,3932
+Anatomic,Artery,Carotid,Head and Neck,9,A_Carotid,Carotid_A,Common Carotid Artery,3939
+Anatomic,Artery,Carotid,Head and Neck,11,A_Carotid_L,L_Carotid_A,Carotid Artery,4058
+Anatomic,Artery,Carotid,Head and Neck,11,A_Carotid_R,R_Carotid_A,Carotid Artery,3941
+Anatomic,Artery,Celiac,Abdomen,8,A_Celiac,Celiac_A,Celiac Artery,50737
+Anatomic,Artery,Coronary,Head and Neck,10,A_Coronary,Coronary_A,Coronary Artery,49893
+Anatomic,Artery,Coronary,Thorax,12,A_Coronary_L,L_Coronary_A,Coronary Artery Left,50040
+Anatomic,Artery,Coronary,Thorax,12,A_Coronary_R,R_Coronary_A,Coronary Artery Right,50039
+Anatomic,Artery,Femoral,Limbs,16,A_Femoral_Cflx_L,L_Cflx_Femoral_A,Circumflex Left Femoral Artery,None
+Anatomic,Artery,Femoral,Limbs,16,A_Femoral_Cflx_R,R_Cflx_Femoral_A,Circumflex Right Femoral Artery,None
+Anatomic,Artery,Femoral,Limbs,11,A_Femoral_L,L_Femoral_A,Femoral Artery Left,70250
+Anatomic,Artery,Femoral,Limbs,11,A_Femoral_R,R_Femoral_A,Femoral Artery Right,70249
+Anatomic,Artery,Humeral,Limbs,16,A_Humeral_Cflx_L,L_Cflx_Humeral_A,Circumflex Humeral Artery Left,None
+Anatomic,Artery,Humeral,Limbs,16,A_Humeral_Cflx_R,R_Cflx_Humeral_A,Circumflex Humeral Artery Right,None
+Anatomic,Artery,Humeral,Limbs,11,A_Humeral_L,L_Humeral_A,Humeral Artery Left,None
+Anatomic,Artery,Humeral,Limbs,11,A_Humeral_R,R_Humeral_A,Humeral Artery Right,None
+Anatomic,Artery,Hypophyseal,Head and Neck,15,A_Hypophyseal_I,I_Hypophyseal_A,Hypophyseal Artery Inferior,49846
+Anatomic,Artery,Hypophyseal,Head and Neck,15,A_Hypophyseal_S,S_Hypophyseal_A,Hypophyseal Artery Superior,49849
+Anatomic,Artery,Iliac,Pelvis,14,A_Iliac_Cflx_L,L_Cflx_Iliac_A,Circumflex Left Iliac Artery,None
+Anatomic,Artery,Iliac,Pelvis,14,A_Iliac_Cflx_R,R_Cflx_Iliac_A,Circumflex Right Iliac Artery,None
+Anatomic,Artery,Iliac,Pelvis,13,A_Iliac_Ext_L,L_Ext_Iliac_A,External iliac artery Left,18807
+Anatomic,Artery,Iliac,Pelvis,13,A_Iliac_Ext_R,R_Ext_Iliac_A,External iliac artery Right,18806
+Anatomic,Artery,Iliac,Pelvis,13,A_Iliac_Int_L,L_Int_Iliac_A,Internal iliac artery Left,18810
+Anatomic,Artery,Iliac,Pelvis,13,A_Iliac_Int_R,R_Int_Iliac_A,Internal iliac artery Right,18809
+Anatomic,Artery,Iliac,Pelvis,9,A_Iliac_L,L_Iliac_A,Common iliac artery Left,14766
+Anatomic,Artery,Iliac,Pelvis,9,A_Iliac_R,R_Iliac_A,Common iliac artery Right,14765
+Anatomic,Artery,LAD,Thorax,5,A_LAD,LAD_A,Anterior interventricular branch of LCA (left anterior descending artery),3862
+Anatomic,Artery,Mesenteric,Abdomen,14,A_Mesenteric_I,I_Mesenteric_A,Inferior mesenteric artery,14750
+Anatomic,Artery,Mesenteric,Abdomen,14,A_Mesenteric_S,S_Mesenteric_A,Superior mesenteric artery,14749
+Anatomic,Artery,Pulmonary,Thorax,11,A_Pulmonary,Pulmonary_A,Pulmonary Artery,66326
+Anatomic,Artery,Subclavian,Thorax,12,A_Subclavian,Subclavian_A,Subclavian Artery,3951
+Anatomic,Artery,Subclavian,Thorax,14,A_Subclavian_L,L_Subclavian_A,Subclavian Artery Left,4694
+Anatomic,Artery,Subclavian,Thorax,14,A_Subclavian_R,R_Subclavian_A,Subclavian Artery Right,3953
+Anatomic,Artery,Vertebral,Thorax,11,A_Vertebral,Vertebral_A,Vertebral arteries,3956
+Anatomic,Artery,Vertebral,Thorax,13,A_Vertebral_L,L_Vertebral_A,Vertebral arteries left,4066
+Anatomic,Artery,Vertebral,Thorax,13,A_Vertebral_R,R_Vertebral_A,Vertebral arteries right,3958
+Anatomic,Bone,Pelvic,Pelvis,12,Acetabulum_L,L_Acetabulum,Acetabulum,16599
+Anatomic,Bone,Pelvic,Pelvis,12,Acetabulum_R,R_Acetabulum,Acetabulum,16598
+Anatomic,Bone,Pelvic,Pelvis,11,Acetabulums,Acetabulums,Acetabulum,16579
+Anatomic,Lung,,Thorax,11,AirWay_Dist,Dist_AirWay,Distal Airway,None
+Anatomic,Lung,,Thorax,11,AirWay_Prox,Prox_AirWay,Proximal Airway,None
+Anatomic,Bowel,Anus,Pelvis,4,Anus,Anus,Anus,15711
+Anatomic,Bowel,Appendix,Abdomen,8,Appendix,Appendix,Appendix,14542
+Anatomic,Cartilage,Arytenoid,Head and Neck,9,Arytenoid,Arytenoid,Arytenoid cartilage,55109
+Anatomic,Cartilage,Arytenoid,Head and Neck,11,Arytenoid_L,L_Arytenoid,Arytenoid cartilage Left,55114
+Anatomic,Cartilage,Arytenoid,Head and Neck,11,Arytenoid_R,R_Arytenoid,Arytenoid cartilage Right,55113
+Anatomic,Heart,Atrium,Thorax,6,Atrium,Atrium,Atrium of the heart,7099
+Anatomic,Heart,Atrium,Thorax,8,Atrium_L,L_Atrium,Atrium of the heart Left,7097
+Anatomic,Heart,Atrium,Thorax,8,Atrium_R,R_Atrium,Atrium of the heart Right,7096
+Non_Anatomic,Bowel,,Abdomen,9,Bag_Bowel,Bowel_Bag,Bowel Bag,None
+Non_Anatomic,Devices,,Body,10,Bag_Ostomy,Ostomy_Bag,Ostomy Bag,None
+Anatomic,Bowel,Bile,Abdomen,15,BileDuct_Common,Common_BileDuct,Common bile duct,14667
+Anatomic,Bladder,,Pelvis,7,Bladder,Bladder,Urinary Bladder,15900
+Anatomic,Bladder,,Pelvis,12,Bladder_Wall,Bladder_Wall,Bladder Wall,15902
+Derived,Bladder,,Pelvis,11,Bladder-CTV,Bladder-CTV,Bladder minus CTV,None
+Anatomic,Body,,Body,4,Body,Body,Only the body,256135
+Derived,Body,,Body,8,Body-PTV,Body-PTV,Body minus PTV,None
+Non_Anatomic,Bolus,,Body,5,Bolus,Bolus,None,None
+Non_Anatomic,Bolus,,Body,10,Bolus_xxmm,xxmm_Bolus,Bolus that is xx millimeters thick e.g. Bolus_03mm^Bolus_10mm,None
+Anatomic,Bone,,Body,4,Bone,Bone,Bone,30317
+Anatomic,Bone,Ethmoid,Head and Neck,12,Bone_Ethmoid,Ethmoid_Bone,Ethmoid Bone,52740
+Anatomic,Bone,Frontal,Head and Neck,12,Bone_Frontal,Frontal_Bone,Frontal Bone,52734
+Anatomic,Bone,Hyoid,Head and Neck,10,Bone_Hyoid,Hyoid_Bone,Hyoid Bone,52749
+Anatomic,Bone,Ilium,Pelvis,10,Bone_Ilium,Ilium_Bone,Ilium,42832
+Anatomic,Bone,Ilium,Pelvis,12,Bone_Ilium_L,L_Ilium_Bone,Ilium Left,16591
+Anatomic,Bone,Ilium,Pelvis,12,Bone_Ilium_R,R_Ilium_Bone,Ilium Right,16590
+Anatomic,Ear,Incus,Head and Neck,10,Bone_Incus,Incus_Bone,Incus,52752
+Anatomic,Ear,Incus,Head and Neck,12,Bone_Incus_L,L_Incus_Bone,Incus Left,74051
+Anatomic,Ear,Incus,Head and Neck,12,Bone_Incus_R,R_Incus_Bone,Incus Right,74050
+Anatomic,Bone,Ischium,Pelvis,14,Bone_Ischium_L,L_Ischium_Bone,Ischium Left,16594
+Anatomic,Bone,Ischium,Pelvis,14,Bone_Ischium_R,R_Ischium_Bone,Ischium Right,16593
+Anatomic,Bone,Lacrimal,Head and Neck,13,Bone_Lacrimal,Lacrimal_Bone,Lacrimal Bone,52741
+Anatomic,Bone,Lacrimal,Head and Neck,15,Bone_Lacrimal_L,L_Lacrimal_Bone,Lacrimal Bone Left,53646
+Anatomic,Bone,Lacrimal,Head and Neck,15,Bone_Lacrimal_R,R_Lacrimal_Bone,Lacrimal Bone Right,53645
+Anatomic,Bone,Mandible,Head and Neck,13,Bone_Mandible,Mandible_Bone,Mandible,52748
+Anatomic,Bone,Mastoid,Head and Neck,12,Bone_Mastoid,Mastoid_Bone,Both Mastoids,52872
+Anatomic,Bone,Mastoid,Head and Neck,14,Bone_Mastoid_L,L_Mastoid_Bone,Left Mastoid Bone,52874
+Anatomic,Bone,Mastoid,Head and Neck,14,Bone_Mastoid_R,R_Mastoid_Bone,Right Mastoid Bone,52873
+Anatomic,Bone,Nasal,Head and Neck,10,Bone_Nasal,Nasal_Bone,Nasal Bone,52745
+Anatomic,Bone,Nasal,Head and Neck,12,Bone_Nasal_L,L_Nasal_Bone,Nasal Bone Left,53648
+Anatomic,Bone,Nasal,Head and Neck,12,Bone_Nasal_R,R_Nasal_Bone,Nasal Bone Right,53647
+Anatomic,Bone,Occipital,Head and Neck,14,Bone_Occipital,Occipital_Bone,Occipital Bone,52735
+Anatomic,Bone,Palatine,Head and Neck,13,Bone_Palatine,Palatine_Bone,Palatine  bone,52746
+Anatomic,Bone,Palatine,Head and Neck,15,Bone_Palatine_L,L_Palatine_Bone,Palatine bone Left,53656
+Anatomic,Bone,Palatine,Head and Neck,15,Bone_Palatine_R,R_Palatine_Bone,Palatine bone Right,53655
+Anatomic,Bone,Parietal,Head and Neck,13,Bone_Parietal,Parietal_Bone,Parietal bone,9613
+Anatomic,Bone,Parietal,Head and Neck,15,Bone_Parietal_L,L_Parietal_Bone,Parietal bone Left,52789
+Anatomic,Bone,Parietal,Head and Neck,15,Bone_Parietal_R,R_Parietal_Bone,Parietal bone Right,52788
+Anatomic,Bone,Pelvic,Pelvis,11,Bone_Pelvic,Pelvic_Bone,Pelvic Bones (Bony Pelvis),16580
+Anatomic,Bone,Pelvic,Pelvis,13,Bone_Pelvic_L,L_Pelvic_Bone,Bony Pelvis Left,20227
+Anatomic,Bone,Pelvic,Pelvis,13,Bone_Pelvic_R,R_Pelvic_Bone,Bony Pelvis Right,20226
+Anatomic,Bone,Sphenoid,Head and Neck,13,Bone_Sphenoid,Sphenoid_Bone,Sphenoid Bone,52736
+Anatomic,Bone,Temporal,Head and Neck,13,Bone_Temporal,Temporal_Bone,Temporal Bone,52737
+Anatomic,Bone,Temporal,Head and Neck,15,Bone_Temporal_L,L_Temporal_Bone,Temporal Bone Left,52739
+Anatomic,Brain,Temporal,Head and Neck,15,Bone_Temporal_R,R_Temporal_Bone,Temporal Bone Right,52738
+Anatomic,Bone,Zygomatic,Head and Neck,16,Bone_Zygomatic_L,L_Zygomatic_Bone,Zygomatic Bone Left,52893
+Anatomic,Bone,Zygomatic,Head and Neck,16,Bone_Zygomatic_R,R_Zygomatic_Bone,Zygomatic Bone Right,52892
+Anatomic,Bone,Zygomatic,Head and Neck,15,Bone_Zygomatics,Zygomatics_Bone,Zygomatic Bone,52747
+Anatomic,Bone,Marrow,Body,10,BoneMarrow,BoneMarrow,Bone Marrow,9608
+Anatomic,Bone,Marrow,Body,14,BoneMarrow_Act,Act_BoneMarrow,Active Bone Marrow,None
+Non-Anatomic,Body,,Body,5,Boost,Boost,Boost Volume,None
+Anatomic,Bowel,,Abdomen,5,Bowel,Bowel,,7199
+Anatomic,Bowel,Large,Pelvis,11,Bowel_Large,Large_Bowel,Large Bowel,7201
+Anatomic,Bowel,,Abdomen,11,Bowel_Small,Small_Bowel,Small Bowel (small intestine),7200
+Anatomic,Nerve,Brachial,Thorax,14,BrachialPlex_L,L_BrachialPlex,Brachial plexus Left,45245
+Anatomic,Nerve,Brachial,Thorax,14,BrachialPlex_R,R_BrachialPlex,Brachial plexus Right,45244
+Anatomic,Nerve,Brachial,Thorax,13,BrachialPlexs,BrachialPlexs,Brachial plexus,5906
+Anatomic,Brain,Brain,Head and Neck,5,Brain,Brain,Brain,50801
+Derived,Brain,Brain,Head and Neck,9,Brain-CTV,Brain-CTV,Brain minus the CTV,None
+Derived,Brain,Brain,Head and Neck,9,Brain-GTV,Brain-GTV,Brain minus the GTV,None
+Derived,Brain,Brain,Head and Neck,9,Brain-PTV,Brain-PTV,Brain minus the PTV,None
+Anatomic,Nerve,Brainstem,Head and Neck,9,Brainstem,Brainstem,Brain Stem,79876
+Anatomic,Nerve,Brainstem,Head and Neck,14,Brainstem_Core,Core_Brainstem,Core of the brainstem,None
+PRV,Nerve,PRV,Head and Neck,13,Brainstem_PRV,PRV_Brainstem,PRV for the Brainstem,None
+PRV,Nerve,PRV,Head and Neck,15,Brainstem_PRVxx,PRVxx_Brainstem,PRV margin on the brain stem that is an xx millimeter expansion,None
+Anatomic,Nerve,Brainstem,Head and Neck,14,Brainstem_Surf,Surf_Brainstem,Surface of the brainstem,None
+Anatomic,Breast,,Thorax,8,Breast_L,L_Breast,Breast Left,321497
+Anatomic,Breast,,Thorax,8,Breast_R,R_Breast,Breast Right,321496
+Anatomic,Breast,,Thorax,7,Breasts,Breasts,Both breasts,268893
+Anatomic,Lung,Bronchus,Thorax,8,Bronchus,Bronchus,Bronchial tree,26660
+Anatomic,Lung,Bronchus,Thorax,10,Bronchus_L,L_Bronchus,Bronchial tree Left,26662
+Anatomic,Lung,Bronchus,Thorax,13,Bronchus_Main,Main_Bronchus,Main Bronchus,7405
+Anatomic,Lung,Bronchus,Thorax,15,Bronchus_Main_L,L_Main_Bronchus,Main Bronchus Left,7396
+Anatomic,Lung,Bronchus,Thorax,15,Bronchus_Main_R,R_Main_Bronchus,Main Bronchus Right,7395
+Anatomic,Lung,Bronchus,Thorax,14,Bronchus_PRVxx,PRVxx_Bronchus,A PRV expansion on the Bronchus that  is xx millimeters thick,None
+Anatomic,Lung,Bronchus,Thorax,10,Bronchus_R,R_Bronchus,Bronchial tree Right,26661
+Anatomic,Bowel,Anus,Pelvis,10,Canal_Anal,Anal_Canal,Anal Canal,15703
+Anatomic,Carina,,Thorax,6,Carina,Carina,Carina,7465
+Anatomic,Cartilage,Thyroid,Thorax,14,Cartlg_Thyroid,Thyroid_Cartlg,Thyroid cartilage,55099
+Anatomic,Nerve,CaudaEquina,Pelvis,11,CaudaEquina,CaudaEquina,Cauda equina,52590
+Anatomic,Reproductive,,Pelvis,10,Cavernosum,Cavernosum,Penis Corpus Cavernosum,75189
+Anatomic,Nose,Nasal,Head and Neck,12,Cavity_Nasal,Nasal_Cavity,Nasal Cavity,54378
+Anatomic,Mouth,Oral Cavity,Head and Neck,11,Cavity_Oral,Oral_Cavity,Oral cavity,20292
+Anatomic,Bowel,,Abdomen,5,Cecum,Cecum,Large bowel - Cecum,14541
+Anatomic,Brain,Cerebellum,Head and Neck,10,Cerebellum,Cerebellum,Cerebellum,67944
+Anatomic,Brain,Cerebrum,Head and Neck,8,Cerebrum,Cerebrum,Cerebrum,62000
+Anatomic,Brain,Cerebrum,Head and Neck,10,Cerebrum_L,L_Cerebrum,,61819
+Anatomic,Brain,Cerebrum,Head and Neck,10,Cerebrum_R,R_Cerebrum,,67292
+Anatomic,Cervix,,Pelvis,6,Cervix,Cervix,Cervix of uterus,17740
+Anatomic,Chest wall,,Thorax,9,Chestwall,Chestwall,Chest wall,50060
+Anatomic,Chest wall,,Thorax,11,Chestwall_L,L_Chestwall,Left Chest Wall,25559
+Anatomic,Chest wall,,Thorax,11,Chestwall_R,R_Chestwall,Right Chest Wall,25558
+Anatomic,Brain,,Head and Neck,12,Cist_Pontine,Pontine_Cist,Pontine Cistern,83719
+Anatomic,Brain,,Head and Neck,16,Cist_Suprasellar,Suprasellar_Cist,None,None
+Anatomic,Bone,Clavicle,Thorax,10,Clavicle_L,L_Clavicle,Clavicle Left,13323
+Anatomic,Bone,Clavicle,Thorax,10,Clavicle_R,R_Clavicle,Clavicle Right,13322
+Anatomic,Nerve,Cranial,Head and Neck,6,CN_III,III_CN,Third Cranial Nerve (Oculomotor nerve),50864
+Anatomic,Nerve,Cranial,Head and Neck,8,CN_III_L,L_III_CN,Third Cranial Nerve (Oculomotor nerve) Left,50880
+Anatomic,Nerve,Cranial,Head and Neck,8,CN_III_R,R_III_CN,Third Cranial Nerve (Oculomotor nerve) Right,50879
+Anatomic,Nerve,Cranial,Head and Neck,5,CN_IX,IX_CN,Ninth Cranial Nerve (Glossopharyngeal nerve),50870
+Anatomic,Nerve,Cranial,Head and Neck,7,CN_IX_L,L_IX_CN,Ninth Cranial Nerve (Glossopharyngeal nerve) Left,50892
+Anatomic,Nerve,Cranial,Head and Neck,7,CN_IX_R,R_IX_CN,Ninth Cranial Nerve (Glossopharyngeal nerve) Right,50870
+Anatomic,Nerve,Cranial,Head and Neck,4,CN_V,V_CN,Fifth Cranial Nerve (Trigeminal nerve),50866
+Anatomic,Nerve,Cranial,Head and Neck,6,CN_V_L,L_V_CN,Fifth Cranial Nerve (Trigeminal nerve) Left,50885
+Anatomic,Nerve,Cranial,Head and Neck,6,CN_V_R,R_V_CN,Fifth Cranial Nerve (Trigeminal nerve) Right,50884
+Anatomic,Nerve,Cranial,Head and Neck,5,CN_VI,VI_CN,Sixth Cranial Nerve (Abducens nerve),50867
+Anatomic,Nerve,Cranial,Head and Neck,7,CN_VI_L,L_VI_CN,Sixth Cranial Nerve (Abducens nerve) Left,50887
+Anatomic,Nerve,Cranial,Head and Neck,7,CN_VI_R,R_VI_CN,Sixth Cranial Nerve (Abducens nerve) Right,50886
+Anatomic,Nerve,Cranial,Head and Neck,6,CN_VII,VII_CN,Seventh Cranial Nerve (Facial),50868
+Anatomic,Nerve,Cranial,Head and Neck,8,CN_VII_L,L_VII_CN,Seventh Cranial Nerve (Facial) Left,50889
+Anatomic,Nerve,Cranial,Head and Neck,8,CN_VII_R,R_VII_CN,Seventh Cranial Nerve (Facial) Right,50888
+Anatomic,Nerve,Cranial,Head and Neck,7,CN_VIII,VIII_CN,Eighth Cranial (Vestibulocochlear) Nerve,50869
+Anatomic,Nerve,Cranial,Head and Neck,9,CN_VIII_L,L_VIII_CN,Eighth Cranial (Vestibulocochlear)  Nerve Left,50891
+Anatomic,Nerve,Cranial,Head and Neck,9,CN_VIII_R,R_VIII_CN,Eighth Cranial (Vestibulocochlear)  Nerve Right,50890
+Anatomic,Nerve,Cranial,Head and Neck,5,CN_XI,XI_CN,Eleventh Cranial Nerve (Spinal accessory nerve),6720
+Anatomic,Nerve,Cranial,Head and Neck,7,CN_XI_L,L_XI_CN,Eleventh Cranial Nerve (Spinal accessory nerve) Left,50899
+Anatomic,Nerve,Cranial,Head and Neck,7,CN_XI_R,R_XI_CN,Eleventh Cranial Nerve (Spinal accessory nerve) Right,50897
+Anatomic,Nerve,Cranial,Head and Neck,6,CN_XII,XII_CN,Twelfth Cranial Nerve (Hypoglossal nerve),50871
+Anatomic,Nerve,Cranial,Head and Neck,8,CN_XII_L,L_XII_CN,Twelfth Cranial Nerve (Hypoglossal nerve) Left,50903
+Anatomic,Nerve,Cranial,Head and Neck,8,CN_XII_R,R_XII_CN,Twelfth Cranial Nerve (Hypoglossal nerve) Right,50901
+Anatomic,Ear,Cochlea,Head and Neck,7,Cochlea,Cochlea,Cochlea,60201
+Anatomic,Ear,Cochlea,Head and Neck,9,Cochlea_L,L_Cochlea,Left Cochlea,60203
+Anatomic,Ear,Cochlea,Head and Neck,9,Cochlea_R,R_Cochlea,Right Cochlea,60202
+Anatomic,Bowel,Colon,Abdomen,5,Colon,Colon,Colon,14543
+Anatomic,Bowel,Colon,Abdomen,15,Colon_Ascending,Ascending_Colon,Large bowel - Ascending colon,14545
+Anatomic,Bowel,Colon,Abdomen,15,Colon_Decending,Decending_Colon,Large bowel - Descending colon,14547
+Anatomic,Bowel,,Abdomen,11,Colon_PTVxx,PTVxx_Colon,PRV created with xx mm expansion on the left optic nerve,None
+Anatomic,Bowel,Colon,Abdomen,13,Colon_Sigmoid,Sigmoid_Colon,Large bowel - Sigmoid colon,14548
+Anatomic,Bowel,Colon,Abdomen,16,Colon_Transverse,Transverse_Colon,Large bowel -Transverse colon,14546
+Anatomic,Eye,Cornea,Head and Neck,6,Cornea,Cornea,Cornea,58238
+Anatomic,Eye,Cornea,Head and Neck,8,Cornea_L,L_Cornea,Cornea Left,58240
+Anatomic,Eye,Cornea,Head and Neck,8,Cornea_R,R_Cornea,Cornea Right,58239
+Anatomic,Bone,Skull,Head and Neck,15,CribriformPlate,CribriformPlate,Cribriform Plate,52890
+Anatomic,Cartilage,Cricoid,Head and Neck,7,Cricoid,Cricoid,Cricoid cartilage,9615
+Anatomic,Pharynx,Constrictors,Head and Neck,15,Cricopharyngeus,Cricopharyngeus,Cricopharyngeal part of inferior pharyngeal constrictor,46661
+Target,CTV,,Body,3,CTV,CTV,Clinical Tumor Volume,None
+Anatomic,Bone,Spine,Head and Neck,4,Dens,Dens,Cervical vertebrae - Bony part of dens of axis,24043
+Anatomic,Diaphragm,,Thorax,9,Diaphragm,Diaphragm,Diaphragm,13295
+Anatomic,Gut,,Abdomen,8,Duodenum,Duodenum,Small bowel - Duodenum,7206
+Anatomic,Ear,External,Head and Neck,14,Ear_External_L,L_External_Ear,External Ear Left,53644
+Anatomic,Ear,External,Head and Neck,14,Ear_External_R,R_External_Ear,External Ear Right,53643
+Anatomic,Ear,External,Head and Neck,13,Ear_Externals,Externals_Ear,External Ear,52781
+Anatomic,Ear,Internal,Head and Neck,14,Ear_Internal_L,L_Internal_Ear,Internal Ear Left,61021
+Anatomic,Ear,Internal,Head and Neck,14,Ear_Internal_R,R_Internal_Ear,Internal Ear Right,61020
+Anatomic,Ear,Internal,Head and Neck,13,Ear_Internals,Internals_Ear,Internal Ear,60909
+Anatomic,Ear,Middle,Head and Neck,10,Ear_Middle,Middle_Ear,Middle Ear,56513
+Anatomic,Ear,Middle,Head and Neck,12,Ear_Middle_L,L_Middle_Ear,Middle Ear Left,56515
+Anatomic,Ear,Middle,Head and Neck,12,Ear_Middle_R,R_Middle_Ear,Middle Ear Right,56514
+Anatomic,Skin,,Body,5,Edema,Edema,Edema,None
+Anatomic,Joint,,Limbs,5,Elbow,Elbow,Elbow,24901
+Anatomic,Joint,,Limbs,7,Elbow_L,L_Elbow,Elbow Left,24903
+Anatomic,Joint,,Limbs,7,Elbow_R,R_Elbow,Elbow Right,24902
+Non-Anatomic,Body,,Body,15,E-PTV_Ev05_xxxx,E-PTV_Ev05_xxxx,All tissue excluding the 5 mm expanded PTV. Generated by subtracting the 5 mm expanded PTV receiving a dose of xxxx cGy from the external contour.,None
+Non-Anatomic,Derived,,Body,10,E-PTV_xxxx,E-PTV_xxxx,All tissue excluding the PTV. Generated by subtracting the PTV receiving a dose of xxxx cGy from the external contour.,None
+Anatomic,Esophagus,,Thorax,9,Esophagus,Esophagus,Esophagus,7131
+Anatomic,Esophagus,,Thorax,11,Esophagus_I,I_Esophagus,Lower Esophagus (abdominal),9397
+Anatomic,Esophagus,,Thorax,11,Esophagus_M,M_Esophagus,Middle Esophagus (thoracic),9396
+Anatomic,Esophagus,,Thorax,14,Esophagus_NAdj,NAdj_Esophagus,Non Adjacent Esophagus,None
+Anatomic,Esophagus,,Thorax,11,Esophagus_S,S_Esophagus,Upper Esophagus (cervical),None
+Non-Anatomic,Body,,Body,4,Eval,Eval,Evaluation Structure,None
+Anatomic,Body,,Body,8,External,External,Contour encompassing body plus other external items,None
+Anatomic,Eye,Eyeball,Head and Neck,5,Eye_L,L_Eye,Eyeball Left,12515
+Anatomic,Eye,Eyeball,Head and Neck,5,Eye_R,R_Eye,Eyeball Right,12514
+Anatomic,Eye,,Head and Neck,4,Eyes,Eyes,Set of eyes,268861
+Anatomic,Bone,Femur,Pelvis,12,Femur_Base_L,L_Base_Femur,Femur Base Left,32846
+Anatomic,Bone,Femur,Pelvis,12,Femur_Base_R,R_Base_Femur,Femur Base Right,32845
+Anatomic,Bone,Femur,Pelvis,12,Femur_Head_L,L_Head_Femur,Femur Head & Neck Left,32843
+Anatomic,Bone,Femur,Pelvis,12,Femur_Head_R,R_Head_Femur,Femur Head & Neck Right,32842
+Anatomic,Joint,Femur,Pelvis,13,Femur_Joint_L,L_Joint_Femur,Femoral Joint Left,35180
+Anatomic,Joint,Femur,Pelvis,13,Femur_Joint_R,R_Joint_Femur,Femoral Joint Right,35179
+Anatomic,Bone,Femur,Limbs,7,Femur_L,L_Femur,Femur  Whole Left,24475
+Anatomic,Bone,Femur,Pelvis,12,Femur_Neck_L,L_Neck_Femur,Femur Neck Right,42386
+Anatomic,Bone,Femur,Pelvis,12,Femur_Neck_R,R_Neck_Femur,Femur Neck Left,42387
+Anatomic,Bone,Femur,Limbs,7,Femur_R,R_Femur,Femur Whole Right,24474
+Anatomic,Bone,Femur,Pelvis,13,Femur_Shaft_L,L_Shaft_Femur,Femur Shaft Left,32849
+Anatomic,Bone,Femur,Pelvis,13,Femur_Shaft_R,R_Shaft_Femur,Femur Shaft Right,32848
+Anatomic,Bone,Femur,Limbs,6,Femurs,Femurs,Both Femurs,9611
+Anatomic,Bone,Fibula,Limbs,6,Fibula,Fibula,Fibula,24479
+Anatomic,Bone,Fibula,Limbs,8,Fibula_L,L_Fibula,Fibula Left,24481
+Anatomic,Bone,Fibula,Limbs,8,Fibula_R,R_Fibula,Fibula Right,24480
+Non-Anatomic,Bladder,,Pelvis,5,Foley,Foley,Foley Catheter,None
+Anatomic,Bone,Fossa,Head and Neck,13,Fossa_Jugular,Jugular_Fossa,Jugular Fossa,56429
+Anatomic,Bone,Fossa,Head and Neck,15,Fossa_Posterior,Posterior_Fossa,Posterior Fossa,54368
+Anatomic,Gallbladder,,Pelvis,11,Gallbladder,Gallbladder,Gall bladder,7202
+Anatomic,Reproductive,,Pelvis,8,Genitals,Genitals,Genitals,45643
+Anatomic,Gland,Adrenal,Thorax,14,Glnd_Adrenal_L,L_Adrenal_Glnd,Adrenal glands left,15629
+Anatomic,Gland,Adrenal,Thorax,14,Glnd_Adrenal_R,R_Adrenal_Glnd,Adrenal glands right,15630
+Anatomic,Gland,Lacrimal,Head and Neck,13,Glnd_Lacrimal,Lacrimal_Glnd,Lacrimal Gland,59101
+Anatomic,Gland,Lacrimal,Head and Neck,15,Glnd_Lacrimal_L,L_Lacrimal_Glnd,Lacrimal Gland Left,59103
+Anatomic,Gland,Lacrimal,Head and Neck,15,Glnd_Lacrimal_R,R_Lacrimal_Glnd,Lacrimal Gland Right,59102
+Anatomic,Gland,,Thorax,16,Glnd_Parathyroid,Parathyroid_Glnd,Parathyroid gland,13890
+Anatomic,Gland,Sublingual,Head and Neck,14,Glnd_Subling_L,L_Subling_Glnd,Sublingual gland,59805
+Anatomic,Gland,Sublingual,Head and Neck,14,Glnd_Subling_R,R_Subling_Glnd,Sublingual gland,59804
+Anatomic,Gland,Sublingual,Head and Neck,13,Glnd_Sublings,Sublings_Glnd,Sublingual gland,320440
+Anatomic,Gland,Submandibular,Head and Neck,14,Glnd_Submand_L,L_Submand_Glnd,Submandibular Gland Left,59803
+Anatomic,Gland,Submandibular,Head and Neck,14,Glnd_Submand_R,R_Submand_Glnd,Submandibular Gland Right,59802
+Anatomic,Gland,Submandibular,Head and Neck,13,Glnd_Submands,Submands_Glnd,Submandibular Gland,320442
+Anatomic,Gland,Thymus,Thorax,11,Glnd_Thymus,Thymus_Glnd,Thymus Gland,9607
+Anatomic,Gland,Thyroid,Thorax,12,Glnd_Thyroid,Thyroid_Glnd,Thyroid Gland,9603
+Anatomic,Glottis,,Head and Neck,7,Glottis,Glottis,Glottis,55414
+Anatomic,Heart,,Thorax,8,GreatVes,GreatVes,Great Vessels of the heart (aorta^ vena cava S&I^ pulmonary A&V),None
+Anatomic,Heart,,Thorax,13,GreatVes_NAdj,NAdj_GreatVes,Non Adjacent Great Vessels,None
+Anatomic,Bone,,Body,13,GrowthPlate_L,L_GrowthPlate,None,None
+Anatomic,Bone,,Body,13,GrowthPlate_R,R_GrowthPlate,None,None
+Target,GTV,,Body,3,GTV,GTV,Gross Tumor Volume,None
+Anatomic,Head,Mouth,Head and Neck,10,Hardpalate,Hardpalate,Hard palate,55023
+Anatomic,Heart,,Thorax,5,Heart,Heart,Heart,7088
+Anatomic,Brain,Hemisphere,Head and Neck,12,Hemisphere_L,L_Hemisphere,,61819
+Anatomic,Brain,Hemisphere,Head and Neck,12,Hemisphere_R,R_Hemisphere,,67292
+Anatomic,Brain,Hemisphere,Head and Neck,11,Hemispheres,Hemispheres,None,None
+Anatomic,Brain,Hippocampus,Head and Neck,10,Hippocampi,Hippocampi,Hippocampus,275020
+Anatomic,Brain,Hippocampus,Head and Neck,13,Hippocampus_L,L_Hippocampus,Hippocampus Left,275024
+Anatomic,Brain,Hippocampus,Head and Neck,13,Hippocampus_R,R_Hippocampus,Hippocampus Right,275022
+Anatomic,Bone,Humerus,Limbs,9,Humerus_L,L_Humerus,Humerus Left,23131
+Anatomic,Bone,Humerus,Limbs,9,Humerus_R,R_Humerus,Humerus Right,23130
+Anatomic,Brain,Hypothalamus,Head and Neck,11,Hypothalmus,Hypothalmus,Hypothalamus,62008
+PRV,Brain,Hypothalamus,Head and Neck,15,Hypothalmus_PRV,PRV_Hypothalmus,None,None
+PRV,Brain,Hypothalamus,Head and Neck,16,Hypothalmus_PRVx,PRVx_Hypothalmus,None,None
+Non-Anatomic,Dose,,Body,3,IDL,IDL,Isodose Line e.g. IDL_5000 isodose line for 50 Gy,None
+Anatomic,Gut,,Abdomen,5,Ileum,Ileum,Small bowel - Ileum,7208
+Target,ITV,,Body,3,ITV,ITV,Internal Target Volume,None
+Anatomic,Gut,Small Bowel,Abdomen,7,Jejunum,Jejunum,Small bowel - Jejunum,7207
+Anatomic,Gut,,Abdomen,13,Jejunum_Ileum,Jejunum_Ileum,Both ileum and jejunum,None
+Anatomic,Joint,,Limbs,11,Joint_Elbow,Elbow_Joint,Elbow joint,35289
+Anatomic,Joint,,Limbs,13,Joint_Elbow_L,L_Elbow_Joint,Left Elbow joint,35295
+Anatomic,Joint,,Limbs,13,Joint_Elbow_R,R_Elbow_Joint,Right Elbow joint,35294
+Anatomic,Joint,Small Bowel,Limbs,14,Joint_Glenohum,Glenohum_Joint,Glenohumeral Joint,25912
+Anatomic,Joint,Small Bowel,Limbs,16,Joint_Glenohum_L,L_Glenohum_Joint,Glenohumeral Joint Left,25929
+Anatomic,Joint,Glenohumeral,Limbs,16,Joint_Glenohum_R,R_Glenohum_Joint,Glenohumeral Joint Right,25927
+Anatomic,Joint,Glenohumeral,Body,13,Joint_Surface,Surface_Joint,None,None
+Anatomic,Joint,Glenohumeral,Head and Neck,8,Joint_TM,TM_Joint,Temperomandibular Joint,54832
+Anatomic,Joint,Temperomandibular,Head and Neck,10,Joint_TM_L,L_TM_Joint,Temperomandibular Joint Left,54834
+Anatomic,Joint,Temperomandibular,Head and Neck,10,Joint_TM_R,R_TM_Joint,Temperomandibular Joint Right,54833
+Anatomic,Urinary,Kidney,Abdomen,13,Kidney_Cortex,Cortex_Kidney,Renal cortex for both Kidneys,15581
+Anatomic,Urinary,Kidney,Abdomen,15,Kidney_Cortex_L,L_Cortex_Kidney,Renal cortex left,15584
+Anatomic,Urinary,Kidney,Abdomen,15,Kidney_Cortex_R,R_Cortex_Kidney,Renal cortex right,15583
+Anatomic,Urinary,Kidney,Abdomen,14,Kidney_Hilum_L,L_Hilum_Kidney,Renal Hilum Left,15942
+Anatomic,Urinary,Kidney,Abdomen,14,Kidney_Hilum_R,R_Hilum_Kidney,Renal Hilum Right,15941
+Anatomic,Urinary,Kidney,Abdomen,13,Kidney_Hilums,Hilums_Kidney,Renal Hilum for both Kidneys,15610
+Anatomic,Urinary,Kidney,Abdomen,8,Kidney_L,L_Kidney,Kidney Left,7205
+Derived,Urinary,Kidney,Abdomen,12,Kidney_L-GTV,L_Kidney-GTV,None,None
+Anatomic,Urinary,Kidney,Abdomen,15,Kidney_Pelvis_L,L_Pelvis_Kidney,Renal pelvis Left,15579
+Anatomic,Urinary,Kidney,Abdomen,15,Kidney_Pelvis_R,R_Pelvis_Kidney,Renal pelvis Right,15578
+Anatomic,Urinary,Kidney,Abdomen,8,Kidney_R,R_Kidney,Kidney Right,7204
+Derived,Urinary,Kidney,Abdomen,12,Kidney_R-GTV,R_Kidney-GTV,None,None
+Derived,Urinary,Kidney,Abdomen,10,Kidney-GTV,Kidney-GTV,None,None
+Anatomic,Urinary,Kidney,Abdomen,7,Kidneys,Kidneys,Both Kidneys,264815
+Anatomic,Joint,,Limbs,4,Knee,Knee,Knee,24974
+Anatomic,Joint,,Limbs,6,Knee_L,L_Knee,Knee Left,24978
+Anatomic,Joint,,Limbs,6,Knee_R,R_Knee,Knee Right,24977
+Anatomic,Tissue,Laryngeal pharynx,Head and Neck,15,Laryngl_Pharynx,Pharynx_Laryngl,Laryngeal pharynx,54880
+Anatomic,Larynx,,Head and Neck,6,Larynx,Larynx,Larynx,55097
+Anatomic,Larynx,,Head and Neck,9,Larynx_SG,SG_Larynx,Supraglottic Larynx,55476
+Non_Anatomic,Devices,,Body,5,Leads,Leads,None,None
+Anatomic,Eye,Lens,Head and Neck,4,Lens,Lens,Eye Lens,58241
+Anatomic,Eye,Lens,Head and Neck,6,Lens_L,L_Lens,Lens Left,58243
+Anatomic,Eye,Lens,Head and Neck,6,Lens_R,R_Lens,Lens Right,58242
+Anatomic,Ligament,Hepatogastric,Abdomen,16,Lig_Hepatogastrc,Hepatogastrc_Lig,Hepatogastric ligament,16520
+Anatomic,Feature,,Head and Neck,4,Lips,Lips,Lips,59815
+Anatomic,Liver,,Abdomen,5,Liver,Liver,Liver,7197
+Derived,Liver,,Abdomen,9,Liver-CTV,Liver-CTV,None,None
+Derived,Liver,,Abdomen,9,Liver-GTV,Liver-GTV,Liver minus GTV,None
+Anatomic,Lymph Node,,Body,2,LN,LN,Lymph Node,5034
+Anatomic,Lymph Node,Axillary,Thorax,12,LN_Ax_Apical,Apical_Ax_LN,Set of apical axillary lymphatic vessels,23394
+Anatomic,Lymph Node,Axillary,Thorax,14,LN_Ax_Apical_L,L_Apical_Ax_LN,Axillary lymphatic chain - Apical Left,73265
+Anatomic,Lymph Node,Axillary,Thorax,14,LN_Ax_Apical_R,R_Apical_Ax_LN,Axillary lymphatic chain - Apical Right,73264
+Anatomic,Lymph Node,Axillary,Thorax,15,LN_Ax_Central_L,L_Central_Ax_LN,Axillary lymphatic chain - Central Left,73263
+Anatomic,Lymph Node,Axillary,Thorax,15,LN_Ax_Central_R,R_Central_Ax_LN,Axillary lymphatic chain - Central Left,73262
+Anatomic,Lymph Node,Axillary,Thorax,14,LN_Ax_Centrals,Centrals_Ax_LN,Set of central axillary lymphatic vessels,233482
+Anatomic,Lymph Node,,Thorax,7,LN_Ax_L,L_Ax_LN,Axillary lymphatic chain Left,73250
+Anatomic,Lymph Node,Axillary,Thorax,10,LN_Ax_L1_L,L_L1_Ax_LN,Level 1 Axillary Lymph Node Left,276001
+Anatomic,Lymph Node,Axillary,Thorax,10,LN_Ax_L1_R,R_L1_Ax_LN,Level 1 Axillary Lymph Node Right,275999
+Anatomic,Lymph Node,Axillary,Thorax,10,LN_Ax_L2_L,L_L2_Ax_LN,Level 2 Axillary Lymph Node Left,276005
+Anatomic,Lymph Node,Axillary,Thorax,10,LN_Ax_L2_R,R_L2_Ax_LN,Level 2 Axillary Lymph Node Right,276003
+Anatomic,Lymph Node,Axillary,Thorax,10,LN_Ax_L3_L,L_L3_Ax_LN,Level 3 Axillary Lymph Node Left,276009
+Anatomic,Lymph Node,Axillary,Thorax,10,LN_Ax_L3_R,R_L3_Ax_LN,Level 3 Axillary Lymph Node Right,276007
+Anatomic,Lymph Node,Axillary,Thorax,15,LN_Ax_Lateral_L,L_Lateral_Ax_LN,Axillary lymphatic chain - Lateral Left,73256
+Anatomic,Lymph Node,Axillary,Thorax,15,LN_Ax_Lateral_R,R_Lateral_Ax_LN,Axillary lymphatic chain - Lateral Right,73255
+Anatomic,Lymph Node,Axillary,Thorax,14,LN_Ax_Laterals,Laterals_Ax_LN,pair of Lungs,233458
+Anatomic,Lymph Node,Axillary,Thorax,16,LN_Ax_Pectoral_L,L_Pectoral_Ax_LN,Axillary lymphatic chain - Pectoral Left,73253
+Anatomic,Lymph Node,Axillary,Thorax,16,LN_Ax_Pectoral_R,R_Pectoral_Ax_LN,Axillary lymphatic chain - Pectoral Right,73252
+Anatomic,Lymph Node,Axillary,Thorax,15,LN_Ax_Pectorals,Pectorals_Ax_LN,Set of pectoral axillary lymphatic vessels,233446
+Anatomic,Lymph Node,Axillary,Thorax,7,LN_Ax_R,R_Ax_LN,Axillary lymphatic chain Right,73249
+Anatomic,Lymph Node,Axillary,Thorax,15,LN_Ax_Subscap_L,L_Subscap_Ax_LN,Axillary lymphatic chain - Subscapular Left,73259
+Anatomic,Lymph Node,Axillary,Thorax,15,LN_Ax_Subscap_R,R_Subscap_Ax_LN,Axillary lymphatic chain - Subscapular Right,73258
+Anatomic,Lymph Node,Axillary,Thorax,14,LN_Ax_Subscaps,Subscaps_Ax_LN,Set of subscapular axillary lymphatic vessels,233470
+Anatomic,Lymph Node,,Thorax,16,LN_Brachioceph_L,L_Brachioceph_LN,Lymph nodes of thorax - Brachiocephalic Left,5946
+Anatomic,Lymph Node,,Thorax,16,LN_Brachioceph_R,R_Brachioceph_LN,Lymph nodes of thorax - Brachiocephalic Right,5945
+Anatomic,Lymph Node,,Thorax,15,LN_Brachiocephs,Brachiocephs_LN,Lymph nodes of thorax - Brachiocephalic,5944
+Anatomic,Lymph Node,,Thorax,15,LN_Bronchpulm_L,L_Bronchpulm_LN,Lymph nodes of thorax - Bronchopulmonary Left,5967
+Anatomic,Lymph Node,,Thorax,15,LN_Bronchpulm_R,R_Bronchpulm_LN,Lymph nodes of thorax - Bronchopulmonary Right,5966
+Anatomic,Lymph Node,,Thorax,14,LN_Bronchpulms,Bronchpulms_LN,Lymph nodes of thorax - Bronchopulmonary,5965
+Anatomic,Lymph Node,,Thorax,16,LN_Diaphragmatic,Diaphragmatic_LN,Lymph nodes of thorax - Diaphragmatic,12773
+Anatomic,Lymph Node,,Pelvis,14,LN_Iliac_Ext_L,L_Ext_Iliac_LN,Lymph nodes of pelvis - external iliac Left,229177
+Anatomic,Lymph Node,,Pelvis,14,LN_Iliac_Ext_R,R_Ext_Iliac_LN,Lymph nodes of pelvis - external iliac Right,229177
+Anatomic,Lymph Node,,Pelvis,14,LN_Iliac_Int_L,L_Int_Iliac_LN,Lymph nodes of pelvis - internal iliac Left,224275
+Anatomic,Lymph Node,,Pelvis,10,LN_Iliac_L,L_Iliac_LN,Lymph nodes of pelvis - common iliac Left,224269
+Anatomic,Lymph Node,,Pelvis,10,LN_Iliac_R,R_Iliac_LN,Lymph nodes of pelvis - common iliac Right,224269
+Anatomic,Lymph Node,Breast,Thorax,8,LN_IMN_L,L_IMN_LN,,5934
+Anatomic,Lymph Node,Breast,Thorax,8,LN_IMN_R,R_IMN_LN,,5933
+Anatomic,Lymph Node,Breast,Thorax,7,LN_IMNs,IMNs_LN,Lymph nodes IMN,5849
+Anatomic,Lymph Node,,Pelvis,13,LN_Inguinofem,Inguinofem_LN,Lymph nodes of pelvis - inguinofemoral,236337
+Anatomic,Lymph Node,,Pelvis,15,LN_Inguinofem_L,L_Inguinofem_LN,Lymph nodes of pelvis - inguinofemoral,236341
+Anatomic,Lymph Node,,Pelvis,15,LN_Inguinofem_R,R_Inguinofem_LN,Lymph nodes of pelvis - inguinofemoral,236339
+Anatomic,Lymph Node,,Thorax,15,LN_Intercostals,Intercostals_LN,Lymph nodes of thorax - Intercostal,5932
+Anatomic,Lymph Node,Unspecified,Body,4,LN_L,L_LN,Lymph Node Left,None
+Anatomic,Lymph Node,,Thorax,16,LN_Ligamentarter,Ligamentarter_LN,Lymph nodes of thorax - Ligamentum arteriosum,74033
+Anatomic,Lymph Node,,Pelvis,14,LN_lliac_Int_R,R_Int_Iliac_LN,Lymph nodes of pelvis - internal iliac Right,224275
+Anatomic,Lymph Node,,Thorax,15,LN_Mediastinals,Mediastinals_LN,Lymph nodes of thorax - Mediastinal,12774
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,12,LN_Neck_IA_L,L_IA_Neck_LN,Level IA (Submental) neck node Left,235616
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,12,LN_Neck_IA_R,R_IA_Neck_LN,Level IA (Submental) neck node Right,235614
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,12,LN_Neck_IB_L,L_IB_Neck_LN,Level IB (Submandibular) neck node Left,232676
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,12,LN_Neck_IB_R,R_IB_Neck_LN,Level IB (Submandibular) neck node Right,232673
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,12,LN_Neck_II_L,L_II_Neck_LN,Level IIA & IIB (Upper Jugular) neck nodes Left,265660
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,12,LN_Neck_II_R,R_II_Neck_LN,Level IIA & IIB (Upper Jugular) neck nodes Left,265658
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,13,LN_Neck_IIA_L,L_IIA_Neck_LN,Level IIA (Upper Jugular) neck node Left,241975
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,13,LN_Neck_IIA_R,R_IIA_Neck_LN,Level IIA (Upper Jugular) neck node Right,241973
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,13,LN_Neck_IIB_L,L_IIB_Neck_LN,Level IIB (Upper Jugular) neck node Left,241979
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,13,LN_Neck_IIB_R,R_IIB_Neck_LN,Level IIB (Upper Jugular) neck node Right,241977
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,13,LN_Neck_III_L,L_III_Neck_LN,Level III (Middle Jugular) neck node Left,241953
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,13,LN_Neck_III_R,R_III_Neck_LN,Level III (Middle Jugular) neck node Right,241951
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,12,LN_Neck_IV_L,L_IV_Neck_LN,Level IV neck (Lower Jugular) node Left,241959
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,12,LN_Neck_IV_R,R_IV_Neck_LN,Level IV (Lower Jugular) neck node Right,241957
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,11,LN_Neck_V_L,L_V_Neck_LN,Level VA^ VB and VC (Posterior Triangle) neck nodes Left,241965
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,11,LN_Neck_V_R,R_V_Neck_LN,Level VA^ VB and VC (Posterior Triangle) neck nodes Right,241963
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,12,LN_Neck_VA_L,L_VA_Neck_LN,Level VA (Posterior Triangle) neck node Left,265629
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,12,LN_Neck_VA_R,R_VA_Neck_LN,Level VA (Posterior Triangle) neck node Right,265626
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,12,LN_Neck_VB_L,L_VB_Neck_LN,Level VB (Posterior Triangle) neck node Left,None
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,12,LN_Neck_VB_R,R_VB_Neck_LN,Level VB (Posterior Triangle) neck node Right,None
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,12,LN_Neck_VC_L,L_VC_Neck_LN,Level VC (Posterior Triangle) neck node Left,232721
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,12,LN_Neck_VC_R,R_VC_Neck_LN,Level VC (Posterior Triangle) neck node Right,232719
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,12,LN_Neck_VI_L,L_VI_Neck_LN,Level VI (Anterior Triangle) neck node Left,241971
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,12,LN_Neck_VI_R,R_VI_Neck_LN,Level VI (Anterior Triangle) neck node Right,241969
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,13,LN_Neck_VII_L,L_VII_Neck_LN,Level VII (Upper Mediastinal) neck node Left,None
+Anatomic,Lymph Node,Neck Nodes,Head and Neck,13,LN_Neck_VII_R,R_VII_Neck_LN,Level VII (Upper Mediastinal) neck node Right,None
+Anatomic,Lymph Node,,Pelvis,14,LN_Obturator_L,L_Obturator_LN,Lymph nodes of pelvis - obturator Left,16676
+Anatomic,Lymph Node,,Pelvis,14,LN_Obturator_R,R_Obturator_LN,Lymph nodes of pelvis - obturator Right,16676
+Anatomic,Lymph Node,,Pelvis,13,LN_Paraaortic,Paraaortic_LN,Lymph nodes of abdomen- para-aortic,223899
+Anatomic,Lymph Node,,Thorax,16,LN_Paramammary_L,L_Paramammary_LN,Lymph nodes of thorax - Paramammary Left,232600
+Anatomic,Lymph Node,,Thorax,16,LN_Paramammary_R,R_Paramammary_LN,Lymph nodes of thorax - Paramammary Right,232598
+Anatomic,Lymph Node,,Thorax,15,LN_Paramammarys,Paramammarys_LN,Lymph nodes of thorax - Paramammary,44313
+Anatomic,Lymph Node,,Thorax,16,LN_Parasternal_L,L_Parasternal_LN,Lymph nodes of thorax - Parasternal Left,5934
+Anatomic,Lymph Node,,Thorax,16,LN_Parasternal_R,R_Parasternal_LN,Lymph nodes of thorax - Parasternal Right,5933
+Anatomic,Lymph Node,,Thorax,15,LN_Parasternals,Parasternals_LN,Lymph nodes of thorax - Parasternal,5849
+Anatomic,Lymph Node,,Pelvis,11,LN_Pelvic_L,L_Pelvic_LN,Pelvic Lymph Nodes Left,None
+Anatomic,Lymph Node,,Pelvis,11,LN_Pelvic_R,R_Pelvic_LN,Pelvic Lymph Nodes Right,None
+Anatomic,Lymph Node,,Pelvis,10,LN_Pelvics,Pelvics_LN,Pelvic Lymph Nodes,None
+Anatomic,Lymph Node,Porta hepatis,Abdomen,15,LN_Portahepatis,Portahepatis_LN,Porta hepatis,15758
+Anatomic,Lymph Node,,Pelvis,14,LN_Presacral_L,L_Presacral_LN,Lymph nodes of pelvis - presacral Left,234280
+Anatomic,Lymph Node,,Pelvis,14,LN_Presacral_R,R_Presacral_LN,Lymph nodes of pelvis - presacral Right,234280
+Anatomic,Lymph Node,,Thorax,14,LN_Pulmonary_L,L_Pulmonary_LN,Lymph nodes of thorax - Pulmonary Left,5970
+Anatomic,Lymph Node,,Thorax,14,LN_Pulmonary_R,R_Pulmonary_LN,Lymph nodes of thorax - Pulmonary Right,5969
+Anatomic,Lymph Node,,Thorax,13,LN_Pulmonarys,Pulmonarys_LN,Lymph nodes of thorax - Pulmonary,5968
+Anatomic,Lymph Node,Unspecified,Body,4,LN_R,R_LN,Lymph Node Right,None
+Anatomic,Lymph Node,Breast,Body,10,LN_Sclav_L,L_Sclav_LN,Supraclavicular Lymph Node Left,232719
+Anatomic,Lymph Node,Breast,Body,10,LN_Sclav_R,R_Sclav_LN,Supraclavicular Lymph Node Right,232721
+Anatomic,Lymph Node,,Thorax,15,LN_Supmammary_L,L_Supmammary_LN,Lymph nodes of thorax - Supramammary Left,232604
+Anatomic,Lymph Node,,Thorax,15,LN_Supmammary_R,R_Supmammary_LN,Lymph nodes of thorax - Supramammary Right,232602
+Anatomic,Lymph Node,,Thorax,14,LN_Supmammarys,Supmammarys_LN,Lymph nodes of thorax - Supramammary,12785
+Anatomic,Lymph Node,,Thorax,14,LN_Trachbrnchs,Trachbronchs_LN,Lymph nodes of thorax - Tracheobronchial,5950
+Anatomic,Lymph Node,,Thorax,16,LN_Trachbrnchs_L,L_Trachbronchs_LN,Lymph nodes of thorax - Tracheobronchial Left,5952
+Anatomic,Lymph Node,,Thorax,16,LN_Trachbrnchs_R,R_Trachbronchs_LN,Lymph nodes of thorax - Tracheobronchial Right,5951
+Anatomic,Brain,Lobe,Head and Neck,12,Lobe_Frontal,Frontal_Lobe,Frontal Lobe,61824
+Anatomic,Brain,Lobe,Head and Neck,14,Lobe_Frontal_L,L_Frontal_Lobe,Frontal Lobe Left,72970
+Anatomic,Brain,Lobe,Head and Neck,14,Lobe_Frontal_R,R_Frontal_Lobe,Frontal Lobe Left,72969
+Anatomic,Brain,Occipital Lobe,Head and Neck,14,Lobe_Occipital,Occipital_Lobe,Occipital Lobe,67325
+Anatomic,Brain,Occipital Lobe,Head and Neck,16,Lobe_Occipital_L,L_Occipital_Lobe,Occipital Lobe Left,72976
+Anatomic,Brain,Occipital Lobe,Head and Neck,16,Lobe_Occipital_R,R_Occipital_Lobe,Occipital Lobe Right,72975
+Anatomic,Brain,Lobe,Head and Neck,13,Lobe_Parietal,Parietal_Lobe,Parietal Lobe,61826
+Anatomic,Brain,Lobe,Head and Neck,15,Lobe_Parietal_L,L_Parietal_Lobe,Parietal Lobe Left,72974
+Anatomic,Brain,Lobe,Head and Neck,15,Lobe_Parietal_R,R_Parietal_Lobe,Parietal Lobe Right,72973
+Anatomic,Brain,Temporal,Head and Neck,13,Lobe_Temporal,Temporal_Lobe,Temporal Lobe,61825
+Anatomic,Brain,Temporal,Head and Neck,15,Lobe_Temporal_L,L_Temporal_Lobe,Temporal Lobe Left,72972
+Anatomic,Brain,Temporal,Head and Neck,15,Lobe_Temporal_R,R_Temporal_Lobe,Temporal Lobe Right,72971
+Anatomic,Lung,,Thorax,6,Lung_L,L_Lung,Lung Left,7310
+Anatomic,Lung,,Thorax,8,Lung_LLL,LLL_Lung,Lung - lower lobe of left,7371
+Anatomic,Lung,,Thorax,8,Lung_LUL,LUL_Lung,Lung - upper lobe of left,7370
+Anatomic,Lung,,Thorax,6,Lung_R,R_Lung,Lung Right,7309
+Anatomic,Lung,,Thorax,8,Lung_RLL,RLL_Lung,Lung - lower lobe of right,7337
+Anatomic,Lung,,Thorax,8,Lung_RML,RML_Lung,Lung - middle lobe of right,7383
+Anatomic,Lung,,Thorax,8,Lung_RUL,RUL_Lung,Lung - upper lobe of right,7333
+Anatomic,Lung,,Thorax,5,Lungs,Lungs,Pair of Lungs,68877
+Derived,Lung,,Thorax,9,Lungs-CTV,Lungs-CTV,Total Lung minus the CTV,None
+Derived,Lung,,Thorax,9,Lungs-GTV,Lungs-GTV,Total Lung minus the GTV,None
+Derived,Lung,,Thorax,9,Lungs-ITV,Lungs-ITV,None,None
+Derived,Lung,,Thorax,9,Lungs-PTV,Lungs-PTV,Total Lung minus the PTV,None
+Anatomic,Bone,Ear,Head and Neck,7,Malleus,Malleus,Malleus,52753
+Anatomic,Bone,Ear,Head and Neck,9,Malleus_L,L_Malleus,Malleus Left,74053
+Anatomic,Bone,Ear,Head and Neck,9,Malleus_R,R_Malleus,Malleus Right,74052
+Non_Anatomic,Devices,,Body,7,Markers,Markers,None,None
+Anatomic,Bone,Maxilla,Head and Neck,7,Maxilla,Maxilla,Maxilla,9711
+Anatomic,Bone,Maxilla,Head and Neck,9,Maxilla_L,L_Maxilla,Maxilla Left,53650
+Anatomic,Bone,Maxilla,Head and Neck,9,Maxilla_R,R_Maxilla,Maxilla Right,53649
+Anatomic,Heart,,Thorax,11,Mediastinum,Mediastinum,Mediastinum,9826
+Anatomic,Muscle,,Body,4,Musc,Musc,Muscle,30316
+Anatomic,Muscle,Constrictors,Head and Neck,14,Musc_Constrict,Constrict_Musc,Constrictor Muscle of Pharynx,46620
+Anatomic,Muscle,Constrictors,Head and Neck,16,Musc_Constrict_I,I_Constrict_Musc,Pharynx - Inferior pharyngeal constrictor,46623
+Anatomic,Muscle,Constrictors,Head and Neck,16,Musc_Constrict_M,M_Constrict_Musc,Pharynx - Middle pharyngeal constrictor,46622
+Anatomic,Muscle,Constrictors,Head and Neck,16,Musc_Constrict_S,S_Constrict_Musc,Pharynx - Superior pharyngeal constrictor,46621
+Anatomic,Muscle,Digastric,Abdomen,16,Musc_Digastric_L,L_Digastric_Musc,Digastric muscle Left,46293
+Anatomic,Muscle,Digastric,Abdomen,16,Musc_Digastric_R,R_Digastric_Musc,Digastric muscle Right,46292
+Anatomic,Muscle,Masseter,Head and Neck,13,Musc_Masseter,Masseter_Musc,Masseter Muscle,48996
+Anatomic,Muscle,Masseter,Head and Neck,15,Musc_Masseter_L,L_Masseter_Musc,Masseter Muscle Left,48998
+Anatomic,Muscle,Masseter,Head and Neck,15,Musc_Masseter_R,R_Masseter_Musc,Masseter Muscle Right,48997
+Anatomic,Muscle,Platysma,Head and Neck,15,Musc_Platysma_L,L_Platysma_Musc,Platysma Left,45740
+Anatomic,Muscle,Platysma,Head and Neck,15,Musc_Platysma_R,R_Platysma_Musc,Platysma Right,45739
+Anatomic,Muscle,Pterygoid,Head and Neck,16,Musc_Pterygoid_L,L_Pterygoid_Musc,Pterygoid muscles - Left,None
+Anatomic,Muscle,Pterygoid,Head and Neck,16,Musc_Pterygoid_R,R_Pterygoid_Musc,Pterygoid muscles - Right,None
+Anatomic,Muscle,Sternocleidomastoid,Head and Neck,14,Musc_Sclmast_L,L_Sclmast_Musc,Sternocleidomastoid Left,13409
+Anatomic,Muscle,Sternocleidomastoid,Head and Neck,14,Musc_Sclmast_R,R_Sclmast_Musc,Sternocleidomastoid Left,13408
+Anatomic,Muscle,Temporal,Head and Neck,15,Musc_Temporal_L,L_Temporal_Musc,Temporal muscle - Left,49008
+Anatomic,Muscle,Temporal,Head and Neck,15,Musc_Temporal_R,R_Temporal_Musc,Temporal muscle - Right,49007
+Anatomic,Nose,Nasal,Head and Neck,14,Nasalconcha_LI,LI_Nasalconcha,Inferior Nasal Concha Left,54738
+Anatomic,Nose,Nasal,Head and Neck,14,Nasalconcha_RI,RI_Nasalconcha,Inferior Nasal Concha Right,54737
+Anatomic,Nose,Nasal,Head and Neck,11,Nasopharynx,Nasopharynx,Nasal part of pharynx,54878
+Anatomic,Nose,Nasal,Head and Neck,4,Nose,Nose,Nose,46472
+Anatomic,Nerve,,Body,14,Nrv_Peripheral,Peripheral_Nrv,Peripheral Nerve,None
+Anatomic,Nerve,,Body,8,Nrv_Root,Root_Nrv,Nerve Root,5981
+Anatomic,Nerve,Optic,Head and Neck,11,OpticChiasm,OpticChiasm,Optic chiasm,62045
+PRV,Nerve,Optic,Head and Neck,15,OpticChiasm_PRV,PRV_OpticChiasm,PRV for Optic Chiasm,None
+PRV,Nerve,Optic,Head and Neck,16,OpticChiasm_PRVx,PRVx_OpticChiasm,PRV expansion of  x mm on the optic chiasm,None
+Anatomic,Nerve,Optic,Head and Neck,8,OpticNrv,OpticNrv,Optic nerve,50863
+Anatomic,Nerve,Optic,Head and Neck,10,OpticNrv_L,L_OpticNrv,Optic nerve,50878
+PRV,Nerve,Optic,Head and Neck,12,OpticNrv_PRV,PRV_OpticNrv,PRV for Optic Nerve,None
+PRV,Nerve,Optic,Head and Neck,14,OpticNrv_PRV_L,L_PRV_OpticNrv,None,None
+PRV,Nerve,Optic,Head and Neck,14,OpticNrv_PRV_R,R_PRV_OpticNrv,None,None
+PRV,Nerve,Optic,Head and Neck,16,OpticNrv_PRVxx_L,L_PRVxx_OpticNrv,PRV expansion of xx millimeters on the right optic nerve,None
+PRV,Nerve,Optic,Head and Neck,16,OpticNrv_PRVxx_R,R_PRVxx_OpticNrv,PRV created with xx mm expansion on the left optic nerve,None
+Anatomic,Nerve,Optic,Head and Neck,10,OpticNrv_R,R_OpticNrv,Optic nerve,50875
+Anatomic,Eye,Orbit,Head and Neck,7,Orbit_L,L_Orbit,Orbit Left,54668
+Anatomic,Eye,Orbit,Head and Neck,7,Orbit_R,R_Orbit,Orbit Right,54667
+Anatomic,Throat,Oropharynx,Head and Neck,10,Oropharynx,Oropharynx,Oral part of pharynx,54879
+Anatomic,Reproductive,,Pelvis,7,Ovaries,Ovaries,Ovary,7409
+Anatomic,Reproductive,,Pelvis,7,Ovary_L,L_Ovary,Ovary Left,7214
+Anatomic,Reproductive,,Pelvis,7,Ovary_R,R_Ovary,Ovary Right,7213
+Non_Anatomic,Devices,,Thorax,9,Pacemaker,Pacemaker,Pacemaker,None
+Anatomic,Muscle,Soft Palate,Head and Neck,11,Palate_Soft,Soft_Palate,Soft palate,55021
+Surgical,Gut,,Abdomen,10,PancJejuno,PancJejuno,The pancreatic jejuno junction - generated by surgical procedure,None
+Anatomic,Gland,Pancreas,Abdomen,8,Pancreas,Pancreas,Pancreas,7198
+Anatomic,Gland,Pancreas,Abdomen,13,Pancreas_Head,Head_Pancreas,Head of Pancreas,10468
+Anatomic,Gland,Pancreas,Abdomen,13,Pancreas_Tail,Tail_Pancreas,Tail of Pancreas,14519
+Anatomic,Reproductive,,Pelvis,11,Parametrium,Parametrium,Parametrium,77061
+Anatomic,Gland,Parotid,Head and Neck,9,Parotid_L,L_Parotid,Parotid Left,59798
+Anatomic,Gland,Parotid,Head and Neck,9,Parotid_R,R_Parotid,Parotid Right,59797
+Anatomic,Gland,Parotid,Head and Neck,8,Parotids,Parotids,Pair of Parotid Glands,320436
+Anatomic,Reproductive,,Pelvis,10,PenileBulb,PenileBulb,Penile Bulb,19614
+Anatomic,Reproductive,,Pelvis,5,Penis,Penis,Penis,9707
+Anatomic,Heart,Membrane,Thorax,11,Pericardium,Pericardium,Pericardium,9869
+Anatomic,Perineum,,Pelvis,8,Perineum,Perineum,Perineum,9579
+Anatomic,Membrane,Peritoneum,Abdomen,10,Peritoneum,Peritoneum,Peritoneal sac,9908
+Anatomic,Throat,Pharynx,Head and Neck,7,Pharynx,Pharynx,Pharynx,46688
+Anatomic,Gland,Pineal,Head and Neck,6,Pineal,Pineal,Pineal gland,62033
+Anatomic,Gland,Pituitary,Head and Neck,9,Pituitary,Pituitary,Pituitary gland,13889
+PRV,Gland,Pituitary,Head and Neck,15,Pituitary_PRVxx,PRVxx_Pituitary,PRV constructed as xx millimeter expansion on Pituitary,None
+Anatomic,Brain,Brainstem,Head and Neck,4,Pons,Pons,Pons,67943
+Non_Anatomic,Surgery,,Body,6,Postop,Postop,Post operative volume,None
+Non_Anatomic,Surgery,,Body,5,Preop,Preop,Region originally occupied by the gross tumor volume,None
+Anatomic,Bone,Mandible,Head and Neck,16,Proc_Condyloid_L,L_Condyloid_Proc,Condyloid process of mandible - Right,52838
+Anatomic,Bone,Mandible,Head and Neck,16,Proc_Condyloid_R,R_Condyloid_Proc,Condyloid process of mandible - Left,52840
+Anatomic,Bone,Mandible,Head and Neck,15,Proc_Coronoid_L,L_Coronoid_Proc,Coronoid process of mandible - Left,52835
+Anatomic,Bone,Mandible,Head and Neck,15,Proc_Coronoid_R,R_Coronoid_Proc,Coronoid process of mandible - Right,52834
+Anatomic,Gland,Prostate,Pelvis,8,Prostate,Prostate,Prostate,9600
+Anatomic,Surgery,Prostate,Pelvis,11,ProstateBed,ProstateBed,Prostate Bed,None
+Anatomic,Surgery,,Body,10,Prosthesis,Prosthesis,Prosthesis,None
+Anatomic,Muscle,Pterygoid,Head and Neck,15,Pterygoid_Lat_L,L_Lat_Pterygoid,Pterygoid muscles lateral - Left,49017
+Anatomic,Muscle,Pterygoid,Head and Neck,15,Pterygoid_Lat_R,R_Lat_Pterygoid,Pterygoid muscles lateral - Right,49016
+Anatomic,Muscle,Pterygoid,Head and Neck,15,Pterygoid_Med_L,L_Med_Pterygoid,Pterygoid muscles medial - Left,49013
+Anatomic,Muscle,Pterygoid,Head and Neck,15,Pterygoid_Med_R,R_Med_Pterygoid,Pterygoid muscles medial - Right,49012
+Target,PTV,,Body,3,PTV,PTV,Planning Target Volume,None
+Anatomic,Bone,Pubic,Pelvis,12,PubicSymphys,PubicSymphys,Pubic Symphysis,16950
+Anatomic,Bone,Pubic,Pelvis,14,PubicSymphys_L,L_PubicSymphys,Pubic bone Left,16597
+Anatomic,Bone,Pubic,Pelvis,14,PubicSymphys_R,R_PubicSymphys,Pubic bone Right,16596
+Anatomic,Bone,Radius,Limbs,8,Radius_L,L_Radius,Radius Left,23465
+Anatomic,Bone,Radius,Limbs,8,Radius_R,R_Radius,Radius Right,23464
+Anatomic,Rectum,,Pelvis,11,Rectal_Wall,Rectal_Wall,Rectal Wall,14626
+Anatomic,Rectum,,Pelvis,6,Rectum,Rectum,Large bowel - Rectum,14544
+Anatomic,Eye,Retina,Head and Neck,8,Retina_L,L_Retina,Retina Left,58303
+PRV,Eye,Retina,Head and Neck,14,Retina_PRVxx_L,L_PRVxx_Retina,None,None
+PRV,Eye,Retina,Head and Neck,14,Retina_PRVxx_R,R_PRVxx_Retina,PRV constructed as xx millimeter expansion on Retina,None
+Anatomic,Eye,Retina,Head and Neck,8,Retina_R,R_Retina,Retina Right,58302
+Anatomic,Eye,Retina,Head and Neck,7,Retinas,Retinas,Both Retinas,58301
+Anatomic,Bone,Rib,Thorax,3,Rib,Rib,Any Rib volume,7574
+Anatomic,Bone,Rib,Thorax,7,Rib01_L,L_Rib01,First Rib Left,7987
+Anatomic,Bone,Rib,Thorax,7,Rib01_R,R_Rib01,First Rib Right,7857
+Anatomic,Bone,Rib,Thorax,7,Rib02_L,L_Rib02,Second rib Left,8012
+Anatomic,Bone,Rib,Thorax,7,Rib02_R,R_Rib02,Second rib Right,7882
+Anatomic,Bone,Rib,Thorax,7,Rib03_L,L_Rib03,Third rib Left,8039
+Anatomic,Bone,Rib,Thorax,7,Rib03_R,R_Rib03,Third rib Right,7909
+Anatomic,Bone,Rib,Thorax,7,Rib04_L,L_Rib04,Fourth rib Left,8148
+Anatomic,Bone,Rib,Thorax,7,Rib04_R,R_Rib04,Fourth rib Right,7957
+Anatomic,Bone,Rib,Thorax,7,Rib05_L,L_Rib05,Fifth rib Left,8093
+Anatomic,Bone,Rib,Thorax,7,Rib05_R,R_Rib05,Fifth rib Right,8066
+Anatomic,Bone,Rib,Thorax,7,Rib06_L,L_Rib06,Sixth rib Left,8202
+Anatomic,Bone,Rib,Thorax,7,Rib06_R,R_Rib06,Sixth rib Right,8175
+Anatomic,Bone,Rib,Thorax,7,Rib07_L,L_Rib07,Seventh rib Left,8256
+Anatomic,Bone,Rib,Thorax,7,Rib07_R,R_Rib07,Seventh rib Right,8229
+Anatomic,Bone,Rib,Thorax,7,Rib08_L,L_Rib08,Eighth rib Left,8310
+Anatomic,Bone,Rib,Thorax,7,Rib08_R,R_Rib08,Eighth rib Right,8283
+Anatomic,Bone,Rib,Thorax,7,Rib09_L,L_Rib09,Ninth rib Left,8391
+Anatomic,Bone,Rib,Thorax,7,Rib09_R,R_Rib09,Ninth rib Right,8364
+Anatomic,Bone,Rib,Thorax,7,Rib10_L,L_Rib10,Tenth rib Left,8472
+Anatomic,Bone,Rib,Thorax,7,Rib10_R,R_Rib10,Tenth rib Right,8445
+Anatomic,Bone,Rib,Thorax,7,Rib11_L,L_Rib11,Eleventh rib Left,8532
+Anatomic,Bone,Rib,Thorax,7,Rib11_R,R_Rib11,Eleventh rib Right,8531
+Anatomic,Bone,Rib,Thorax,7,Rib12_L,L_Rib12,Twelfth rib Left,8534
+Anatomic,Bone,Rib,Thorax,7,Rib12_R,R_Rib12,Twelfth rib Right,8533
+Anatomic,Nerve,Sacrum,Pelvis,10,SacralPlex,SacralPlex,Sacral Plexus,5909
+Anatomic,Bone,Spine,Pelvis,6,Sacrum,Sacrum,Sacrum,16202
+Anatomic,Skin,,Head and Neck,5,Scalp,Scalp,,46494
+Anatomic,Bone,Scapula,Thorax,9,Scapula_L,L_Scapula,Scapula Left,13396
+Anatomic,Bone,Scapula,Thorax,9,Scapula_R,R_Scapula,Scapula Right,13395
+Anatomic,Skin,,Body,4,Scar,Scar,Scar,None
+Anatomic,Skin,,Body,10,Scar_Boost,Boost_Scar,None,None
+Anatomic,Skin,,Pelvis,7,Scrotum,Scrotum,Scrotum (skin & cremasteric fascia),18252
+Anatomic,Gland,,Pelvis,10,SeminalVes,SeminalVes,Seminal vesicle,19387
+Anatomic,Gland,,Pelvis,15,SeminalVes_Dist,Dist_SeminalVes,Distal Seminal Vesicle,None
+Anatomic,Gland,,Pelvis,15,SeminalVes_Prox,Prox_SeminalVes,Proximal Seminal Vesicle,None
+Anatomic,Sinus,Ethmoid,Head and Neck,13,Sinus_Ethmoid,Ethmoid_Sinus,Ethmoidal Sinus,84115
+Anatomic,Brain,Sinus,Head and Neck,13,Sinus_Frontal,Frontal_Sinus,Frontal Sinus,57417
+Anatomic,Brain,Sinus,Head and Neck,15,Sinus_Frontal_L,L_Frontal_Sinus,Frontal Sinus Left,57419
+Anatomic,Brain,Sinus,Head and Neck,15,Sinus_Frontal_R,R_Frontal_Sinus,Frontal Sinus Right,57418
+Anatomic,Sinus,Maxillary,Head and Neck,13,Sinus_Maxilry,Maxilry_Sinus,Maxillary Sinus,57715
+Anatomic,Sinus,Maxillary,Head and Neck,15,Sinus_Maxilry_L,L_Maxilry_Sinus,Maxillary Sinus,57717
+Anatomic,Sinus,Maxillary,Head and Neck,15,Sinus_Maxilry_R,R_Maxilry_Sinus,Maxillary Sinus,57716
+Anatomic,Bone,Sphenoid,Head and Neck,14,Sinus_Sphenoid,Sphenoid_Sinus,Sphenoidal Sinus,54683
+Anatomic,Bone,Sphenoid,Head and Neck,16,Sinus_Sphenoid_L,L_Sphenoid_Sinus,Sphenoidal Sinus Left,54708
+Anatomic,Bone,Sphenoid,Head and Neck,16,Sinus_Sphenoid_R,R_Sphenoid_Sinus,Sphenoidal Sinus Right,54707
+Anatomic,Skin,,Body,4,Skin,Skin,Skin,7163
+Anatomic,Skin,,Pelvis,13,Skin_Perineum,Perineum_Skin,,20429
+Anatomic,Skin,,Abdomen,15,Skin_Peritoneum,Peritoneum_Skin,None,None
+Anatomic,Bone,Skull,Head and Neck,5,Skull,Skull,Skeletal system of head,46565
+Anatomic,Space,,Body,3,Spc,Spc,Space,None
+Anatomic,Bowel,Space,Abdomen,10,Spc_Bowel,Bowel_Spc,Space occupied by bowel,None
+Anatomic,Space,,Abdomen,15,Spc_Bowel_Small,Small_Bowel_Spc,None,None
+Anatomic,Space,Retropharyngeal,Head and Neck,15,Spc_Retrophar_L,L_Retrophar_Spc,Retropharyngeal space Left,None
+Anatomic,Space,Retropharyngeal,Head and Neck,15,Spc_Retrophar_R,R_Retrophar_Spc,Retropharyngeal space Right,None
+Anatomic,Space,,Head and Neck,14,Spc_Retrophars,Retrophars_Spc,Retropharyngeal space,286702
+Anatomic,Space,Retrostyloid,Head and Neck,12,Spc_Retrosty,Retrosty_Spc,Retrostyloid space,None
+Anatomic,Space,Retrostyloid,Head and Neck,14,Spc_Retrosty_L,L_Retrosty_Spc,Retrostyloid space -Left,None
+Anatomic,Space,Retrostyloid,Head and Neck,14,Spc_Retrosty_R,R_Retrosty_Spc,Retrostyloid space -Left,None
+Anatomic,Space,Supraclavicular,Thorax,15,Spc_Supraclav_L,L_Supraclav_Spc,Supraclavicular space - Left,45797
+Anatomic,Space,Supraclavicular,Thorax,15,Spc_Supraclav_R,R_Supraclav_Spc,Supraclavicular space - Right,45796
+Anatomic,Bowel,Anus,Pelvis,14,Sphincter_Anal,Anal_Sphincter,Internal Anal Sphincter,15710
+Anatomic,Canal,Spinal Cord,Body,11,SpinalCanal,SpinalCanal,Vertebral canal,9680
+PRV,PRV,Spinal Canal,Body,15,SpinalCanal_PRV,PRV_SpinalCanal,None,None
+PRV,PRV,Spinal Canal,Body,16,SpinalCanal_PRVx,PRVx_SpinalCanal,A PRV created with an x millimeter expansion on the spinal canal,None
+Anatomic,Nerve,Spinal Cord,Body,10,SpinalCord,SpinalCord,Spinal Cord,7647
+Anatomic,Nerve,Spinal Cord,Head and Neck,15,SpinalCord_Cerv,Cerv_SpinalCord,Spinal Cord Cervical,71166
+Anatomic,Nerve,Spinal Cord,Abdomen,14,SpinalCord_Lum,Lum_SpinalCord,Spinal Cord Lumbar,71168
+PRV,PRV,Spinal Cord,Body,14,SpinalCord_PRV,PRV_SpinalCord,None,None
+PRV,PRV,Spinal Cord,Body,16,SpinalCord_PRVxx,PRVxx_SpinalCord,A PRV created with an xx millimeter expansion on the spinal cord,None
+Anatomic,Nerve,Spinal Cord,Pelvis,14,SpinalCord_Sac,Sac_SpinalCord,Spinal Cord Sacral,256623
+Anatomic,Nerve,Spinal Cord,Thorax,15,SpinalCord_Thor,Thor_SpinalCord,Spinal Cord Thoracic,71167
+Anatomic,Lymph Node,Spleen,Abdomen,6,Spleen,Spleen,Spleen,7196
+Anatomic,Lymph Node,Spleen,Abdomen,12,Spleen_Hilum,Hilum_Spleen,Splenic hilum,15841
+Anatomic,Reproductive,,Pelvis,10,Spongiosum,Spongiosum,Penis Corpus Spongiosum,19617
+Anatomic,Ear,Stapes,Head and Neck,6,Stapes,Stapes,Stapes,52751
+Anatomic,Ear,Stapes,Head and Neck,8,Stapes_L,L_Stapes,Stapes Left,74049
+Anatomic,Ear,Stapes,Head and Neck,8,Stapes_R,R_Stapes,Stapes Right,74048
+Anatomic,Stomach,,Abdomen,7,Stomach,Stomach,Stomach,7148
+PRV,Stomach,,Abdomen,13,Stomach_PRVxx,PRVxx_Stomach,PRV created with xx mm expansion on the stomach,None
+Anatomic,Body,,Body,6,Strct,Strct,Structure,None
+Anatomic,Joint,,Limbs,16,Strct_Suprapatel,Suprapatel_Strct,Suprapatellar Structures,None
+Anatomic,Eye,,,8,Surf_Eye,Eye_Surf,None,None
+Anatomic,Surgery,,Body,11,SurgicalBed,SurgicalBed,None,None
+Anatomic,Brain,,Head and Neck,15,Sys_Ventricular,Ventricular_Sys,,242787
+Anatomic,Tendon,,Limbs,7,Tendon,Tendon,,9721
+Anatomic,Tendon,,Limbs,11,Tendon_Quad,Quad_Tendon,,46900
+Anatomic,Reproductive,Testis,Pelvis,6,Testis,Testis,Testis,7210
+Anatomic,Reproductive,Testis,Pelvis,8,Testis_L,L_Testis,Testis Left,7212
+Anatomic,Reproductive,Testis,Pelvis,8,Testis_R,R_Testis,Testis Right,7211
+Anatomic,Membrane,Thecal Sac,Body,9,ThecalSac,ThecalSac,,83720
+Anatomic,Duct,Thoracic,Thorax,13,Thoracic_Duct,Duct_Thoracic,Thoracic Duct,5031
+Anatomic,Mouth,Tongue,Head and Neck,6,Tongue,Tongue,Tongue,54640
+Anatomic,Mouth,Tongue,Head and Neck,10,Tongue_All,All_Tongue,None,None
+Anatomic,Mouth,Tongue,Head and Neck,11,Tongue_Base,Base_Tongue,,54645
+Anatomic,Mouth,Tongue,Head and Neck,13,Tongue_Base_L,L_Base_Tongue,None,None
+Anatomic,Mouth,Tongue,Head and Neck,13,Tongue_Base_R,R_Base_Tongue,None,None
+Anatomic,Mouth,Tongue,Head and Neck,11,Tongue_Oral,Oral_Tongue,,54644
+Anatomic,Mouth,Tongue,Head and Neck,13,Tongue_Oral_L,L_Oral_Tongue,,281502
+Anatomic,Mouth,Tongue,Head and Neck,13,Tongue_Oral_R,R_Oral_Tongue,,281500
+Anatomic,Mouth,Tongue,Head and Neck,6,Tonsil,Tonsil,,9609
+Anatomic,Lung,Trachea,Thorax,7,Trachea,Trachea,Trachea,7394
+Anatomic,Lung,Trachea,Thorax,12,Trachea_NAdj,NAdj_Trachea,Trachea non adjacent wall,None
+Non_Anatomic,Surgery,,Body,8,TumorBed,TumorBed,Tumor Bed,None
+Anatomic,Urinary,Ureter,Pelvis,8,Ureter_L,L_Ureter,Ureter Left,17888
+Anatomic,Urinary,Ureter,Pelvis,8,Ureter_R,R_Ureter,Ureter Right,17887
+Anatomic,Urinary,Ureter,Pelvis,13,UreterDivert,UreterDivert,Urinary Divergence,None
+Anatomic,Urinary,Ureter,Pelvis,13,Ureters,Ureters,Both Ureters,264814
+Anatomic,Urinary,Urethra,Pelvis,7,Urethra,Urethra,Urethra,19667
+Anatomic,Urinary,Urethra,Pelvis,16,Urethra_Prostatc,Prostatc_Urethra,Prostatic Urethra,None
+Anatomic,Reproductive,Uterus,Pelvis,6,Uterus,Uterus,Uterus,17558
+Anatomic,Vein,Azygos,Thorax,8,V_Azygos,Azygos_V,Azygos Vein,4838
+Anatomic,Vein,Brachiocephalic,Thorax,15,V_Brachioceph_L,L_Brachioceph_V,Brachiocephalic vein Left,4761
+Anatomic,Vein,Brachiocephalic,Thorax,15,V_Brachioceph_R,R_Brachioceph_V,Brachiocephalic vein Right,4751
+Anatomic,Vein,Iliac,Pelvis,13,V_Iliac_Ext_L,L_Ext_Iliac_V,External iliac vein Left,18886
+Anatomic,Vein,Iliac,Pelvis,13,V_Iliac_Ext_R,R_Ext_Iliac_V,External iliac vein Right,18885
+Anatomic,Vein,Iliac,Pelvis,13,V_Iliac_Int_L,L_Int_Iliac_V,Internal iliac vein Left,18810
+Anatomic,Vein,Iliac,Pelvis,13,V_Iliac_Int_R,R_Int_Iliac_V,Internal iliac vein Right,18809
+Anatomic,Vein,Iliac,Pelvis,9,V_Iliac_L,L_Iliac_V,Common iliac vein Right,21387
+Anatomic,Vein,Iliac,Pelvis,9,V_Iliac_R,R_Iliac_V,Common iliac vein Left,21388
+Anatomic,Vein,Jugular,Head and Neck,9,V_Jugular,Jugular_V,Any Jugular Vein,None
+Anatomic,Vein,Jugular,Head and Neck,15,V_Jugular_Ext_L,L_Ext_Jugular_V,,13112
+Anatomic,Vein,Jugular,Head and Neck,15,V_Jugular_Ext_R,R_Ext_Jugular_V,,13111
+Anatomic,Vein,Jugular,Head and Neck,15,V_Jugular_Int_L,L_Int_Jugular_V,Internal jugular vein Right,4754
+Anatomic,Vein,Jugular,Head and Neck,15,V_Jugular_Int_R,R_Int_Jugular_V,Internal jugular vein Left,4762
+Anatomic,Vein,Portal,Abdomen,8,V_Portal,Portal_V,Portal Vein,66645
+Anatomic,Vein,Pulmonary,Thorax,11,V_Pulmonary,Pulmonary_V,Pulmonary vein,66643
+Anatomic,Vein,Subclavian,Thorax,14,V_Subclavian_L,L_Subclavian_V,Subclavian Vein Left,4763
+Anatomic,Vein,Subclavian,Thorax,14,V_Subclavian_R,R_Subclavian_V,Subclavian Vein Right,4755
+Anatomic,Vein,Subclavian,Thorax,13,V_Subclavians,Subclavians_V,Subclavian Vein,4725
+Anatomic,Vein,VenaCava,Thorax,12,V_Venacava_I,I_Venacava_V,Inferior vena cava,10951
+Anatomic,Vein,VenaCava,Thorax,12,V_Venacava_S,S_Venacava_V,Superior vena cava,4720
+Anatomic,Reproductive,Vagina,Pelvis,6,Vagina,Vagina,Vagina,19949
+Anatomic,Reproductive,Vagina,Pelvis,11,Vagina_Surf,Surf_Vagina,None,None
+Anatomic,Reproductive,Vagina,Pelvis,11,VaginalCuff,VaginalCuff,Vaginal Cuff,None
+Anatomic,Valve,,Body,5,Valve,Valve,Valve,None
+Anatomic,Valve,Aorta,Thorax,12,Valve_Aortic,Aortic_Valve,Aortic Valve,7236
+Anatomic,Valve,Heart,Thorax,12,Valve_Mitral,Mitral_Valve,Mitral Valve,7235
+Anatomic,Valve,,Thorax,14,Valve_Pulmonic,Pulmonic_Valve,Pulmonic Valve,7246
+Anatomic,Valve,Heart,Thorax,15,Valve_Tricuspid,Tricuspid_Valve,Tricuspid Valve,7234
+Anatomic,Bone,Vertebral Body,Body,2,VB,VB,Vertebral Body,None
+Anatomic,Bone,Vertebral Body,Head and Neck,4,VB_C,C_VB,Cervical vertebrae,72063
+Anatomic,Bone,Vertebral Body,Head and Neck,5,VB_C1,C1_VB,Atlas - C1,12519
+Anatomic,Bone,Vertebral Body,Head and Neck,5,VB_C2,C2_VB,Axis - C2,12520
+Anatomic,Bone,Vertebral Body,Head and Neck,5,VB_C3,C3_VB,Cervical vertebra - C3,12521
+Anatomic,Bone,Vertebral Body,Head and Neck,5,VB_C4,C4_VB,Cervical vertebra - C4,12522
+Anatomic,Bone,Vertebral Body,Head and Neck,5,VB_C5,C5_VB,Cervical vertebra - C5,12523
+Anatomic,Bone,Vertebral Body,Head and Neck,5,VB_C6,C6_VB,Cervical vertebra - C6,12524
+Anatomic,Bone,Vertebral Body,Head and Neck,5,VB_C7,C7_VB,Cervical vertebra - C7,12525
+Anatomic,Bone,Spine,Abdomen,4,VB_L,L_VB,Lumbar Vertebrae,72065
+Anatomic,Bone,Spine,Abdomen,5,VB_L1,L1_VB,Lumbar Vertebra L1,13072
+Anatomic,Bone,Spine,Abdomen,5,VB_L2,L2_VB,Lumbar Vertebra L2,13073
+Anatomic,Bone,Spine,Abdomen,5,VB_L3,L3_VB,Lumbar Vertebra L3,13074
+Anatomic,Bone,Spine,Abdomen,5,VB_L4,L4_VB,Lumbar Vertebra L4,13075
+Anatomic,Bone,Spine,Abdomen,5,VB_L5,L5_VB,Lumbar Vertebra L5,13076
+Anatomic,Bone,Spine,Pelvis,4,VB_S,S_VB,Sacral Vertebra,12526
+Anatomic,Bone,Spine,Pelvis,5,VB_S1,S1_VB,Sacral Vertebra S1,13077
+Anatomic,Bone,Spine,Pelvis,5,VB_S2,S2_VB,Sacral Vertebra S2,13078
+Anatomic,Bone,Spine,Pelvis,5,VB_S3,S3_VB,Sacral Vertebra S3,13079
+Anatomic,Bone,Spine,Pelvis,5,VB_S4,S4_VB,Sacral Vertebra S4,13080
+Anatomic,Bone,Spine,Pelvis,5,VB_S5,S5_VB,Sacral Vertebra S5,13081
+Anatomic,Bone,Spine,Thorax,4,VB_T,T_VB,Thoracic Vertebra,9139
+Anatomic,Bone,Spine,Thorax,6,VB_T01,T01_VB,Thoracic Vertebra T1,9165
+Anatomic,Bone,Spine,Thorax,6,VB_T02,T02_VB,Thoracic Vertebra T2,9187
+Anatomic,Bone,Spine,Thorax,6,VB_T03,T03_VB,Thoracic Vertebra T3,9209
+Anatomic,Bone,Spine,Thorax,6,VB_T04,T04_VB,Thoracic Vertebra T4,9248
+Anatomic,Bone,Spine,Thorax,6,VB_T05,T05_VB,Thoracic Vertebra T5,9922
+Anatomic,Bone,Spine,Thorax,6,VB_T06,T06_VB,Thoracic Vertebra T6,9945
+Anatomic,Bone,Spine,Thorax,6,VB_T07,T07_VB,Thoracic Vertebra T7,9968
+Anatomic,Bone,Spine,Thorax,6,VB_T08,T08_VB,Thoracic Vertebra T8,9991
+Anatomic,Bone,Spine,Thorax,6,VB_T09,T09_VB,Thoracic Vertebra T9,10014
+Anatomic,Bone,Spine,Thorax,6,VB_T10,T10_VB,Thoracic Vertebra T10,10037
+Anatomic,Bone,Spine,Thorax,6,VB_T11,T11_VB,Thoracic Vertebra T11,10059
+Anatomic,Bone,Spine,Thorax,6,VB_T12,T12_VB,Thoracic Vertebra T12,10081
+Anatomic,Bone,Vertebral Body,Body,3,VBs,VBs,Vertebral Bodies,11945
+Anatomic,Heart,Ventricle,Thorax,9,Ventricle,Ventricle,Ventricle (cardiac),7100
+Anatomic,Heart,Ventricle,Thorax,11,Ventricle_L,L_Ventricle,Ventricle (cardiac) Left,7101
+Anatomic,Heart,Ventricle,Thorax,11,Ventricle_R,R_Ventricle,Ventricle (cardiac) Right,7098
+Anatomic,Larynx,,Head and Neck,11,VocalCord_L,L_VocalCord,,55459
+Anatomic,Larynx,,Head and Neck,11,VocalCord_R,R_VocalCord,,55458
+Anatomic,Larynx,,Head and Neck,10,VocalCords,VocalCords,Vocal Cords,323919
+Anatomic,Bone,Vomer,Head and Neck,5,Vomer,Vomer,Vomer,9710
+Anatomic,Reproductive,Vulva,Pelvis,5,Vulva,Vulva,Vulva,20462
+Anatomic,Reproductive,Vagina,Pelvis,11,Wall_Vagina,Vagina_Wall,Wall of vagina,19971

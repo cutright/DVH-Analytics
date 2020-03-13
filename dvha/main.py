@@ -17,7 +17,7 @@ from pubsub import pub
 from dvha.db import sql_columns
 from dvha.db.sql_to_python import QuerySQL
 from dvha.db.sql_connector import echo_sql_db, initialize_db
-from dvha.dialogs.main import query_dlg, UserSettings, About
+from dvha.dialogs.main import query_dlg, UserSettings, About, PythonLibraries
 from dvha.dialogs.database import SQLSettingsDialog
 from dvha.dialogs.export import ExportCSVDialog, save_data_to_file
 from dvha.models.import_dicom import ImportDicomFrame
@@ -41,7 +41,7 @@ from dvha.tools.errors import MemoryErrorDialog, PlottingMemoryError
 from dvha.tools.roi_name_manager import DatabaseROIs
 from dvha.tools.stats import StatsData, sync_variables_in_stats_data_objects
 from dvha.tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux, is_mac, get_window_size, \
-    save_object_to_file, load_object_from_file, set_msw_background_color, initialize_directories_and_settings, \
+    save_object_to_file, load_object_from_file, set_msw_background_color, initialize_directories, \
     set_frame_icon
 from dvha.db.sql_columns import all_columns as sql_column_info
 
@@ -196,6 +196,7 @@ class DVHAMainFrame(wx.Frame):
 
         help_menu = wx.Menu()
         menu_github = help_menu.Append(wx.ID_ANY, 'GitHub Page')
+        menu_python_libraries = help_menu.Append(wx.ID_ANY, 'Python Libraries Used')
         menu_report_issue = help_menu.Append(wx.ID_ANY, 'Report an Issue')
         menu_about = help_menu.Append(wx.ID_ANY, '&About')
 
@@ -210,6 +211,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_pref, menu_pref)
         self.Bind(wx.EVT_MENU, self.on_githubpage, menu_github)
         self.Bind(wx.EVT_MENU, self.on_report_issue, menu_report_issue)
+        self.Bind(wx.EVT_MENU, self.on_python_libraries, menu_python_libraries)
         self.Bind(wx.EVT_MENU, self.on_about, menu_about)
         self.Bind(wx.EVT_MENU, self.on_sql, menu_sql)
         self.Bind(wx.EVT_MENU, self.on_toolbar_roi_map, menu_roi_map)
@@ -861,6 +863,10 @@ class DVHAMainFrame(wx.Frame):
         webbrowser.open_new_tab("https://github.com/cutright/DVH-Analytics/issues")
 
     @staticmethod
+    def on_python_libraries(evt):
+        PythonLibraries()
+
+    @staticmethod
     def on_about(evt):
         About()
 
@@ -1029,7 +1035,7 @@ class DVHAMainFrame(wx.Frame):
 class MainApp(wx.App):
     def OnInit(self):
 
-        initialize_directories_and_settings()
+        initialize_directories()
         if is_windows():
             from dvha.tools.windows_reg_edit import set_ie_emulation_level, set_ie_lockdown_level
             set_ie_emulation_level()

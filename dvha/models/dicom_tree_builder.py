@@ -72,6 +72,7 @@ class DicomTreeBuilder:
         self.file_tree = {}
         self.roi_name_map = {}
         self.roi_nodes = {}
+        self.roi_name_over_ride = {}
 
         self.__do_subscribe()
         self.__set_images()
@@ -159,7 +160,8 @@ class DicomTreeBuilder:
             self.tree_ctrl_rois.SetItemBackgroundColour(self.root_rois, None)
             dicom_rt_struct = dicomparser.DicomParser(self.dicom_file_paths[plan_uid]['rtstruct'][0])
             structures = dicom_rt_struct.GetStructures()
-            self.roi_name_map = {structures[key]['name']: {'key': key, 'type': structures[key]['type']}
+            self.roi_name_map = {structures[key]['name']: {'key': key,
+                                                           'type': structures[key]['type']}
                                  for key in list(structures) if structures[key]['type'] != 'MARKER'}
             self.roi_nodes = {}
             rois = list(self.roi_name_map)
@@ -168,6 +170,7 @@ class DicomTreeBuilder:
                 self.roi_nodes[roi] = self.tree_ctrl_rois.AppendItem(self.root_rois, roi, ct_type=0)
                 roi_type = [None, 'PTV'][self.roi_name_map[roi]['type'] == 'PTV']
                 self.update_tree_ctrl_roi_with_roi_type(roi, roi_type=roi_type)
+            self.apply_roi_name_over_rides(plan_uid)
         else:
             self.tree_ctrl_rois.SetItemBackgroundColour(self.root_rois, wx.Colour(255, 0, 0))
 
@@ -178,6 +181,31 @@ class DicomTreeBuilder:
             text = roi
         self.tree_ctrl_rois.SetItemText(self.roi_nodes[roi], text)
 
+    def apply_roi_name_over_rides(self, plan_uid):
+        if plan_uid in list(self.roi_name_over_ride):
+            for roi_name, over_ride in self.roi_name_over_ride[plan_uid].items():
+                if roi_name in list(self.roi_name_map):
+                    self.roi_name_map[over_ride] = self.roi_name_map.pop(roi_name)
+                if roi_name in list(self.roi_nodes):
+                    self.roi_nodes[over_ride] = self.roi_nodes.pop(roi_name)
+                    self.tree_ctrl_rois.SetItemText(self.roi_nodes[over_ride], over_ride)
+
+    def set_roi_name_over_ride(self, plan_uid, roi_name, roi_name_over_ride):
+
+        # get all plan_uids with this struct file (e.g., Eclipse plans with multiple Rxs)
+        rt_file_path = self.dicom_file_paths[plan_uid]['rtstruct'][0]
+        plan_uids = []
+        for uid, file_paths in self.dicom_file_paths.items():
+            if file_paths['rtstruct'] and file_paths['rtstruct'][0] == rt_file_path:
+                plan_uids.append(uid)
+
+        for uid in plan_uids:
+            if uid not in list(self.roi_name_over_ride):
+                self.roi_name_over_ride[uid] = {}
+            self.roi_name_over_ride[uid][roi_name] = roi_name_over_ride
+
+        self.apply_roi_name_over_rides(plan_uid)
+
     def add_patient_node(self, mrn):
         """
         Add a patient node to tree_ctrl_files
@@ -185,7 +213,6 @@ class DicomTreeBuilder:
         :type mrn: str
         """
         if mrn not in list(self.patient_nodes):
-            # TODO: get patient name for tree item title
             self.patient_nodes[mrn] = self.tree_ctrl_files.AppendItem(self.root_files, mrn, ct_type=1)
             # self.patient_nodes[mrn].Set3State(True)
             self.tree_ctrl_files.SetPyData(self.patient_nodes[mrn], None)
@@ -468,16 +495,16 @@ class DicomDirectoryParserWorker(Thread):
 
         wx.CallAfter(pub.sendMessage, "pre_import_progress_update", msg=msg)
 
-        try:
-            ds = dicom.read_file(file_path, stop_before_pixels=True, force=True)
-        except InvalidDicomError:
+        file_name = os.path.basename(file_path)
+        file_ext = os.path.splitext(file_path)[1]
+
+        if file_ext and file_ext.lower() != '.dcm' or file_name.lower() == 'dicomdir':
             ds = None
-        except MemoryError as e:
-            # MIM metacache files throw memory errors instead of InvalidDicomError
-            if 'metacache.mim' in file_path:
+        else:
+            try:
+                ds = dicom.read_file(file_path, stop_before_pixels=True, force=True)
+            except InvalidDicomError:
                 ds = None
-            else:
-                raise MemoryError
 
         if ds is not None:
 
@@ -502,7 +529,7 @@ class DicomDirectoryParserWorker(Thread):
                     self.dicom_files[modality].append(file_path)
 
                     # All RT Plan files need to be found first
-                    if modality == 'rtplan':
+                    if modality == 'rtplan' and hasattr(ds, 'ReferencedStructureSetSequence'):
                         uid = ds.ReferencedStructureSetSequence[0].ReferencedSOPInstanceUID
                         mrn = self.dicom_tag_values[file_path]['mrn']
                         self.uid_to_mrn[uid] = ds.PatientID

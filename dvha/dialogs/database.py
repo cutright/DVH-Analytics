@@ -18,7 +18,7 @@ from os import mkdir, rename
 from os.path import join, basename
 from dvha.db.sql_connector import DVH_SQL, echo_sql_db, is_file_sqlite_db
 from dvha.models.import_dicom import ImportDicomFrame
-from dvha.paths import IMPORTED_DIR, INBOX_DIR, DATA_DIR
+from dvha.paths import DATA_DIR
 from dvha.tools.errors import SQLError, SQLErrorDialog
 from dvha.tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file, get_file_paths,\
     delete_imported_dicom_files, move_imported_dicom_files, MessageDialog
@@ -572,8 +572,9 @@ class ReimportDialog(wx.Dialog):
             dicom_files = cnx.get_dicom_file_paths(uid=self.uid)
             if self.delete_from_db:
                 cnx.delete_rows("study_instance_uid = '%s'" % self.uid)
-        move_imported_dicom_files(dicom_files, INBOX_DIR)
-        ImportDicomFrame(self.roi_map, self.options, inbox=INBOX_DIR, auto_parse=True)
+        inbox = self.options.INBOX_DIR
+        move_imported_dicom_files(dicom_files, inbox)
+        ImportDicomFrame(self.roi_map, self.options, inbox=inbox, auto_parse=True)
 
 
 class SQLSettingsDialog(wx.Dialog):
@@ -757,35 +758,40 @@ class SQLSettingsDialog(wx.Dialog):
 # action_yes and/or action_no for Yes/No button clicks
 # ------------------------------------------------------
 class DeleteAllData(MessageDialog):
-    def __init__(self, parent):
+    def __init__(self, parent, options):
         MessageDialog.__init__(self, parent, "Delete All Data in Database")
+        self.options = options
 
     def action_yes(self):
         with DVH_SQL() as cnx:
             cnx.reinitialize_database()
-        MoveFilesToInbox(self.parent)
+        MoveFilesToInbox(self.parent, self.options.INBOX_DIR, self.options.IMPORTED_DIR)
 
 
 class MoveFilesToInbox(MessageDialog):
-    def __init__(self, parent):
+    def __init__(self, parent, inbox_dir, imported_dir):
         MessageDialog.__init__(self, parent, "Move files to inbox?")
+        self.parent = parent
+        self.inbox_dir = inbox_dir
+        self.imported_dir = imported_dir
 
     def action_yes(self):
-        new_dir = join(INBOX_DIR, "previously_imported %s" %
+        new_dir = join(self.inbox_dir, "previously_imported %s" %
                        str(datetime.now()).split('.')[0].replace(':', '-').replace(' ', '_'))
-        rename(IMPORTED_DIR, new_dir)
-        mkdir(IMPORTED_DIR)
+        rename(self.imported_dir, new_dir)
+        mkdir(self.imported_dir)
 
     def action_no(self):
-        DeleteImportedDirectory(self.parent)
+        DeleteImportedDirectory(self.parent, self.imported_dir)
 
 
 class DeleteImportedDirectory(MessageDialog):
-    def __init__(self, parent):
+    def __init__(self, parent, directory):
         MessageDialog.__init__(self, parent, "Delete Imported Directory?")
+        self.directory = directory
 
     def action_yes(self):
-        delete_directory_contents(IMPORTED_DIR)
+        delete_directory_contents(self.directory)
 
 
 class MoveFiles(MessageDialog):
@@ -848,4 +854,4 @@ class RebuildDB(MessageDialog):
         with DVH_SQL() as cnx:
             cnx.reinitialize_database()
 
-        ImportDicomFrame(self.roi_map, self.options, inbox=IMPORTED_DIR, auto_parse=True)
+        ImportDicomFrame(self.roi_map, self.options, inbox=self.options.IMPORTED_DIR, auto_parse=True)

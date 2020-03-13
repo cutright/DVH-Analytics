@@ -8,4 +8,4 @@ include dvha/icons/*.png
 include dvha/icons/dvha.icns
 include dvha/icons/dvha.ico
 include dvha/db/*.sql
-include dvha/db/*.roi
+include dvha/tools/*.csv

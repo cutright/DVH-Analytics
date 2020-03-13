@@ -29,7 +29,7 @@ from dvha.db.dicom_parser import DICOM_Parser, PreImportData
 from dvha.dialogs.main import DatePicker
 from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, DelPhysicianROI, AssignVariation, DelVariation,\
     AddROIType, RoiManager, ChangePlanROIName
-from dvha.paths import IMPORT_SETTINGS_PATH, parse_settings_file, ICONS, TEMP_DIR
+from dvha.paths import ICONS, TEMP_DIR
 from dvha.tools.dicom_dose_sum import DoseGrid
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
@@ -37,7 +37,6 @@ from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move
     set_frame_icon, PopupMenu
 
 
-# TODO: Provide methods to write over-rides to DICOM file
 class ImportDicomFrame(wx.Frame):
     """
     Class used to generate the DICOM import GUI
@@ -48,17 +47,16 @@ class ImportDicomFrame(wx.Frame):
         :type roi_map: DatabaseROIs
         :param options: user options object
         :type options: Options
-        :param inbox: optional initial directory
-        :type inbox: str
+        :param inbox: set the inbox, defaults to value in options if None
         """
         wx.Frame.__init__(self, None, title='Import DICOM')
         set_frame_icon(self)
 
         set_msw_background_color(self)  # If windows, change the background color
 
-        self.initial_inbox = inbox
         self.options = options
         self.auto_parse = auto_parse
+        self.inbox = inbox
 
         with DVH_SQL() as cnx:
             cnx.initialize_database()
@@ -71,7 +69,7 @@ class ImportDicomFrame(wx.Frame):
         self.roi_map = roi_map
         self.selected_roi = None
 
-        self.start_path = parse_settings_file(IMPORT_SETTINGS_PATH)['inbox']
+        self.start_path = self.options.INBOX_DIR
 
         self.checkbox = {}
         keys = ['birth_date', 'sim_study_date', 'physician', 'tx_site', 'rx_dose']
@@ -129,7 +127,7 @@ class ImportDicomFrame(wx.Frame):
 
         self.tree_ctrl_roi = CustomTreeCtrl(self.panel_roi_tree, wx.ID_ANY, agwStyle=TR_DEFAULT_STYLE)
         self.tree_ctrl_roi.SetBackgroundColour(wx.WHITE)
-        self.tree_ctrl_roi_root = self.tree_ctrl_roi.AddRoot('RT Structures', ct_type=0)
+        self.tree_ctrl_roi_root = self.tree_ctrl_roi.AddRoot('RT Structures (right-click an ROI to edit)', ct_type=0)
 
         self.checkbox_include_uncategorized = wx.CheckBox(self, wx.ID_ANY, "Import uncategorized ROIs")
 
@@ -225,7 +223,11 @@ class ImportDicomFrame(wx.Frame):
         self.button_save_roi_map.SetToolTip("Save ROI Map changes.")
 
     def __do_layout(self):
-        self.label = {}
+        labels = {'mrn': 'MRN:', 'study_instance_uid': "Study Instance UID:", 'birth_date': "Birthdate:",
+                  'sim_study_date': "Sim Study Date:", 'physician': "Physician:", 'tx_site': "Tx Site:",
+                  'rx_dose': "Rx Dose (Gy):", 'physician_roi': "Physician's ROI Label:", 'roi_type': "ROI Type:"}
+        self.label = {key: wx.StaticText(self, wx.ID_ANY, label) for key, label in labels.items()}
+
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_warning = wx.BoxSizer(wx.HORIZONTAL)
@@ -291,18 +293,15 @@ class ImportDicomFrame(wx.Frame):
         sizer_browse_and_tree.Add(sizer_studies, 1, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
         sizer_main.Add(sizer_browse_and_tree, 1, wx.EXPAND, 0)
 
-        self.label['mrn'] = wx.StaticText(self, wx.ID_ANY, "MRN:")
         sizer_mrn.Add(self.label['mrn'], 0, 0, 0)
         sizer_mrn.Add(self.input['mrn'], 0, wx.EXPAND, 0)
 
         sizer_plan_data.Add(sizer_mrn, 1, wx.ALL | wx.EXPAND, 5)
-        self.label['study_instance_uid'] = wx.StaticText(self, wx.ID_ANY, "Study Instance UID:")
         sizer_uid.Add(self.label['study_instance_uid'], 0, 0, 0)
         sizer_uid.Add(self.input['study_instance_uid'], 0, wx.EXPAND, 0)
         sizer_uid.Add(self.button_delete_study, 0, wx.ALL | wx.ALIGN_CENTER, 5)
 
         sizer_plan_data.Add(sizer_uid, 1, wx.ALL | wx.EXPAND, 5)
-        self.label['birth_date'] = wx.StaticText(self, wx.ID_ANY, "Birthdate:")
         sizer_birth_date.Add(self.label['birth_date'], 0, 0, 0)
         sizer_birth_date_text_button.Add(self.input['birth_date'], 0, 0, 0)
         sizer_birth_date_text_button.Add(self.button_edit_birth_date, 0, wx.LEFT, 10)
@@ -312,7 +311,6 @@ class ImportDicomFrame(wx.Frame):
         sizer_birth_date.Add(sizer_birth_date_checkbox, 1, wx.EXPAND, 0)
         sizer_plan_data.Add(sizer_birth_date, 1, wx.ALL | wx.EXPAND, 5)
 
-        self.label['sim_study_date'] = wx.StaticText(self, wx.ID_ANY, "Sim Study Date:")
         sizer_sim_study_date.Add(self.label['sim_study_date'], 0, 0, 0)
         sizer_sim_study_date_text_button.Add(self.input['sim_study_date'], 0, 0, 0)
         sizer_sim_study_date_text_button.Add(self.button_edit_sim_study_date, 0, wx.LEFT, 10)
@@ -322,7 +320,6 @@ class ImportDicomFrame(wx.Frame):
         sizer_sim_study_date.Add(sizer_sim_study_date_checkbox, 1, wx.EXPAND, 0)
         sizer_plan_data.Add(sizer_sim_study_date, 1, wx.ALL | wx.EXPAND, 5)
 
-        self.label['physician'] = wx.StaticText(self, wx.ID_ANY, "Physician:")
         sizer_physician_input.Add(self.label['physician'], 0, 0, 0)
         sizer_physician_input_and_button.Add(self.input['physician'], 0, 0, 0)
         sizer_physician_input_and_button.Add(self.button_add_physician, 0, wx.LEFT, 5)
@@ -333,7 +330,6 @@ class ImportDicomFrame(wx.Frame):
         sizer_physician.Add(sizer_physician_checkbox, 1, wx.EXPAND, 0)
         sizer_plan_data.Add(sizer_physician, 1, wx.ALL | wx.EXPAND, 5)
 
-        self.label['tx_site'] = wx.StaticText(self, wx.ID_ANY, "Tx Site:")
         sizer_tx_site.Add(self.label['tx_site'], 0, 0, 0)
         sizer_tx_site.Add(self.input['tx_site'], 0, wx.EXPAND, 0)
         sizer_tx_site_checkbox.Add(self.checkbox['tx_site_1'], 0, wx.RIGHT, 20)
@@ -341,7 +337,6 @@ class ImportDicomFrame(wx.Frame):
         sizer_tx_site.Add(sizer_tx_site_checkbox, 1, wx.EXPAND, 0)
         sizer_plan_data.Add(sizer_tx_site, 1, wx.ALL | wx.EXPAND, 5)
 
-        self.label['rx_dose'] = wx.StaticText(self, wx.ID_ANY, "Rx Dose (Gy):")
         # self.label['fx_grp'] = wx.StaticText(self, wx.ID_ANY, "Fx Group:")
         sizer_rx_input.Add(self.label['rx_dose'], 0, 0, 0)
         sizer_rx_input.Add(self.input['rx_dose'], 0, 0, 0)
@@ -362,13 +357,11 @@ class ImportDicomFrame(wx.Frame):
         sizer_roi_map.Add(self.panel_roi_tree, 1, wx.EXPAND, 0)
         sizer_roi_map.Add(self.button_roi_manager, 0, wx.EXPAND | wx.ALL, 5)
 
-        self.label['physician_roi'] = wx.StaticText(self, wx.ID_ANY, "Physician's ROI Label:")
         sizer_physician_roi_with_add = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician_roi.Add(self.label['physician_roi'], 0, 0, 0)
         sizer_physician_roi.Add(self.input_roi['physician'], 0, wx.EXPAND, 0)
         sizer_physician_roi_with_add.Add(sizer_physician_roi, 1, wx.EXPAND, 0)
 
-        self.label['roi_type'] = wx.StaticText(self, wx.ID_ANY, "ROI Type:")
         sizer_roi_type_with_add = wx.BoxSizer(wx.HORIZONTAL)
         sizer_roi_type.Add(self.label['roi_type'], 0, 0, 0)
         sizer_roi_type.Add(self.input_roi['type'], 0, wx.EXPAND, 0)
@@ -399,9 +392,13 @@ class ImportDicomFrame(wx.Frame):
 
     def run(self):
         self.Show()
-        if self.initial_inbox is None or not isdir(self.initial_inbox):
-            self.initial_inbox = ''
-        self.text_ctrl_directory.SetValue(self.initial_inbox)
+        if self.inbox is not None and isdir(self.inbox):
+            inbox = self.inbox
+        elif isdir(self.options.INBOX_DIR):
+            inbox = self.options.INBOX_DIR
+        else:
+            inbox = ''
+        self.text_ctrl_directory.SetValue(inbox)
 
         if self.auto_parse:
             self.dicom_importer = self.get_importer()
@@ -414,7 +411,8 @@ class ImportDicomFrame(wx.Frame):
         self.do_unsubscribe()
         self.Destroy()
 
-    def do_unsubscribe(self):
+    @staticmethod
+    def do_unsubscribe():
         pub.unsubAll(topicName="parse_dicom_data")
         pub.unsubAll(topicName="set_pre_import_parsed_dicom_data")
         pub.unsubAll(topicName="pre_import_complete")
@@ -478,6 +476,7 @@ class ImportDicomFrame(wx.Frame):
                 self.input['tx_site'].SetValue(data.tx_site)
                 self.input['rx_dose'].SetValue(str(data.rx_dose))
                 self.dicom_importer.update_mapped_roi_status(data.physician)
+                self.update_all_roi_text_with_roi_type()
                 wx.EndBusyCursor()
                 self.update_physician_roi_choices()
                 self.enable_inputs()
@@ -506,9 +505,18 @@ class ImportDicomFrame(wx.Frame):
             physician = self.input['physician'].GetValue()
             is_mapped = not evt.GetItem().GetImage()
 
+            # TODO: This block of code works, but is overly complicated
             msg_prepend = "%s %s as" % (['Add', 'Remove'][is_mapped], roi_name)
             labels = ["%s %s" % (msg_prepend, roi_type) for roi_type in ['Physician ROI', 'Variation']]
-            dlg_objects = [DelPhysicianROI, DelVariation] if is_mapped else [AddPhysicianROI, AssignVariation]
+            if is_mapped:
+                if self.roi_map.is_physician_roi(roi_name, physician):
+                    dlg_objects = [DelPhysicianROI]
+                    labels = [labels[0]]
+                else:
+                    dlg_objects = [DelVariation]
+                    labels = [labels[1]]
+            else:
+                dlg_objects = [AddPhysicianROI, AssignVariation]
             pre_func = partial(self.roi_tree_right_click_action, physician, roi_name)
 
             popup = PopupMenu(self)
@@ -516,7 +524,19 @@ class ImportDicomFrame(wx.Frame):
                 popup.add_menu_item(label, partial(pre_func, dlg_objects[i]))
             # if is_mapped:
             #     popup.add_menu_item("Do Not Import", partial(pre_func, dlg_objects[0]))
+
+            popup.add_menu_item('Edit ROI Name', partial(self.change_plan_roi_name, evt))
+
             popup.run()
+
+    def change_plan_roi_name(self, evt_tree, *evt):
+        ChangePlanROIName(self.tree_ctrl_roi,
+                          evt_tree.GetItem(),
+                          self.selected_uid,
+                          self.parsed_dicom_data[self.selected_uid],
+                          self.dicom_importer)
+        self.dicom_importer.update_mapped_roi_status(self.input['physician'].GetValue())
+        self.update_physician_roi_choices()
 
     def update_input_roi_physician_enable(self):
         if self.selected_roi:
@@ -552,6 +572,13 @@ class ImportDicomFrame(wx.Frame):
     def update_roi_text_with_roi_type(self, roi, roi_type):
         roi_type_for_tree_text = [None, 'PTV'][roi_type == 'PTV']
         self.dicom_importer.update_tree_ctrl_roi_with_roi_type(roi, roi_type=roi_type_for_tree_text)
+
+    def update_all_roi_text_with_roi_type(self):
+        self.parsed_dicom_data[self.selected_uid].autodetect_target_roi_type()
+        for roi in list(self.dicom_importer.roi_name_map):
+            roi_key = self.dicom_importer.roi_name_map[roi]['key']
+            roi_type = self.parsed_dicom_data[self.selected_uid].get_roi_type(roi_key)
+            self.update_roi_text_with_roi_type(roi, roi_type)
 
     def clear_plan_data(self):
         for input_obj in self.input.values():
@@ -668,6 +695,7 @@ class ImportDicomFrame(wx.Frame):
 
     def on_apply_plan(self, evt):
         wx.BeginBusyCursor()
+        current_physician = self.input['physician'].GetValue()
         self.on_physician_change()
         over_rides = self.parsed_dicom_data[self.selected_uid].plan_over_rides
         apply_all_selected = False
@@ -694,12 +722,16 @@ class ImportDicomFrame(wx.Frame):
             self.validate()
         else:
             self.validate(uid=self.selected_uid)
+
+        if current_physician != self.input['physician']:
+            self.update_all_roi_text_with_roi_type()
+
         self.update_warning_label()
         wx.EndBusyCursor()
 
     def on_apply_roi(self, evt):
         if self.allow_input_roi_apply:
-            roi_type_over_ride = self.parsed_dicom_data[self.selected_uid].roi_type_over_ride
+            roi_type_over_ride = self.parsed_dicom_data[self.selected_uid].roi_over_ride['type']
             key = self.dicom_importer.roi_name_map[self.selected_roi]['key']
             roi_type_over_ride[key] = self.input_roi['type'].GetValue()
             self.validate(uid=self.selected_uid)
@@ -903,19 +935,10 @@ class ImportDicomFrame(wx.Frame):
         if physician_roi not in self.roi_map.get_physician_rois(physician):
             self.roi_map.add_physician_roi(physician, physician_roi)
         if variation not in self.roi_map.get_variations(physician, physician_roi):
-            self.roi_map.add_variation(physician, physician_roi, variation)
+            self.roi_map.add_variations(physician, physician_roi, variation)
 
         self.dicom_importer.update_mapped_roi_status(physician)
         self.update_input_roi_physician_enable()
-
-    def on_roi_tree_double_click(self, evt):
-        ChangePlanROIName(self.tree_ctrl_roi,
-                          evt.GetItem(),
-                          self.input['mrn'].GetValue(),
-                          self.input['study_instance_uid'].GetValue(),
-                          self.parsed_dicom_data[self.input['study_instance_uid'].GetValue()])
-        # self.dicom_dir = self.parsed_dicom_data[self.input['study_instance_uid'].GetValue()]
-        # self.dicom_dir.update_mapped_roi_status(self.input['physician'].GetValue())
 
 
 class ImportStatusDialog(wx.Dialog):
@@ -1101,7 +1124,7 @@ class StudyImporter:
 
         mrn = parsed_data.mrn
         study_uid = parsed_data.study_instance_uid_to_be_imported
-        structures = parsed_data.dicompyler_rt_structures
+        structures = parsed_data.structure_name_and_type
         roi_name_map = {key: structures[key]['name'] for key in list(structures) if structures[key]['type'] != 'MARKER'}
         data_to_import = {'Plans': [parsed_data.get_plan_row()],
                           'Rxs': parsed_data.get_rx_rows(),
@@ -1301,6 +1324,7 @@ class ImportWorker(Thread):
         :param keep_in_inbox: Set to False to move files, True to copy files to imported
         :type keep_in_inbox: bool
         :param roi_map: pass the latest roi_map
+
         """
         Thread.__init__(self)
 

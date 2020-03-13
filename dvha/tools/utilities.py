@@ -14,17 +14,20 @@ General utilities for DVHA
 import wx
 from datetime import datetime
 from dateutil.parser import parse as parse_date
+import linecache
 import numpy as np
 from os import walk, listdir, unlink, mkdir, rmdir, chdir, sep
 from os.path import join, isfile, isdir, splitext, basename, dirname, realpath
-import shutil
-import pydicom as dicom
 import pickle
-from dvha.db.sql_connector import DVH_SQL
-from dvha.paths import IMPORT_SETTINGS_PATH, SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
-    APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR, MODELS_DIR, WIN_APP_ICON
+import pydicom
+from pydicom.uid import ImplicitVRLittleEndian
+import shutil
+from subprocess import check_output
+import sys
 import tracemalloc
-import linecache
+from dvha.db.sql_connector import DVH_SQL
+from dvha.paths import SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
+    APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR, MODELS_DIR, WIN_APP_ICON, PIP_LIST_PATH
 
 
 IGNORED_FILES = ['.ds_store']
@@ -47,15 +50,6 @@ def is_mac():
     return wx.Platform == '__WXMAC__'
 
 
-def initialize_directories_and_settings():
-    """
-    Various methods of DVHA expect certain directories and files to be available, this will check for their existence
-    and create if needed
-    """
-    initialize_directories()
-    initialize_default_import_settings_file()
-
-
 def initialize_directories():
     """
     Based on paths.py, create required directories if they do not exist
@@ -66,33 +60,6 @@ def initialize_directories():
     for directory in directories:
         if not isdir(directory):
             mkdir(directory)
-
-
-def initialize_default_import_settings_file():
-    """
-    Create default import settings file
-    """
-    if not isfile(IMPORT_SETTINGS_PATH):
-        write_import_settings({'inbox': INBOX_DIR,
-                               'imported': IMPORTED_DIR,
-                               'review': REVIEW_DIR})
-
-
-def write_import_settings(directories):
-    """
-    Create a file defining the location of inbox, imported, and review directories.  This file can be edited
-    through the DVHA GUI in user settings.
-    :param directories: absolute directory paths for inbox, imported, and review
-    :type directories: dict
-    """
-
-    import_text = ['inbox ' + directories['inbox'],
-                   'imported ' + directories['imported'],
-                   'review ' + directories['review']]
-    import_text = '\n'.join(import_text)
-
-    with open(IMPORT_SETTINGS_PATH, "w") as text_file:
-        text_file.write(import_text)
 
 
 def write_sql_connection_settings(config):
@@ -451,7 +418,7 @@ def delete_imported_dicom_files(dicom_files):
         remaining_files = listdir(directory)
         for f in remaining_files:
             try:
-                uid = str(dicom.read_file(join(directory, f)).StudyInstanceUID)
+                uid = str(pydicom.read_file(join(directory, f)).StudyInstanceUID)
                 if uid == str(dicom_files['study_instance_uid'][i]):
                     delete_file(f)
             except Exception:
@@ -482,7 +449,7 @@ def move_imported_dicom_files(dicom_files, new_dir):
         files = []
         for f in remaining_files:
             try:
-                uid = str(dicom.read_file(join(directory, f)).StudyInstanceUID)
+                uid = str(pydicom.read_file(join(directory, f)).StudyInstanceUID)
                 if uid == str(dicom_files['study_instance_uid'][i]):
                     files.append(f)
             except Exception:
@@ -763,3 +730,38 @@ class PopupMenu:
 
         self.parent.PopupMenu(popup_menu)
         popup_menu.Destroy()
+
+
+def validate_transfer_syntax_uid(data_set):
+    meta = pydicom.Dataset()
+    meta.ImplementationClassUID = pydicom.uid.generate_uid()
+    meta.TransferSyntaxUID = ImplicitVRLittleEndian
+    new_data_set = pydicom.FileDataset(filename_or_obj=None, dataset=data_set, is_little_endian=True,
+                                       file_meta=meta)
+    new_data_set.is_little_endian = True
+    new_data_set.is_implicit_VR = True
+
+    return new_data_set
+
+
+def get_installed_python_libraries():
+    """Use pip command line function 'list' to extract the currently installed libraries"""
+
+    try:
+        output = str(check_output(['pip', 'list', '--local']), 'utf-8').split('\n')
+    except Exception:
+        # If running from PyInstaller, this will fail, pickle a file prior to freezing with save_pip_list
+        return load_object_from_file(PIP_LIST_PATH)
+
+    python_version = '.'.join(str(i) for i in sys.version_info[:3])
+    libraries = {'Library': ['python'], 'Version': [python_version]}
+    for row in output[2:]:  # ignore first two rows which are column headers and a separator
+        data = [v for v in row.strip().split(' ') if v]
+        if data:
+            libraries['Library'].append(data[0])
+            libraries['Version'].append(data[1])
+    return libraries
+
+
+def save_pip_list():
+    save_object_to_file(get_installed_python_libraries(), PIP_LIST_PATH)

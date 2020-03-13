@@ -15,15 +15,13 @@ from os.path import isfile
 from os import unlink
 import hashlib
 from copy import deepcopy
-from dvha.paths import OPTIONS_PATH, OPTIONS_CHECKSUM_PATH
+from dvha.paths import OPTIONS_PATH, OPTIONS_CHECKSUM_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR
 
 
 class DefaultOptions:
-    """
-    Create default options, to be inherited by Options class
-    """
+    """Create default options, to be inherited by Options class"""
     def __init__(self):
-        self.VERSION = '0.7.3post1'
+        self.VERSION = '0.7.4'
 
         self.DB_TYPE = 'sqlite'
         self.SQL_PGSQL_IP_HIST = []
@@ -153,12 +151,18 @@ class DefaultOptions:
         self.COMPLEXITY_SCORE_X_WEIGHT = 1.
         self.COMPLEXITY_SCORE_Y_WEIGHT = 1.
 
-        self.ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV', 'EXTERNAL',
-                          'FIDUCIAL', 'IMPLANT', 'OPTIMIZATION', 'PRV', 'SUPPORT', 'NONE']
+        # Per TG-263 (plus ITV)
+        self.ROI_TYPES = ['ORGAN', 'PTV', 'ITV', 'CTV', 'GTV',
+                          'AVOIDANCE', 'BOLUS', 'CAVITY', 'CONTRAST_AGENT', 'EXTERNAL',
+                          'IRRAD_VOLUME', 'REGISTRATION', 'TREATED_VOLUME']
 
         self.KEEP_IN_INBOX = 0
         self.SEARCH_SUBFOLDERS = 1
         self.IMPORT_UNCATEGORIZED = 0
+
+        self.INBOX_DIR = INBOX_DIR
+        self.IMPORTED_DIR = IMPORTED_DIR
+        self.REVIEW_DIR = REVIEW_DIR
 
 
 class Options(DefaultOptions):
@@ -239,9 +243,8 @@ class Options(DefaultOptions):
             if current_checksum == stored_checksum:
                 return True
         except Exception:
-            pass
-        print('Corrupted options file detected. Loading default options.')
-        return False
+            print('Corrupted options file detected. Loading default options.')
+            return False
 
     def restore_defaults(self):
         if isfile(OPTIONS_PATH):

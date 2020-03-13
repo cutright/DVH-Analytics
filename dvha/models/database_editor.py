@@ -192,7 +192,6 @@ class DatabaseEditorFrame(wx.Frame):
 
         condition = self.text_ctrl_condition.GetValue()
 
-        wait = wx.BusyInfo("Querying data\nPlease wait...")
         with DVH_SQL() as cnx:
             try:
                 data = cnx.query(table, ','.join(columns), condition, bokeh_cds=True)
@@ -200,7 +199,6 @@ class DatabaseEditorFrame(wx.Frame):
             except SQLError as e:
                 SQLErrorDialog(self, e)
                 self.data_query_results.clear()
-        del wait
 
     def on_clear(self, evt):
         self.data_query_results.clear()
@@ -222,7 +220,6 @@ class DatabaseEditorFrame(wx.Frame):
         self.change_or_delete_dlg(ChangePatientIdentifierDialog)
 
     def on_delete_study(self, evt):
-        # TODO: Needs an Are you sure? dialog
         self.change_or_delete_dlg(DeletePatientDialog)
 
     def change_or_delete_dlg(self, class_type):
@@ -251,7 +248,7 @@ class DatabaseEditorFrame(wx.Frame):
         RebuildDB(self, self.roi_map, self.options)
 
     def on_delete_all_data(self, evt):
-        DeleteAllData(self)
+        DeleteAllData(self, self.options)
 
     def on_export_csv(self, evt):
         save_data_to_file(self, "Export Data Table to CSV", self.data_query_results.get_csv())

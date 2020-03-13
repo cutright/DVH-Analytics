@@ -1942,7 +1942,7 @@ class PlotROIMap(Plot):
 
         self.bokeh_layout = column(self.figure)
 
-    def update_roi_map_source_data(self, physician, plot_type=None):
+    def update_roi_map_source_data(self, physician, plot_type=None, y_shift=None):
         # TODO: allow ability to define initial viewing range
         self.set_figure_dimensions()
         new_data = self.roi_map.get_all_institutional_roi_visual_coordinates(physician)
@@ -1961,11 +1961,22 @@ class PlotROIMap(Plot):
 
         new_data = self.roi_map.get_all_institutional_roi_visual_coordinates(physician,
                                                                              ignored_physician_rois=ignored_roi)
+        # Shift coordinates so plot is initially viewing the provided shift or physician_roi
+        if y_shift is not None and new_data is not None:
+            try:
+                if type(y_shift) is str:
+                    index = new_data['name'].index(y_shift)
+                    y_shift = new_data['y'][index] + 3
+                for key in ['y', 'y0', 'y1']:
+                    new_data[key] = (np.array(new_data[key]) - y_shift).tolist()
+            except ValueError:
+                pass
 
         self.figure.title.text = 'ROI Map for %s' % physician
         if new_data:
             self.source['map'].data = new_data
-            self.figure.y_range.bounds = (min(self.source['map'].data['y']) - 3, max(self.source['map'].data['y']) + 3)
+            self.figure.y_range.bounds = (min(self.source['map'].data['y1']) - 6,
+                                          max(self.source['map'].data['y1']) + 6)
             self.update_bokeh_layout_in_wx_python()
         else:
             self.clear_source('map')

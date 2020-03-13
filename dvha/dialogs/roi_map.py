@@ -13,10 +13,11 @@ GUI tools to edit the ROI Name map
 import wx
 from functools import partial
 from dvha.models.data_table import DataTable
-from dvha.tools.errors import ROIVariationErrorDialog
+from dvha.tools.errors import ROIVariationErrorDialog, ROIVariationError
 from dvha.tools.name_prediction import ROINamePredictor
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog
-from dvha.tools.roi_name_manager import ROIVariationError, clean_name
+from dvha.tools.roi_map_generator import ROIMapGenerator
+from dvha.tools.roi_name_manager import clean_name
 
 
 class AddPhysician(wx.Dialog):
@@ -33,7 +34,7 @@ class AddPhysician(wx.Dialog):
         wx.Dialog.__init__(self, None)
 
         self.roi_map = roi_map
-        physicians = ['NONE'] + self.roi_map.get_physicians()
+        physicians = ['NONE'] + [p for p in list(self.roi_map.physicians) if p != 'DEFAULT']
         if initial_physician and initial_physician.lower() not in {'default'}:
             self.initial_physician = initial_physician
         else:
@@ -95,7 +96,11 @@ class AddPhysician(wx.Dialog):
 
     def action(self):
         if self.combo_box_copy_from.GetValue().lower() == 'none':
-            self.roi_map.add_physician(self.text_ctrl_physician.GetValue(), add_institutional_rois=False)
+            # self.roi_map.add_physician(self.text_ctrl_physician.GetValue(), add_institutional_rois=False)
+            physician = self.text_ctrl_physician.GetValue()
+            dlg = TG263Dialog(physician, self.roi_map)
+            self.roi_map.import_physician_roi_map(dlg.map_file_path)
+
         else:
             self.roi_map.copy_physician(self.text_ctrl_physician.GetValue(),
                                         copy_from=self.combo_box_copy_from.GetValue(),
@@ -108,11 +113,89 @@ class AddPhysician(wx.Dialog):
         self.Destroy()
 
     def update_enable(self, *evt):
-        invalid_choices = list(set(self.roi_map.get_physicians())) + ['']
-        new = clean_name(self.text_ctrl_physician.GetValue()).upper()
+        invalid_choices = list(self.roi_map.physicians) + ['']
+        new = self.text_ctrl_physician.GetValue()
         self.button_ok.Enable(new not in invalid_choices)
         disable = self.text_ctrl_physician.GetValue() == '' or self.combo_box_copy_from.GetValue().lower() == 'none'
         self.checkbox_variations.Enable(not disable)
+
+
+class TG263Dialog(wx.Dialog):
+    def __init__(self, physician, roi_map):
+        wx.Dialog.__init__(self, None)
+
+        self.physician = physician
+        self.roi_map = roi_map
+        self.generator = ROIMapGenerator()
+
+        self.map_file_path = None
+
+        self.checkbox_keys = self.generator.anatomic_groups
+        self.checkbox = {key: wx.CheckBox(self, wx.ID_ANY, key) for key in self.checkbox_keys}
+
+        self.button_keys = ['Select All', 'Deselect All', 'OK', 'Cancel']
+        button_ids = [wx.ID_ANY, wx.ID_ANY, wx.ID_OK, wx.ID_CANCEL]
+        self.button = {key: wx.Button(self, button_ids[i], key) for i, key in enumerate(self.button_keys)}
+
+        self.__set_properties()
+        self.__do_bind()
+        self.__do_layout()
+
+        self.run()
+
+    def __set_properties(self):
+        self.SetTitle("Create ROI Map")
+        self.SetMinSize((300, 100))
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_BUTTON, self.on_select_all, id=self.button['Select All'].GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_deselect_all, id=self.button['Deselect All'].GetId())
+
+    def __do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_main = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_body_site = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Body Sites"), wx.VERTICAL)
+        sizer_buttons = wx.BoxSizer(wx.VERTICAL)
+
+        for key in self.checkbox_keys:
+            sizer_body_site.Add(self.checkbox[key], 1, wx.EXPAND, 0)
+
+        sizer_buttons.Add((20, 20), 0, 0, 0)
+        for key in self.button_keys:
+            sizer_buttons.Add(self.button[key], 1, wx.EXPAND | wx.ALL, 5)
+
+        sizer_main.Add(sizer_body_site, 0, wx.ALL, 5)
+        sizer_main.Add(sizer_buttons, 0, wx.LEFT, 10)
+
+        title = wx.StaticText(self, wx.ID_ANY, "Create ROI Map for %s with selected body sites" % self.physician)
+        sizer_wrapper.Add(title, 0, wx.EXPAND | wx.ALL, 10)
+        sizer_wrapper.Add(sizer_main, 1, wx.ALL, 10)
+
+        self.SetSizer(sizer_wrapper)
+        self.Layout()
+        self.Fit()
+        self.Center()
+
+    def set_checkbox_values(self, value):
+        for checkbox in self.checkbox.values():
+            checkbox.SetValue(value)
+
+    def on_select_all(self, *evt):
+        self.set_checkbox_values(True)
+
+    def on_deselect_all(self, *evt):
+        self.set_checkbox_values(False)
+
+    def run(self):
+        res = self.ShowModal()
+        if res == wx.ID_OK:
+            map_file_name = "physician_%s.roi" % clean_name(self.physician, physician=True)
+            self.map_file_path = self.generator(map_file_name, body_sites=self.checked_values)
+        self.Destroy()
+
+    @property
+    def checked_values(self):
+        return [key for key, checkbox in self.checkbox.items() if checkbox.GetValue()]
 
 
 # TODO: Disable ability to use Variation Manager on 'DEFAULT' physician
@@ -136,7 +219,7 @@ class RoiManager(wx.Dialog):
         self.initial_physician = physician
         self.initial_physician_roi = physician_roi
 
-        self.combo_box_physician = wx.ComboBox(self, wx.ID_ANY, choices=self.roi_map.get_physicians(),
+        self.combo_box_physician = wx.ComboBox(self, wx.ID_ANY, choices=list(self.roi_map.physicians),
                                                style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_physician_roi = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.list_ctrl_variations = wx.ListCtrl(self, wx.ID_ANY, style=wx.LC_NO_HEADER | wx.LC_REPORT | wx.BORDER_SUNKEN)
@@ -237,14 +320,11 @@ class RoiManager(wx.Dialog):
         self.Destroy()
 
     def update_physicians(self, old_physicians=None):
-
-        choices = self.roi_map.get_physicians()
+        choices = list(self.roi_map.physicians)
         if choices:
             new = choices[0]
             if old_physicians:
                 new = list(set(choices) - set(old_physicians))
-                if new:
-                    new = clean_name(new[0]).upper()
 
             self.update_combo_box_choices(self.combo_box_physician, choices, new)
 
@@ -254,8 +334,6 @@ class RoiManager(wx.Dialog):
             new = choices[0]
             if old_physician_rois:
                 new = list(set(choices) - set(old_physician_rois))
-                if new:
-                    new = clean_name(new[0])
 
             self.update_combo_box_choices(self.combo_box_physician_roi, choices, new)
 
@@ -349,7 +427,7 @@ class RoiManager(wx.Dialog):
         self.update_physician_rois(old_physician_rois=old_physician_rois)
 
     def add_physician(self, evt):
-        old_physicians = self.roi_map.get_physicians()
+        old_physicians = list(self.roi_map.physicians)
         AddPhysician(self.roi_map)
         self.update_physicians(old_physicians=old_physicians)
 
@@ -371,7 +449,8 @@ class AddVariationDlg(wx.Dialog):
             self.user_input = wx.TextCtrl(self, wx.ID_ANY, "")
         else:
             choices = roi_map.get_physician_rois(physician)
-            self.user_input = wx.ComboBox(self, wx.ID_ANY, choices=choices,  style=wx.CB_DROPDOWN | wx.CB_READONLY)
+            self.user_input = wx.ComboBox(self, wx.ID_ANY, choices=choices,
+                                          style=wx.CB_DROPDOWN | wx.CB_READONLY)
             self.prediction_label = wx.StaticText(self, wx.ID_ANY, "")
 
         self.button_ok = wx.Button(self, wx.ID_OK, "Add")
@@ -434,7 +513,11 @@ class AddVariationDlg(wx.Dialog):
         res = self.ShowModal()
         if res == wx.ID_OK:
             try:
-                self.roi_map.add_variation(self.physician, self.user_input.GetValue(), self.input_roi_name)
+                physician_roi = self.input_roi_name if self.mode == 'add' else self.user_input.GetValue()
+                variation = self.user_input.GetValue() if self.mode == 'add' else self.input_roi_name
+                self.roi_map.add_variations(physician=self.physician,
+                                            physician_roi=physician_roi,
+                                            variation=variation)
             except ROIVariationError as e:
                 ROIVariationErrorDialog(self.parent, e)
         self.Destroy()
@@ -516,9 +599,8 @@ class MoveVariationDialog(wx.Dialog):
         self.Destroy()
 
     def action(self):
-        for variation in self.variations:
-            self.roi_map.delete_variation(self.physician, self.old_physician_roi, variation)
-            self.roi_map.add_variation(self.physician, self.combo_box.GetValue(), variation)
+        self.roi_map.delete_variations(self.physician, self.old_physician_roi, self.variations)
+        self.roi_map.add_variations(self.physician, self.combo_box.GetValue(), self.variations)
 
 
 class AddPhysicianROI(wx.Dialog):
@@ -592,8 +674,7 @@ class AddPhysicianROI(wx.Dialog):
         sizer_main = wx.BoxSizer(wx.VERTICAL)
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_input = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.HORIZONTAL)
-        if not self.institutional_mode:
-            sizer_institutional_roi = wx.BoxSizer(wx.VERTICAL)
+
         sizer_physician_roi = wx.BoxSizer(wx.VERTICAL)
 
         label_physician_roi = wx.StaticText(self, wx.ID_ANY, "New %s ROI:" %
@@ -603,6 +684,7 @@ class AddPhysicianROI(wx.Dialog):
         sizer_input.Add(sizer_physician_roi, 1, wx.ALL | wx.EXPAND, 5)
 
         if not self.institutional_mode:
+            sizer_institutional_roi = wx.BoxSizer(wx.VERTICAL)
             label_institutional_roi = wx.StaticText(self, wx.ID_ANY, "Linked Institutional ROI:")
             sizer_institutional_roi.Add(label_institutional_roi, 0, 0, 0)
             sizer_institutional_roi.Add(self.combo_box_institutional_roi, 0, wx.EXPAND, 0)
@@ -638,16 +720,14 @@ class AddPhysicianROI(wx.Dialog):
             invalid_choices = set(self.roi_map.get_physician_rois(self.physician) +
                                   self.roi_map.get_all_variations_of_physician(self.physician))
         else:
-            invalid_choices = self.roi_map.get_institutional_rois()
+            invalid_choices = self.roi_map.institutional_rois
 
         new = clean_name(self.text_ctrl_physician_roi.GetValue())
         self.button_ok.Enable(new not in invalid_choices)
 
 
 class DelPhysicianROI:
-    """
-    Delete a physician roi of the specified physician
-    """
+    """Delete a physician roi of the specified physician"""
     def __init__(self, parent, physician, roi_map, physician_roi):
         """
         :param parent: wx parent object
@@ -657,15 +737,13 @@ class DelPhysicianROI:
         :type physician_roi: str
         :param roi_map: roi_map to be edited
         """
-        caption = "Delete %s from %s's ROI map?" % (physician_roi, physician)
+        caption = "Delete %s (Physician ROI) from %s's ROI map?" % (physician_roi, physician)
         action = partial(roi_map.delete_physician_roi, physician, physician_roi)
         MessageDialog(parent, caption, action_yes_func=action)
 
 
 class DelVariation:
-    """
-    Delete a physician roi variation of the specified physician
-    """
+    """Delete a physician roi variation of the specified physician"""
     def __init__(self, parent, physician, roi_map, variation):
         """
         :param parent: wx parent object
@@ -676,8 +754,8 @@ class DelVariation:
         :type variation: str
         """
         physician_roi = roi_map.get_physician_roi(physician, variation)
-        caption = "Delete %s from %s's %s?" % (physician_roi, physician, variation)
-        action = partial(roi_map.delete_variation, physician, physician_roi, variation)
+        caption = "Delete %s (Variation) from %s's %s (Physician ROI)?" % (variation, physician, physician_roi)
+        action = partial(roi_map.delete_variations, physician, physician_roi, variation)
         MessageDialog(parent, caption, action_yes_func=action)
 
 
@@ -736,27 +814,27 @@ class ChangePlanROIName(wx.Dialog):
     """
     Change the roi name of a parsed plan in the DICOM importer
     """
-    # TODO: implement ChangePlanROIName
-    def __init__(self, tree_ctrl_roi, tree_item, mrn, study_instance_uid, parsed_dicom_data):
+    def __init__(self, tree_ctrl_roi, tree_item, plan_uid, parsed_dicom_data, dicom_importer):
         """
         :param tree_ctrl_roi: the roi tree from the DICOM importer view
         :param tree_item: the tree_ctrl_roi item to be edited
-        :param mrn: the patient's mrn for the plan of interest
-        :type mrn: str
-        :param study_instance_uid: the study instance uid of the plan of interest (should be plan_uid now?)
-        :type study_instance_uid: str
+        :param plan_uid: the study instance uid of the plan of interest
+        :type plan_uid: str
         :param parsed_dicom_data: parsed dicom data object for plan of interest
         :type parsed_dicom_data: DICOM_Parser
+        :param dicom_importer: Needed to edit tree
+        :type dicom_importer: DicomTreeBuilder
         """
         wx.Dialog.__init__(self, None, title='Edit %s' % tree_ctrl_roi.GetItemText(tree_item))
 
         self.tree_ctrl_roi = tree_ctrl_roi
         self.tree_item = tree_item
         self.roi = tree_ctrl_roi.GetItemText(tree_item)
-        self.initial_mrn = mrn
-        self.initial_study_instance_uid = study_instance_uid
+
+        self.plan_uid = plan_uid
 
         self.parsed_dicom_data = parsed_dicom_data
+        self.dicom_importer = dicom_importer
 
         invalid_options = [''] + parsed_dicom_data.roi_names
         self.invalid_options = [clean_name(name) for name in invalid_options]
@@ -808,7 +886,7 @@ class ChangePlanROIName(wx.Dialog):
 
     @property
     def new_name(self):
-        return clean_name(self.text_ctrl.GetValue())
+        return self.text_ctrl.GetValue()
 
     def run(self):
         res = self.ShowModal()
@@ -817,17 +895,17 @@ class ChangePlanROIName(wx.Dialog):
         self.Destroy()
 
     def action(self):
-        # TODO: data doesn't propagate everywhere needed?
         key = self.parsed_dicom_data.get_roi_key(self.roi)
         self.parsed_dicom_data.set_roi_name(key, self.new_name)
         self.tree_ctrl_roi.SetItemText(self.tree_item, self.new_name)
+        self.dicom_importer.set_roi_name_over_ride(self.plan_uid, self.roi, self.new_name)
 
 
 class RenamerBaseClass(wx.Dialog):
     """
     Simple base class used for renaming (e.g., renaming a physician in the roi map)
     """
-    def __init__(self, title, text_input_label, invalid_options, lower_case=True):
+    def __init__(self, title, text_input_label, invalid_options):
         """
         :param title: title of the dialog window
         :type title: str
@@ -835,13 +913,10 @@ class RenamerBaseClass(wx.Dialog):
         :type text_input_label: str
         :param invalid_options: if text_ctrl is in invalid options, OK button will be disabled
         :type invalid_options: list
-        :param lower_case: final value of text_input_label will be forced to either all lower or upper case
-        :type lower_case: bool
         """
         wx.Dialog.__init__(self, None, title=title)
 
-        self.invalid_options = invalid_options
-        self.lower_case = lower_case
+        self.invalid_options = [clean_name(option) for option in invalid_options]
 
         self.text_input_label = text_input_label
 
@@ -884,15 +959,11 @@ class RenamerBaseClass(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self.text_ticker, id=self.text_ctrl.GetId())
 
     def text_ticker(self, evt):
-        [self.button_ok.Disable, self.button_ok.Enable][self.new_name not in self.invalid_options]()
+        [self.button_ok.Disable, self.button_ok.Enable][clean_name(self.new_name) not in self.invalid_options]()
 
     @property
     def new_name(self):
-        new = clean_name(self.text_ctrl.GetValue())  # clean name will result in lower-case
-        if self.lower_case:
-            return new
-        else:
-            return new.upper()
+        return self.text_ctrl.GetValue()
 
     def run(self):
         self.res = self.ShowModal()
@@ -918,7 +989,7 @@ class RenamePhysicianDialog(RenamerBaseClass):
         self.physician = physician
         self.roi_map = roi_map
         RenamerBaseClass.__init__(self, 'Rename %s' % physician,
-                                  'New Physician Name:', roi_map.get_physicians(), lower_case=False)
+                                  'New Physician Name:', list(roi_map.physicians))
 
     def action(self):
         self.roi_map.rename_physician(self.new_name, self.physician)
@@ -961,7 +1032,7 @@ class RenameInstitutionalROIDialog(RenamerBaseClass):
         self.institutional_roi = institutional_roi
         self.roi_map = roi_map
         RenamerBaseClass.__init__(self, 'Rename %s' % institutional_roi,
-                                  'New Institutional ROI name:', roi_map.get_institutional_rois())
+                                  'New Institutional ROI name:', roi_map.institutional_rois)
 
     def action(self):
         self.roi_map.rename_institutional_roi(self.new_name, self.institutional_roi)
@@ -987,7 +1058,7 @@ class LinkPhysicianROI(wx.Dialog):
         self.physician = physician
         self.physician_roi = physician_roi
         self.roi_map = roi_map
-        self.institutional_rois = self.roi_map.get_institutional_rois()
+        self.institutional_rois = self.roi_map.institutional_rois
         self.institutional_roi = self.roi_map.get_institutional_roi(self.physician, self.physician_roi)
         choices = self.roi_map.get_unused_institutional_rois(self.physician)
         if self.institutional_roi not in choices:
