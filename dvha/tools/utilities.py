@@ -26,7 +26,7 @@ from subprocess import check_output
 import tracemalloc
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
-    APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR, MODELS_DIR, WIN_APP_ICON
+    APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR, MODELS_DIR, WIN_APP_ICON, PIP_LIST_PATH
 
 
 IGNORED_FILES = ['.ds_store']
@@ -745,15 +745,21 @@ def validate_transfer_syntax_uid(data_set):
 
 def get_installed_python_libraries():
     """Use pip command line function 'list' to extract the currently installed libraries"""
-    libraries = {'Library': [], 'Version': []}
+
     try:
         output = str(check_output(['pip', 'list']), 'utf-8').split('\n')
-        for row in output[2:]:  # ignore first two rows which are column headers and a separator
-            data = [v for v in row.strip().split(' ') if v]
-            if data:
-                libraries['Library'].append(data[0])
-                libraries['Version'].append(data[1])
     except Exception:
-        libraries['Library'].append('pip list failed')
-        libraries['Version'].append(' ')
+        # If running from PyInstaller, this will fail, pickle a file prior to freezing with save_pip_list
+        return load_object_from_file(PIP_LIST_PATH)
+
+    libraries = {'Library': [], 'Version': []}
+    for row in output[2:]:  # ignore first two rows which are column headers and a separator
+        data = [v for v in row.strip().split(' ') if v]
+        if data:
+            libraries['Library'].append(data[0])
+            libraries['Version'].append(data[1])
     return libraries
+
+
+def save_pip_list():
+    save_object_to_file(get_installed_python_libraries(), PIP_LIST_PATH)

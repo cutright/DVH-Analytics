@@ -35,6 +35,7 @@ LICENSE_PATH = join(SCRIPT_DIR, 'LICENSE.txt')
 CREATE_PGSQL_TABLES = join(SCRIPT_DIR, 'db', 'create_tables.sql')
 CREATE_SQLITE_TABLES = join(SCRIPT_DIR, 'db', 'create_tables_sqlite.sql')
 TG263_CSV = join(SCRIPT_DIR, 'tools', 'TG263_Nomenclature_Worksheet_20170815.csv')
+PIP_LIST_PATH = join(SCRIPT_DIR, 'tools', 'pip_list')
 
 ICONS = {'Open': "iconfinder_Open_1493293.png",
          'Close': "iconfinder_Close_1493281.png",

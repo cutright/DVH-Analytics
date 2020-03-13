@@ -1043,7 +1043,10 @@ class PythonLibraries(wx.Dialog):
 
     def __set_data(self):
         columns = ['Library', 'Version']
-        libraries = get_installed_python_libraries()
+        try:
+            libraries = get_installed_python_libraries()
+        except Exception:
+            libraries = {'Library': ['pip list failed'], 'Version': [' ']}
         self.data_table.set_data(libraries, columns)
 
     def __do_layout(self):
