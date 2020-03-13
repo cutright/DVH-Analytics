@@ -17,9 +17,11 @@ import matplotlib.colors as plot_colors
 import numpy as np
 import time
 from os.path import isdir
-from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_window_size
+from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_window_size,\
+    get_installed_python_libraries
 from dvha.db import sql_columns
 from dvha.db.sql_connector import DVH_SQL
+from dvha.models.data_table import DataTable
 from dvha.paths import LICENSE_PATH
 from dvha.options import DefaultOptions
 
@@ -1021,5 +1023,41 @@ class About(wx.Dialog):
         self.SetSize((750, 900))
         self.Center()
 
+        self.ShowModal()
+        self.Destroy()
+
+
+class PythonLibraries(wx.Dialog):
+    """Simple dialog to display the installed python libraries"""
+    def __init__(self):
+        wx.Dialog.__init__(self, None, title='Installed Python Libraries')
+
+        self.list_ctrl = wx.ListCtrl(self, wx.ID_ANY,
+                                     style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
+        self.data_table = DataTable(self.list_ctrl, widths=[200, 150])
+
+        self.__set_data()
+        self.__do_layout()
+
+        self.run()
+
+    def __set_data(self):
+        columns = ['Library', 'Version']
+        libraries = get_installed_python_libraries()
+        self.data_table.set_data(libraries, columns)
+
+    def __do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_main = wx.BoxSizer(wx.VERTICAL)
+
+        sizer_main.Add(self.list_ctrl, 1, wx.EXPAND, 0)
+        sizer_wrapper.Add(sizer_main, 1, wx.EXPAND | wx.ALL, 10)
+
+        self.SetBackgroundColour(wx.WHITE)
+        self.SetSizer(sizer_wrapper)
+        self.SetSize(get_window_size(0.25, 0.8))
+        self.Center()
+
+    def run(self):
         self.ShowModal()
         self.Destroy()

@@ -14,19 +14,19 @@ General utilities for DVHA
 import wx
 from datetime import datetime
 from dateutil.parser import parse as parse_date
+import linecache
 import numpy as np
 from os import walk, listdir, unlink, mkdir, rmdir, chdir, sep
 from os.path import join, isfile, isdir, splitext, basename, dirname, realpath
-import shutil
-import pydicom as dicom
 import pickle
+import pydicom
+from pydicom.uid import ImplicitVRLittleEndian
+import shutil
+from subprocess import check_output
+import tracemalloc
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
     APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR, MODELS_DIR, WIN_APP_ICON
-import tracemalloc
-import linecache
-import pydicom
-from pydicom.uid import ImplicitVRLittleEndian
 
 
 IGNORED_FILES = ['.ds_store']
@@ -417,7 +417,7 @@ def delete_imported_dicom_files(dicom_files):
         remaining_files = listdir(directory)
         for f in remaining_files:
             try:
-                uid = str(dicom.read_file(join(directory, f)).StudyInstanceUID)
+                uid = str(pydicom.read_file(join(directory, f)).StudyInstanceUID)
                 if uid == str(dicom_files['study_instance_uid'][i]):
                     delete_file(f)
             except Exception:
@@ -448,7 +448,7 @@ def move_imported_dicom_files(dicom_files, new_dir):
         files = []
         for f in remaining_files:
             try:
-                uid = str(dicom.read_file(join(directory, f)).StudyInstanceUID)
+                uid = str(pydicom.read_file(join(directory, f)).StudyInstanceUID)
                 if uid == str(dicom_files['study_instance_uid'][i]):
                     files.append(f)
             except Exception:
@@ -741,3 +741,19 @@ def validate_transfer_syntax_uid(data_set):
     new_data_set.is_implicit_VR = True
 
     return new_data_set
+
+
+def get_installed_python_libraries():
+    """Use pip command line function 'list' to extract the currently installed libraries"""
+    libraries = {'Library': [], 'Version': []}
+    try:
+        output = str(check_output(['pip', 'list']), 'utf-8').split('\n')
+        for row in output[2:]:  # ignore first two rows which are column headers and a separator
+            data = [v for v in row.strip().split(' ') if v]
+            if data:
+                libraries['Library'].append(data[0])
+                libraries['Version'].append(data[1])
+    except Exception:
+        libraries['Library'].append('pip list failed')
+        libraries['Version'].append(' ')
+    return libraries

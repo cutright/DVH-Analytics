@@ -13,6 +13,7 @@ v0.7.4 (TBD)
  - [ROI Name Map] Implementation of TG-263 compliance
  - [ROI Name Map] Fixes for [issue #48](https://github.com/cutright/DVH-Analytics/issues/48)
  - [ROI Name Map] Fixes for [issue #50](https://github.com/cutright/DVH-Analytics/issues/50)
+ - [Misc] To see which python libraries and versions are being used: Help -> Python Libraries Used
 
 v0.7.3 (2020.03.04)
 --------------------
