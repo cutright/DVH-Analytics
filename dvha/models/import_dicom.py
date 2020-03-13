@@ -476,6 +476,7 @@ class ImportDicomFrame(wx.Frame):
                 self.input['tx_site'].SetValue(data.tx_site)
                 self.input['rx_dose'].SetValue(str(data.rx_dose))
                 self.dicom_importer.update_mapped_roi_status(data.physician)
+                self.update_all_roi_text_with_roi_type()
                 wx.EndBusyCursor()
                 self.update_physician_roi_choices()
                 self.enable_inputs()
@@ -573,6 +574,7 @@ class ImportDicomFrame(wx.Frame):
         self.dicom_importer.update_tree_ctrl_roi_with_roi_type(roi, roi_type=roi_type_for_tree_text)
 
     def update_all_roi_text_with_roi_type(self):
+        self.parsed_dicom_data[self.selected_uid].autodetect_target_roi_type()
         for roi in list(self.dicom_importer.roi_name_map):
             roi_key = self.dicom_importer.roi_name_map[roi]['key']
             roi_type = self.parsed_dicom_data[self.selected_uid].get_roi_type(roi_key)
@@ -722,7 +724,6 @@ class ImportDicomFrame(wx.Frame):
             self.validate(uid=self.selected_uid)
 
         if current_physician != self.input['physician']:
-            self.parsed_dicom_data[self.selected_uid].autodetect_target_roi_type()
             self.update_all_roi_text_with_roi_type()
 
         self.update_warning_label()

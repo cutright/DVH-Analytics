@@ -1,6 +1,6 @@
 # Change log of DVH Analytics
 
-v0.7.4 (TBD)
+v0.7.4 (2020.03.13)
 --------------------
  - [Endpoints] Fixed a bug where endpoint short-hand would not display on MS Windows
  - [Import] Users can edit ROI Names with a right-click, rather than editing ROI Map
@@ -8,6 +8,7 @@ v0.7.4 (TBD)
  - [Import] Plan complexity calculation corrected, now is direct sum of all CP complexities
  - [Import] Catch PatientSetupSequence error to allow for brachytherapy plan import
  - [Import] Implement scipy.nd_image.map_coordinates for ~2.5x faster dose interpolation
+ - [Import] Fixed bug where DVHA could crash if trying to parse non-DICOM files (e.g. .html)
  - [PyPI] scikit-learn changed 0.21 to 0.21.0, updated requirements.txt (as of v0.7.3.post1)
  - [Settings] Inbox and Imported directory settings were not sticking: fixed per [issue #48](https://github.com/cutright/DVH-Analytics/issues/48)
  - [ROI Name Map] Implementation of TG-263 compliance

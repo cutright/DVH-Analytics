@@ -495,16 +495,15 @@ class DicomDirectoryParserWorker(Thread):
 
         wx.CallAfter(pub.sendMessage, "pre_import_progress_update", msg=msg)
 
-        try:
-            ds = dicom.read_file(file_path, stop_before_pixels=True, force=True)
-        except InvalidDicomError:
+        file_ext = os.path.splitext(file_path)[1]
+
+        if file_ext and file_ext.lower() != '.dcm':
             ds = None
-        except MemoryError as e:
-            # MIM metacache files throw memory errors instead of InvalidDicomError
-            if 'metacache.mim' in file_path:
+        else:
+            try:
+                ds = dicom.read_file(file_path, stop_before_pixels=True, force=True)
+            except InvalidDicomError:
                 ds = None
-            else:
-                raise MemoryError
 
         if ds is not None:
 
