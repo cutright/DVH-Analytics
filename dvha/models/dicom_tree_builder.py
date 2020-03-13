@@ -529,7 +529,7 @@ class DicomDirectoryParserWorker(Thread):
                     self.dicom_files[modality].append(file_path)
 
                     # All RT Plan files need to be found first
-                    if modality == 'rtplan':
+                    if modality == 'rtplan' and hasattr(ds, 'ReferencedStructureSetSequence'):
                         uid = ds.ReferencedStructureSetSequence[0].ReferencedSOPInstanceUID
                         mrn = self.dicom_tag_values[file_path]['mrn']
                         self.uid_to_mrn[uid] = ds.PatientID
