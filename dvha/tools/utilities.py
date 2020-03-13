@@ -23,6 +23,7 @@ import pydicom
 from pydicom.uid import ImplicitVRLittleEndian
 import shutil
 from subprocess import check_output
+import sys
 import tracemalloc
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
@@ -752,7 +753,8 @@ def get_installed_python_libraries():
         # If running from PyInstaller, this will fail, pickle a file prior to freezing with save_pip_list
         return load_object_from_file(PIP_LIST_PATH)
 
-    libraries = {'Library': [], 'Version': []}
+    python_version = '.'.join(str(i) for i in sys.version_info[:3])
+    libraries = {'Library': ['python'], 'Version': [python_version]}
     for row in output[2:]:  # ignore first two rows which are column headers and a separator
         data = [v for v in row.strip().split(' ') if v]
         if data:
