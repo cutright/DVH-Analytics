@@ -495,9 +495,10 @@ class DicomDirectoryParserWorker(Thread):
 
         wx.CallAfter(pub.sendMessage, "pre_import_progress_update", msg=msg)
 
+        file_name = os.path.basename(file_path)
         file_ext = os.path.splitext(file_path)[1]
 
-        if file_ext and file_ext.lower() != '.dcm':
+        if file_ext and file_ext.lower() != '.dcm' or file_name.lower() == 'dicomdir':
             ds = None
         else:
             try:
