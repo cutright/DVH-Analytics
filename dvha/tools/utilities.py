@@ -26,8 +26,7 @@ from subprocess import check_output
 import sys
 import tracemalloc
 from dvha.db.sql_connector import DVH_SQL
-from dvha.paths import SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
-    APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR, MODELS_DIR, WIN_APP_ICON, PIP_LIST_PATH
+from dvha.paths import SQL_CNF_PATH, WIN_APP_ICON, PIP_LIST_PATH, DIRECTORIES
 
 
 IGNORED_FILES = ['.ds_store']
@@ -55,9 +54,7 @@ def initialize_directories():
     Based on paths.py, create required directories if they do not exist
     :return:
     """
-    directories = [APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,
-                   BACKUP_DIR, TEMP_DIR, MODELS_DIR]
-    for directory in directories:
+    for directory in DIRECTORIES.values():
         if not isdir(directory):
             mkdir(directory)
 
