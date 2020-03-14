@@ -1,0 +1,66 @@
+# Description: 3fx Constraints per BR002
+Bile Duct
+    D_max   36
+Bladder
+    D_max   33
+    D_15    16.8
+Bowel
+    D_max   34.5
+    D_20    24
+Brachial Plexus
+    D_max   26
+    D_3     22
+Cauda Equina
+    D_max   25.5
+    D_5     21.9
+Duodenum
+    D_max   24
+    D_10    15
+Esophagus
+    D_max   27
+    D_5     17.7
+Femoral Heads
+    D_10    24
+Great Vessels
+    D_max   45
+    D_10    39
+Heart/Pericardium
+    D_max   30
+    D_15    24
+Kidney (Total)
+    V_15    200
+Liver
+    MVS_17.1    700
+Lung
+    V_20    15%
+    V_11    37%
+    V_10.5  1500
+    V_11.4  1000
+Penile Bulb
+    D_3     25
+Rectum
+    D_max   49.5
+    D_3.5   45
+    D_20    27.5
+Renal Hilum / Vascular Trunk
+    D_15    19.5
+Rib
+    D_max   50
+    D_5     40
+Sacral Plexus
+    D_max   24
+    D_5     22.5
+Skin
+    D_max   33
+    D_10    31
+Spinal Cord
+    D_max   22.5
+    D_1.2   13
+Stomach
+    D_max   30
+    D_10    22.5
+Trachea & Bronchial Tree
+    D_max   30
+    D_5     25.8
+Ureter
+    D_max   40

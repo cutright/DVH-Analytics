@@ -1,0 +1,80 @@
+# Description: 1fx Constraints per TG101
+Bladder
+    D_max   18.4
+    D_15    11.4
+Brachial Plexus
+    D_max   17.5
+    D_3     14
+Brainstem
+    D_max   15
+    D_0.5   10
+Bronchus (smaller airways)
+    D_max   13.3
+    D_0.5   12.4
+Cauda Equina
+    D_max   16
+    D_5     14
+Cochlea
+    D_max   9
+Colon
+    D_max   18.4
+    D_20    14.3
+Duodenum
+    D_max   12.4
+    D_5     11.2
+    D_10    9
+Esophagus
+    D_max   15.4
+    D_5     11.9
+Femoral Heads
+    D_10    14
+Great Vessels
+    D_max   37
+    D_10    31
+Heart/Pericardium
+    D_max   22
+    D_15    16
+Jejunum / Ileum
+    D_max   15.4
+    D_5     11.9
+Kidney (Total)
+    V_8.4  200
+Liver
+    MVS_9.1 700
+Lung
+    V_7     1500
+    V_7.4   1000
+Optic Pathway
+    D_max   10
+    D_0.2   8
+Penile Bulb
+    D_max   34
+    D_3     14
+Rectum
+    D_max   18.4
+    D_20    14.3
+Renal Hilum / Vascular Trunk
+    D_max   18.6
+    V_66.67 10.6
+Rib
+    D_max   30
+    D_1     22
+Sacral Plexus
+    D_max   16
+    D_5     14.4
+Skin
+    D_max   26
+    D_10    23
+Spinal Cord
+    D_max   14
+    D_0.35  10
+    D_1.2   7
+Spinal Cord Sub-Volume
+    D_max   14
+    D_10%   10
+Stomach
+    D_max   12.4
+    D_10    11.2
+TBT
+    D_max   20.2
+    D_4     10.5
