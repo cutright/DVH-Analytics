@@ -997,7 +997,7 @@ class About(wx.Dialog):
     """
     Simple dialog to display the LICENSE file and a brief text header in a scrollable window
     """
-    def __init__(self):
+    def __init__(self, *evt):
         wx.Dialog.__init__(self, None, title='About DVH Analytics')
 
         scrolled_window = wx.ScrolledWindow(self, wx.ID_ANY)
@@ -1029,7 +1029,7 @@ class About(wx.Dialog):
 
 class PythonLibraries(wx.Dialog):
     """Simple dialog to display the installed python libraries"""
-    def __init__(self):
+    def __init__(self, *evt):
         wx.Dialog.__init__(self, None, title='Installed Python Libraries')
 
         self.list_ctrl = wx.ListCtrl(self, wx.ID_ANY,
