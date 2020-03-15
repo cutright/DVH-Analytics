@@ -491,7 +491,8 @@ class Protocols:
             protocol_name, fxs = tuple(file_name.split('_'))
             if protocol_name not in list(self.data):
                 self.data[protocol_name] = {}
-            self.data[protocol_name][fxs] = self.parse_protocol_file(f)
+            fxs_key = fxs.lower().replace('fx', '').strip()
+            self.data[protocol_name][fxs_key] = self.parse_protocol_file(f)
 
     @property
     def file_paths(self):
@@ -531,26 +532,25 @@ class Protocols:
         return self.data[protocol_name][fractionation][roi_name]
 
     def get_column_data(self, protocol_name, fractionation):
-        roi_template = []
-        keys = ['string_rep', 'operator', 'input_value', 'input_units', 'input_type', 'output_units', 'output_type',
-                'input_scale', 'output_scale', 'threshold_value', 'calc_type']
-        data = {key: [] for key in keys}
 
+        columns = ['Structure', 'ROI Type', 'Constraint', 'Threshold']
+        data = {key: [] for key in columns}
         for roi in self.get_rois(protocol_name, fractionation):
-            roi_type = ['OAR', 'PTV']['PTV' in roi]
             for constraint_label, threshold in self.get_constraints(protocol_name, fractionation, roi).items():
-                roi_template.append(roi)
-                constraint = Constraint(constraint_label, threshold, roi_type=roi_type,
-                                        max_dose_volume=self.max_dose_volume)
-                for key, column in data.items():
-                    column.append(getattr(constraint, key))
-        data['roi_template'] = roi_template
+                if data['Structure'] and data['Structure'][-1] == roi:
+                    data['Structure'].append('')
+                    data['ROI Type'].append('')
+                else:
+                    data['Structure'].append(roi)
+                    data['ROI Type'].append(self.get_roi_type(roi))
+                data['Constraint'].append(constraint_label)
+                data['Threshold'].append(threshold)
 
-        return data
+        return data, columns
 
-    def get_roi_constraints(self, protocol_roi, protocol_name, fractionation, roi_type='OAR'):
-        if roi_type.lower() not in {'gtv', 'ctv', 'itv', 'ptv'}:
-            roi_type = 'OAR'
+    def get_roi_constraints(self, protocol_roi, protocol_name, fractionation, roi_type=None):
+        if roi_type is None:
+            roi_type = self.get_roi_type(protocol_roi)
 
         constraints = []
         for constraint_label, threshold in self.get_constraints(protocol_name, fractionation, protocol_roi).items():
@@ -558,6 +558,13 @@ class Protocols:
                                           max_dose_volume=self.max_dose_volume))
 
         return constraints
+
+    @staticmethod
+    def get_roi_type(roi_name):
+        roi_name = roi_name.lower()
+        if any([t in roi_name for t in {'gtv', 'ctv', 'itv', 'ptv'}]):
+            return 'TARGET'
+        return 'OAR'
 
 
 class Constraint:
