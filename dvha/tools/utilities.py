@@ -50,13 +50,19 @@ def is_mac():
 
 
 def initialize_directories():
-    """
-    Based on paths.py, create required directories if they do not exist
-    :return:
-    """
+    """Based on paths.py, create required directories if they do not exist"""
     for directory in DIRECTORIES.values():
         if not isdir(directory):
             mkdir(directory)
+    initialize_protocols()
+
+
+def initialize_protocols():
+    """If no protocols are found in PROTOCOL_DIR, copy defaults"""
+    current_protocols = [f for f in listdir(DIRECTORIES['PROTOCOL']) if splitext(f)[1].lower() == '.scp']
+    if not current_protocols:
+        default_protocols = listdir(DIRECTORIES['PROTOCOL_DEFAULT'])
+        move_files_to_new_path(default_protocols, DIRECTORIES['PROTOCOL'], copy_files=True)
 
 
 def write_sql_connection_settings(config):

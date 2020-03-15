@@ -27,7 +27,8 @@ BACKUP_DIR = join(DATA_DIR, 'backup')
 TEMP_DIR = join(DATA_DIR, 'temp')
 MODELS_DIR = join(DATA_DIR, 'models')
 PROTOCOL_DIR = join(DATA_DIR, 'protocols')
-DIRECTORIES = {key: value for key, value in locals().items() if key.endswith('_DIR')}
+PROTOCOL_DEFAULT_DIR = join(SCRIPT_DIR, 'protocols')
+DIRECTORIES = {key[:-4]: value for key, value in locals().items() if key.endswith('_DIR')}
 
 OPTIONS_PATH = join(PREF_DIR, '.options')
 OPTIONS_CHECKSUM_PATH = join(PREF_DIR, '.options_checksum')
