@@ -20,6 +20,7 @@ from dvha.db.sql_connector import echo_sql_db, initialize_db
 from dvha.dialogs.main import query_dlg, UserSettings, About, PythonLibraries
 from dvha.dialogs.database import SQLSettingsDialog
 from dvha.dialogs.export import ExportCSVDialog, save_data_to_file
+from dvha.dialogs.protocols import ProtocolsEditor
 from dvha.models.import_dicom import ImportDicomFrame
 from dvha.models.database_editor import DatabaseEditorFrame
 from dvha.models.data_table import DataTable
@@ -194,6 +195,9 @@ class DVHAMainFrame(wx.Frame):
         menu_sql = settings_menu.Append(wx.ID_ANY, '&Database Connection\tCtrl+D')
         menu_roi_map = settings_menu.Append(wx.ID_ANY, '&ROI Map\tCtrl+R')
 
+        plan_eval_menu = wx.Menu()
+        menu_protocol_editor = plan_eval_menu.Append(wx.ID_ANY, 'Protocol Editor')
+
         help_menu = wx.Menu()
         menu_github = help_menu.Append(wx.ID_ANY, 'GitHub Page')
         menu_python_libraries = help_menu.Append(wx.ID_ANY, 'Python Libraries Used')
@@ -232,9 +236,12 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_view_stats_data_1, self.data_menu_items['StatsData1'])
         self.Bind(wx.EVT_MENU, self.on_view_stats_data_2, self.data_menu_items['StatsData2'])
 
+        self.Bind(wx.EVT_MENU, ProtocolsEditor, menu_protocol_editor)
+
         self.frame_menubar.Append(file_menu, '&File')
         self.frame_menubar.Append(self.data_menu, '&Data')
         self.frame_menubar.Append(settings_menu, '&Settings')
+        self.frame_menubar.Append(plan_eval_menu, '&Plan Evaluation')
         self.frame_menubar.Append(help_menu, '&Help')
         self.SetMenuBar(self.frame_menubar)
 

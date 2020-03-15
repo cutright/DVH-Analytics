@@ -383,9 +383,31 @@ class DVH:
         return bool(len(self.mrn))
 
     def evaluate_constraint(self, index, constraint):
+        """
+
+        :param index: The index of the dvh to be evaluated (self.dvh[:, index])
+        :type index: int
+        :param constraint: dvh endpoint constraint
+        :type constraint: Constraint
+        :return: True if the dvh meets the constraint
+        :rtype: bool
+        """
         return constraint(self.dvh[:, index], self.mean_dose[index], self.volume[index], self.dvh_bin_width)
 
     def evaluate_dvh(self, index, protocol_roi, protocol_name, fractionation):
+        """
+
+        :param index: The index of the dvh to be evaluated (self.dvh[:, index])
+        :type index: int
+        :param protocol_roi: the name of the roi as defined in the protocol
+        :type protocol_roi: str
+        :param protocol_name: name of the protocol (e.g., TG101, PEMBRO)
+        :type protocol_name: str
+        :param fractionation: number of fractions associated with constraints, str(int) or 'Std'
+        :type fractionation: str
+        :return: evaluation of all constraints for the protocol_roi with provided dvh
+        :rtype: dict
+        """
         constraints = self.protocols.get_roi_constraints(protocol_roi, protocol_name, fractionation,
                                                          roi_type=self.roi_type[index])
         return {str(c): self.evaluate_constraint(index, c) for c in constraints}
@@ -454,28 +476,27 @@ def calc_eud(dvh, a, dvh_bin_width=1):
 
 
 def calc_tcp(gamma_50, td_tcd, eud):
-    return 1 / (1 + (td_tcd / eud) ** (4. * gamma_50))
+    return 1. / (1. + (td_tcd / eud) ** (4. * gamma_50))
 
 
 class Protocols:
+    """Parse all protocols in user's PROTOCOL_DIR"""
     def __init__(self, max_dose_volume=MAX_DOSE_VOLUME):
         self.max_dose_volume = max_dose_volume
-        self.__load()
 
-    def __load(self):
+        # Collect .scp files, parse, store in self.data
         self.data = {}
         for f in self.file_paths:
             file_name = splitext(str(basename(f)))[0]
-            name_fxs = file_name.split('_')
-            protocol_name = name_fxs[0]
-            fxs = name_fxs[1]
+            protocol_name, fxs = tuple(file_name.split('_'))
             if protocol_name not in list(self.data):
                 self.data[protocol_name] = {}
             self.data[protocol_name][fxs] = self.parse_protocol_file(f)
 
     @property
     def file_paths(self):
-        return [join(PROTOCOL_DIR, f) for f in listdir(PROTOCOL_DIR) if self.is_protocol_file(f)]
+        files = listdir(PROTOCOL_DIR)
+        return [join(PROTOCOL_DIR, f) for f in files if self.is_protocol_file(f) and f.count('_') == 1]
 
     @staticmethod
     def is_protocol_file(file_path):
@@ -552,22 +573,38 @@ class Constraint:
     def __repr__(self):
         return self.__str__()
 
-    def __call__(self, dvh, mean_dose, volume, bin_width):
-        calc_type = self.calc_type
-        input_value = self.input_value
-        endpoint = None
+    def __call__(self, dvh, volume, bin_width=1, mean_dose=None):
+        """
+        Determine if a DVH meets this constraint
+        :param dvh: a relative DVH
+        :type dvh: np.array
+        :param volume: ROI volume
+        :type volume: float
+        :param bin_width: dose distance between elements of dvh, default value is 1
+        :type bin_width: int
+        :param mean_dose: optionally provide ROI mean dose for efficiency
+        :type mean_dose: float
+        :return: the pass/fail status of the dvh with this constraint
+        :rtype: bool
+        """
+        if mean_dose is None:  # if mean dose not provided, calculate it
+            diff = abs(np.diff(np.append(dvh, 0)))  # per dicompyler-core
+            mean_dose = (diff.bincenters * diff.counts).sum() / diff.counts.sum()
+
+        calc_type = self.calc_type  # calculate only once
         if calc_type == 'Volume':
-            endpoint = dose_to_volume(dvh, input_value, dvh_bin_width=bin_width)
+            endpoint = dose_to_volume(dvh, self.input_value, dvh_bin_width=bin_width)
         elif calc_type == 'Dose':
-            endpoint = volume_of_dose(dvh, input_value, dvh_bin_width=bin_width)
+            endpoint = volume_of_dose(dvh, self.input_value, dvh_bin_width=bin_width)
         elif calc_type == 'Mean':
             endpoint = mean_dose
         elif calc_type == 'MVS':
-            endpoint = volume - volume_of_dose(dvh, input_value, dvh_bin_width=bin_width)
+            endpoint = volume - volume_of_dose(dvh, self.input_value, dvh_bin_width=bin_width)
+        else:
+            return
 
-        func = [operator.gt, operator.lt][self.operator_str == '<']
-        if endpoint is not None:
-            return func(endpoint, self.threshold_value)
+        func = operator.lt if self.operator_str == '<' else operator.gt
+        return func(endpoint, self.threshold_value)
 
     @property
     def threshold_value(self):

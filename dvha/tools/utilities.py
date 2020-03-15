@@ -61,8 +61,9 @@ def initialize_protocols():
     """If no protocols are found in PROTOCOL_DIR, copy defaults"""
     current_protocols = [f for f in listdir(DIRECTORIES['PROTOCOL']) if splitext(f)[1].lower() == '.scp']
     if not current_protocols:
-        default_protocols = listdir(DIRECTORIES['PROTOCOL_DEFAULT'])
-        move_files_to_new_path(default_protocols, DIRECTORIES['PROTOCOL'], copy_files=True)
+        file_names = [f for f in listdir(DIRECTORIES['PROTOCOL_DEFAULT']) if splitext(f)[1].lower() == '.scp']
+        file_paths = [join(DIRECTORIES['PROTOCOL_DEFAULT'], f) for f in file_names]
+        move_files_to_new_path(file_paths, DIRECTORIES['PROTOCOL'], copy_files=True)
 
 
 def write_sql_connection_settings(config):
