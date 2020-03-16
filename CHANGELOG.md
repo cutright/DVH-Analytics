@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.7.5 (TBD)
+--------------------
+ - [Protocols] Protocol (DVH constraint) editor
+
 v0.7.4 (2020.03.13)
 --------------------
  - [Endpoints] Fixed a bug where endpoint short-hand would not display on MS Windows

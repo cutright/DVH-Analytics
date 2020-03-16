@@ -26,7 +26,6 @@ class ProtocolsEditor(wx.Dialog):
         keys = ['protocol', 'fractionation']
         self.combo_box = {key: wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
                           for key in keys}
-        self.label = {key: wx.StaticText(self, wx.ID_ANY, key.capitalize() + ':') for key in keys}
 
         button_map = {'add': '+', 'del': '-', 'edit': u"Δ"}
         self.buttons_combos = {key: {b_key: wx.Button(self, wx.ID_ANY, b_val)
@@ -64,6 +63,9 @@ class ProtocolsEditor(wx.Dialog):
         self.button_constraints['Edit'].Disable()
         self.button_constraints['Delete'].Disable()
 
+        self.combo_box['protocol'].SetMinSize((300, self.combo_box['protocol'].GetSize()[1]))
+        self.combo_box['fractionation'].SetMinSize((50, self.combo_box['fractionation'].GetSize()[1]))
+
     def __do_bind(self):
         self.Bind(wx.EVT_COMBOBOX, self.protocol_ticker, id=self.combo_box['protocol'].GetId())
         self.Bind(wx.EVT_COMBOBOX, self.update_table, id=self.combo_box['fractionation'].GetId())
@@ -80,23 +82,20 @@ class ProtocolsEditor(wx.Dialog):
 
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_main = wx.BoxSizer(wx.VERTICAL)
-        sizer_combos = {key: {'all': wx.BoxSizer(wx.VERTICAL),
-                              'action': wx.BoxSizer(wx.HORIZONTAL)} for key in ['protocol', 'fractionation']}
+        sizer_combos = {key: wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, key.capitalize()), wx.HORIZONTAL)
+                        for key in ['protocol', 'fractionation']}
         sizer_combos_wrapper = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_constraints = wx.BoxSizer(wx.VERTICAL)
+        sizer_constraints = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, 'Constraints'), wx.VERTICAL)
         sizer_actions = wx.BoxSizer(wx.HORIZONTAL)
         sizer_dlg_buttons = wx.BoxSizer(wx.HORIZONTAL)
 
         for key in ['protocol', 'fractionation']:
-            sizer_combos[key]['action'].Add(self.combo_box[key], 0, wx.LEFT | wx.RIGHT, 2)
-            sizer_combos[key]['action'].Add(self.buttons_combos[key]['add'], 0, wx.LEFT | wx.RIGHT, 2)
-            sizer_combos[key]['action'].Add(self.buttons_combos[key]['del'], 0, wx.LEFT | wx.RIGHT, 2)
-            sizer_combos[key]['action'].Add(self.buttons_combos[key]['edit'], 0, wx.LEFT, 2)
-            sizer_combos[key]['action'].Add((50, 20), 0, 0, 0)
-
-            sizer_combos[key]['all'].Add(self.label[key], 0, 0, 0)
-            sizer_combos[key]['all'].Add(sizer_combos[key]['action'], 0, 0, 0)
-            sizer_combos_wrapper.Add(sizer_combos[key]['all'], 0, wx.ALL | wx.EXPAND, 5)
+            sizer_combos[key].Add(self.combo_box[key], 0, wx.LEFT | wx.RIGHT, 2)
+            sizer_combos[key].Add((15, 10), 0, 0, 0)
+            sizer_combos[key].Add(self.buttons_combos[key]['add'], 0, wx.LEFT | wx.RIGHT, 2)
+            sizer_combos[key].Add(self.buttons_combos[key]['del'], 0, wx.LEFT | wx.RIGHT, 2)
+            sizer_combos[key].Add(self.buttons_combos[key]['edit'], 0, wx.LEFT, 2)
+            sizer_combos_wrapper.Add(sizer_combos[key], 0, wx.ALL | wx.EXPAND, 5)
         sizer_main.Add(sizer_combos_wrapper, 0, wx.EXPAND, 0)
 
         sizer_actions.Add(self.button_constraints['Add'], 0, wx.RIGHT, 5)
@@ -104,8 +103,7 @@ class ProtocolsEditor(wx.Dialog):
         sizer_actions.Add(self.button_constraints['Delete'], 0, wx.RIGHT | wx.LEFT, 5)
         sizer_actions.Add(self.button_constraints['Select All'], 0, wx.RIGHT | wx.LEFT, 5)
         sizer_actions.Add(self.button_constraints['Deselect All'], 0,  wx.LEFT, 5)
-        label_actions = wx.StaticText(self, wx.ID_ANY, "Constraints:")
-        sizer_constraints.Add(label_actions, 0, 0, 0)
+
         sizer_constraints.Add(sizer_actions, 0, wx.ALL | wx.EXPAND, 5)
         sizer_constraints.Add(self.list_ctrl, 1, wx.ALL | wx.EXPAND, 5)
         sizer_main.Add(sizer_constraints, 1, wx.ALL | wx.EXPAND, 5)
@@ -185,10 +183,14 @@ class ProtocolsEditor(wx.Dialog):
     def on_delete_constraint(self, *evt):
         for index_and_row in self.data_table.selected_row_data_with_index:
             index, row = tuple(index_and_row)
+
+            # the data table view does not print repeated structure names,
+            # if roi is blank, work backwards until it isn't
             i = index
-            while not self.data_table.data['Structure'][i]:
+            while not self.data_table.data['Structure'][i] and i != -1:  # prevent infinite loop if no roi found
                 i -= 1
             roi = self.data_table.data['Structure'][i]
+
             constraint_label = row[2].replace('cc', '').replace('Gy', '')
             if roi:
                 self.protocols.delete_constraint(self.selected_protocol, self.selected_fx, roi, constraint_label)
@@ -219,14 +221,14 @@ class AddProtocolROI(wx.Dialog):
         self.fractionation = fractionation
         self.roi_map = roi_map
 
-        columns = ['Input Type', 'Input Value', 'Operator', 'Output Type', 'Output Value']
+        # columns = ['Input Type', 'Input Value', 'Operator', 'Output Type', 'Output Value']
         keys = ['constraints', 'aliases']
         style = wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES
         self.list_ctrl = {key: wx.ListCtrl(self, wx.ID_ANY, style=style) for key in keys}
         self.data_table = {key: DataTable(self.list_ctrl[key]) for key in keys}
 
-        keys = ['Add', 'Delete', 'Help']
-        self.button_constraint = {key: wx.Button(self, wx.ID_ANY, key) for key in keys}
+        key_map = {'Add': '+', 'Delete': '-', 'Help': 'Help'}
+        self.button_constraint = {key: wx.Button(self, wx.ID_ANY, label) for key, label in key_map.items()}
         self.button_alias = {key: wx.Button(self, wx.ID_ANY, key) for key in ['Add', 'Remove']}
         self.button_ok = wx.Button(self, wx.ID_OK, "OK")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
@@ -234,7 +236,7 @@ class AddProtocolROI(wx.Dialog):
         self.combo_box_alias = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
 
         self.text_ctrl_structure = wx.TextCtrl(self, wx.ID_ANY, "")
-        self.text_ctrl_constraint = wx.TextCtrl(self, wx.ID_ANY, "")
+        self.text_ctrl_constraint = wx.TextCtrl(self, wx.ID_ANY, 'Enter New Constraint (e.g., V20 < 1500)')
 
         self.__set_properties()
         self.__do_bind()
@@ -246,6 +248,11 @@ class AddProtocolROI(wx.Dialog):
     def __set_properties(self):
         self.SetTitle("New Constraints for %s: %sFx" % (self.protocol_name, self.fractionation))
         self.update_combo_box_aliases()
+
+        for key in ['Add', 'Delete']:
+            self.button_constraint[key].SetMaxSize((25, 25))
+
+        self.text_ctrl_constraint.SetMinSize((400, self.text_ctrl_constraint.GetSize()[1]))
 
     def __do_bind(self):
         pass
@@ -264,11 +271,11 @@ class AddProtocolROI(wx.Dialog):
         sizer_structure.Add(self.text_ctrl_structure, 0, wx.EXPAND | wx.ALL, 5)
         sizer_main.Add(sizer_structure, 0, wx.ALL | wx.EXPAND, 5)
 
-        sizer_constraints.Add(self.text_ctrl_constraint, 1, wx.RIGHT, 5)
+        sizer_constraints.Add(self.text_ctrl_constraint, 0, wx.RIGHT, 5)
         sizer_constraints.Add(self.button_constraint['Add'], 0, wx.LEFT | wx.RIGHT, 5)
         sizer_constraints.Add(self.button_constraint['Delete'], 0, wx.LEFT | wx.RIGHT, 5)
         sizer_constraints.Add(self.button_constraint['Help'], 0, wx.LEFT, 5)
-        sizer_constraints_wrapper.Add(sizer_constraints, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_constraints_wrapper.Add(sizer_constraints, 0, wx.ALL, 5)
         sizer_constraints_wrapper.Add(self.list_ctrl['constraints'], 1, wx.ALL | wx.EXPAND, 5)
         sizer_main.Add(sizer_constraints_wrapper, 1, wx.ALL | wx.EXPAND, 5)
 
@@ -294,6 +301,9 @@ class AddProtocolROI(wx.Dialog):
         self.Fit()
         self.Center()
 
-    def update_combo_box_aliases(self):
+    def update_combo_box_aliases(self, set_value=None):
         self.combo_box_alias.SetItems(self.roi_map.institutional_rois)
-        self.combo_box_alias.SetValue(self.roi_map.institutional_rois[0])
+        if set_value is not None and set_value in self.roi_map.institutional_rois:
+            self.combo_box_alias.SetValue(set_value)
+        else:
+            self.combo_box_alias.SetValue(self.roi_map.institutional_rois[0])
