@@ -236,7 +236,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_view_stats_data_1, self.data_menu_items['StatsData1'])
         self.Bind(wx.EVT_MENU, self.on_view_stats_data_2, self.data_menu_items['StatsData2'])
 
-        self.Bind(wx.EVT_MENU, ProtocolsEditor, menu_protocol_editor)
+        self.Bind(wx.EVT_MENU, self.on_protocol_editor, menu_protocol_editor)
 
         self.frame_menubar.Append(file_menu, '&File')
         self.frame_menubar.Append(self.data_menu, '&Data')
@@ -955,6 +955,9 @@ class DVHAMainFrame(wx.Frame):
                 self.data_views[key] = None
         else:
             self.no_queried_data_dlg()
+
+    def on_protocol_editor(self, *evt):
+        ProtocolsEditor(self.roi_map)
 
     def no_queried_data_dlg(self):
         dlg = wx.MessageDialog(self, 'Please query/open some data first.', 'ERROR!', wx.ICON_ERROR | wx.OK_DEFAULT)

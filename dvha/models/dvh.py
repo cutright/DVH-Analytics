@@ -536,15 +536,19 @@ class Protocols:
         columns = ['Structure', 'ROI Type', 'Constraint', 'Threshold']
         data = {key: [] for key in columns}
         for roi in self.get_rois(protocol_name, fractionation):
-            for constraint_label, threshold in self.get_constraints(protocol_name, fractionation, roi).items():
-                if data['Structure'] and data['Structure'][-1] == roi:
+            constraints = self.get_roi_constraints(roi, protocol_name, fractionation)
+            for i, constraint in enumerate(constraints):
+                if i:
                     data['Structure'].append('')
                     data['ROI Type'].append('')
                 else:
                     data['Structure'].append(roi)
-                    data['ROI Type'].append(self.get_roi_type(roi))
-                data['Constraint'].append(constraint_label)
-                data['Threshold'].append(threshold)
+                    data['ROI Type'].append(constraint.roi_type)
+                data['Constraint'].append(constraint.label_with_units)
+                data['Threshold'].append(constraint.threshold_with_units)
+            if len(constraints):
+                for col in columns:
+                    data[col].append('')
 
         return data, columns
 
@@ -566,16 +570,33 @@ class Protocols:
             return 'TARGET'
         return 'OAR'
 
+    def delete_protocol(self, protocol_name):
+        if protocol_name in list(self.data):
+            self.data.pop(protocol_name, None)
+
+    def delete_fractionation(self, protocol_name, fractionation):
+        if protocol_name in list(self.data) and fractionation in list(self.data[protocol_name]):
+            self.data[protocol_name].pop(fractionation, None)
+
+    def delete_constraint(self, protocol_name, fractionation, roi, constraint_label):
+        try:
+            self.data[protocol_name][fractionation][roi].pop(constraint_label, None)
+        except KeyError:
+            pass
+
+    def save(self):
+        pass
+
 
 class Constraint:
-    def __init__(self, constraint_label, threshold, roi_type='OAR', max_dose_volume=MAX_DOSE_VOLUME):
-        self.constraint_label = constraint_label
+    def __init__(self, label, threshold, roi_type='OAR', max_dose_volume=MAX_DOSE_VOLUME):
+        self.label = label
         self.threshold = threshold
         self.roi_type = roi_type
         self.max_dose_volume = max_dose_volume
 
     def __str__(self):
-        return "%s %s %s" % (self.constraint_label, self.operator_str, self.threshold)
+        return "%s %s %s" % (self.label, self.operator_str, self.threshold)
 
     def __repr__(self):
         return self.__str__()
@@ -620,10 +641,6 @@ class Constraint:
         return float(self.threshold)
 
     @property
-    def string_rep(self):
-        return self.__str__()
-
-    @property
     def operator_str(self):
         if self.output_type == 'MVS':
             return ['<', '>']['OAR' in self.roi_type]
@@ -631,9 +648,9 @@ class Constraint:
 
     @property
     def output_type(self):
-        if self.constraint_label == 'Mean':
+        if self.label == 'Mean':
             return 'D'
-        return self.constraint_label.split('_')[0]
+        return self.label.split('_')[0]
 
     @property
     def output_units(self):
@@ -641,9 +658,9 @@ class Constraint:
 
     @property
     def input(self):
-        if self.constraint_label == 'Mean':
+        if self.label == 'Mean':
             return None
-        return self.constraint_label.split('_')[1]
+        return self.label.split('_')[1]
 
     @property
     def input_type(self):
@@ -651,9 +668,9 @@ class Constraint:
 
     @property
     def calc_type(self):
-        if 'MVS' in self.constraint_label:
+        if 'MVS' in self.label:
             return 'MVS'
-        if 'Mean' in self.constraint_label:
+        if 'Mean' in self.label:
             return 'Mean'
         return self.input_type
 
@@ -682,3 +699,16 @@ class Constraint:
         scale = ['absolute', 'relative']['%' in self.input]
         abs_units = ['cc', 'Gy'][self.input_type == 'Dose']
         return ['%', abs_units][scale == 'absolute']
+
+    @property
+    def label_with_units(self):
+        input_units = self.input_units
+        if '%' not in self.label and not self.label.lower().endswith('max') and input_units:
+            return self.label + input_units
+        return self.label
+
+    @property
+    def threshold_with_units(self):
+        if '%' not in self.threshold:
+            return self.threshold + self.output_units
+        return self.threshold

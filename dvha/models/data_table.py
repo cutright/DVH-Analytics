@@ -387,6 +387,10 @@ class DataTable:
         """
         return [self.get_row(index) for index in get_selected_listctrl_items(self.layout)]
 
+    @property
+    def selected_row_data_with_index(self):
+        return [[index, self.get_row(index)] for index in get_selected_listctrl_items(self.layout)]
+
     def apply_selection_to_all(self, state):
         """
         Select or Deselect all rows in the layout
