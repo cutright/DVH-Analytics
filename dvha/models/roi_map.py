@@ -22,6 +22,7 @@ from dvha.models.data_table import DataTable
 from dvha.models.plot import PlotROIMap
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_elapsed_time, get_window_size,\
     set_frame_icon, set_msw_background_color, is_windows
+from dvha.tools.roi_map_generator import ROIMapGenerator
 from dvha.tools.roi_name_manager import clean_name
 
 
@@ -90,6 +91,18 @@ class ROIMapFrame(wx.Frame):
                                                                style=wx.CB_DROPDOWN | wx.CB_READONLY)}
         self.button_merge = wx.Button(self.window_editor, wx.ID_ANY, "Merge")
 
+        self.list_ctrl_tg263 = wx.ListCtrl(self.window_editor, wx.ID_ANY, style=wx.LC_REPORT | wx.BORDER_SUNKEN)
+        self.roi_map_gen = ROIMapGenerator()
+        self.roi_map_gen.prep_data_for_roi_map_gui()
+        self.data_table_tg263 = DataTable(self.list_ctrl_tg263, columns=self.roi_map_gen.keys)
+        combo_map = {'anatomy': self.roi_map_gen.anatomic_groups,
+                     'target': self.roi_map_gen.target_types,
+                     'major': self.roi_map_gen.major_categories,
+                     'minor': self.roi_map_gen.minor_categories}
+        self.combo_box_tg263 = {key: wx.ComboBox(self.window_editor, wx.ID_ANY,
+                                                 choices=['All'] + choices, style=wx.CB_DROPDOWN | wx.CB_READONLY)
+                                for key, choices in combo_map.items()}
+
         self.button_save_and_update = wx.Button(self.window_editor, wx.ID_ANY, "Save and Update Database")
         self.button_cancel = wx.Button(self.window_editor, wx.ID_ANY, "Cancel Changes and Reload")
 
@@ -137,6 +150,11 @@ class ROIMapFrame(wx.Frame):
                 combo_box.SetMinSize((combo_box.GetSize()[0], 26))
             self.button_uncategorized_ignored_ignore.SetMinSize((self.button_uncategorized_ignored_ignore.GetSize()[0],
                                                                  self.button_uncategorized_ignored_delete.GetSize()[1]))
+
+        self.data_table_tg263.set_data(self.roi_map_gen.tg_263, columns=self.roi_map_gen.keys)
+        self.data_table_tg263.set_column_widths(auto=True)
+        for combo_box in self.combo_box_tg263.values():
+            combo_box.SetValue('All')
 
     def __do_bind(self):
         self.window_tree.Bind(wx.EVT_COMBOBOX, self.on_plot_data_type_change, id=self.combo_box_tree_plot_data.GetId())
@@ -203,6 +221,9 @@ class ROIMapFrame(wx.Frame):
         sizer_physician = wx.BoxSizer(wx.VERTICAL)
         sizer_physician_row = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician_roi_row = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_tg263 = wx.StaticBoxSizer(wx.StaticBox(self.window_editor, wx.ID_ANY, "TG-263"), wx.VERTICAL)
+        sizer_tg263_filters = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_tg263_table = wx.BoxSizer(wx.VERTICAL)
         sizer_save_cancel_buttons = wx.BoxSizer(wx.HORIZONTAL)
 
         label_physician = wx.StaticText(self.window_editor, wx.ID_ANY, "Physician:")
@@ -253,7 +274,7 @@ class ROIMapFrame(wx.Frame):
         sizer_physician_roi_merger_merge.Add((20, 16), 0, 0, 0)
         sizer_physician_roi_merger_merge.Add(self.button_merge, 0, wx.ALL, 5)
         sizer_physician_roi_merger.Add(sizer_physician_roi_merger_merge, 0, wx.ALL | wx.EXPAND, 0)
-        sizer_map_editor.Add(sizer_physician_roi_merger, 0, wx.EXPAND, 0)
+        sizer_map_editor.Add(sizer_physician_roi_merger, 0, wx.EXPAND | wx.ALL, 5)
 
         sizer_save_cancel_buttons.Add(self.button_save_and_update, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 40)
         sizer_save_cancel_buttons.Add(self.button_cancel, 1, wx.EXPAND | wx.LEFT| wx.RIGHT, 40)
@@ -290,6 +311,13 @@ class ROIMapFrame(wx.Frame):
         sizer_uncategorized_ignored_ignore.Add(self.button_uncategorized_ignored_ignore, 0, wx.ALL, 5)
         sizer_uncategorized_ignored.Add(sizer_uncategorized_ignored_ignore, 0, wx.EXPAND, 0)
         sizer_editor.Add(sizer_uncategorized_ignored, 0, wx.ALL | wx.EXPAND, 5)
+
+        sizer_tg263_table.Add(self.list_ctrl_tg263, 1, wx.EXPAND, 0)
+
+        sizer_tg263.Add(self.combo_box_tg263['anatomy'], 0, 0, 0)
+
+        sizer_tg263.Add(sizer_tg263_table, 1, wx.EXPAND, 0)
+        sizer_editor.Add(sizer_tg263, 1, wx.EXPAND | wx.ALL, 10)
 
         self.window_editor.SetSizer(sizer_editor)
         self.window.SplitVertically(self.window_tree, self.window_editor)
