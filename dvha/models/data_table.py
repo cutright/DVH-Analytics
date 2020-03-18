@@ -295,18 +295,18 @@ class DataTable:
         """
         self.layout.SetColumnWidth(index, width)
 
-    def set_column_widths(self):
-        """
-        Set all widths in layout based on self.widths
-        """
-        if self.widths is not None:
-            for i, width in enumerate(self.widths):
-                self.set_column_width(i, width)
+    def set_column_widths(self, auto=False):
+        """Set all widths in layout based on self.widths"""
+        if auto:
+            for i in range(len(self.columns)):
+                self.set_column_width(i, wx.LIST_AUTOSIZE)
+        else:
+            if self.widths is not None:
+                for i, width in enumerate(self.widths):
+                    self.set_column_width(i, width)
 
     def clear(self):
-        """
-        Delete all data in self.data and clear the table view
-        """
+        """Delete all data in self.data and clear the table view"""
         self.delete_all_rows()
         self.layout.DeleteAllColumns()
 
