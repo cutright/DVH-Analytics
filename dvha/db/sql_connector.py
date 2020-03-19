@@ -366,9 +366,7 @@ class DVH_SQL:
                     "roi_name = '%s' and study_instance_uid = '%s'" % (variation, study_instance_uid))
 
     def drop_tables(self):
-        """
-        Delete all tables in the database if they exist
-        """
+        """Delete all tables in the database if they exist"""
         for table in self.tables:
             self.cursor.execute("DROP TABLE IF EXISTS %s;" % table)
             self.cnx.commit()
@@ -383,18 +381,18 @@ class DVH_SQL:
         self.cnx.commit()
 
     def initialize_database(self):
-        """
-        Ensure that all of the latest SQL columns exist in the user's database
-        """
+        """Ensure that all of the latest SQL columns exist in the user's database"""
         create_tables_file = [CREATE_PGSQL_TABLES, CREATE_SQLITE_TABLES][self.db_type == 'sqlite']
         self.execute_file(create_tables_file)
 
     def reinitialize_database(self):
-        """
-        Delete all data and create all tables with latest columns
-        """
+        """Delete all data and create all tables with latest columns"""
         self.drop_tables()
         self.initialize_database()
+        if self.db_type == 'sqlite':
+            self.cnx.isolation_level = None
+            self.cnx.execute('VACUUM')
+            self.cnx.isolation_level = ''
 
     def does_db_exist(self):
         """

@@ -759,8 +759,8 @@ class SQLSettingsDialog(wx.Dialog):
 # ------------------------------------------------------
 class DeleteAllData(MessageDialog):
     def __init__(self, parent, options):
-        MessageDialog.__init__(self, parent, "Delete All Data in Database")
         self.options = options
+        MessageDialog.__init__(self, parent, "Delete All Data in Database")
 
     def action_yes(self):
         with DVH_SQL() as cnx:
@@ -770,10 +770,10 @@ class DeleteAllData(MessageDialog):
 
 class MoveFilesToInbox(MessageDialog):
     def __init__(self, parent, inbox_dir, imported_dir):
-        MessageDialog.__init__(self, parent, "Move files to inbox?")
         self.parent = parent
         self.inbox_dir = inbox_dir
         self.imported_dir = imported_dir
+        MessageDialog.__init__(self, parent, "Move files to inbox?")
 
     def action_yes(self):
         new_dir = join(self.inbox_dir, "previously_imported %s" %
@@ -787,8 +787,8 @@ class MoveFilesToInbox(MessageDialog):
 
 class DeleteImportedDirectory(MessageDialog):
     def __init__(self, parent, directory):
-        MessageDialog.__init__(self, parent, "Delete Imported Directory?")
         self.directory = directory
+        MessageDialog.__init__(self, parent, "Delete Imported Directory?")
 
     def action_yes(self):
         delete_directory_contents(self.directory)
