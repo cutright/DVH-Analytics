@@ -12,7 +12,7 @@ Classes to generate bokeh plots
 
 import wx.html2
 from bokeh.plotting import figure
-from bokeh.io.export import get_layout_html
+from bokeh.io.export import get_layout_html, export_svgs
 from bokeh.models import Legend, HoverTool, ColumnDataSource, DataTable, TableColumn,\
     NumberFormatter, Div, Range1d, LabelSet
 from bokeh.layouts import column, row
@@ -67,6 +67,8 @@ class Plot:
         self.figure = figure(x_axis_type=x_axis_type, tools=tools, toolbar_sticky=True)
         self.figure.xaxis.axis_label = x_axis_label
         self.figure.yaxis.axis_label = y_axis_label
+
+        self.figures = [self.figure]  # keep track of all figures
 
         self.source = {}  # Will be a dictionary of bokeh ColumnDataSources
 
@@ -127,6 +129,13 @@ class Plot:
             self.layout.LoadURL(web_file)
         else:
             self.layout.SetPage(self.html_str, "")
+
+    def get_svg(self, file_name):
+        for fig in self.figures:
+            fig.output_backend = "svg"
+        export_svgs(self.bokeh_layout, filename=file_name)
+        for fig in self.figures:
+            fig.output_backend = "canvas"
 
     @staticmethod
     def clean_data(*data, mrn=None, uid=None, dates=None):
@@ -479,6 +488,7 @@ class PlotTimeSeries(Plot):
 
     def __add_histogram_data(self):
         self.histogram = figure(tools="")
+        self.figures.append(self.histogram)
         self.histogram.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
         self.histogram.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
         self.histogram.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
@@ -706,6 +716,7 @@ class PlotCorrelation(Plot):
     def __add_figure(self):
         self.fig = figure(plot_width=900, plot_height=700, x_axis_location="above", x_range=[''], y_range=[''],
                           tools="pan, crosshair, box_zoom, wheel_zoom, reset")
+        self.figures = [self.fig]
 
     def __set_fig_attr(self):
         self.fig.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
@@ -766,6 +777,7 @@ class PlotCorrelation(Plot):
 
         self.fig = figure(x_axis_location="above", x_range=data['x_factors'], y_range=data['y_factors'],
                           tools="pan, crosshair, box_zoom, wheel_zoom, reset")
+        self.figures = [self.fig]
         self.__set_fig_attr()
         self.__add_plot_data()
         self.__add_hover()
@@ -832,11 +844,13 @@ class PlotRegression(Plot):
 
     def __create_additional_figures(self):
         self.figure_residual_fits = figure(tools="pan,box_zoom,crosshair,reset")
+        self.figures.append(self.figure_residual_fits)
         self.figure_residual_fits.xaxis.axis_label = 'Fitted Values'
         self.figure_residual_fits.yaxis.axis_label = 'Residuals'
         self.figure_prob_plot = figure(tools="pan,box_zoom,crosshair,reset")
         self.figure_prob_plot.xaxis.axis_label = 'Quantiles'
         self.figure_prob_plot.yaxis.axis_label = 'Ordered Values'
+        self.figures.append(self.figure_prob_plot)
 
     def __create_table(self):
         self.regression_table = DataTable(source=self.source['table'], columns=self.table_columns, index_position=None)
@@ -1087,6 +1101,7 @@ class PlotMultiVarRegression(Plot):
 
     def __add_additional_figures(self):
         self.figure_prob_plot = figure(tools=DEFAULT_TOOLS)
+        self.figures.append(self.figure_prob_plot)
         self.figure_prob_plot.xaxis.axis_label = 'Quantiles'
         self.figure_prob_plot.yaxis.axis_label = 'Ordered Values'
 
@@ -1328,6 +1343,7 @@ class PlotControlChart(Plot):
 
     def __add_adj_figure(self):
         self.adj_figure = figure()
+        self.figures.append(self.adj_figure)
         self.adj_figure.xaxis.axis_label = 'Study'
         self.adj_figure.yaxis.axis_label = 'Residual'
         self.adj_figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
