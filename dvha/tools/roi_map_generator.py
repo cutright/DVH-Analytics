@@ -12,8 +12,11 @@ class ROIMapGenerator:
             for line in doc:
                 if 'xx' not in line:  # ignore the rows with generic expansions
                     for col, value in enumerate(line.split(',')):
+                        if value == '':
+                            value = 'None'
                         self.tg_263[keys[col]].append(value.strip().replace('^', ','))
             self.keys = keys
+            self.keys.append(self.keys.pop(0))  # Move Target Type to the end
 
         self.key_map = {key: key for key in keys}
 
@@ -74,6 +77,10 @@ class ROIMapGenerator:
         :return: subset of tg_263 with the data_filter applied
         :type: dict
         """
+
+        for key in list(data_filter):
+            if data_filter[key].lower() == 'all':
+                data_filter.pop(key)
 
         data = {key: [] for key in self.keys}
         for row in range(len(self.tg_263[self.keys[0]])):

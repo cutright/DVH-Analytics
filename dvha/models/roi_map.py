@@ -156,6 +156,10 @@ class ROIMapFrame(wx.Frame):
         for combo_box in self.combo_box_tg263.values():
             combo_box.SetValue('All')
 
+        # These combo_boxes get a height of 30 since adding TG263 combo_boxes?
+        for combo_box in self.combo_box_physician_roi_merge.values():
+            combo_box.SetMaxSize((1000, 26))
+
     def __do_bind(self):
         self.window_tree.Bind(wx.EVT_COMBOBOX, self.on_plot_data_type_change, id=self.combo_box_tree_plot_data.GetId())
 
@@ -181,6 +185,10 @@ class ROIMapFrame(wx.Frame):
         self.window_editor.Bind(wx.EVT_BUTTON, self.on_delete_dvh, id=self.button_uncategorized_ignored_delete.GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.on_ignore_dvh, id=self.button_uncategorized_ignored_ignore.GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.on_merge, id=self.button_merge.GetId())
+
+        for combo_box in self.combo_box_tg263.values():
+            self.window_editor.Bind(wx.EVT_COMBOBOX, self.update_tg263_table, id=combo_box.GetId())
+        self.window_editor.Bind(wx.EVT_LIST_COL_CLICK, self.sort_tg263_table, self.list_ctrl_tg263)
 
         self.window_editor.Bind(wx.EVT_BUTTON, self.save_and_update, id=self.button_save_and_update.GetId())
         self.window_editor.Bind(wx.EVT_BUTTON, self.on_cancel, id=self.button_cancel.GetId())
@@ -221,8 +229,10 @@ class ROIMapFrame(wx.Frame):
         sizer_physician = wx.BoxSizer(wx.VERTICAL)
         sizer_physician_row = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician_roi_row = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_tg263 = wx.StaticBoxSizer(wx.StaticBox(self.window_editor, wx.ID_ANY, "TG-263"), wx.VERTICAL)
+        sizer_tg263 = wx.StaticBoxSizer(wx.StaticBox(self.window_editor, wx.ID_ANY, "TG-263 (for reference)"),
+                                        wx.VERTICAL)
         sizer_tg263_filters = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_tg263_col = {key: wx.BoxSizer(wx.VERTICAL) for key in list(self.combo_box_tg263)}
         sizer_tg263_table = wx.BoxSizer(wx.VERTICAL)
         sizer_save_cancel_buttons = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -257,29 +267,29 @@ class ROIMapFrame(wx.Frame):
         sizer_variation_buttons.Add(self.button_variation_move, 0, wx.EXPAND | wx.ALL, 5)
         sizer_variation_buttons.Add(self.button_variation_select_all, 0, wx.EXPAND | wx.ALL, 5)
         sizer_variation_buttons.Add(self.button_variation_deselect_all, 0, wx.EXPAND | wx.ALL, 5)
-        sizer_variations.Add(sizer_variation_buttons, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_variations.Add(sizer_variation_buttons, 0, wx.EXPAND, 0)
 
         sizer_map_editor.Add(sizer_variations, 0, wx.EXPAND, 0)
 
         label_physician_roi_a = wx.StaticText(self.window_editor, wx.ID_ANY, "Merge Physician ROI A:")
-        sizer_physician_roi_a.Add(label_physician_roi_a, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        sizer_physician_roi_a.Add(label_physician_roi_a, 0, wx.EXPAND | wx.LEFT, 5)
         sizer_physician_roi_a.Add(self.combo_box_physician_roi_merge['a'], 1,
-                                  wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
+                                  wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_physician_roi_merger.Add(sizer_physician_roi_a, 1, wx.EXPAND, 0)
         label_physician_roi_b = wx.StaticText(self.window_editor, wx.ID_ANY, "Into Physician ROI B:")
-        sizer_physician_roi_b.Add(label_physician_roi_b, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        sizer_physician_roi_b.Add(label_physician_roi_b, 0, wx.EXPAND, 0)
         sizer_physician_roi_b.Add(self.combo_box_physician_roi_merge['b'], 1,
-                                  wx.EXPAND | wx.BOTTOM | wx.LEFT | wx.RIGHT, 5)
+                                  wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_physician_roi_merger.Add(sizer_physician_roi_b, 1, wx.EXPAND, 0)
         sizer_physician_roi_merger_merge.Add((20, 16), 0, 0, 0)
         sizer_physician_roi_merger_merge.Add(self.button_merge, 0, wx.ALL, 5)
         sizer_physician_roi_merger.Add(sizer_physician_roi_merger_merge, 0, wx.ALL | wx.EXPAND, 0)
-        sizer_map_editor.Add(sizer_physician_roi_merger, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_map_editor.Add(sizer_physician_roi_merger, 0, wx.EXPAND, 0)
 
         sizer_save_cancel_buttons.Add(self.button_save_and_update, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 40)
         sizer_save_cancel_buttons.Add(self.button_cancel, 1, wx.EXPAND | wx.LEFT| wx.RIGHT, 40)
         sizer_map_editor.Add((10, 10), 0, 0, 0)
-        sizer_map_editor.Add(sizer_save_cancel_buttons, 0, wx.EXPAND | wx.ALL, 10)
+        sizer_map_editor.Add(sizer_save_cancel_buttons, 0, wx.EXPAND | wx.ALL, 5)
 
         sizer_roi_manager.Add(sizer_map_editor, 1, wx.EXPAND, 0)
         sizer_editor.Add(sizer_roi_manager, 0, wx.EXPAND | wx.ALL, 5)
@@ -314,10 +324,16 @@ class ROIMapFrame(wx.Frame):
 
         sizer_tg263_table.Add(self.list_ctrl_tg263, 1, wx.EXPAND, 0)
 
-        sizer_tg263.Add(self.combo_box_tg263['anatomy'], 0, 0, 0)
+        label_tg263 = {key: wx.StaticText(self.window_editor, wx.ID_ANY, key.capitalize() + ':')
+                       for key in list(self.combo_box_tg263)}
+        for key in ['major', 'minor', 'anatomy', 'target']:
+            sizer_tg263_col[key].Add(label_tg263[key])
+            sizer_tg263_col[key].Add(self.combo_box_tg263[key], 0, wx.EXPAND, 0)
+            sizer_tg263_filters.Add(sizer_tg263_col[key], 0, wx.EXPAND, 0)
 
+        sizer_tg263.Add(sizer_tg263_filters, 0, 0, 0)
         sizer_tg263.Add(sizer_tg263_table, 1, wx.EXPAND, 0)
-        sizer_editor.Add(sizer_tg263, 1, wx.EXPAND | wx.ALL, 10)
+        sizer_editor.Add(sizer_tg263, 1, wx.EXPAND | wx.ALL, 5)
 
         self.window_editor.SetSizer(sizer_editor)
         self.window.SplitVertically(self.window_tree, self.window_editor)
@@ -632,6 +648,29 @@ class ROIMapFrame(wx.Frame):
         dlg = LinkPhysicianROI(self, self.physician, self.physician_roi, self.roi_map)
         if dlg.res == wx.ID_OK:
             self.update_roi_map()
+
+    def update_tg263_table(self, *evt):
+        filter_key_map = {'major': 'Major Cat.', 'minor': 'Minor Cat.',
+                          'anatomy': 'Anat. Group', 'target': 'Target Type'}
+        data_filter = {col: self.combo_box_tg263[key].GetValue() for key, col in filter_key_map.items()}
+        data = self.roi_map_gen.get_filtered_data(data_filter)
+        self.data_table_tg263.set_data(data, columns=self.roi_map_gen.keys)
+        self.data_table_tg263.set_column_widths(auto=True)
+
+        self.update_tg263_combo_choices()
+
+    def update_tg263_combo_choices(self):
+        filter_key_map = {'major': 'Major Cat.', 'minor': 'Minor Cat.',
+                          'anatomy': 'Anat. Group', 'target': 'Target Type'}
+        for key, col in filter_key_map.items():
+            current_choice = self.combo_box_tg263[key].GetValue()
+            new_choices = ['All'] + self.data_table_tg263.get_unique_values(col)
+            self.combo_box_tg263[key].SetItems(new_choices)
+            self.combo_box_tg263[key].SetValue(current_choice)
+
+    def sort_tg263_table(self, evt):
+        self.data_table_tg263.sort_table(evt)
+        self.data_table_tg263.set_column_widths(auto=True)
 
     def save_and_update(self, evt):
         RemapROIFrame(self.roi_map)

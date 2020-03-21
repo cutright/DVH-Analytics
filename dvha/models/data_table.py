@@ -299,7 +299,7 @@ class DataTable:
         """Set all widths in layout based on self.widths"""
         if auto:
             for i in range(len(self.columns)):
-                self.set_column_width(i, wx.LIST_AUTOSIZE)
+                self.set_column_width(i, wx.LIST_AUTOSIZE_USEHEADER)
         else:
             if self.widths is not None:
                 for i, width in enumerate(self.widths):
@@ -427,3 +427,6 @@ class DataTable:
         if self.sort_indices is None:
             return self.data
         return {column: [self.data[column][i] for i in self.sort_indices] for column in self.columns}
+
+    def get_unique_values(self, column):
+        return sorted(set(self.data[column]))
