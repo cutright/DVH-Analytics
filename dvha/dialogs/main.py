@@ -642,11 +642,13 @@ class UserSettings(wx.Dialog):
 
         line_style_options = ['solid', 'dashed', 'dotted', 'dotdash', 'dashdot']
 
-        self.SetSize((500, 580))
+        # self.SetSize((500, 580))
         self.text_ctrl_inbox = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_DONTWRAP)
         self.button_inbox = wx.Button(self, wx.ID_ANY, u"…")
         self.text_ctrl_imported = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_DONTWRAP)
         self.button_imported = wx.Button(self, wx.ID_ANY, u"…")
+
+        self.checkbox_dicom_dvh = wx.CheckBox(self, wx.ID_ANY, "Import DICOM DVH if available")
         self.dvh_bin_width_input = wx.TextCtrl(self, wx.ID_ANY, str(self.options.dvh_bin_width))
         self.combo_box_colors_category = wx.ComboBox(self, wx.ID_ANY, choices=color_variables,
                                                      style=wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -685,6 +687,9 @@ class UserSettings(wx.Dialog):
         self.text_ctrl_imported.SetToolTip("Directory for post-processed DICOM files")
         self.text_ctrl_imported.SetMinSize((100, 21))
         self.button_imported.SetMinSize((40, 21))
+        self.checkbox_dicom_dvh.SetValue(self.options.USE_DICOM_DVH)
+        self.checkbox_dicom_dvh.SetToolTip("If a DICOM RT-Dose file has a DVH Sequence, use this DVH instead of "
+                                           "recalculating during import.")
         self.dvh_bin_width_input.SetToolTip("Value must be an integer.")
         self.dvh_bin_width_input.SetMinSize((50, 21))
         self.combo_box_colors_category.SetMinSize((250, self.combo_box_colors_category.GetSize()[1]))
@@ -711,6 +716,7 @@ class UserSettings(wx.Dialog):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_ok_cancel = wx.BoxSizer(wx.HORIZONTAL)
         sizer_plot_options = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Plot Options"), wx.VERTICAL)
+        sizer_dvh_options = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "DVH Options"), wx.VERTICAL)
         sizer_dvh_bin_width = wx.BoxSizer(wx.HORIZONTAL)
         sizer_alpha = wx.BoxSizer(wx.VERTICAL)
         sizer_alpha_input = wx.BoxSizer(wx.HORIZONTAL)
@@ -748,6 +754,9 @@ class UserSettings(wx.Dialog):
         sizer_imported_wrapper.Add(sizer_imported, 1, wx.EXPAND, 0)
         sizer_dicom_directories.Add(sizer_imported_wrapper, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_dicom_directories, 0, wx.ALL | wx.EXPAND, 10)
+
+        sizer_dvh_options.Add(self.checkbox_dicom_dvh, 0, wx.ALL, 5)
+        sizer_wrapper.Add(sizer_dvh_options, 0, wx.ALL | wx.EXPAND, 10)
 
         label_dvh_bin_width = wx.StaticText(self, wx.ID_ANY, "DVH Bin Width (cGy):")
         label_dvh_bin_width.SetToolTip("Value must be an integer")
@@ -803,11 +812,14 @@ class UserSettings(wx.Dialog):
 
         self.SetSizer(sizer_wrapper)
         self.Layout()
+        self.Fit()
         self.Center()
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.inbox_dir_dlg, id=self.button_inbox.GetId())
         self.Bind(wx.EVT_BUTTON, self.imported_dir_dlg, id=self.button_imported.GetId())
+
+        self.Bind(wx.EVT_CHECKBOX, self.on_use_dicom_dvh, id=self.checkbox_dicom_dvh.GetId())
 
         self.Bind(wx.EVT_TEXT, self.update_dvh_bin_width_val, id=self.dvh_bin_width_input.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.update_input_colors_var, id=self.combo_box_colors_category.GetId())
@@ -991,6 +1003,9 @@ class UserSettings(wx.Dialog):
         MessageDialog(self, "Restore default preferences?", action_yes_func=self.options.restore_defaults)
         self.update_size_val()
         self.refresh_options()
+
+    def on_use_dicom_dvh(self, *evt):
+        self.options.set_option('USE_DICOM_DVH', self.checkbox_dicom_dvh.GetValue())
 
 
 class About(wx.Dialog):

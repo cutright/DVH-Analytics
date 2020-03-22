@@ -2,6 +2,8 @@
 
 v0.7.5 (TBD)
 --------------------
+ - [Import] Option to import DVH stored in DICOM RT-Dose rather than calculate it. NOTE: Currently the source of the DVH
+  is not stored in the database.
  - [Protocols] Protocol (DVH constraint) editor
 
 v0.7.4 (2020.03.13)

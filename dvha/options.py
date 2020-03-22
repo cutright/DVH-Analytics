@@ -166,6 +166,8 @@ class DefaultOptions:
 
         self.MAX_DOSE_VOLUME = 0.03
 
+        self.USE_DICOM_DVH = False
+
 
 class Options(DefaultOptions):
     def __init__(self):

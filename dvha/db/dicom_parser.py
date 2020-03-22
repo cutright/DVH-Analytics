@@ -8,7 +8,7 @@
 #    See the file LICENSE included with this distribution, also
 #    available at https://github.com/cutright/DVH-Analytics
 
-from dicompylercore import dvhcalc
+from dicompylercore import dvhcalc, dvh as dicompyler_dvh
 from dicompylercore.dicomparser import DicomParser as dicompylerParser
 from datetime import datetime
 from dateutil.relativedelta import relativedelta  # python-dateutil
@@ -30,7 +30,7 @@ class DICOM_Parser:
     Parse a set of DICOM files for database
     """
     def __init__(self, plan_file=None, structure_file=None, dose_file=None, dose_sum_file=None, plan_over_rides=None,
-                 global_plan_over_rides=None, roi_over_ride=None, roi_map=None):
+                 global_plan_over_rides=None, roi_over_ride=None, roi_map=None, use_dicom_dvh=False):
         """
         :param plan_file: absolute path of DICOM RT Plan file
         :type plan_file: str
@@ -48,6 +48,8 @@ class DICOM_Parser:
         :type roi_over_ride: dict
         :param roi_map: roi name map
         :type roi_map: DatabaseROIs
+        :param use_dicom_dvh: use the DVH stored in DICOM RT-Dose if it exists
+        :type use_dicom_dvh: bool
         """
 
         self.database_rois = DatabaseROIs() if roi_map is None else roi_map
@@ -57,6 +59,8 @@ class DICOM_Parser:
         self.structure_file = structure_file
         self.dose_file = dose_file
         self.dose_sum_file = dose_sum_file
+
+        self.use_dicom_dvh = use_dicom_dvh
 
         # store these values when clearing file loaded data
         self.stored_values = {}
@@ -388,16 +392,24 @@ class DICOM_Parser:
         :rtype: dict
         """
 
-        try:
-            dvh = dvhcalc.get_dvh(self.rt_data['structure'], self.rt_data['dose'], dvh_index,
-                                  callback=self.send_dvh_progress)
-        except AttributeError:
-            dose = validate_transfer_syntax_uid(self.rt_data['dose'])
-            structure = validate_transfer_syntax_uid(self.rt_data['structure'])
-            dvh = dvhcalc.get_dvh(structure, dose, dvh_index,
-                                  callback=self.send_dvh_progress)
+        dvh = None
+        if self.use_dicom_dvh:
+            try:
+                dvh = dicompyler_dvh.DVH.from_dicom_dvh(self.rt_data['dose'], dvh_index)
+            except AttributeError:  # dicompyler-core raises this is structure is not found in DICOM DVH
+                pass
 
-        if dvh.volume > 0:  # ignore points and empty ROIs
+        if dvh is None:
+            try:
+                dvh = dvhcalc.get_dvh(self.rt_data['structure'], self.rt_data['dose'], dvh_index,
+                                      callback=self.send_dvh_progress)
+            except AttributeError:
+                dose = validate_transfer_syntax_uid(self.rt_data['dose'])
+                structure = validate_transfer_syntax_uid(self.rt_data['structure'])
+                dvh = dvhcalc.get_dvh(structure, dose, dvh_index,
+                                      callback=self.send_dvh_progress)
+
+        if dvh and dvh.volume > 0:  # ignore points and empty ROIs
             geometries = self.get_dvh_geometries(dvh_index)
 
             return {'mrn': [self.mrn, 'text'],

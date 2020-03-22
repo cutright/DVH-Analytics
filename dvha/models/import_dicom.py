@@ -787,7 +787,7 @@ class ImportDicomFrame(wx.Frame):
             ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
                          self.checkbox_include_uncategorized.GetValue(),
                          self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue(),
-                         self.roi_map)
+                         self.roi_map, self.options.USE_DICOM_DVH)
             dlg = ImportStatusDialog()
             # calling self.Close() below caused issues in Windows if Show() used instead of ShowModal()
             [dlg.Show, dlg.ShowModal][is_windows()]()
@@ -1311,7 +1311,7 @@ class ImportWorker(Thread):
     Create a thread separate from the GUI to perform the import calculations
     """
     def __init__(self, data, checked_uids, import_uncategorized, other_dicom_files, start_path,
-                 keep_in_inbox, roi_map):
+                 keep_in_inbox, roi_map, use_dicom_dvh):
         """
         :param data: parsed dicom data
         :type data: dict
@@ -1324,6 +1324,8 @@ class ImportWorker(Thread):
         :param keep_in_inbox: Set to False to move files, True to copy files to imported
         :type keep_in_inbox: bool
         :param roi_map: pass the latest roi_map
+        :type use_dicom_dvh: if DVH exists in DICOM RT-Dose, import it instead of calculating
+        :param use_dicom_dvh: bool
 
         """
         Thread.__init__(self)
@@ -1337,6 +1339,7 @@ class ImportWorker(Thread):
         self.start_path = start_path
         self.keep_in_inbox = keep_in_inbox
         self.roi_map = roi_map
+        self.use_dicom_dvh = use_dicom_dvh
 
         self.dose_sum_save_file_names = self.get_dose_sum_save_file_names()
         self.move_msg_queue = []
@@ -1431,6 +1434,7 @@ class ImportWorker(Thread):
                     init_param['roi_map'] = self.roi_map
                     if study_uid in self.dose_sum_save_file_names.keys():
                         init_param['dose_sum_file'] = self.dose_sum_save_file_names[study_uid]
+                        init_param['use_dicom_dvh'] = self.use_dicom_dvh
                     args = (init_param, msg, self.import_uncategorized, plan_uid == plan_uid_set[-1])
                     queue.put(args)
                 else:
