@@ -130,6 +130,7 @@ class ImportDicomFrame(wx.Frame):
         self.tree_ctrl_roi_root = self.tree_ctrl_roi.AddRoot('RT Structures (right-click an ROI to edit)', ct_type=0)
 
         self.checkbox_include_uncategorized = wx.CheckBox(self, wx.ID_ANY, "Import uncategorized ROIs")
+        self.checkbox_auto_sum_dose = wx.CheckBox(self, wx.ID_ANY, "Sum all dose grids in a patient")
 
         self.allow_input_roi_apply = False
 
@@ -207,8 +208,16 @@ class ImportDicomFrame(wx.Frame):
 
         self.checkbox_include_uncategorized.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
                                                             wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
+        self.checkbox_auto_sum_dose.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
+                                                    wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         value = self.options.IMPORT_UNCATEGORIZED if hasattr(self.options, 'IMPORT_UNCATEGORIZED') else 0
         self.checkbox_include_uncategorized.SetValue(value)
+        value = self.options.AUTO_SUM_DOSE if hasattr(self.options, 'AUTO_SUM_DOSE') else 1
+        self.checkbox_auto_sum_dose.SetValue(value)
+
+        self.checkbox_auto_sum_dose.SetToolTip("If multiple dose grids are found for one patient, dose grids will be "
+                                               "summed and composite DVHs will be stored. "
+                                               "This is typically recommended.")
 
         for checkbox in self.checkbox.values():
             checkbox.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
@@ -262,6 +271,7 @@ class ImportDicomFrame(wx.Frame):
         sizer_mrn = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
         sizer_browse_and_tree = wx.BoxSizer(wx.VERTICAL)
         sizer_studies = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Studies"), wx.VERTICAL)
+        sizer_studies_checkboxes = wx.BoxSizer(wx.HORIZONTAL)
         sizer_progress = wx.BoxSizer(wx.HORIZONTAL)
         sizer_tree = wx.BoxSizer(wx.HORIZONTAL)
         sizer_dicom_import_directory = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "DICOM Import Directory"),
@@ -285,7 +295,9 @@ class ImportDicomFrame(wx.Frame):
         sizer_tree.Add(self.tree_ctrl_import, 1, wx.EXPAND, 0)
         self.panel_study_tree.SetSizer(sizer_tree)
         sizer_studies.Add(self.panel_study_tree, 1, wx.ALL | wx.EXPAND, 5)
-        sizer_studies.Add(self.checkbox_include_uncategorized, 0, wx.LEFT | wx.BOTTOM | wx.EXPAND, 10)
+        sizer_studies_checkboxes.Add(self.checkbox_include_uncategorized, 0, wx.RIGHT, 10)
+        sizer_studies_checkboxes.Add(self.checkbox_auto_sum_dose, 0, 0, 0)
+        sizer_studies.Add(sizer_studies_checkboxes, 0, wx.LEFT | wx.EXPAND, 10)
         self.label_progress = wx.StaticText(self, wx.ID_ANY, "")
         self.label_progress.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         sizer_progress.Add(self.label_progress, 1, 0, 0)
@@ -783,11 +795,12 @@ class ImportDicomFrame(wx.Frame):
         if self.parsed_dicom_data and self.dicom_importer.checked_plans:
             self.roi_map.write_to_file()
             self.options.set_option('KEEP_IN_INBOX', self.checkbox_keep_in_inbox.GetValue())
+            self.options.set_option('AUTO_SUM_DOSE', self.checkbox_auto_sum_dose.GetValue())
             self.options.save()
             ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
                          self.checkbox_include_uncategorized.GetValue(),
                          self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue(),
-                         self.roi_map, self.options.USE_DICOM_DVH)
+                         self.roi_map, self.options.USE_DICOM_DVH, self.checkbox_auto_sum_dose.GetValue())
             dlg = ImportStatusDialog()
             # calling self.Close() below caused issues in Windows if Show() used instead of ShowModal()
             [dlg.Show, dlg.ShowModal][is_windows()]()
@@ -874,7 +887,8 @@ class ImportDicomFrame(wx.Frame):
             res = dlg.ShowModal()
             dlg.Center()
             if res == wx.ID_YES:
-                cnx.delete_rows("study_instance_uid = '%s'" % uid)
+                # As of DVH v0.7.5, study_instance_uid may end with _N where N is the nth plan of a file set
+                cnx.delete_rows("study_instance_uid LIKE '%s%%'" % uid)
 
         dlg.Destroy()
 
@@ -1311,7 +1325,7 @@ class ImportWorker(Thread):
     Create a thread separate from the GUI to perform the import calculations
     """
     def __init__(self, data, checked_uids, import_uncategorized, other_dicom_files, start_path,
-                 keep_in_inbox, roi_map, use_dicom_dvh):
+                 keep_in_inbox, roi_map, use_dicom_dvh, auto_sum_dose):
         """
         :param data: parsed dicom data
         :type data: dict
@@ -1324,8 +1338,10 @@ class ImportWorker(Thread):
         :param keep_in_inbox: Set to False to move files, True to copy files to imported
         :type keep_in_inbox: bool
         :param roi_map: pass the latest roi_map
-        :type use_dicom_dvh: if DVH exists in DICOM RT-Dose, import it instead of calculating
-        :param use_dicom_dvh: bool
+        :param use_dicom_dvh: if DVH exists in DICOM RT-Dose, import it instead of calculating
+        :type use_dicom_dvh: bool
+        :param auto_sum_dose:
+        :type auto_sum_dose: bool
 
         """
         Thread.__init__(self)
@@ -1340,6 +1356,7 @@ class ImportWorker(Thread):
         self.keep_in_inbox = keep_in_inbox
         self.roi_map = roi_map
         self.use_dicom_dvh = use_dicom_dvh
+        self.auto_sum_dose = auto_sum_dose
 
         self.dose_sum_save_file_names = self.get_dose_sum_save_file_names()
         self.move_msg_queue = []
@@ -1355,15 +1372,12 @@ class ImportWorker(Thread):
         pub.subscribe(self.set_terminate, 'terminate_import')
 
     def run(self):
-        # Sum dose grids
-        msg = {'calculation': 'Dose Grid Summation(s)... please wait',
-               'roi_num': 0,
-               'roi_total': 1,
-               'roi_name': '',
-               'progress': 0}
-        wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+        if self.auto_sum_dose:
+            msg = {'calculation': 'Dose Grid Summation(s)... please wait',
+                   'roi_num': 0, 'roi_total': 1, 'roi_name': '', 'progress': 0}
+            wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
+            self.run_dose_sum()
 
-        self.run_dose_sum()
         self.run_import()
         self.close()
 
@@ -1422,6 +1436,7 @@ class ImportWorker(Thread):
         plan_counter = 0
         queue = Queue()
         for study_uid, plan_uid_set in study_uids.items():
+            plan_count = len(plan_uid_set)
             for i, plan_uid in enumerate(plan_uid_set):
                 if plan_uid in list(self.data):
 
@@ -1432,10 +1447,14 @@ class ImportWorker(Thread):
                            'study_total': plan_total}
                     init_param = self.data[plan_uid].init_param
                     init_param['roi_map'] = self.roi_map
-                    if study_uid in self.dose_sum_save_file_names.keys():
-                        init_param['dose_sum_file'] = self.dose_sum_save_file_names[study_uid]
-                        init_param['use_dicom_dvh'] = self.use_dicom_dvh
-                    args = (init_param, msg, self.import_uncategorized, plan_uid == plan_uid_set[-1])
+                    init_param['use_dicom_dvh'] = self.use_dicom_dvh
+                    if self.auto_sum_dose:
+                        if study_uid in self.dose_sum_save_file_names.keys():
+                            init_param['dose_sum_file'] = self.dose_sum_save_file_names[study_uid]
+                    elif plan_count > 1:
+                        init_param['plan_over_rides']['study_instance_uid'] = "%s_%s" % (study_uid, i+1)
+                    final_plan = True if not self.auto_sum_dose else plan_uid == plan_uid_set[-1]
+                    args = (init_param, msg, self.import_uncategorized, final_plan)
                     queue.put(args)
                 else:
                     print('ERROR: This plan could not be parsed. Skipping import.'

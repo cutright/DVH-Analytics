@@ -217,7 +217,12 @@ class DVH_SQL:
             raise SQLError(str(e), update)
 
     def is_study_instance_uid_in_table(self, table_name, study_instance_uid):
-        return self.is_value_in_table(table_name, study_instance_uid, 'study_instance_uid')
+        # As of DVH v0.7.5, study_instance_uid may end with _N where N is the nth plan of a file set
+        query = "SELECT DISTINCT study_instance_uid FROM %s WHERE study_instance_uid LIKE '%s%%';" % \
+                (table_name, study_instance_uid)
+        self.cursor.execute(query)
+        results = self.cursor.fetchall()
+        return bool(results)
 
     def is_mrn_in_table(self, table_name, mrn):
         return self.is_value_in_table(table_name, mrn, 'mrn')
@@ -388,11 +393,19 @@ class DVH_SQL:
     def reinitialize_database(self):
         """Delete all data and create all tables with latest columns"""
         self.drop_tables()
+        self.vacuum()
         self.initialize_database()
+
+    def vacuum(self):
+        """Call to reclaim space in the database"""
         if self.db_type == 'sqlite':
             self.cnx.isolation_level = None
             self.cnx.execute('VACUUM')
             self.cnx.isolation_level = ''
+        else:
+            # TODO: PGSQL VACUUM needs testing
+            # self.cnx.execute('VACUUM')
+            pass
 
     def does_db_exist(self):
         """
