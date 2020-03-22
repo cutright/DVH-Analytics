@@ -130,7 +130,7 @@ class ImportDicomFrame(wx.Frame):
         self.tree_ctrl_roi_root = self.tree_ctrl_roi.AddRoot('RT Structures (right-click an ROI to edit)', ct_type=0)
 
         self.checkbox_include_uncategorized = wx.CheckBox(self, wx.ID_ANY, "Import uncategorized ROIs")
-        self.checkbox_auto_sum_dose = wx.CheckBox(self, wx.ID_ANY, "Sum all dose grids in a patient")
+        self.checkbox_auto_sum_dose = wx.CheckBox(self, wx.ID_ANY, "Sum all dose grids in a study")
 
         self.allow_input_roi_apply = False
 
