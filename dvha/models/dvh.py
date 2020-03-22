@@ -15,7 +15,7 @@ from dateutil.parser import parse as date_parser
 import numpy as np
 from dvha.db.sql_connector import DVH_SQL
 from dvha.db.sql_to_python import QuerySQL
-import operator
+import operator as operator_lib
 from os import listdir
 from os.path import join, basename, splitext
 from dvha.options import Options
@@ -515,7 +515,10 @@ class Protocols:
                         constraints[current_key] = {}
                     else:  # OAR Name
                         line_data = line.split()
-                        constraints[current_key][line_data[0]] = line_data[1]
+                        operator = '<' if len(line_data) < 3 else line_data[-2]
+                        # constraints[current_key][line_data[0]] = {'threshold': line_data[-1],
+                        #                                           'operator': operator}
+                        constraints[current_key][line_data[0]] = Constraint(line_data[0], operator, line_data[-1])
         return constraints
 
     @property
@@ -531,11 +534,12 @@ class Protocols:
     def get_constraints(self, protocol_name, fractionation, roi_name):
         return self.data[protocol_name][fractionation][roi_name]
 
-    def get_column_data(self, protocol_name, fractionation):
+    def get_column_data(self, protocol_name, fractionation, roi=None):
 
-        columns = ['Structure', 'ROI Type', 'Constraint', 'Threshold']
+        columns = ['Structure', 'ROI Type', 'Constraint']
         data = {key: [] for key in columns}
-        for roi in self.get_rois(protocol_name, fractionation):
+        rois = [roi] if roi is not None else self.get_rois(protocol_name, fractionation)
+        for roi in rois:
             constraints = self.get_roi_constraints(roi, protocol_name, fractionation)
             for i, constraint in enumerate(constraints):
                 if i:
@@ -544,24 +548,15 @@ class Protocols:
                 else:
                     data['Structure'].append(roi)
                     data['ROI Type'].append(constraint.roi_type)
-                data['Constraint'].append(constraint.label_with_units)
-                data['Threshold'].append(constraint.threshold_with_units)
-            if len(constraints):
+                data['Constraint'].append(str(constraint))
+            if len(constraints) and roi != rois[-1]:
                 for col in columns:
                     data[col].append('')
 
         return data, columns
 
-    def get_roi_constraints(self, protocol_roi, protocol_name, fractionation, roi_type=None):
-        if roi_type is None:
-            roi_type = self.get_roi_type(protocol_roi)
-
-        constraints = []
-        for constraint_label, threshold in self.get_constraints(protocol_name, fractionation, protocol_roi).items():
-            constraints.append(Constraint(constraint_label, threshold, roi_type=roi_type,
-                                          max_dose_volume=self.max_dose_volume))
-
-        return constraints
+    def get_roi_constraints(self, protocol_roi, protocol_name, fractionation):
+        return self.get_constraints(protocol_name, fractionation, protocol_roi).values()
 
     @staticmethod
     def get_roi_type(roi_name):
@@ -584,19 +579,33 @@ class Protocols:
         except KeyError:
             pass
 
-    def save(self):
-        pass
+    def add_constraint(self, protocol_name, fractionation, roi_name, constraint):
+        protocol = self.data[protocol_name][fractionation]
+        if roi_name not in list(protocol):
+            protocol[roi_name] = {}
+        protocol[roi_name][str(constraint)] = constraint
+
+    def save_old(self, protocol, fractionation):
+        file_path = join(PROTOCOL_DIR, "%s_%s.scp_test" % (protocol, fractionation))
+        with open(file_path, 'w') as doc:
+            lines = []
+            for roi, constraints in self.data[protocol][fractionation].items():
+                lines.append(roi)
+                for name, threshold in constraints.items():
+                    lines.append("\t%s\t<\t%s" % (name, threshold))
+            doc.write('\n'.join(lines))
 
 
 class Constraint:
-    def __init__(self, label, threshold, roi_type='OAR', max_dose_volume=MAX_DOSE_VOLUME):
+    def __init__(self, label, operator, threshold, roi_type='OAR', max_dose_volume=MAX_DOSE_VOLUME):
         self.label = label
+        self.operator = operator
         self.threshold = threshold
         self.roi_type = roi_type
         self.max_dose_volume = max_dose_volume
 
     def __str__(self):
-        return "%s %s %s" % (self.label, self.operator_str, self.threshold)
+        return "%s %s %s" % (self.label_with_units, self.operator, self.threshold_with_units)
 
     def __repr__(self):
         return self.__str__()
@@ -631,7 +640,7 @@ class Constraint:
         else:
             return
 
-        func = operator.lt if self.operator_str == '<' else operator.gt
+        func = operator_lib.lt if self.operator == '<' else operator_lib.gt
         return func(endpoint, self.threshold_value)
 
     @property
@@ -639,12 +648,6 @@ class Constraint:
         if '%' in self.threshold:
             return float(self.threshold.replace('%', '')) / 100.
         return float(self.threshold)
-
-    @property
-    def operator_str(self):
-        if self.output_type == 'MVS':
-            return ['<', '>']['OAR' in self.roi_type]
-        return ['>', '<']['OAR' in self.roi_type]
 
     @property
     def output_type(self):

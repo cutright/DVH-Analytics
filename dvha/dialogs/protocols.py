@@ -12,7 +12,8 @@ Dialogs used to edit DVH Constraint Protocols
 
 import wx
 from dvha.models.data_table import DataTable
-from dvha.models.dvh import Protocols
+from dvha.models.dvh import Protocols, Constraint
+from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import get_window_size, get_selected_listctrl_items
 
 
@@ -39,7 +40,7 @@ class ProtocolsEditor(wx.Dialog):
         self.button_dlg = {key: wx.Button(self, wxid, key) for key, wxid in button_id_map.items()}
 
         self.list_ctrl = wx.ListCtrl(self, wx.ID_ANY, style=wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
-        self.data_table = DataTable(self.list_ctrl, widths=[250, 100, 100, 100])
+        self.data_table = DataTable(self.list_ctrl, widths=[-2, -2, -2])
 
         self.__set_properties()
         self.__do_bind()
@@ -197,7 +198,11 @@ class ProtocolsEditor(wx.Dialog):
         self.update_table()
 
     def on_add_constraint(self, *evt):
-        AddProtocolROI(self, self.protocols, self.selected_protocol, self.selected_fx, self.roi_map)
+        existing_rois = self.protocols.get_rois(self.selected_protocol, self.selected_fx)
+        dlg = AddProtocolROI(self, existing_rois)
+        res = dlg.ShowModal()
+        if res == wx.ID_OK:
+            EditProtocolROI(self, dlg.roi_name, self.protocols, self.selected_protocol, self.selected_fx, self.roi_map)
 
     def update_delete_constraint_enable(self, *evt):
         selected = get_selected_listctrl_items(self.list_ctrl)
@@ -212,7 +217,62 @@ class ProtocolsEditor(wx.Dialog):
 
 
 class AddProtocolROI(wx.Dialog):
-    def __init__(self, parent, protocols, protocol_name, fractionation, roi_map):
+    def __init__(self, parent, existing_rois):
+        wx.Dialog.__init__(self, parent)
+        self.existing_rois = existing_rois
+        self.text_ctrl = wx.TextCtrl(self, wx.ID_ANY, "")
+        self.button_ok = wx.Button(self, wx.ID_OK, "OK")
+        self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+
+        self.__set_properties()
+        self.__do_bind()
+        self.__do_layout()
+
+    def __set_properties(self):
+        self.SetTitle('Add New ROI to Protocol')
+        self.SetMinSize((400, 0))
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_TEXT, self.update_ok_enable, id=self.text_ctrl.GetId())
+
+    def __do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_main = wx.BoxSizer(wx.VERTICAL)
+        sizer_input = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "New ROI Name"), wx.VERTICAL)
+        sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
+
+        sizer_input.Add(self.text_ctrl, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_main.Add(sizer_input, 0, wx.EXPAND | wx.ALL, 5)
+
+        sizer_buttons.Add(self.button_ok, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_buttons.Add(self.button_cancel, 0, wx.EXPAND | wx.ALL, 5)
+        sizer_main.Add(sizer_buttons, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+
+        sizer_wrapper.Add(sizer_main, 0, wx.EXPAND | wx.ALL, 5)
+
+        self.SetSizer(sizer_wrapper)
+        self.Layout()
+        self.Fit()
+        self.Center()
+
+    @property
+    def roi_name(self):
+        return self.text_ctrl.GetValue()
+
+    @property
+    def is_roi_valid(self):
+        clean_roi = clean_name(self.roi_name)
+        for roi in self.existing_rois:
+            if clean_roi == clean_name(roi):
+                return False
+        return True
+
+    def update_ok_enable(self, *evt):
+        self.button_ok.Enable(self.is_roi_valid)
+
+
+class EditProtocolROI(wx.Dialog):
+    def __init__(self, parent, roi_name, protocols, protocol_name, fractionation, roi_map):
         wx.Dialog.__init__(self, parent)
 
         self.parent = parent
@@ -225,7 +285,7 @@ class AddProtocolROI(wx.Dialog):
         keys = ['constraints', 'aliases']
         style = wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES
         self.list_ctrl = {key: wx.ListCtrl(self, wx.ID_ANY, style=style) for key in keys}
-        self.data_table = {key: DataTable(self.list_ctrl[key]) for key in keys}
+        self.data_table = {key: DataTable(self.list_ctrl[key], widths=[-2]) for i, key in enumerate(keys)}
 
         key_map = {'Add': '+', 'Delete': '-', 'Help': 'Help'}
         self.button_constraint = {key: wx.Button(self, wx.ID_ANY, label) for key, label in key_map.items()}
@@ -235,8 +295,10 @@ class AddProtocolROI(wx.Dialog):
 
         self.combo_box_alias = wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
 
-        self.text_ctrl_structure = wx.TextCtrl(self, wx.ID_ANY, "")
-        self.text_ctrl_constraint = wx.TextCtrl(self, wx.ID_ANY, 'Enter New Constraint (e.g., V20 < 1500)')
+        self.text_ctrl_structure = wx.TextCtrl(self, wx.ID_ANY, roi_name)
+        self.text_ctrl_structure.Disable()
+
+        self.text_ctrl_constraint = wx.TextCtrl(self, wx.ID_ANY, "")
 
         self.__set_properties()
         self.__do_bind()
@@ -246,16 +308,20 @@ class AddProtocolROI(wx.Dialog):
         self.Destroy()
 
     def __set_properties(self):
-        self.SetTitle("New Constraints for %s: %sFx" % (self.protocol_name, self.fractionation))
+        self.SetTitle("Constraints Editor")
         self.update_combo_box_aliases()
 
         for key in ['Add', 'Delete']:
             self.button_constraint[key].SetMaxSize((25, 25))
 
-        self.text_ctrl_constraint.SetMinSize((400, self.text_ctrl_constraint.GetSize()[1]))
+        self.text_ctrl_constraint.SetMinSize((200, self.text_ctrl_constraint.GetSize()[1]))
+
+        self.button_constraint['Add'].Disable()
+        self.button_constraint['Delete'].Disable()
 
     def __do_bind(self):
-        pass
+        self.Bind(wx.EVT_TEXT, self.update_add_enable, id=self.text_ctrl_constraint.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_add_constraint, id=self.button_constraint['Add'].GetId())
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -267,6 +333,9 @@ class AddProtocolROI(wx.Dialog):
         sizer_aliases = wx.BoxSizer(wx.VERTICAL)
         sizer_aliases_edit = wx.BoxSizer(wx.HORIZONTAL)
         sizer_ok_cancel = wx.BoxSizer(wx.HORIZONTAL)
+
+        label = wx.StaticText(self, wx.ID_ANY, "Protocol: %s %sFx" % (self.protocol_name, self.fractionation))
+        sizer_main.Add(label, 0, wx.ALL, 5)
 
         sizer_structure.Add(self.text_ctrl_structure, 0, wx.EXPAND | wx.ALL, 5)
         sizer_main.Add(sizer_structure, 0, wx.ALL | wx.EXPAND, 5)
@@ -307,3 +376,34 @@ class AddProtocolROI(wx.Dialog):
             self.combo_box_alias.SetValue(set_value)
         else:
             self.combo_box_alias.SetValue(self.roi_map.institutional_rois[0])
+
+    def update_add_enable(self, *evt):
+        self.button_constraint['Add'].Enable(self.constraint is not None)
+
+    @property
+    def constraint(self):
+        """Given a string, convert into constraint name, operator, and threshold"""
+        text = self.text_ctrl_constraint.GetValue()
+        # include one and only one < or > operator, no =
+        iter_ = [c in text for c in ['<', '>']]
+        if any(iter_) and not all(iter_) and '=' not in text:
+            if text.count('<') == 1 or text.count('>') == 1:
+                operator = ['<', '>']['>' in text]
+                name, threshold = tuple([t.strip().upper() for t in text.split(operator)])
+                if '_' in name and (name[0] != '_' and name[-1] != '_'):
+                    if any([c == name.split('_')[0] for c in ['V', 'D', 'MVS']]):
+                        return Constraint(name, operator, threshold)
+
+    @property
+    def structure(self):
+        return self.text_ctrl_structure.GetValue().strip()
+
+    def on_add_constraint(self, *evt):
+        self.protocols.add_constraint(self.protocol_name, self.fractionation, self.structure, self.constraint)
+        self.update_constraints_table()
+
+    def update_constraints_table(self, *evt):
+        constraints = self.protocols.get_constraints(self.protocol_name, self.fractionation, self.structure)
+        constraints = {'Constraint': [str(c) for c in constraints]}
+        # data, columns = self.protocols.get_column_data(self.protocol_name, self.fractionation, roi=self.structure)
+        self.data_table['constraints'].set_data(constraints, list(constraints))
