@@ -914,7 +914,7 @@ class DICOM_Parser:
                               'dose': 'InstanceCreationTime'}}
 
         datetime_str = self.get_attribute(rt_type, attribute['date'][rt_type])
-        time = self.get_attribute(rt_type, attribute['time'][rt_type])
+        time = self.get_attribute(rt_type, attribute['time'][rt_type]).split('.')[0]  # ignore fractional sec
 
         try:
             if time:
