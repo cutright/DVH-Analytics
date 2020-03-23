@@ -1,4 +1,4 @@
-from fuzzywuzzy import fuzz
+from rapidfuzz import fuzz
 from dvha.tools.roi_name_manager import clean_name
 
 
