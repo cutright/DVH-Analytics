@@ -29,6 +29,7 @@ from dvha.db.dicom_parser import DICOM_Parser, PreImportData
 from dvha.dialogs.main import DatePicker
 from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, DelPhysicianROI, AssignVariation, DelVariation,\
     AddROIType, RoiManager, ChangePlanROIName
+from dvha.models.data_table import DataTable
 from dvha.paths import ICONS, TEMP_DIR
 from dvha.tools.dicom_dose_sum import DoseGrid
 from dvha.tools.roi_name_manager import clean_name
@@ -109,6 +110,7 @@ class ImportDicomFrame(wx.Frame):
         self.checkbox_keep_in_inbox = wx.CheckBox(self, wx.ID_ANY, "Leave files in inbox")
         self.panel_study_tree = wx.Panel(self, wx.ID_ANY, style=wx.BORDER_SUNKEN)
         self.button_import = wx.Button(self, wx.ID_ANY, "Import")
+        self.button_assign_ptv_test = wx.Button(self, wx.ID_ANY, "Assign PTV Test")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
         self.button_save_roi_map = wx.Button(self, wx.ID_ANY, "Save ROI Map")
 
@@ -147,9 +149,7 @@ class ImportDicomFrame(wx.Frame):
         self.run()
 
     def __do_subscribe(self):
-        """
-        After DICOM directory is scanned and sorted, parse_dicom_data will be called
-        """
+        """After DICOM directory is scanned and sorted, parse_dicom_data will be called"""
         pub.subscribe(self.parse_dicom_data, "parse_dicom_data")
         pub.subscribe(self.set_pre_import_parsed_dicom_data, 'set_pre_import_parsed_dicom_data')
         pub.subscribe(self.pre_import_complete, "pre_import_complete")
@@ -183,6 +183,7 @@ class ImportDicomFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_add_physician, id=self.button_add_physician.GetId())
 
         self.Bind(wx.EVT_BUTTON, self.on_import, id=self.button_import.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_assign_ptv_test, id=self.button_assign_ptv_test.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_cancel, id=self.button_cancel.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_roi_map, id=self.button_save_roi_map.GetId())
 
@@ -392,6 +393,7 @@ class ImportDicomFrame(wx.Frame):
         sizer_warning.Add(self.label_warning, 1, wx.EXPAND, 0)
 
         sizer_warning_buttons.Add(sizer_warning, 1, wx.ALL | wx.EXPAND, 5)
+        sizer_buttons.Add(self.button_assign_ptv_test, 0, wx.ALL, 5)
         sizer_buttons.Add(self.button_save_roi_map, 0, wx.ALL, 5)
         sizer_buttons.Add(self.button_import, 0, wx.ALL, 5)
         sizer_buttons.Add(self.button_cancel, 0, wx.ALL, 5)
@@ -797,6 +799,8 @@ class ImportDicomFrame(wx.Frame):
             self.options.set_option('KEEP_IN_INBOX', self.checkbox_keep_in_inbox.GetValue())
             self.options.set_option('AUTO_SUM_DOSE', self.checkbox_auto_sum_dose.GetValue())
             self.options.save()
+            # study_uid_dict = get_study_uid_dict(list(self.dicom_importer.checked_plans), self.parsed_dicom_data)
+            # AssignPTV(self, self.parsed_dicom_data, study_uid_dict)
             ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
                          self.checkbox_include_uncategorized.GetValue(),
                          self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue(),
@@ -812,6 +816,10 @@ class ImportDicomFrame(wx.Frame):
             dlg.Destroy()
 
         self.do_unsubscribe()
+
+    def on_assign_ptv_test(self, evt):
+        study_uid_dict = get_study_uid_dict(list(self.dicom_importer.checked_plans), self.parsed_dicom_data)
+        AssignPTV(self, self.parsed_dicom_data, study_uid_dict)
 
     def parse_dicom_data(self):
         PreImportFileSetParserWorker(self.dicom_importer.dicom_file_paths)
@@ -1406,23 +1414,8 @@ class ImportWorker(Thread):
                 StudyImporter(*parameters)
             queue.task_done()
 
-    def get_study_uids(self):
-        """
-        This thread iterates through self.checked_uids which contains plan uids, but we need to iterate through
-        study instance uids so that plans on the same study are imported adjacently.
-        :return: a dictionary with study uids for the keys and a list of associated plan uids for values
-        :rtype: dict
-        """
-        study_uids = {}
-        for plan_uid in self.checked_uids:
-            study_uid = self.data[plan_uid].study_instance_uid_to_be_imported
-            if study_uid not in list(study_uids):
-                study_uids[study_uid] = []
-            study_uids[study_uid].append(plan_uid)
-        return study_uids
-
     def get_dose_file_sets(self):
-        study_uids = self.get_study_uids()
+        study_uids = get_study_uid_dict(self.checked_uids, self.data)
         dose_file_sets = {}
         for study_uid, plan_uid_set in study_uids.items():
             if len(plan_uid_set) > 1:
@@ -1431,7 +1424,7 @@ class ImportWorker(Thread):
 
     @property
     def import_queue(self):
-        study_uids = self.get_study_uids()
+        study_uids = get_study_uid_dict(self.checked_uids, self.data)
         plan_total = len(self.checked_uids)
         plan_counter = 0
         queue = Queue()
@@ -1520,3 +1513,196 @@ class ImportWorker(Thread):
         for f in listdir(TEMP_DIR):
             if 'temp_dose_sum' in f:
                 remove(join(TEMP_DIR, f))
+
+
+def get_study_uid_dict(checked_uids, parsed_dicom_data):
+    """
+    This thread iterates through self.checked_uids which contains plan uids, but we need to iterate through
+    study instance uids so that plans on the same study are imported adjacently.
+    :return: a dictionary with study uids for the keys and a list of associated plan uids for values
+    :rtype: dict
+    """
+    study_uids = {}
+    for plan_uid in checked_uids:
+        study_uid = parsed_dicom_data[plan_uid].study_instance_uid_to_be_imported
+        if study_uid not in list(study_uids):
+            study_uids[study_uid] = []
+        study_uids[study_uid].append(plan_uid)
+    return study_uids
+
+
+class AssignPTV(wx.Dialog):
+    def __init__(self, parent, parsed_dicom_data, study_uid_dict):
+        wx.Dialog.__init__(self, parent)
+
+        self.parsed_dicom_data = parsed_dicom_data
+        self.study_uid_dict = study_uid_dict
+
+        self.__initialize_uid_dict()
+        self.__initialize_ptv_dict()
+        self.current_index = 0
+
+        self.plan_uid, self.study_uid = self.uids[self.current_index]
+
+        self.input_keys = ['patient_name', 'study_instance_uid', 'plan_uid', 'sim_study_date', 'tx_site']
+        self.text_ctrl = {key: wx.TextCtrl(self, wx.ID_ANY, "")
+                          for key in self.input_keys}
+        self.label = {key: wx.StaticText(self, wx.ID_ANY, key.replace('_', ' ').title().replace('Uid', 'UID') + ':')
+                      for key in self.input_keys}
+
+        self.button_add = wx.Button(self, wx.ID_ANY, ">")
+        self.button_remove = wx.Button(self, wx.ID_ANY, "<")
+
+        keys = ['ignored', 'included']
+        self.list_ctrl = {key: wx.ListCtrl(self, wx.ID_ANY, style=wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
+                          for key in keys}
+        self.data_table = {key: DataTable(self.list_ctrl[key], columns=[key.capitalize()], widths=[-2])
+                           for key in keys}
+
+        self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+        self.button_back = wx.Button(self, wx.ID_ANY, "Back")
+        self.button_next = wx.Button(self, wx.ID_ANY, "Next")
+
+        self.__set_properties()
+        self.__do_bind()
+        self.__do_layout()
+
+        self.update_data()
+
+        self.Show()
+
+    def __set_properties(self):
+        self.SetTitle("PTV Assignment for Overlap and Distance Calculations")
+
+        for text_ctrl in self.text_ctrl.values():
+            text_ctrl.Disable()
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_BUTTON, self.on_next, id=self.button_next.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_back, id=self.button_back.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_include, id=self.button_add.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_ignore, id=self.button_remove.GetId())
+
+    def __do_layout(self):
+        # Sizers
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_main = wx.BoxSizer(wx.VERTICAL)
+        sizer_input = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
+        sizer_text_ctrl = {key: wx.BoxSizer(wx.VERTICAL) for key in self.input_keys}
+        sizer_add_remove = wx.BoxSizer(wx.VERTICAL)
+        sizer_list_ctrl = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_cancel = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_back_next = wx.BoxSizer(wx.HORIZONTAL)
+
+        # Add text_ctrl and label objects
+        for key in self.input_keys:
+            sizer_text_ctrl[key].Add(self.label[key], 0, 0, 0)
+            sizer_text_ctrl[key].Add(self.text_ctrl[key], 0, wx.EXPAND, 0)
+            sizer_input.Add(sizer_text_ctrl[key], 0, wx.ALL | wx.EXPAND, 5)
+
+        # PTV assignment objections
+        sizer_list_ctrl.Add(self.list_ctrl['ignored'], 0, wx.EXPAND, 0)
+        sizer_add_remove.Add((20, 20), 0, 0, 0)  # Top Spacer
+        sizer_add_remove.Add(self.button_add, 0, wx.ALIGN_CENTER | wx.ALL, 5)
+        sizer_add_remove.Add(self.button_remove, 0, wx.ALIGN_CENTER | wx.ALL, 5)
+        sizer_add_remove.Add((20, 20), 0, 0, 0)  # Bottom Spacer
+        sizer_list_ctrl.Add(sizer_add_remove, 0, wx.ALL | wx.EXPAND, 10)
+        sizer_list_ctrl.Add(self.list_ctrl['included'], 0, wx.EXPAND, 0)
+        sizer_input.Add(sizer_list_ctrl, 0, wx.ALL | wx.EXPAND, 5)
+
+        # Cancel, Back, and Next buttons
+        sizer_cancel.Add(self.button_cancel, 0, wx.ALL, 5)
+        sizer_buttons.Add(sizer_cancel, 1, wx.EXPAND, 0)
+        sizer_back_next.Add(self.button_back, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+        sizer_back_next.Add(self.button_next, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+        sizer_buttons.Add(sizer_back_next, 0, wx.ALIGN_RIGHT | wx.EXPAND, 0)
+
+        sizer_main.Add(sizer_input, 1, wx.ALL | wx.EXPAND, 5)
+        sizer_main.Add(sizer_buttons, 0, wx.ALIGN_RIGHT | wx.ALL | wx.EXPAND, 5)
+
+        sizer_wrapper.Add(sizer_main, 1, wx.EXPAND, 0)
+
+        self.SetSizer(sizer_wrapper)
+        self.Fit()
+        self.Layout()
+        self.Center()
+
+    def __initialize_uid_dict(self):
+        """Create a list of tuples (plan_uid, study_uid) for multi-plan studies"""
+        self.uids = []
+        for study_uid, plan_uid_set in self.study_uid_dict.items():
+            if len(plan_uid_set) > 1:
+                for plan_uid in plan_uid_set:
+                    self.uids.append((plan_uid, study_uid))
+
+    def __initialize_ptv_dict(self):
+        """Create dict to track all PTVs in a study, and to which plans they are assigned"""
+        self.ptvs = {}
+        for plan_uid, study_uid in self.uids:
+            if study_uid not in list(self.ptvs):
+                self.ptvs[study_uid] = set()
+            if plan_uid not in list(self.ptvs):
+                self.ptvs[plan_uid] = set()
+            ptvs = set(self.parsed_dicom_data[plan_uid].stored_values['ptv_names'])
+            self.ptvs[study_uid] = self.ptvs[study_uid].union(ptvs)
+
+    def update_data(self, increment=0):
+        self.current_index += increment
+        self.update_back_next_buttons()
+        if self.current_index < len(self.uids):
+            self.plan_uid, self.study_uid = self.uids[self.current_index]
+            data = self.parsed_dicom_data[self.plan_uid]
+            for key, text_ctrl in self.text_ctrl.items():
+                value = getattr(data, key) if key != 'plan_uid' else self.plan_uid
+                if key == 'sim_study_date':
+                    try:
+                        date = parse_date(value)
+                        value = "%s-%s-%s" % (date.year, date.month, date.day)
+                    except Exception:
+                        pass
+                text_ctrl.SetValue(value)
+            self.update_ptv_data_tables()
+        else:
+            self.close()
+
+    def update_ptv_data_tables(self):
+        ptvs = self.get_current_ptv_assignments()
+        for key in ['ignored', 'included']:
+            column = key.capitalize()
+            self.data_table[key].set_data({column: ptvs[key]}, [column])
+
+    def get_current_ptv_assignments(self):
+        included, ignored = [], []
+        for ptv in self.ptvs[self.study_uid]:
+            if ptv in self.ptvs[self.plan_uid]:
+                included.append(ptv)
+            else:
+                ignored.append(ptv)
+        included.sort()
+        ignored.sort()
+        return {'included': included, 'ignored': ignored}
+
+    def on_next(self, *evt):
+        self.update_data(1)
+
+    def on_back(self, *evt):
+        self.update_data(-1)
+
+    def on_include(self, *evt):
+        selected_ptvs = set([row[0] for row in self.data_table['ignored'].selected_row_data])
+        self.ptvs[self.plan_uid] = self.ptvs[self.plan_uid].union(selected_ptvs)
+        self.update_data()
+
+    def on_ignore(self, *evt):
+        selected_ptvs = set([row[0] for row in self.data_table['included'].selected_row_data])
+        self.ptvs[self.plan_uid] = self.ptvs[self.plan_uid].difference(selected_ptvs)
+        self.update_data()
+
+    def close(self):
+        self.Destroy()
+
+    def update_back_next_buttons(self):
+        self.button_back.Enable(self.current_index > 0)
+        label = 'Next' if self.current_index < len(self.uids) - 1 else 'Finish'
+        self.button_next.SetLabel(label)

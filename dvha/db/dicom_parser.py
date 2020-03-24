@@ -1398,6 +1398,9 @@ class PreImportData:
 
         self.roi_over_ride = {'name': {}, 'type': {}}
 
+        # If importing with auto sum turned off, use this list to track plan-specific PTVs
+        self.plan_ptvs = []
+
     @property
     def mrn(self):
         if self.plan_over_rides['mrn'] is not None:
@@ -1406,7 +1409,7 @@ class PreImportData:
 
     @property
     def study_instance_uid(self):
-        return self.stored_values['study_instance_uid']
+        return self.stored_values['study_instance_uid_to_be_imported']
 
     @property
     def study_instance_uid_to_be_imported(self):
@@ -1495,8 +1498,10 @@ class PreImportData:
         :rtype: str
         """
         if key in list(self.roi_over_ride['type']):
-            return self.roi_over_ride['type'][key]
-        return self.dicompyler_rt_structures[key]['type'].upper()
+            ans = self.roi_over_ride['type'][key]
+        else:
+            ans = self.dicompyler_rt_structures[key]['type'].upper()
+        return ans if ans else 'NONE'
 
     def reset_roi_type_over_ride(self, key):
         self.roi_over_ride['type'][key] = None
