@@ -107,6 +107,8 @@ class DataTable:
         if self.widths:
             self.set_column_widths()
 
+        self.sort_indices = None  # If len of new data is different than previous, sorting may crash
+
     def set_layout_columns(self):
         self.layout.DeleteAllColumns()
         for i, col in enumerate(self.columns):
