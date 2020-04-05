@@ -110,7 +110,6 @@ class ImportDicomFrame(wx.Frame):
         self.checkbox_keep_in_inbox = wx.CheckBox(self, wx.ID_ANY, "Leave files in inbox")
         self.panel_study_tree = wx.Panel(self, wx.ID_ANY, style=wx.BORDER_SUNKEN)
         self.button_import = wx.Button(self, wx.ID_ANY, "Import")
-        self.button_assign_ptv_test = wx.Button(self, wx.ID_ANY, "Assign PTV Test")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
         self.button_save_roi_map = wx.Button(self, wx.ID_ANY, "Save ROI Map")
 
@@ -183,7 +182,6 @@ class ImportDicomFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_add_physician, id=self.button_add_physician.GetId())
 
         self.Bind(wx.EVT_BUTTON, self.on_import, id=self.button_import.GetId())
-        self.Bind(wx.EVT_BUTTON, self.on_assign_ptv_test, id=self.button_assign_ptv_test.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_cancel, id=self.button_cancel.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_roi_map, id=self.button_save_roi_map.GetId())
 
@@ -393,7 +391,7 @@ class ImportDicomFrame(wx.Frame):
         sizer_warning.Add(self.label_warning, 1, wx.EXPAND, 0)
 
         sizer_warning_buttons.Add(sizer_warning, 1, wx.ALL | wx.EXPAND, 5)
-        sizer_buttons.Add(self.button_assign_ptv_test, 0, wx.ALL, 5)
+        # sizer_buttons.Add(self.button_assign_ptv_test, 0, wx.ALL, 5)
         sizer_buttons.Add(self.button_save_roi_map, 0, wx.ALL, 5)
         sizer_buttons.Add(self.button_import, 0, wx.ALL, 5)
         sizer_buttons.Add(self.button_cancel, 0, wx.ALL, 5)
@@ -799,27 +797,30 @@ class ImportDicomFrame(wx.Frame):
             self.options.set_option('KEEP_IN_INBOX', self.checkbox_keep_in_inbox.GetValue())
             self.options.set_option('AUTO_SUM_DOSE', self.checkbox_auto_sum_dose.GetValue())
             self.options.save()
-            # study_uid_dict = get_study_uid_dict(list(self.dicom_importer.checked_plans), self.parsed_dicom_data)
-            # AssignPTV(self, self.parsed_dicom_data, study_uid_dict)
-            ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
-                         self.checkbox_include_uncategorized.GetValue(),
-                         self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue(),
-                         self.roi_map, self.options.USE_DICOM_DVH, self.checkbox_auto_sum_dose.GetValue())
-            dlg = ImportStatusDialog()
-            # calling self.Close() below caused issues in Windows if Show() used instead of ShowModal()
-            [dlg.Show, dlg.ShowModal][is_windows()]()
-            self.Close()
+            study_uid_dict = get_study_uid_dict(list(self.dicom_importer.checked_plans), self.parsed_dicom_data,
+                                                multi_plan_only=True)
+
+            finish_import = True
+            if study_uid_dict and not self.checkbox_auto_sum_dose.GetValue():
+                dlg = AssignPTV(self, self.parsed_dicom_data, study_uid_dict)
+                dlg.ShowModal()
+                finish_import = dlg.continue_status
+
+            if finish_import:
+                ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
+                             self.checkbox_include_uncategorized.GetValue(),
+                             self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue(),
+                             self.roi_map, self.options.USE_DICOM_DVH, self.checkbox_auto_sum_dose.GetValue())
+                dlg = ImportStatusDialog()
+                # calling self.Close() below caused issues in Windows if Show() used instead of ShowModal()
+                [dlg.Show, dlg.ShowModal][is_windows()]()
+                self.Close()
+                self.do_unsubscribe()
         else:
             dlg = wx.MessageDialog(self, "No plans have been selected.", caption='Import Failure',
                                    style=wx.OK | wx.OK_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
             dlg.ShowModal()
             dlg.Destroy()
-
-        self.do_unsubscribe()
-
-    def on_assign_ptv_test(self, evt):
-        study_uid_dict = get_study_uid_dict(list(self.dicom_importer.checked_plans), self.parsed_dicom_data)
-        AssignPTV(self, self.parsed_dicom_data, study_uid_dict)
 
     def parse_dicom_data(self):
         PreImportFileSetParserWorker(self.dicom_importer.dicom_file_paths)
@@ -1210,8 +1211,9 @@ class StudyImporter:
         if not self.terminate:
             self.push(data_to_import)
 
-        # Wait until entire study has been pushed since these values are based on entire PTV volume
-        if self.final_plan_in_study and not self.terminate:
+        # Wait until entire study has been pushed since these values are based on entire PTV volume,
+        # unless plan_ptvs are assigned
+        if (self.final_plan_in_study or parsed_data.plan_ptvs) and not self.terminate:
             if db_update.uid_has_ptvs(study_uid):
 
                 # collect roi names for post-import calculations
@@ -1234,7 +1236,7 @@ class StudyImporter:
                                 post_import_rois.append(clean_name(roi_name_map[roi_key]))
 
                 # Calculate the PTV overlap for each roi
-                tv = db_update.get_total_treatment_volume_of_study(study_uid)
+                tv = db_update.get_total_treatment_volume_of_study(study_uid, ptvs=parsed_data.plan_ptvs)
                 self.post_import_calc('PTV Overlap Volume', study_uid, post_import_rois,
                                       db_update.treatment_volume_overlap, tv)
 
@@ -1515,7 +1517,7 @@ class ImportWorker(Thread):
                 remove(join(TEMP_DIR, f))
 
 
-def get_study_uid_dict(checked_uids, parsed_dicom_data):
+def get_study_uid_dict(checked_uids, parsed_dicom_data, multi_plan_only=False):
     """
     This thread iterates through self.checked_uids which contains plan uids, but we need to iterate through
     study instance uids so that plans on the same study are imported adjacently.
@@ -1528,12 +1530,20 @@ def get_study_uid_dict(checked_uids, parsed_dicom_data):
         if study_uid not in list(study_uids):
             study_uids[study_uid] = []
         study_uids[study_uid].append(plan_uid)
+
+    if multi_plan_only:
+        for study_uid in list(study_uids):
+            if len(study_uids[study_uid]) < 2:
+                study_uids.pop(study_uid)
+
     return study_uids
 
 
 class AssignPTV(wx.Dialog):
     def __init__(self, parent, parsed_dicom_data, study_uid_dict):
         wx.Dialog.__init__(self, parent)
+
+        self.continue_status = False
 
         self.parsed_dicom_data = parsed_dicom_data
         self.study_uid_dict = study_uid_dict
@@ -1568,8 +1578,6 @@ class AssignPTV(wx.Dialog):
         self.__do_layout()
 
         self.update_data()
-
-        self.Show()
 
     def __set_properties(self):
         self.SetTitle("PTV Assignment for Overlap and Distance Calculations")
@@ -1643,7 +1651,7 @@ class AssignPTV(wx.Dialog):
             if study_uid not in list(self.ptvs):
                 self.ptvs[study_uid] = set()
             if plan_uid not in list(self.ptvs):
-                self.ptvs[plan_uid] = set()
+                self.ptvs[plan_uid] = set(self.parsed_dicom_data[plan_uid].plan_ptvs)
             ptvs = set(self.parsed_dicom_data[plan_uid].stored_values['ptv_names'])
             self.ptvs[study_uid] = self.ptvs[study_uid].union(ptvs)
 
@@ -1700,7 +1708,10 @@ class AssignPTV(wx.Dialog):
         self.update_data()
 
     def close(self):
-        self.Destroy()
+        for plan_uid, parsed_dicom_data in self.parsed_dicom_data.items():
+            parsed_dicom_data.plan_ptvs = list(self.ptvs[plan_uid])
+        self.continue_status = True
+        self.Close()
 
     def update_back_next_buttons(self):
         self.button_back.Enable(self.current_index > 0)

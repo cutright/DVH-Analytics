@@ -32,7 +32,7 @@ setup(
     author_email='dan.cutright@gmail.com',
     url='https://github.com/cutright/DVH-Analytics-Desktop',
     download_url='https://github.com/cutright/DVH-Analytics-Desktop/archive/master.zip',
-    license="MIT License",
+    license="BSD License",
     keywords=['dvh', 'radiation therapy', 'research', 'dicom', 'dicom-rt', 'bokeh', 'analytics', 'wxpython'],
     classifiers=[],
     install_requires=requires,

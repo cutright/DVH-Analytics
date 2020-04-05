@@ -200,6 +200,7 @@ class DVHAMainFrame(wx.Frame):
 
         help_menu = wx.Menu()
         menu_github = help_menu.Append(wx.ID_ANY, 'GitHub Page')
+        menu_dvha_edit = help_menu.Append(wx.ID_ANY, 'DVHA DICOM Editor')
         menu_python_libraries = help_menu.Append(wx.ID_ANY, 'Python Libraries Used')
         menu_report_issue = help_menu.Append(wx.ID_ANY, 'Report an Issue')
         menu_about = help_menu.Append(wx.ID_ANY, '&About')
@@ -215,6 +216,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_pref, menu_pref)
         self.Bind(wx.EVT_MENU, self.on_githubpage, menu_github)
         self.Bind(wx.EVT_MENU, self.on_report_issue, menu_report_issue)
+        self.Bind(wx.EVT_MENU, self.on_dvha_edit, menu_dvha_edit)
         self.Bind(wx.EVT_MENU, PythonLibraries, menu_python_libraries)
         self.Bind(wx.EVT_MENU, About, menu_about)
         self.Bind(wx.EVT_MENU, self.on_sql, menu_sql)
@@ -864,6 +866,10 @@ class DVHAMainFrame(wx.Frame):
     @staticmethod
     def on_githubpage(evt):
         webbrowser.open_new_tab("http://dvhanalytics.com/")
+
+    @staticmethod
+    def on_dvha_edit(evt):
+        webbrowser.open_new_tab("https://github.com/cutright/DVHA-DICOM-Editor")
 
     @staticmethod
     def on_report_issue(evt):

@@ -6,6 +6,7 @@ v0.7.5 (TBD)
   is not stored in the database.
  - [Import] Fixed bug that caused datetime parsing to fail if DICOM timestamp had fractional seconds
  (avoid the "unconverted data remains" error).
+ - [Import] Option to turn off automatic dose summation
  - [Protocols] Protocol (DVH constraint) editor
 
 v0.7.4 (2020.03.13)

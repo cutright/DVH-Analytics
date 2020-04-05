@@ -30,7 +30,7 @@ class DICOM_Parser:
     Parse a set of DICOM files for database
     """
     def __init__(self, plan_file=None, structure_file=None, dose_file=None, dose_sum_file=None, plan_over_rides=None,
-                 global_plan_over_rides=None, roi_over_ride=None, roi_map=None, use_dicom_dvh=False):
+                 global_plan_over_rides=None, roi_over_ride=None, roi_map=None, use_dicom_dvh=False, plan_ptvs=None):
         """
         :param plan_file: absolute path of DICOM RT Plan file
         :type plan_file: str
@@ -50,6 +50,8 @@ class DICOM_Parser:
         :type roi_map: DatabaseROIs
         :param use_dicom_dvh: use the DVH stored in DICOM RT-Dose if it exists
         :type use_dicom_dvh: bool
+        :param plan_ptvs: assign specifc PTVs for distance calculations
+        :type plan_ptvs: list
         """
 
         self.database_rois = DatabaseROIs() if roi_map is None else roi_map
@@ -96,6 +98,8 @@ class DICOM_Parser:
         self.global_plan_over_rides = global_plan_over_rides
 
         self.roi_over_ride = roi_over_ride if roi_over_ride is not None else {'name': {}, 'type': {}}
+
+        self.plan_ptvs = plan_ptvs
 
     def update_stored_values(self):
         keys = ['study_instance_uid_to_be_imported', 'patient_name', 'mrn', 'sim_study_date', 'birth_date',
@@ -1586,7 +1590,7 @@ class PreImportData:
 
     @property
     def init_param(self):
-        params = ['plan_file', 'structure_file', 'dose_file',
+        params = ['plan_file', 'structure_file', 'dose_file', 'plan_ptvs',
                   'plan_over_rides', 'global_plan_over_rides', 'roi_over_ride']
         return {key: getattr(self, key) for key in params}
 
