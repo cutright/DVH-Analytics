@@ -6,7 +6,9 @@ v0.7.5 (TBD)
   is not stored in the database.
  - [Import] Fixed bug that caused datetime parsing to fail if DICOM timestamp had fractional seconds
  (avoid the "unconverted data remains" error).
- - [Import] Option to turn off automatic dose summation
+ - [Import] Option to turn off automatic dose summation: [#57](https://github.com/cutright/DVH-Analytics/issues/57)
+ - [Import] Bug fix: [#59](https://github.com/cutright/DVH-Analytics/issues/59)
+ - [Import] SQLite import_time_stamp now actually includes time, and is in your local timezone
  - [Protocols] Protocol (DVH constraint) editor
 
 v0.7.4 (2020.03.13)

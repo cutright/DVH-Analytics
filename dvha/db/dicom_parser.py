@@ -98,6 +98,9 @@ class DICOM_Parser:
         self.global_plan_over_rides = global_plan_over_rides
 
         self.roi_over_ride = roi_over_ride if roi_over_ride is not None else {'name': {}, 'type': {}}
+        for over_ride_type, over_ride in self.roi_over_ride.items():
+            for key, value in over_ride.items():
+                self.structure_name_and_type[key][over_ride_type] = value
 
         self.plan_ptvs = plan_ptvs
 
@@ -758,7 +761,6 @@ class DICOM_Parser:
 
     def get_roi_name(self, key):
         """
-        Applies clean_name from roi_name_manager.py to the name in the DICOM file
         :param key: the index of the roi
         :return: roi name to be used in the database
         :rtype: str

@@ -168,13 +168,12 @@ class DVH_SQL:
         :return: The current time as seen by the SQL database
         :rtype: datetime
         """
-
         return self.query_generic("SELECT %s" % self.sql_cmd_now)[0][0]
 
     @property
     def sql_cmd_now(self):
         if self.db_type == 'sqlite':
-            sql_cmd = "date('now')"
+            sql_cmd = "datetime('now', 'localtime')"
         else:
             sql_cmd = "NOW()"
         return sql_cmd
