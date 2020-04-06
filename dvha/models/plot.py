@@ -145,12 +145,14 @@ class Plot:
 
             self.figures_attr.append(current_attr)
             for key, value in fig_attr_dict.items():
-                if key in top_keys:
-                    setattr(fig, key, value)
-                else:
-                    top_key = key[:key.rfind('_')]
-                    sub_key = key[key.rfind('_') + 1:]
-                    setattr(getattr(fig, top_key), sub_key, value)
+                if value is not None:
+                    value = None if value == 'none' else value
+                    if key in top_keys:
+                        setattr(fig, key, value)
+                    else:
+                        top_key = key[:key.rfind('_')]
+                        sub_key = key[key.rfind('_') + 1:]
+                        setattr(getattr(fig, top_key), sub_key, value)
 
     def load_stored_fig_attr(self):
         """Restore the figure properties before set_fig_attr was called"""

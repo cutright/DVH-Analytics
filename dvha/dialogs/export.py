@@ -34,7 +34,7 @@ def save_data_to_file(frame, title, data, wildcard="CSV files (*.csv)|*.csv", da
     :type initial_dir: str
     """
 
-    with wx.FileDialog(frame, title, initial_dir, wildcard=wildcard,
+    with wx.FileDialog(frame, title, defaultDir=initial_dir,  wildcard=wildcard,
                        style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
 
         if fileDialog.ShowModal() == wx.ID_CANCEL:
@@ -354,7 +354,7 @@ class ExportFigure(wx.Dialog):
         return 'string' if self.format == 'HTML' else 'function'
 
     def on_export(self, *evt):
-        save_data_to_file(self, self.export_title, self.plot_data,
+        save_data_to_file(self, self.export_title, self.plot_data, initial_dir="",
                           data_type=self.data_type, wildcard=self.wildcard)
 
     def get_text_ctrl_float(self, key):
@@ -372,8 +372,7 @@ class ExportFigure(wx.Dialog):
             return None
 
     def get_combo_box(self, key):
-        value = self.combo_box[key].GetValue()
-        return None if value == 'none' else value
+        return self.combo_box[key].GetValue()
 
     @property
     def y_range_start(self):
