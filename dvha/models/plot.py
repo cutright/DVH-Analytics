@@ -69,6 +69,7 @@ class Plot:
         self.figure.yaxis.axis_label = y_axis_label
 
         self.figures = [self.figure]  # keep track of all figures
+        self.figures_attr = []  # temporary storage of figure dimensions/colors during export
 
         self.source = {}  # Will be a dictionary of bokeh ColumnDataSources
 
@@ -130,12 +131,49 @@ class Plot:
         else:
             self.layout.SetPage(self.html_str, "")
 
-    def get_svg(self, file_name):
+    def set_fig_attr(self, fig_attr_dict):
+        """During plot export, user can supply custom figure properties, apply these and store original values"""
+        self.figures_attr = []
+        for fig in self.figures:
+            top_keys = [key for key in fig_attr_dict.keys() if (not key.endswith('_start') and not key.endswith('_end'))]
+            sub_keys = set(fig_attr_dict.keys()) - set(top_keys)
+            current_attr = {key: getattr(fig, key) for key in top_keys}
+            for key in sub_keys:
+                top_key = key[:key.rfind('_')]
+                sub_key = key[key.rfind('_')+1:]
+                current_attr[key] = getattr(getattr(fig, top_key), sub_key)
+
+            self.figures_attr.append(current_attr)
+            for key, value in fig_attr_dict.items():
+                if key in top_keys:
+                    setattr(fig, key, value)
+                else:
+                    top_key = key[:key.rfind('_')]
+                    sub_key = key[key.rfind('_') + 1:]
+                    setattr(getattr(fig, top_key), sub_key, value)
+
+    def load_stored_fig_attr(self):
+        """Restore the figure properties before set_fig_attr was called"""
+        for i, fig in enumerate(self.figures):
+            for key, value in self.figures_attr[i].items():
+                if key.endswith('_start') or key.endswith('_end'):
+                    top_key = key[:key.rfind('_')]
+                    sub_key = key[key.rfind('_') + 1:]
+                    setattr(getattr(fig, top_key), sub_key, value)
+                else:
+                    setattr(fig, key, value)
+
+    def get_svg(self, fig_attr_dict, file_name):
+
+        self.set_fig_attr(fig_attr_dict)  # apply custom figure properties
+
         for fig in self.figures:
             fig.output_backend = "svg"
         export_svgs(self.bokeh_layout, filename=file_name)
         for fig in self.figures:
             fig.output_backend = "canvas"
+
+        self.load_stored_fig_attr()  # restore previous figure properties
 
     @staticmethod
     def clean_data(*data, mrn=None, uid=None, dates=None):

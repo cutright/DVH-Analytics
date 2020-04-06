@@ -12,6 +12,7 @@ GUI tools to export text data to a file
 
 import wx
 import wx.adv
+from functools import partial
 import matplotlib.colors as plot_colors
 from dvha.models.data_table import DataTable
 from dvha.paths import DATA_DIR
@@ -275,6 +276,7 @@ class ExportFigure(wx.Dialog):
                        'Dismiss': wx.Button(self, wx.ID_CANCEL, 'Dismiss')}
 
         self.keys = keys_tc + self.keys_cb
+        self.fig_attr_keys = keys_tc + ['background_fill_color', 'border_fill_color']
 
         self.__set_properties()
         self.__do_bind()
@@ -341,8 +343,11 @@ class ExportFigure(wx.Dialog):
 
     @property
     def plot_data(self):
-        plot_map = {'SVG': 'get_svg', 'HTML': 'html_str'}
-        return getattr(self.plot, plot_map[self.format])
+        if self.format == 'SVG':
+            return partial(self.plot.get_svg, self.fig_attr_dict)
+        return self.plot.html_str
+        # plot_map = {'SVG': 'get_svg', 'HTML': 'html_str'}
+        # return getattr(self.plot, plot_map[self.format])
 
     @property
     def data_type(self):
@@ -351,6 +356,56 @@ class ExportFigure(wx.Dialog):
     def on_export(self, *evt):
         save_data_to_file(self, self.export_title, self.plot_data,
                           data_type=self.data_type, wildcard=self.wildcard)
+
+    def get_text_ctrl_float(self, key):
+        value = self.text_ctrl[key].GetValue()
+        try:
+            return float(value)
+        except ValueError:
+            return None
+
+    def get_text_ctrl_int(self, key):
+        value = self.text_ctrl[key].GetValue()
+        try:
+            return int(float(value))
+        except ValueError:
+            return None
+
+    def get_combo_box(self, key):
+        value = self.combo_box[key].GetValue()
+        return None if value == 'none' else value
+
+    @property
+    def y_range_start(self):
+        return self.get_text_ctrl_float('y_range_start')
+
+    @property
+    def x_range_start(self):
+        return self.get_text_ctrl_float('x_range_start')
+
+    @property
+    def y_range_end(self):
+        return self.get_text_ctrl_float('y_range_end')
+
+    @property
+    def plot_height(self):
+        return self.get_text_ctrl_int('plot_height')
+
+    @property
+    def plot_width(self):
+        return self.get_text_ctrl_int('plot_width')
+
+    @property
+    def background_fill_color(self):
+        return self.get_combo_box('background_fill_color')
+
+    @property
+    def border_fill_color(self):
+        return self.get_combo_box('border_fill_color')
+
+    @property
+    def fig_attr_dict(self):
+        return {key: getattr(self, key) for key in self.fig_attr_keys}
 
     def run(self):
         self.ShowModal()
