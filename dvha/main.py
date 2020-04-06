@@ -170,9 +170,17 @@ class DVHAMainFrame(wx.Frame):
         export_regression = export_plot.Append(wx.ID_ANY, 'Regression')
         export_control_chart = export_plot.Append(wx.ID_ANY, 'Control Chart')
 
+        export_plot_svg = wx.Menu()
+        export_svg_dvhs = export_plot_svg.Append(wx.ID_ANY, 'DVHs')
+        export_svg_time_series = export_plot_svg.Append(wx.ID_ANY, 'Time Series')
+        export_svg_correlation = export_plot_svg.Append(wx.ID_ANY, 'Correlation')
+        export_svg_regression = export_plot_svg.Append(wx.ID_ANY, 'Regression')
+        export_svg_control_chart = export_plot_svg.Append(wx.ID_ANY, 'Control Chart')
+
         export = wx.Menu()
         export_csv = export.Append(wx.ID_ANY, 'Data to csv\tCtrl+E')
         export.AppendSubMenu(export_plot, 'Plot to html')
+        export.AppendSubMenu(export_plot_svg, 'Plot to svg')
         file_menu.AppendSeparator()
 
         qmi = file_menu.Append(wx.ID_ANY, '&Quit\tCtrl+Q')
@@ -230,6 +238,11 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_save_plot_correlation, export_correlation)
         self.Bind(wx.EVT_MENU, self.on_save_plot_regression, export_regression)
         self.Bind(wx.EVT_MENU, self.on_save_plot_control_chart, export_control_chart)
+        self.Bind(wx.EVT_MENU, self.on_save_plot_svg_dvhs, export_svg_dvhs)
+        self.Bind(wx.EVT_MENU, self.on_save_plot_svg_time_series, export_svg_time_series)
+        self.Bind(wx.EVT_MENU, self.on_save_plot_svg_correlation, export_svg_correlation)
+        self.Bind(wx.EVT_MENU, self.on_save_plot_svg_regression, export_svg_regression)
+        self.Bind(wx.EVT_MENU, self.on_save_plot_svg_control_chart, export_svg_control_chart)
         self.Bind(wx.EVT_MENU, self.on_toolbar_database, menu_db_admin)
         self.Bind(wx.EVT_MENU, self.on_view_dvhs, self.data_menu_items['DVHs'])
         self.Bind(wx.EVT_MENU, self.on_view_plans, self.data_menu_items['Plans'])
@@ -901,6 +914,26 @@ class DVHAMainFrame(wx.Frame):
     def on_save_plot_control_chart(self, evt):
         save_data_to_file(self, 'Save Control Chart plot', self.control_chart.plot.html_str,
                           wildcard="HTML files (*.html)|*.html")
+
+    def on_save_plot_svg_dvhs(self, evt):
+        save_data_to_file(self, 'Save DVHs plot', self.plot.get_svg, data_type='function',
+                          wildcard="SVG files (*.svg)|*.svg")
+
+    def on_save_plot_svg_time_series(self, evt):
+        save_data_to_file(self, 'Save Time Series plot', self.time_series.plot.get_svg, data_type='function',
+                          wildcard="SVG files (*.svg)|*.svg")
+
+    def on_save_plot_svg_correlation(self, evt):
+        save_data_to_file(self, 'Save Correlation plot', self.correlation.plot.get_svg, data_type='function',
+                          wildcard="SVG files (*.svg)|*.svg")
+
+    def on_save_plot_svg_regression(self, evt):
+        save_data_to_file(self, 'Save Regression plot', self.regression.plot.get_svg, data_type='function',
+                          wildcard="SVG files (*.svg)|*.svg")
+
+    def on_save_plot_svg_control_chart(self, evt):
+        save_data_to_file(self, 'Save Control Chart plot', self.control_chart.plot.get_svg, data_type='function',
+                          wildcard="SVG files (*.svg)|*.svg")
 
     def on_view_dvhs(self, evt):
         self.view_table_data('DVHs')

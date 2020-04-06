@@ -45,8 +45,11 @@ def save_data_to_file(frame, title, data, wildcard="CSV files (*.csv)|*.csv", da
             except IOError:
                 wx.LogError("Cannot save current data in file '%s'." % pathname)
 
-        if data_type == 'pickle':
+        elif data_type == 'pickle':
             save_object_to_file(data, pathname)
+
+        elif data_type == 'function':
+            data(pathname)
 
 
 class ExportCSVDialog(wx.Dialog):
