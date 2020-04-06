@@ -12,6 +12,7 @@ GUI tools to export text data to a file
 
 import wx
 import wx.adv
+import matplotlib.colors as plot_colors
 from dvha.models.data_table import DataTable
 from dvha.paths import DATA_DIR
 from dvha.tools.utilities import get_selected_listctrl_items, save_object_to_file
@@ -28,6 +29,8 @@ def save_data_to_file(frame, title, data, wildcard="CSV files (*.csv)|*.csv", da
     :type wildcard: str
     :param data_type: either 'string' or 'pickle'
     :type data_type: str
+    :param initial_dir: start the FileDialog at this directory
+    :type initial_dir: str
     """
 
     with wx.FileDialog(frame, title, initial_dir, wildcard=wildcard,
@@ -243,3 +246,111 @@ class ExportCSVDialog(wx.Dialog):
                 csv_data.append('\n\n')
 
         return '\n'.join(csv_data)
+
+
+class ExportFigure(wx.Dialog):
+    def __init__(self, parent):
+        wx.Dialog.__init__(self, parent)
+
+        self.parent = parent
+        self.options = parent.options
+        self.plots = {'DVHs': parent.plot,
+                      'Time Series': parent.time_series.plot,
+                      'Correlation': parent.correlation.plot,
+                      'Regression': parent.regression.plot,
+                      'Control Chart': parent.control_chart.plot}
+
+        keys_tc = ['y_range_start', 'y_range_end', 'x_range_start', 'plot_height', 'plot_width']
+        self.text_ctrl = {key: wx.TextCtrl(self, wx.ID_ANY, str(self.options.save_fig_param[key])) for key in keys_tc}
+        self.label = {key: wx.StaticText(self, wx.ID_ANY, key.replace('_', ' ').title() + ':') for key in keys_tc}
+
+        self.keys_cb = ['background_fill_color', 'border_fill_color', 'plot', 'format']
+        self.combo_box = {key: wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.TE_READONLY)
+                          for key in self.keys_cb}
+        for key in self.keys_cb:
+            self.label[key] = wx.StaticText(self, wx.ID_ANY, key.replace('_', ' ').title() + ':')
+
+        self.button_keys = ['Export', 'Dismiss']
+        self.button = {'Export': wx.Button(self, wx.ID_ANY, 'Export'),
+                       'Dismiss': wx.Button(self, wx.ID_CANCEL, 'Dismiss')}
+
+        self.keys = keys_tc + self.keys_cb
+
+        self.__set_properties()
+        self.__do_bind()
+        self.__do_layout()
+
+        self.run()
+
+    def __set_properties(self):
+        self.SetTitle("Export Figure")
+
+        self.combo_box['plot'].SetItems(sorted(list(self.plots)))
+        self.combo_box['plot'].SetValue('DVHs')
+
+        self.combo_box['format'].SetItems(['HTML', 'SVG'])
+        self.combo_box['format'].SetValue('SVG')
+
+        color_options = ['none'] + list(plot_colors.cnames)
+        for key in ['background_fill_color', 'border_fill_color']:
+            self.combo_box[key].SetItems(color_options)
+            self.combo_box[key].SetValue(self.options.save_fig_param[key])
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button['Export'].GetId())
+
+    def __do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_main = wx.BoxSizer(wx.VERTICAL)
+        sizer_input = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
+        sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
+
+        for key in self.keys:
+            input_obj = self.combo_box[key] if key in self.keys_cb else self.text_ctrl[key]
+            sizer_input.Add(self.label[key], 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+            sizer_input.Add(input_obj, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
+        sizer_main.Add(sizer_input, 0, wx.EXPAND | wx.ALL, 5)
+
+        for key in self.button_keys:
+            sizer_buttons.Add(self.button[key], 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+        sizer_main.Add(sizer_buttons, 0, wx.EXPAND | wx.ALL, 5)
+
+        sizer_wrapper.Add(sizer_main, 0, wx.EXPAND | wx.ALL, 5)
+
+        self.SetSizer(sizer_wrapper)
+        self.Fit()
+        self.Layout()
+        self.Center()
+
+    @property
+    def plot(self):
+        return self.plots[self.combo_box['plot'].GetValue()]
+
+    @property
+    def export_title(self):
+        return "Save %s plot as .%s" % (self.combo_box['plot'].GetValue(), self.format.lower())
+
+    @property
+    def wildcard(self):
+        ext = self.combo_box['format'].GetValue()
+        return "%s files (*.%s)|*.%s" % (ext.upper(), ext.lower(), ext.lower())
+
+    @property
+    def format(self):
+        return self.combo_box['format'].GetValue()
+
+    @property
+    def plot_data(self):
+        plot_map = {'SVG': 'get_svg', 'HTML': 'html_str'}
+        return getattr(self.plot, plot_map[self.format])
+
+    @property
+    def data_type(self):
+        return 'string' if self.format == 'HTML' else 'function'
+
+    def on_export(self, *evt):
+        save_data_to_file(self, self.export_title, self.plot_data,
+                          data_type=self.data_type, wildcard=self.wildcard)
+
+    def run(self):
+        self.ShowModal()

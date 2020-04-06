@@ -169,6 +169,14 @@ class DefaultOptions:
         self.USE_DICOM_DVH = False
         self.AUTO_SUM_DOSE = True
 
+        self.save_fig_param = {'y_range_start': -0.0005,
+                               'x_range_start': 0,
+                               'y_range_end': 1.0005,
+                               'background_fill_color': 'none',
+                               'border_fill_color': 'none',
+                               'plot_height': 600,
+                               'plot_width': 820}
+
 
 class Options(DefaultOptions):
     def __init__(self):

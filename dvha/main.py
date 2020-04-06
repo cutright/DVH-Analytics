@@ -19,7 +19,7 @@ from dvha.db.sql_to_python import QuerySQL
 from dvha.db.sql_connector import echo_sql_db, initialize_db
 from dvha.dialogs.main import query_dlg, UserSettings, About, PythonLibraries
 from dvha.dialogs.database import SQLSettingsDialog
-from dvha.dialogs.export import ExportCSVDialog, save_data_to_file
+from dvha.dialogs.export import ExportCSVDialog, save_data_to_file, ExportFigure
 from dvha.dialogs.protocols import ProtocolsEditor
 from dvha.models.import_dicom import ImportDicomFrame
 from dvha.models.database_editor import DatabaseEditorFrame
@@ -153,7 +153,6 @@ class DVHAMainFrame(wx.Frame):
         self.frame_menubar = wx.MenuBar()
 
         file_menu = wx.Menu()
-        # file_menu.Append(wx.ID_NEW, '&New')
         menu_open = file_menu.Append(wx.ID_OPEN, '&Open\tCtrl+O')
         menu_import = file_menu.Append(wx.ID_OPEN, '&Import DICOM\tCtrl+I')
         menu_save = file_menu.Append(wx.ID_ANY, '&Save\tCtrl+S')
@@ -163,24 +162,9 @@ class DVHAMainFrame(wx.Frame):
         load_model_mvr = load_model.Append(wx.ID_ANY, 'Multi-Variable Regression')
         load_model_ml = load_model.Append(wx.ID_ANY, 'Machine Learning')
 
-        export_plot = wx.Menu()
-        export_dvhs = export_plot.Append(wx.ID_ANY, 'DVHs')
-        export_time_series = export_plot.Append(wx.ID_ANY, 'Time Series')
-        export_correlation = export_plot.Append(wx.ID_ANY, 'Correlation')
-        export_regression = export_plot.Append(wx.ID_ANY, 'Regression')
-        export_control_chart = export_plot.Append(wx.ID_ANY, 'Control Chart')
-
-        export_plot_svg = wx.Menu()
-        export_svg_dvhs = export_plot_svg.Append(wx.ID_ANY, 'DVHs')
-        export_svg_time_series = export_plot_svg.Append(wx.ID_ANY, 'Time Series')
-        export_svg_correlation = export_plot_svg.Append(wx.ID_ANY, 'Correlation')
-        export_svg_regression = export_plot_svg.Append(wx.ID_ANY, 'Regression')
-        export_svg_control_chart = export_plot_svg.Append(wx.ID_ANY, 'Control Chart')
-
         export = wx.Menu()
         export_csv = export.Append(wx.ID_ANY, 'Data to csv\tCtrl+E')
-        export.AppendSubMenu(export_plot, 'Plot to html')
-        export.AppendSubMenu(export_plot_svg, 'Plot to svg')
+        export_figure = export.Append(wx.ID_ANY, 'Plot to file')
         file_menu.AppendSeparator()
 
         qmi = file_menu.Append(wx.ID_ANY, '&Quit\tCtrl+Q')
@@ -191,6 +175,7 @@ class DVHAMainFrame(wx.Frame):
         menu_db_admin = self.data_menu.Append(wx.ID_ANY, 'Database Administrator')
         self.data_menu.AppendSubMenu(load_model, 'Load &Model')
         self.data_menu.AppendSubMenu(export, '&Export')
+        self.data_menu.AppendSeparator()
         self.data_menu_items = {'DVHs': self.data_menu.Append(wx.ID_ANY, 'Show DVHs\tCtrl+1'),
                                 'Plans': self.data_menu.Append(wx.ID_ANY, 'Show Plans\tCtrl+2'),
                                 'Rxs': self.data_menu.Append(wx.ID_ANY, 'Show Rxs\tCtrl+3'),
@@ -220,6 +205,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_load_ml_model, load_model_ml)
         self.Bind(wx.EVT_MENU, self.on_close, menu_close)
         self.Bind(wx.EVT_MENU, self.on_export, export_csv)
+        self.Bind(wx.EVT_MENU, self.on_export_figure, export_figure)
         self.Bind(wx.EVT_MENU, self.on_save, menu_save)
         self.Bind(wx.EVT_MENU, self.on_pref, menu_pref)
         self.Bind(wx.EVT_MENU, self.on_githubpage, menu_github)
@@ -233,16 +219,6 @@ class DVHAMainFrame(wx.Frame):
             menu_user_settings = settings_menu.Append(wx.ID_ANY, '&Preferences\tCtrl+,')
             self.Bind(wx.EVT_MENU, self.on_pref, menu_user_settings)
 
-        self.Bind(wx.EVT_MENU, self.on_save_plot_dvhs, export_dvhs)
-        self.Bind(wx.EVT_MENU, self.on_save_plot_time_series, export_time_series)
-        self.Bind(wx.EVT_MENU, self.on_save_plot_correlation, export_correlation)
-        self.Bind(wx.EVT_MENU, self.on_save_plot_regression, export_regression)
-        self.Bind(wx.EVT_MENU, self.on_save_plot_control_chart, export_control_chart)
-        self.Bind(wx.EVT_MENU, self.on_save_plot_svg_dvhs, export_svg_dvhs)
-        self.Bind(wx.EVT_MENU, self.on_save_plot_svg_time_series, export_svg_time_series)
-        self.Bind(wx.EVT_MENU, self.on_save_plot_svg_correlation, export_svg_correlation)
-        self.Bind(wx.EVT_MENU, self.on_save_plot_svg_regression, export_svg_regression)
-        self.Bind(wx.EVT_MENU, self.on_save_plot_svg_control_chart, export_svg_control_chart)
         self.Bind(wx.EVT_MENU, self.on_toolbar_database, menu_db_admin)
         self.Bind(wx.EVT_MENU, self.on_view_dvhs, self.data_menu_items['DVHs'])
         self.Bind(wx.EVT_MENU, self.on_view_plans, self.data_menu_items['Plans'])
@@ -358,7 +334,7 @@ class DVHAMainFrame(wx.Frame):
         sizer_query_categorical.Add(self.table_categorical, 1, wx.ALL | wx.EXPAND, 10)
 
         sizer_query_numerical.Add(sizer_numerical_buttons, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_query_numerical.Add(self.table_numerical, 1, wx.TOP | wx.LEFT | wx.RIGHT | wx.EXPAND, 10)
+        sizer_query_numerical.Add(self.table_numerical, 1, wx.ALL | wx.EXPAND, 10)
 
         sizer_summary.Add(self.text_summary)
 
@@ -434,7 +410,7 @@ class DVHAMainFrame(wx.Frame):
         self.SetSizer(sizer_main)
         self.Layout()
 
-        self.SetSize(get_window_size(0.833, 0.857))
+        self.SetSize(get_window_size(0.833, 0.875))
 
         self.Center()
 
@@ -895,45 +871,12 @@ class DVHAMainFrame(wx.Frame):
         SQLSettingsDialog(self.options)
         [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db()]()
 
-    def on_save_plot_dvhs(self, evt):
-        save_data_to_file(self, 'Save DVHs plot', self.plot.html_str,
-                          wildcard="HTML files (*.html)|*.html")
-
-    def on_save_plot_time_series(self, evt):
-        save_data_to_file(self, 'Save Time Series plot', self.time_series.plot.html_str,
-                          wildcard="HTML files (*.html)|*.html")
-
-    def on_save_plot_correlation(self, evt):
-        save_data_to_file(self, 'Save Correlation plot', self.correlation.plot.html_str,
-                          wildcard="HTML files (*.html)|*.html")
-
-    def on_save_plot_regression(self, evt):
-        save_data_to_file(self, 'Save Regression plot', self.regression.plot.html_str,
-                          wildcard="HTML files (*.html)|*.html")
-
-    def on_save_plot_control_chart(self, evt):
-        save_data_to_file(self, 'Save Control Chart plot', self.control_chart.plot.html_str,
-                          wildcard="HTML files (*.html)|*.html")
-
-    def on_save_plot_svg_dvhs(self, evt):
-        save_data_to_file(self, 'Save DVHs plot', self.plot.get_svg, data_type='function',
-                          wildcard="SVG files (*.svg)|*.svg")
-
-    def on_save_plot_svg_time_series(self, evt):
-        save_data_to_file(self, 'Save Time Series plot', self.time_series.plot.get_svg, data_type='function',
-                          wildcard="SVG files (*.svg)|*.svg")
-
-    def on_save_plot_svg_correlation(self, evt):
-        save_data_to_file(self, 'Save Correlation plot', self.correlation.plot.get_svg, data_type='function',
-                          wildcard="SVG files (*.svg)|*.svg")
-
-    def on_save_plot_svg_regression(self, evt):
-        save_data_to_file(self, 'Save Regression plot', self.regression.plot.get_svg, data_type='function',
-                          wildcard="SVG files (*.svg)|*.svg")
-
-    def on_save_plot_svg_control_chart(self, evt):
-        save_data_to_file(self, 'Save Control Chart plot', self.control_chart.plot.get_svg, data_type='function',
-                          wildcard="SVG files (*.svg)|*.svg")
+    def on_export_figure(self, evt):
+        if self.save_data:
+            ExportFigure(self)
+        else:
+            wx.MessageBox('There is no data to save. Please query/open some data first.', 'Save Error',
+                          wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
 
     def on_view_dvhs(self, evt):
         self.view_table_data('DVHs')
