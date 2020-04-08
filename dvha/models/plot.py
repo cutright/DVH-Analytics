@@ -215,6 +215,9 @@ class Plot:
         self.set_figure_dimensions()
         self.update_bokeh_layout_in_wx_python()
 
+    def apply_options(self):
+        self.__apply_default_figure_options()
+
 
 class PlotStatDVH(Plot):
     """
@@ -256,6 +259,8 @@ class PlotStatDVH(Plot):
         self.add_legend(self.figure)
         self.__create_table()
 
+        self.apply_options()
+
         self.bokeh_layout = column(self.figure, self.table)
 
     def __add_hover(self):
@@ -279,50 +284,21 @@ class PlotStatDVH(Plot):
                                                     line_width=self.options.DVH_LINE_WIDTH, alpha=0,
                                                     line_dash=self.options.DVH_LINE_DASH,
                                                     nonselection_alpha=0, selection_alpha=1)
-        # self.dvhs_renderer_2 = self.figure.multi_line('x', 'y', source=self.source['dvh'], selection_color='color',
-        #                                               line_width=self.options.DVH_LINE_WIDTH, alpha=0,
-        #                                               line_dash=self.options.DVH_LINE_DASH,
-        #                                               nonselection_alpha=0, selection_alpha=1)
 
         # Add statistical plots to figure
-        self.stats_max = self.figure.line('x', 'max', source=self.source['stats'],
-                                          line_width=self.options.STATS_MAX_LINE_WIDTH, color=self.options.PLOT_COLOR,
-                                          line_dash=self.options.STATS_MAX_LINE_DASH, alpha=self.options.STATS_MAX_ALPHA)
-        self.stats_median = self.figure.line('x', 'median', source=self.source['stats'],
-                                             line_width=self.options.STATS_MEDIAN_LINE_WIDTH,
-                                             color=self.options.PLOT_COLOR, line_dash=self.options.STATS_MEDIAN_LINE_DASH,
-                                             alpha=self.options.STATS_MEDIAN_ALPHA)
-        self.stats_mean = self.figure.line('x', 'mean', source=self.source['stats'],
-                                           line_width=self.options.STATS_MEAN_LINE_WIDTH,
-                                           color=self.options.PLOT_COLOR, line_dash=self.options.STATS_MEAN_LINE_DASH,
-                                           alpha=self.options.STATS_MEAN_ALPHA)
-        self.stats_min = self.figure.line('x', 'min', source=self.source['stats'],
-                                          line_width=self.options.STATS_MIN_LINE_WIDTH, color=self.options.PLOT_COLOR,
-                                          line_dash=self.options.STATS_MIN_LINE_DASH, alpha=self.options.STATS_MIN_ALPHA)
+        self.stats_max = self.figure.line('x', 'max', source=self.source['stats'])
+        self.stats_median = self.figure.line('x', 'median', source=self.source['stats'])
+        self.stats_mean = self.figure.line('x', 'mean', source=self.source['stats'])
+        self.stats_min = self.figure.line('x', 'min', source=self.source['stats'])
 
-        self.stats_max_2 = self.figure.line('x', 'max', source=self.source['stats_2'],
-                                            line_width=self.options.STATS_MAX_LINE_WIDTH, color=self.options.PLOT_COLOR_2,
-                                            line_dash=self.options.STATS_MAX_LINE_DASH,
-                                            alpha=self.options.STATS_MAX_ALPHA)
-        self.stats_median_2 = self.figure.line('x', 'median', source=self.source['stats_2'],
-                                               line_width=self.options.STATS_MEDIAN_LINE_WIDTH,
-                                               color=self.options.PLOT_COLOR_2,
-                                               line_dash=self.options.STATS_MEDIAN_LINE_DASH,
-                                               alpha=self.options.STATS_MEDIAN_ALPHA)
-        self.stats_mean_2 = self.figure.line('x', 'mean', source=self.source['stats_2'],
-                                             line_width=self.options.STATS_MEAN_LINE_WIDTH,
-                                             color=self.options.PLOT_COLOR_2, line_dash=self.options.STATS_MEAN_LINE_DASH,
-                                             alpha=self.options.STATS_MEAN_ALPHA)
-        self.stats_min_2 = self.figure.line('x', 'min', source=self.source['stats_2'],
-                                            line_width=self.options.STATS_MIN_LINE_WIDTH, color=self.options.PLOT_COLOR_2,
-                                            line_dash=self.options.STATS_MIN_LINE_DASH,
-                                            alpha=self.options.STATS_MIN_ALPHA)
+        self.stats_max_2 = self.figure.line('x', 'max', source=self.source['stats_2'])
+        self.stats_median_2 = self.figure.line('x', 'median', source=self.source['stats_2'])
+        self.stats_mean_2 = self.figure.line('x', 'mean', source=self.source['stats_2'])
+        self.stats_min_2 = self.figure.line('x', 'min', source=self.source['stats_2'])
 
         # Shaded region between Q1 and Q3
-        self.iqr = self.figure.varea('x', 'y1', 'y2', source=self.source['patch'], alpha=self.options.IQR_ALPHA,
-                                     color=self.options.PLOT_COLOR)
-        self.iqr_2 = self.figure.varea('x', 'y1', 'y2', source=self.source['patch_2'], alpha=self.options.IQR_ALPHA,
-                                       color=self.options.PLOT_COLOR_2)
+        self.iqr = self.figure.varea('x', 'y1', 'y2', source=self.source['patch'])
+        self.iqr_2 = self.figure.varea('x', 'y1', 'y2', source=self.source['patch_2'])
 
     @property
     def legend_items(self):
@@ -470,6 +446,27 @@ class PlotStatDVH(Plot):
 
         return '\n'.join(summary + dvh_data)
 
+    def apply_options(self):
+        super().apply_options()
+
+        self.dvhs_renderer.glyph.line_width = self.options.DVH_LINE_WIDTH  # TODO: Not realized in GUI?
+        self.dvhs_renderer.glyph.line_dash = self.options.DVH_LINE_DASH
+
+        for group in ['', '_2']:
+            for stat in ['max', 'median', 'mean', 'min']:
+                renderer = getattr(self, 'stats_%s%s' % (stat, group))
+                glyph = getattr(renderer, 'glyph')
+                glyph.line_color = getattr(self.options, 'PLOT_COLOR' + group)
+                glyph.line_width = getattr(self.options, ('stats_%s_line_width' % stat).upper())
+                glyph.line_dash = getattr(self.options, ('stats_%s_line_dash' % stat).upper())
+                glyph.line_alpha = getattr(self.options, ('stats_%s_alpha' % stat).upper())
+
+        self.iqr.glyph.fill_alpha = self.options.IQR_ALPHA
+        self.iqr.glyph.fill_color = self.options.PLOT_COLOR
+
+        self.iqr_2.glyph.fill_alpha = self.options.IQR_ALPHA
+        self.iqr_2.glyph.fill_color = self.options.PLOT_COLOR_2
+
 
 class PlotTimeSeries(Plot):
     """
@@ -504,46 +501,26 @@ class PlotTimeSeries(Plot):
         self.__add_hover()
         self.__do_layout()
 
+        self.apply_options()
+
     def __add_plot_data(self):
-        self.plot_data = self.figure.circle('x', 'y', source=self.source[1]['plot'], size=self.options.TIME_SERIES_CIRCLE_SIZE,
-                                            alpha=self.options.TIME_SERIES_CIRCLE_ALPHA, color=self.options.PLOT_COLOR)
+        self.plot_data = self.figure.circle('x', 'y', source=self.source[1]['plot'])
 
-        self.plot_trend = self.figure.line('x', 'y', color=self.options.PLOT_COLOR, source=self.source[1]['trend'],
-                                           line_width=self.options.TIME_SERIES_TREND_LINE_WIDTH,
-                                           line_dash=self.options.TIME_SERIES_TREND_LINE_DASH)
-        self.plot_avg = self.figure.line('x', 'avg', color=self.options.PLOT_COLOR, source=self.source[1]['bound'],
-                                         line_width=self.options.TIME_SERIES_AVG_LINE_WIDTH,
-                                         line_dash=self.options.TIME_SERIES_AVG_LINE_DASH)
-        self.plot_patch = self.figure.patch('x', 'y', color=self.options.PLOT_COLOR, source=self.source[1]['patch'],
-                                            alpha=self.options.TIME_SERIES_PATCH_ALPHA)
+        self.plot_trend = self.figure.line('x', 'y', source=self.source[1]['trend'])
+        self.plot_avg = self.figure.line('x', 'avg', source=self.source[1]['bound'])
+        self.plot_patch = self.figure.patch('x', 'y', source=self.source[1]['patch'])
 
-        self.plot_data_2 = self.figure.circle('x', 'y', source=self.source[2]['plot'],
-                                              size=self.options.TIME_SERIES_CIRCLE_SIZE,
-                                              alpha=self.options.TIME_SERIES_CIRCLE_ALPHA,
-                                              color=self.options.PLOT_COLOR_2)
+        self.plot_data_2 = self.figure.circle('x', 'y', source=self.source[2]['plot'])
 
-        self.plot_trend_2 = self.figure.line('x', 'y', color=self.options.PLOT_COLOR_2, source=self.source[2]['trend'],
-                                             line_width=self.options.TIME_SERIES_TREND_LINE_WIDTH,
-                                             line_dash=self.options.TIME_SERIES_TREND_LINE_DASH)
-        self.plot_avg_2 = self.figure.line('x', 'avg', color=self.options.PLOT_COLOR_2, source=self.source[2]['bound'],
-                                           line_width=self.options.TIME_SERIES_AVG_LINE_WIDTH,
-                                           line_dash=self.options.TIME_SERIES_AVG_LINE_DASH)
-        self.plot_patch_2 = self.figure.patch('x', 'y', color=self.options.PLOT_COLOR_2, source=self.source[2]['patch'],
-                                              alpha=self.options.TIME_SERIES_PATCH_ALPHA)
+        self.plot_trend_2 = self.figure.line('x', 'y', source=self.source[2]['trend'])
+        self.plot_avg_2 = self.figure.line('x', 'avg', source=self.source[2]['bound'])
+        self.plot_patch_2 = self.figure.patch('x', 'y', source=self.source[2]['patch'])
 
     def __add_histogram_data(self):
         self.histogram = figure(tools="")
         self.figures.append(self.histogram)
-        self.histogram.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.histogram.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.histogram.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.histogram.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.histogram.min_border_left = self.options.MIN_BORDER
-        self.histogram.min_border_bottom = self.options.MIN_BORDER
-        self.vbar = self.histogram.vbar(x='x', width='width', bottom=0, top='top', source=self.source[1]['hist'],
-                                        color=self.options.PLOT_COLOR, alpha=self.options.HISTOGRAM_ALPHA)
-        self.vbar_2 = self.histogram.vbar(x='x', width='width', bottom=0, top='top', source=self.source[2]['hist'],
-                                          color=self.options.PLOT_COLOR_2, alpha=self.options.HISTOGRAM_ALPHA)
+        self.vbar = self.histogram.vbar(x='x', width='width', bottom=0, top='top', source=self.source[1]['hist'])
+        self.vbar_2 = self.histogram.vbar(x='x', width='width', bottom=0, top='top', source=self.source[2]['hist'])
 
         self.histogram.xaxis.axis_label = ""
         self.histogram.yaxis.axis_label = "Frequency"
@@ -731,6 +708,47 @@ class PlotTimeSeries(Plot):
         self.t_test_div.width = div_width
         self.wilcoxon_div.width = div_width
 
+    def apply_options(self):
+        super().apply_options()
+
+        for group in ['', '_2']:
+            glyph = getattr(self, 'plot_%s%s' % ('data', group)).glyph
+            glyph.line_color = getattr(self.options, 'PLOT_COLOR%s' % group)
+            glyph.fill_color = getattr(self.options, 'PLOT_COLOR%s' % group)
+            glyph.size = getattr(self.options, 'TIME_SERIES_%s' % 'CIRCLE_SIZE')
+            glyph.line_alpha = getattr(self.options, 'TIME_SERIES_%s' % 'CIRCLE_ALPHA')
+            glyph.fill_alpha = getattr(self.options, 'TIME_SERIES_%s' % 'CIRCLE_ALPHA')
+
+            glyph = getattr(self, 'plot_%s%s' % ('trend', group)).glyph
+            glyph.line_color = getattr(self.options, 'PLOT_COLOR%s' % group)
+            glyph.line_width = getattr(self.options, 'TIME_SERIES_%s' % 'TREND_LINE_WIDTH')
+            glyph.line_dash = getattr(self.options, 'TIME_SERIES_%s' % 'TREND_LINE_DASH')
+
+            glyph = getattr(self, 'plot_%s%s' % ('avg', group)).glyph
+            glyph.line_color = getattr(self.options, 'PLOT_COLOR%s' % group)
+            glyph.line_width = getattr(self.options, 'TIME_SERIES_%s' % 'AVG_LINE_WIDTH')
+            glyph.line_dash = getattr(self.options, 'TIME_SERIES_%s' % 'AVG_LINE_DASH')
+
+            glyph = getattr(self, 'plot_%s%s' % ('patch', group)).glyph
+            glyph.fill_color = getattr(self.options, 'PLOT_COLOR%s' % group)
+            glyph.fill_alpha = getattr(self.options, 'TIME_SERIES_%s' % 'PATCH_ALPHA')
+            glyph.line_color = getattr(self.options, 'PLOT_COLOR%s' % group)
+            glyph.line_alpha = getattr(self.options, 'TIME_SERIES_%s' % 'PATCH_ALPHA')
+
+        self.histogram.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.histogram.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.histogram.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.histogram.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.histogram.min_border_left = self.options.MIN_BORDER
+        self.histogram.min_border_bottom = self.options.MIN_BORDER
+
+        for group in ['', '_2']:
+            glyph = getattr(self, 'vbar%s' % group).glyph
+            glyph.line_color = getattr(self.options, 'PLOT_COLOR%s' % group)
+            glyph.fill_color = getattr(self.options, 'PLOT_COLOR%s' % group)
+            glyph.line_alpha = getattr(self.options, 'HISTOGRAM_ALPHA')
+            glyph.fill_alpha = getattr(self.options, 'HISTOGRAM_ALPHA')
+
 
 class PlotCorrelation(Plot):
     """
@@ -764,10 +782,6 @@ class PlotCorrelation(Plot):
         self.figures = [self.fig]
 
     def __set_fig_attr(self):
-        self.fig.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.fig.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.fig.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.fig.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
         self.fig.min_border_left = 175
         self.fig.min_border_top = 130
         self.fig.xaxis.major_label_orientation = pi / 4
@@ -847,6 +861,15 @@ class PlotCorrelation(Plot):
         self.fig.plot_width = int(self.size_factor[0] * float(panel_width))
         self.fig.plot_height = int(self.size_factor[1] * float(panel_height))
 
+    def apply_options(self):
+        # TODO: options are applied in update_plot_data
+        super().apply_options()
+
+        self.fig.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.fig.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.fig.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.fig.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+
 
 class PlotRegression(Plot):
     """
@@ -886,6 +909,8 @@ class PlotRegression(Plot):
         self.__add_plot_data()
         self.__add_hover()
         self.__do_layout()
+
+        self.apply_options()
 
     def __create_additional_figures(self):
         self.figure_residual_fits = figure(tools="pan,box_zoom,crosshair,reset")
@@ -1103,6 +1128,39 @@ class PlotRegression(Plot):
         for key in list(self.source):
             self.clear_source(key)
 
+    def apply_options(self):
+        # TODO: review application of color, set in source?
+        super().apply_options()
+
+        self.color[1] = self.options.PLOT_COLOR
+        self.color[2] = self.options.PLOT_COLOR_2
+        for group in [1, 2]:
+            glyph = getattr(self, 'plot_%s' % 'data')[group].glyph
+            glyph.line_color = self.color[group]
+            glyph.fill_color = self.color[group]
+            glyph.size = getattr(self.options, 'REGRESSION_%s' % 'CIRCLE_SIZE')
+            glyph.line_alpha = getattr(self.options, 'REGRESSION_%s' % 'ALPHA')
+            glyph.fill_alpha = getattr(self.options, 'REGRESSION_%s' % 'ALPHA')
+
+        for group in [1, 2]:
+            glyph = getattr(self, 'plot_%s' % 'trend')[group].glyph
+            glyph.line_color = self.color[group]
+            glyph.line_width = getattr(self.options, 'REGRESSION_%s' % 'LINE_WIDTH')
+            glyph.line_dash = getattr(self.options, 'REGRESSION_%s' % 'LINE_DASH')
+
+        for circle_plot in ['residuals', 'prob']:
+            glyph = getattr(self, 'plot_%s' % circle_plot).glyph
+            glyph.size = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'CIRCLE_SIZE')
+            glyph.line_alpha = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'ALPHA')
+            glyph.fill_alpha = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'ALPHA')
+
+        for line_plot in ['residuals_zero', 'prob_45']:
+            glyph = getattr(self, 'plot_%s' % line_plot).glyph
+            glyph.line_color = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'LINE_COLOR')
+            glyph.line_width = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'LINE_WIDTH')
+            glyph.line_dash = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'LINE_DASH')
+            glyph.line_alpha = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'ALPHA')
+
 
 class PlotMultiVarRegression(Plot):
     """
@@ -1144,37 +1202,19 @@ class PlotMultiVarRegression(Plot):
         self.__create_table()
         self.__do_layout()
 
+        self.apply_options()
+
     def __add_additional_figures(self):
         self.figure_prob_plot = figure(tools=DEFAULT_TOOLS)
         self.figures.append(self.figure_prob_plot)
         self.figure_prob_plot.xaxis.axis_label = 'Quantiles'
         self.figure_prob_plot.yaxis.axis_label = 'Ordered Values'
 
-        self.figure_prob_plot.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.figure_prob_plot.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.figure_prob_plot.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.figure_prob_plot.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-
     def __add_plot_data(self):
-        plot_color = [self.options.PLOT_COLOR_2, self.options.PLOT_COLOR][self.group == 1]
-        self.plot_residuals = self.figure.circle('x', 'y', source=self.source['residuals'],
-                                                 size=self.options.REGRESSION_RESIDUAL_CIRCLE_SIZE,
-                                                 alpha=self.options.REGRESSION_RESIDUAL_ALPHA,
-                                                 color=plot_color)
-        self.plot_residuals_zero = self.figure.line('x', 'y', source=self.source['residuals_zero'],
-                                                    line_width=self.options.REGRESSION_RESIDUAL_LINE_WIDTH,
-                                                    line_dash=self.options.REGRESSION_RESIDUAL_LINE_DASH,
-                                                    alpha=self.options.REGRESSION_RESIDUAL_ALPHA,
-                                                    color=self.options.REGRESSION_RESIDUAL_LINE_COLOR)
-        self.plot_prob = self.figure_prob_plot.circle('x', 'y', source=self.source['prob'],
-                                                      size=self.options.REGRESSION_RESIDUAL_CIRCLE_SIZE,
-                                                      alpha=self.options.REGRESSION_RESIDUAL_ALPHA,
-                                                      color=plot_color)
-        self.plot_prob_45 = self.figure_prob_plot.line('x', 'y', source=self.source['prob_45'],
-                                                       line_width=self.options.REGRESSION_RESIDUAL_LINE_WIDTH,
-                                                       line_dash=self.options.REGRESSION_RESIDUAL_LINE_DASH,
-                                                       alpha=self.options.REGRESSION_RESIDUAL_ALPHA,
-                                                       color=self.options.REGRESSION_RESIDUAL_LINE_COLOR)
+        self.plot_residuals = self.figure.circle('x', 'y', source=self.source['residuals'])
+        self.plot_residuals_zero = self.figure.line('x', 'y', source=self.source['residuals_zero'])
+        self.plot_prob = self.figure_prob_plot.circle('x', 'y', source=self.source['prob'])
+        self.plot_prob_45 = self.figure_prob_plot.line('x', 'y', source=self.source['prob_45'])
 
     def __add_hover(self):
         self.figure.add_tools(HoverTool(show_arrow=True,
@@ -1345,6 +1385,30 @@ class PlotMultiVarRegression(Plot):
                 'study_date': self.dates,
                 'uid': self.uid}
 
+    def apply_options(self):
+        super().apply_options()
+
+        self.figure_prob_plot.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.figure_prob_plot.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.figure_prob_plot.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.figure_prob_plot.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+
+        plot_color = [self.options.PLOT_COLOR_2, self.options.PLOT_COLOR][self.group == 1]
+        for circle_plot in ['residuals', 'prob']:
+            glyph = getattr(self, 'plot_%s' % circle_plot).glyph
+            glyph.size = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'CIRCLE_SIZE')
+            glyph.line_alpha = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'ALPHA')
+            glyph.fill_alpha = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'ALPHA')
+            glyph.line_color = getattr(self.options, plot_color)
+            glyph.fill_color = getattr(self.options, plot_color)
+
+        for line_plot in ['residuals_zero', 'prob_45']:
+            glyph = getattr(self, 'plot_%s' % line_plot).glyph
+            glyph.line_color = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'LINE_COLOR')
+            glyph.line_width = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'LINE_WIDTH')
+            glyph.line_dash = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'LINE_DASH')
+            glyph.line_alpha = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'ALPHA')
+
 
 class PlotControlChart(Plot):
     """
@@ -1386,71 +1450,32 @@ class PlotControlChart(Plot):
         self.add_legend(self.adj_figure, legend_items=self.legend_items_adj)
         self.__do_layout()
 
+        self.apply_options()
+
     def __add_adj_figure(self):
         self.adj_figure = figure()
         self.figures.append(self.adj_figure)
         self.adj_figure.xaxis.axis_label = 'Study'
         self.adj_figure.yaxis.axis_label = 'Residual'
-        self.adj_figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.adj_figure.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.adj_figure.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.adj_figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.adj_figure.min_border = self.options.MIN_BORDER
         self.adj_figure.yaxis.axis_label_text_baseline = "bottom"
 
     def __add_plot_data(self):
         self.plot_data = self.figure.circle('x', 'y', source=self.source['plot'],
-                                            size=self.options.CONTROL_CHART_CIRCLE_SIZE,
                                             alpha='alpha', color='color')
-        self.plot_data_line = self.figure.line('x', 'y', source=self.source['plot'],
-                                               line_width=self.options.CONTROL_CHART_LINE_WIDTH,
-                                               color=self.options.CONTROL_CHART_LINE_COLOR,
-                                               line_dash=self.options.CONTROL_CHART_LINE_DASH)
-        self.plot_patch = self.figure.patch('x', 'y', color=self.options.CONTROL_CHART_PATCH_COLOR,
-                                            source=self.source['patch'],
-                                            alpha=self.options.CONTROL_CHART_PATCH_ALPHA)
+        self.plot_data_line = self.figure.line('x', 'y', source=self.source['plot'])
+        self.plot_patch = self.figure.patch('x', 'y', source=self.source['patch'])
 
-        self.plot_center_line = self.figure.line('x', 'y', source=self.source['center_line'],
-                                                 line_width=self.options.CONTROL_CHART_CENTER_LINE_WIDTH,
-                                                 alpha=self.options.CONTROL_CHART_CENTER_LINE_ALPHA,
-                                                 color=self.options.CONTROL_CHART_CENTER_LINE_COLOR,
-                                                 line_dash=self.options.CONTROL_CHART_CENTER_LINE_DASH)
-        self.plot_lcl_line = self.figure.line('x', 'y', source=self.source['lcl_line'],
-                                              line_width=self.options.CONTROL_CHART_LCL_LINE_WIDTH,
-                                              alpha=self.options.CONTROL_CHART_LCL_LINE_ALPHA,
-                                              color=self.options.CONTROL_CHART_LCL_LINE_COLOR,
-                                              line_dash=self.options.CONTROL_CHART_LCL_LINE_DASH)
-        self.plot_ucl_line = self.figure.line('x', 'y', source=self.source['ucl_line'],
-                                              line_width=self.options.CONTROL_CHART_UCL_LINE_WIDTH,
-                                              alpha=self.options.CONTROL_CHART_UCL_LINE_ALPHA,
-                                              color=self.options.CONTROL_CHART_UCL_LINE_COLOR,
-                                              line_dash=self.options.CONTROL_CHART_UCL_LINE_DASH)
+        self.plot_center_line = self.figure.line('x', 'y', source=self.source['center_line'])
+        self.plot_lcl_line = self.figure.line('x', 'y', source=self.source['lcl_line'])
+        self.plot_ucl_line = self.figure.line('x', 'y', source=self.source['ucl_line'])
 
         self.adj_plot_data = self.adj_figure.circle('x', 'y', source=self.source['adj_plot'],
-                                                    size=self.options.CONTROL_CHART_CIRCLE_SIZE,
                                                     alpha='alpha', color='color')
-        self.adj_plot_data_line = self.adj_figure.line('x', 'y', source=self.source['adj_plot'],
-                                                       line_width=self.options.CONTROL_CHART_LINE_WIDTH,
-                                                       color=self.options.CONTROL_CHART_LINE_COLOR,
-                                                       line_dash=self.options.CONTROL_CHART_LINE_DASH)
-        self.adj_plot_patch = self.adj_figure.patch('x', 'y', color=self.options.CONTROL_CHART_PATCH_COLOR,
-                                                    source=self.source['adj_patch'],
-                                                    alpha=self.options.CONTROL_CHART_PATCH_ALPHA)
-        self.adj_plot_center_line = self.adj_figure.line('x', 'y', source=self.source['adj_center_line'],
-                                                         line_width=self.options.CONTROL_CHART_CENTER_LINE_WIDTH,
-                                                         alpha=self.options.CONTROL_CHART_CENTER_LINE_ALPHA,
-                                                         color=self.options.CONTROL_CHART_CENTER_LINE_COLOR,
-                                                         line_dash=self.options.CONTROL_CHART_CENTER_LINE_DASH)
-        self.adj_plot_lcl_line = self.adj_figure.line('x', 'y', source=self.source['adj_lcl_line'],
-                                                      line_width=self.options.CONTROL_CHART_LCL_LINE_WIDTH,
-                                                      alpha=self.options.CONTROL_CHART_LCL_LINE_ALPHA,
-                                                      color=self.options.CONTROL_CHART_LCL_LINE_COLOR,
-                                                      line_dash=self.options.CONTROL_CHART_LCL_LINE_DASH)
-        self.adj_plot_ucl_line = self.adj_figure.line('x', 'y', source=self.source['adj_ucl_line'],
-                                                      line_width=self.options.CONTROL_CHART_UCL_LINE_WIDTH,
-                                                      alpha=self.options.CONTROL_CHART_UCL_LINE_ALPHA,
-                                                      color=self.options.CONTROL_CHART_UCL_LINE_COLOR,
-                                                      line_dash=self.options.CONTROL_CHART_UCL_LINE_DASH)
+        self.adj_plot_data_line = self.adj_figure.line('x', 'y', source=self.source['adj_plot'])
+        self.adj_plot_patch = self.adj_figure.patch('x', 'y', source=self.source['adj_patch'])
+        self.adj_plot_center_line = self.adj_figure.line('x', 'y', source=self.source['adj_center_line'])
+        self.adj_plot_lcl_line = self.adj_figure.line('x', 'y', source=self.source['adj_lcl_line'])
+        self.adj_plot_ucl_line = self.adj_figure.line('x', 'y', source=self.source['adj_ucl_line'])
 
     def __add_hover(self):
         self.figure.add_tools(HoverTool(show_arrow=True,
@@ -1625,6 +1650,7 @@ class PlotControlChart(Plot):
         data = self.source['plot'].data
         resid = self.source['adj_plot'].data['y']
         if resid:
+            # TODO: self.model_name?
             residual_column = ',Residual%s' % [' (%s)' % self.model_name, ''][self.model_name is None]
         else:
             residual_column = ''
@@ -1635,6 +1661,35 @@ class PlotControlChart(Plot):
                 csv_data[-1] = csv_data[-1] + ',%s' % resid[i]
 
         return '\n'.join(csv_data)
+
+    def apply_options(self):
+        super().apply_options()
+
+        self.adj_figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.adj_figure.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.adj_figure.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.adj_figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.adj_figure.min_border = self.options.MIN_BORDER
+
+        for circle_plot in ['plot_data', 'adj_plot_data']:
+            glyph = getattr(self, circle_plot).glyph
+            glyph.size = getattr(self.options, 'CONTROL_CHART_%s' % 'CIRCLE_SIZE')
+
+        for plot_type in ['', 'adj_']:
+            # line plots
+            for line_plot in ['data', 'center_line', 'lcl_line', 'ucl_line']:
+                glyph = getattr(self, '%splot_%s' % (plot_type, line_plot)).glyph
+                modifier = 'LINE_' if line_plot == 'data' else '%s_' % line_plot.upper()
+                glyph.line_color = getattr(self.options, 'CONTROL_CHART_%s%s' % (modifier, 'COLOR'))
+                glyph.line_width = getattr(self.options, 'CONTROL_CHART_%s%s' % (modifier, 'WIDTH'))
+                glyph.line_dash = getattr(self.options, 'CONTROL_CHART_%s%s' % (modifier, 'DASH'))
+                if line_plot != 'data':
+                    glyph.line_alpha = getattr(self.options, 'CONTROL_CHART_%s%s' % (modifier, 'ALPHA'))
+
+            # patches
+            glyph = getattr(self, '%splot_patch' % plot_type).glyph
+            glyph.fill_color = getattr(self.options, 'CONTROL_CHART_PATCH_COLOR')
+            glyph.fill_alpha = getattr(self.options, 'CONTROL_CHART_PATCH_ALPHA')
 
 
 class PlotMachineLearning(Plot):
@@ -1709,31 +1764,20 @@ class PlotMachineLearning(Plot):
         self.set_figure_dimensions()
         self.update_bokeh_layout_in_wx_python()
 
+        self.apply_options()
+
     def __add_plot_data(self):
         self.glyphs = {}
 
         for data_type in self.plot_types:
             srcs = self.source[data_type]
             figs = self.figures[data_type]
-            opt = self.options
-            self.glyphs[data_type] = {'data': figs['data'].cross('x', 'y', source=srcs['data'],
-                                                                 color=opt.MACHINE_LEARNING_COLOR_DATA,
-                                                                 size=opt.MACHINE_LEARNING_SIZE_DATA),
-                                      'predict': figs['data'].circle('x', 'y', source=srcs['predict'],
-                                                                     color=opt.MACHINE_LEARNING_COLOR_PREDICT,
-                                                                     alpha=opt.MACHINE_LEARNING_ALPHA,
-                                                                     size=opt.MACHINE_LEARNING_SIZE_PREDICT),
-                                      'multi_var': figs['data'].circle('x', 'y', source=srcs['multi_var'],
-                                                                       color=opt.MACHINE_LEARNING_COLOR_MULTI_VAR,
-                                                                       alpha=opt.MACHINE_LEARNING_ALPHA,
-                                                                       size=opt.MACHINE_LEARNING_SIZE_MULTI_VAR),
+            self.glyphs[data_type] = {'data': figs['data'].cross('x', 'y', source=srcs['data']),
+                                      'predict': figs['data'].circle('x', 'y', source=srcs['predict']),
+                                      'multi_var': figs['data'].circle('x', 'y', source=srcs['multi_var']),
                                       'diff': figs['diff'].circle(x='x', y='y0', source=srcs['diff'], alpha=0),
-                                      'diff_ml': figs['diff'].varea(x='x', y1='y_ml', y2='y0', source=srcs['diff'],
-                                                                    color=opt.MACHINE_LEARNING_COLOR_PREDICT,
-                                                                    alpha=opt.MACHINE_LEARNING_ALPHA_DIFF),
-                                      'diff_mvr': figs['diff'].varea(x='x', y1='y_mvr', y2='y0', source=srcs['diff'],
-                                                                     color=opt.MACHINE_LEARNING_COLOR_MULTI_VAR,
-                                                                     alpha=opt.MACHINE_LEARNING_ALPHA_DIFF)}
+                                      'diff_ml': figs['diff'].varea(x='x', y1='y_ml', y2='y0', source=srcs['diff']),
+                                      'diff_mvr': figs['diff'].varea(x='x', y1='y_mvr', y2='y0', source=srcs['diff'])}
 
     def __do_layout(self):
         self.bokeh_layout = row(column(self.div_title['train'], self.div_mse['train'],
@@ -1779,11 +1823,6 @@ class PlotMachineLearning(Plot):
             for key in {'data', 'diff'}:
                 fig = self.figures[data_type][key]
                 fig.xaxis.axis_label = 'Study'
-                fig.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-                fig.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-                fig.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-                fig.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-                fig.min_border = self.options.MIN_BORDER
                 fig.yaxis.axis_label_text_baseline = "bottom"
                 if data_type == 'test':
                     fig.background_fill_color = "black"
@@ -1880,6 +1919,39 @@ class PlotMachineLearning(Plot):
 
         return '\n'.join(csv_data)
 
+    def apply_options(self):
+        super().apply_options()
+
+        for data_type in self.plot_types:
+            for key in {'data', 'diff'}:
+                fig = self.figures[data_type][key]
+                fig.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+                fig.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+                fig.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+                fig.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+                fig.min_border = self.options.MIN_BORDER
+
+        for data_type in self.plot_types:
+            glyph = self.glyphs[data_type]['data']
+            glyph.size = getattr(self.options, 'MACHINE_LEARNING_SIZE_DATA')
+            glyph.line_color = getattr(self.options, 'MACHINE_LEARNING_COLOR_DATA')
+            glyph.fill_color = getattr(self.options, 'MACHINE_LEARNING_COLOR_DATA')
+
+            for line_type in ['predict', 'multi_var']:
+                glyph = self.glyphs[data_type][line_type]
+                glyph.size = getattr(self.options, 'MACHINE_LEARNING_SIZE_%s' % line_type)
+                glyph.line_alpha = getattr(self.options, 'MACHINE_LEARNING_ALPHA')
+                glyph.fill_alpha = getattr(self.options, 'MACHINE_LEARNING_ALPHA')
+                glyph.line_color = getattr(self.options, 'MACHINE_LEARNING_COLOR_%s' % line_type)
+                glyph.fill_color = getattr(self.options, 'MACHINE_LEARNING_COLOR_%s' % line_type)
+
+            for diff_type in ['ml', 'mvr']:
+                glyph = self.glyphs[data_type]['diff_%s' % diff_type]
+                glyph.line_color = getattr(self.options, 'MACHINE_LEARNING_COLOR_PREDICT')
+                glyph.fill_color = getattr(self.options, 'MACHINE_LEARNING_COLOR_PREDICT')
+                glyph.line_alpha = getattr(self.options, 'MACHINE_LEARNING_ALPHA_DIFF')
+                glyph.fill_alpha = getattr(self.options, 'MACHINE_LEARNING_ALPHA_DIFF')
+
 
 class PlotFeatureImportance(Plot):
     def __init__(self, parent, options, x_variables, feature_importances, title):
@@ -1913,9 +1985,11 @@ class PlotFeatureImportance(Plot):
 
         self.update_bokeh_layout_in_wx_python()
 
+        self.apply_options()
+
     def __add_plot_data(self):
-        self.figure.hbar(y='y', right='right', left=0, height='height', source=self.source['plot'],
-                         color=self.options.MACHINE_LEARNING_COLOR_PREDICT, alpha=0.6)
+        self.hbar = self.figure.hbar(y='y', right='right', left=0, height='height', source=self.source['plot'],
+                                     alpha=0.6)
 
     def __do_layout(self):
         self.bokeh_layout = column(self.div_title,
@@ -1927,11 +2001,6 @@ class PlotFeatureImportance(Plot):
                                                   ('Variable', '@variable')]))
 
     def initialize_figures(self):
-        self.figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.figure.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.figure.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.figure.min_border = self.options.MIN_BORDER
         self.figure.xaxis.axis_label_text_baseline = "bottom"
         self.figure.xaxis.axis_label = 'Importance'
 
@@ -1949,6 +2018,18 @@ class PlotFeatureImportance(Plot):
                                     'variable': [self.x_variables[i] for i in order]}
         self.figure.y_range.factors = [self.x_variables[i] for i in order]
         self.figure.x_range = Range1d(0, max(self.feature_importances) * 1.05)
+
+    def apply_options(self):
+        super().apply_options()
+
+        self.figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.figure.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        self.figure.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.figure.min_border = self.options.MIN_BORDER
+
+        self.hbar.glyph.fill_color = self.options.MACHINE_LEARNING_COLOR_PREDICT
+        self.hbar.glyph.line_color = self.options.MACHINE_LEARNING_COLOR_PREDICT
 
 
 class PlotROIMap(Plot):

@@ -865,7 +865,8 @@ class DVHAMainFrame(wx.Frame):
         webbrowser.open_new_tab("https://github.com/cutright/DVH-Analytics/issues")
 
     def on_pref(self, *args):
-        UserSettings(self.options)
+        frame = UserSettings(self)
+        frame.Show()
 
     def on_sql(self, *args):
         SQLSettingsDialog(self.options)
@@ -873,7 +874,8 @@ class DVHAMainFrame(wx.Frame):
 
     def on_export_figure(self, evt):
         if self.save_data:
-            ExportFigure(self)
+            frame = ExportFigure(self)
+            frame.Show()
         else:
             wx.MessageBox('There is no data to save. Please query/open some data first.', 'Save Error',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
@@ -957,6 +959,14 @@ class DVHAMainFrame(wx.Frame):
             self.correlation.plot.redraw_plot()
             self.regression.plot.redraw_plot()
             self.control_chart.plot.redraw_plot()
+
+    def apply_plot_options(self):
+        if self.group_data[1]['dvh']:
+            self.plot.apply_options()
+            self.time_series.plot.apply_options()
+            self.correlation.plot.apply_options()
+            self.regression.plot.apply_options()
+            self.control_chart.plot.apply_options()
 
     def update_stats_data_plots(self):
         if self.group_data[1]['dvh']:

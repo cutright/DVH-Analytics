@@ -12,6 +12,7 @@ v0.7.5 (TBD)
  - [Import] SoftwareVersions and Deferred read error fix: [#36](https://github.com/cutright/DVH-Analytics/issues/36)
  - [Export] New figure export implementation in tool bar, supports SVG and HTML. Note that SVG export requires 
  phantomJS to be installed, which is not a python library.
+ - [Plots] Plot options in User Settings no longer require DVHA to be restarted to be applied.
 
 v0.7.4 (2020.03.13)
 --------------------

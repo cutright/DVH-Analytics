@@ -250,9 +250,9 @@ class ExportCSVDialog(wx.Dialog):
         return '\n'.join(csv_data)
 
 
-class ExportFigure(wx.Dialog):
+class ExportFigure(wx.Frame):
     def __init__(self, parent):
-        wx.Dialog.__init__(self, parent)
+        wx.Frame.__init__(self, parent)
 
         self.parent = parent
         self.options = parent.options
@@ -283,8 +283,6 @@ class ExportFigure(wx.Dialog):
         self.__do_bind()
         self.__do_layout()
 
-        self.run()
-
     def __set_properties(self):
         self.SetTitle("Export Figure")
 
@@ -301,6 +299,7 @@ class ExportFigure(wx.Dialog):
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button['Export'].GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_dismiss, id=wx.ID_CANCEL)
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -402,5 +401,5 @@ class ExportFigure(wx.Dialog):
     def fig_attr_dict(self):
         return {key: getattr(self, key) for key in self.fig_attr_keys}
 
-    def run(self):
-        self.ShowModal()
+    def on_dismiss(self, *evt):
+        wx.CallAfter(self.Destroy)

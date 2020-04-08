@@ -618,18 +618,18 @@ class QueryNumericalDialog(wx.Dialog):
                 pass
 
 
-class UserSettings(wx.Dialog):
+class UserSettings(wx.Frame):
     """
     Customize directories and visual settings for DVHA
     """
-    def __init__(self, options):
+    def __init__(self, parent):
         """
-        :param options: user settings object
-        :type options: Options
+        :param parent: main application frame
         """
-        wx.Dialog.__init__(self, None, title="User Settings")
+        wx.Frame.__init__(self, None, title="User Settings")
 
-        self.options = options
+        self.parent = parent
+        self.options = parent.options
 
         colors = list(plot_colors.cnames)
         colors.sort()
@@ -666,10 +666,11 @@ class UserSettings(wx.Dialog):
                                                            style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_alpha_category = wx.ComboBox(self, wx.ID_ANY, choices=alpha_variables,
                                                     style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.spin_ctrl_alpha_input = wx.SpinCtrlDouble(self, wx.ID_ANY, "0", min=0.1, max=1.0, style=wx.SP_ARROW_KEYS)
+        self.spin_ctrl_alpha_input = wx.SpinCtrlDouble(self, wx.ID_ANY, "0", min=0, max=1.0, style=wx.SP_ARROW_KEYS)
         self.button_restore_defaults = wx.Button(self, wx.ID_ANY, "Restore Defaults")
         self.button_ok = wx.Button(self, wx.ID_OK, "OK")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+        self.button_apply = wx.Button(self, wx.ID_ANY, 'Apply')
 
         self.__set_properties()
         self.__do_layout()
@@ -678,7 +679,7 @@ class UserSettings(wx.Dialog):
         self.refresh_options()
         self.load_paths()
 
-        self.run()
+        self.is_edited = False
 
     def __set_properties(self):
         self.text_ctrl_inbox.SetToolTip("Default directory for batch processing of incoming DICOM files")
@@ -806,6 +807,7 @@ class UserSettings(wx.Dialog):
         sizer_wrapper.Add(sizer_plot_options, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10)
 
         sizer_ok_cancel.Add(self.button_restore_defaults, 0, wx.RIGHT, 20)
+        sizer_ok_cancel.Add(self.button_apply, 0, wx.LEFT | wx.RIGHT, 5)
         sizer_ok_cancel.Add(self.button_ok, 0, wx.LEFT | wx.RIGHT, 5)
         sizer_ok_cancel.Add(self.button_cancel, 0, wx.LEFT | wx.RIGHT, 5)
         sizer_wrapper.Add(sizer_ok_cancel, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
@@ -835,14 +837,21 @@ class UserSettings(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self.update_alpha_val, id=self.spin_ctrl_alpha_input.GetId())
 
         self.Bind(wx.EVT_BUTTON, self.restore_defaults, id=self.button_restore_defaults.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_apply, id=self.button_apply.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_ok, id=wx.ID_OK)
+        self.Bind(wx.EVT_BUTTON, self.on_cancel, id=wx.ID_CANCEL)
 
-    def run(self):
-        res = self.ShowModal()
-        if res == wx.ID_OK:
-            self.options.save()
-        else:
-            self.options.load()
-        self.Destroy()
+    def on_ok(self, *evt):
+        self.options.save()
+        if self.is_edited:
+            self.apply_and_redraw_plots()
+        wx.CallAfter(self.Destroy)
+
+    def on_cancel(self, *evt):
+        self.options.load()
+        if self.is_edited:
+            self.apply_and_redraw_plots()
+        wx.CallAfter(self.Destroy)
 
     def inbox_dir_dlg(self, evt):
         self.dir_dlg('inbox', self.text_ctrl_inbox)
@@ -1006,6 +1015,14 @@ class UserSettings(wx.Dialog):
 
     def on_use_dicom_dvh(self, *evt):
         self.options.set_option('USE_DICOM_DVH', self.checkbox_dicom_dvh.GetValue())
+
+    def on_apply(self, *evt):
+        self.apply_and_redraw_plots()
+        self.is_edited = True
+
+    def apply_and_redraw_plots(self):
+        self.parent.apply_plot_options()
+        self.parent.redraw_plots()
 
 
 class About(wx.Dialog):
