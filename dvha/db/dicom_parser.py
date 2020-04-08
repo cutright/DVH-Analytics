@@ -645,7 +645,14 @@ class DICOM_Parser:
 
     @property
     def tps_software_version(self):
-        return ','.join(self.get_attribute('plan', 'SoftwareVersions'))
+        # Some TPSs may store the version in RT Dose rather than plan
+        # SoftwareVersions may also be stored as a string rather than a list
+        for rt_type in ['plan', 'dose', 'structure']:  # Check each rt_type until SoftwareVersions is found
+            version = self.get_attribute(rt_type, 'SoftwareVersions')
+            if version is not None:
+                if isinstance(version, str):
+                    version = [version]
+                return ','.join(version)
 
     @property
     def tx_site(self):
