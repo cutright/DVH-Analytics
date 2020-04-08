@@ -16,6 +16,7 @@ from functools import partial
 import matplotlib.colors as plot_colors
 from dvha.models.data_table import DataTable
 from dvha.paths import DATA_DIR
+from dvha.tools.errors import ErrorDialog
 from dvha.tools.utilities import get_selected_listctrl_items, save_object_to_file
 
 
@@ -342,20 +343,15 @@ class ExportFigure(wx.Dialog):
         return self.combo_box['format'].GetValue()
 
     @property
-    def plot_data(self):
-        if self.format == 'SVG':
-            return partial(self.plot.get_svg, self.fig_attr_dict)
-        return self.plot.html_str
-        # plot_map = {'SVG': 'get_svg', 'HTML': 'html_str'}
-        # return getattr(self.plot, plot_map[self.format])
-
-    @property
-    def data_type(self):
-        return 'string' if self.format == 'HTML' else 'function'
+    def save_plot_function(self):
+        return partial(self.plot.save_figure, self.format.lower(), self.fig_attr_dict)
 
     def on_export(self, *evt):
-        save_data_to_file(self, self.export_title, self.plot_data, initial_dir="",
-                          data_type=self.data_type, wildcard=self.wildcard)
+        try:
+            save_data_to_file(self, self.export_title, self.save_plot_function, initial_dir="",
+                              data_type='function', wildcard=self.wildcard)
+        except Exception as e:
+            ErrorDialog(self, str(e), "Save Error")
 
     def get_text_ctrl_float(self, key):
         value = self.text_ctrl[key].GetValue()

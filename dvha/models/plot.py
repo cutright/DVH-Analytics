@@ -165,17 +165,22 @@ class Plot:
                 else:
                     setattr(fig, key, value)
 
-    def get_svg(self, fig_attr_dict, file_name):
+    def save_figure(self, figure_format, fig_attr_dict, file_name):
 
         self.set_fig_attr(fig_attr_dict)  # apply custom figure properties
+        getattr(self, 'export_%s' % figure_format)(file_name)
+        self.load_stored_fig_attr()  # restore previous figure properties
 
+    def export_svg(self, file_name):
         for fig in self.figures:
             fig.output_backend = "svg"
         export_svgs(self.bokeh_layout, filename=file_name)
         for fig in self.figures:
             fig.output_backend = "canvas"
 
-        self.load_stored_fig_attr()  # restore previous figure properties
+    def export_html(self, file_name):
+        with open(file_name, 'w') as doc:
+            doc.write(get_layout_html(self.bokeh_layout))
 
     @staticmethod
     def clean_data(*data, mrn=None, uid=None, dates=None):
