@@ -9,7 +9,9 @@ v0.7.5 (TBD)
  - [Import] Option to turn off automatic dose summation: [#57](https://github.com/cutright/DVH-Analytics/issues/57)
  - [Import] Bug fix: [#59](https://github.com/cutright/DVH-Analytics/issues/59)
  - [Import] SQLite import_time_stamp now actually includes time, and is in your local timezone
- - [Protocols] Protocol (DVH constraint) editor
+ - [Import] SoftwareVersions and Deferred read error fix: [#36](https://github.com/cutright/DVH-Analytics/issues/36)
+ - [Export] New figure export implementation in tool bar, supports SVG and HTML. Note that SVG export requires 
+ phantomJS to be installed, which is not a python library.
 
 v0.7.4 (2020.03.13)
 --------------------
