@@ -21,7 +21,7 @@ from dvha.paths import OPTIONS_PATH, OPTIONS_CHECKSUM_PATH, INBOX_DIR, IMPORTED_
 class DefaultOptions:
     """Create default options, to be inherited by Options class"""
     def __init__(self):
-        self.VERSION = '0.7.5dev'
+        self.VERSION = '0.7.5dev1'
 
         self.DB_TYPE = 'sqlite'
         self.SQL_PGSQL_IP_HIST = []
