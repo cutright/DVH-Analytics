@@ -69,7 +69,7 @@ class DVHAMainFrame(wx.Frame):
                                'data': {key: None for key in ['Plans', 'Beams', 'Rxs']},
                                'stats_data': None}}
 
-        self.toolbar_keys = ['Open', 'Close', 'Save', 'Export', 'Import', 'Database', 'ROI Map', 'Settings']
+        self.toolbar_keys = ['Open', 'Close', 'Save', 'Export', 'Image', 'Import', 'Database', 'ROI Map', 'Settings']
         self.toolbar_ids = {key: i + 1000 for i, key in enumerate(self.toolbar_keys)}
 
         # sql_columns.py contains dictionaries of all queryable variables along with their
@@ -127,6 +127,7 @@ class DVHAMainFrame(wx.Frame):
                        'Save': "Save queried data",
                        # 'Print': "Print a report",
                        'Export': "Export data to CSV",
+                       'Image': "Export a plot to SVG/HTML",
                        'Import': "DICOM import wizard",
                        'Settings': "User Settings",
                        'Database': "Database Administrator Tools",
@@ -139,12 +140,13 @@ class DVHAMainFrame(wx.Frame):
             self.frame_toolbar.AddTool(self.toolbar_ids[key], key, bitmap,
                                        wx.NullBitmap, wx.ITEM_NORMAL, description[key], "")
 
-            if key in {'Close', 'Export', 'ROI Map'}:
+            if key in {'Close', 'Image', 'ROI Map'}:
                 self.frame_toolbar.AddSeparator()
 
         self.Bind(wx.EVT_TOOL, self.on_save, id=self.toolbar_ids['Save'])
         self.Bind(wx.EVT_TOOL, self.on_open, id=self.toolbar_ids['Open'])
         self.Bind(wx.EVT_TOOL, self.on_export, id=self.toolbar_ids['Export'])
+        self.Bind(wx.EVT_TOOL, self.on_export_figure, id=self.toolbar_ids['Image'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_database, id=self.toolbar_ids['Database'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_settings, id=self.toolbar_ids['Settings'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_roi_map, id=self.toolbar_ids['ROI Map'])
