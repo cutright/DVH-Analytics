@@ -520,7 +520,8 @@ class DICOM_Parser:
         for fx_grp_index, beam_parser_list in self.beam_data.items():
             for beam_parser in beam_parser_list:
                 tx_modalities.append(beam_parser.tx_modality)
-        return ','.join(list(set(tx_modalities)))
+        tx_modalities = sorted(list(set(tx_modalities)))
+        return ','.join(tx_modalities)
 
     @property
     def rx_dose(self):
@@ -707,7 +708,7 @@ class DICOM_Parser:
                      'ELECTRONS': self.electron,
                      'PROTONS': self.proton,
                      'BRACHY': self.brachy_type}
-        types = [rad_type for rad_type, rad_value in rad_types.items() if rad_value]
+        types = sorted([rad_type for rad_type, rad_value in rad_types.items() if rad_value])
         return ','.join(types)
 
     @property

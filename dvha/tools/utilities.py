@@ -36,9 +36,9 @@ def is_windows():
     return wx.Platform == '__WXMSW__'
 
 
-def set_msw_background_color(parent):
+def set_msw_background_color(window_obj, color='lightgrey'):
     if is_windows():
-        parent.SetBackgroundColour('lightgrey')
+        window_obj.SetBackgroundColour(color)
 
 
 def is_linux():

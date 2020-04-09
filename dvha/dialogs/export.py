@@ -17,7 +17,8 @@ import matplotlib.colors as plot_colors
 from dvha.models.data_table import DataTable
 from dvha.paths import DATA_DIR
 from dvha.tools.errors import ErrorDialog
-from dvha.tools.utilities import get_selected_listctrl_items, save_object_to_file
+from dvha.tools.utilities import get_selected_listctrl_items, save_object_to_file,\
+    set_msw_background_color, set_frame_icon
 
 
 def save_data_to_file(frame, title, data, wildcard="CSV files (*.csv)|*.csv", data_type='string', initial_dir=DATA_DIR):
@@ -282,6 +283,9 @@ class ExportFigure(wx.Frame):
         self.__set_properties()
         self.__do_bind()
         self.__do_layout()
+
+        set_msw_background_color(self)
+        set_frame_icon(self)
 
     def __set_properties(self):
         self.SetTitle("Export Figure")

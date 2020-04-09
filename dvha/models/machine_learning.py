@@ -21,7 +21,7 @@ from dvha.options import DefaultOptions
 from dvha.paths import MODELS_DIR
 from dvha.models.plot import PlotMachineLearning, PlotFeatureImportance
 from dvha.tools.stats import MultiVariableRegression
-from dvha.tools.utilities import set_msw_background_color, get_window_size, load_object_from_file
+from dvha.tools.utilities import set_msw_background_color, get_window_size, load_object_from_file, set_frame_icon
 
 
 class MachineLearningFrame(wx.Frame):
@@ -124,6 +124,7 @@ class MachineLearningFrame(wx.Frame):
         sizer_wrapper.Add(self.plot.layout, 1, wx.EXPAND, 0)
 
         set_msw_background_color(self)  # If windows, change the background color
+        set_frame_icon(self)
 
         self.SetSizer(sizer_wrapper)
         self.Layout()
@@ -847,6 +848,7 @@ class FeatureImportanceFrame(wx.Frame):
         sizer_wrapper.Add(self.plot.layout, 1, wx.EXPAND, 0)
 
         set_msw_background_color(self)  # If windows, change the background color
+        set_frame_icon(self)
 
         self.SetSizer(sizer_wrapper)
         self.Layout()
@@ -893,6 +895,9 @@ class MachineLearningModelViewer:
                     frame = ALGORITHMS[self.title]['frame']
                     self.ml_frame = frame(data, include_test_data=False)
                     self.__load_model()
+
+                    set_msw_background_color(self.ml_frame)
+                    set_frame_icon(self.ml_frame)
 
                     self.ml_frame.run()
                 else:

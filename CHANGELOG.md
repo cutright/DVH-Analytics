@@ -10,6 +10,8 @@ v0.7.5 (TBD)
  - [Import] Bug fix: [#59](https://github.com/cutright/DVH-Analytics/issues/59)
  - [Import] SQLite import_time_stamp now actually includes time, and is in your local timezone
  - [Import] SoftwareVersions and Deferred read error fix: [#36](https://github.com/cutright/DVH-Analytics/issues/36)
+ - [Import] Treatment modalities are sorted before importing so database doesn't have ModalityA,ModalityB and 
+ ModalityB,ModalityA
  - [Export] New figure export implementation in tool bar, supports SVG and HTML. Note that SVG export requires 
  phantomJS to be installed, which is not a python library.
  - [Plots] Plot options in User Settings no longer require DVHA to be restarted to be applied.

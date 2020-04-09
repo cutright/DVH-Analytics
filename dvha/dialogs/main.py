@@ -18,7 +18,7 @@ import numpy as np
 import time
 from os.path import isdir
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_window_size,\
-    get_installed_python_libraries
+    get_installed_python_libraries, set_msw_background_color, set_frame_icon
 from dvha.db import sql_columns
 from dvha.db.sql_connector import DVH_SQL
 from dvha.models.data_table import DataTable
@@ -680,6 +680,9 @@ class UserSettings(wx.Frame):
         self.load_paths()
 
         self.is_edited = False
+
+        set_msw_background_color(self)
+        set_frame_icon(self)
 
     def __set_properties(self):
         self.text_ctrl_inbox.SetToolTip("Default directory for batch processing of incoming DICOM files")

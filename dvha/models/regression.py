@@ -21,7 +21,8 @@ from dvha.dialogs.main import SelectRegressionVariablesDialog
 from dvha.options import DefaultOptions
 from dvha.paths import ICONS, MODELS_DIR
 from dvha.tools.stats import MultiVariableRegression
-from dvha.tools.utilities import set_msw_background_color, get_tree_ctrl_image, get_window_size, load_object_from_file
+from dvha.tools.utilities import set_msw_background_color, get_tree_ctrl_image, get_window_size, load_object_from_file,\
+    set_frame_icon
 
 
 class RegressionFrame:
@@ -54,6 +55,8 @@ class RegressionFrame:
         self.tree_ctrl_root = self.tree_ctrl.AddRoot('Regressions')
 
         self.mvr_frames = []
+
+        set_msw_background_color(self.window, color='white')
 
     def __define_gui_objects(self):
         self.window = wx.SplitterWindow(self.parent, wx.ID_ANY)
@@ -418,6 +421,7 @@ class MultiVarResultsFrame(wx.Frame):
         self.stats_data = group_data[group]['stats_data']
 
         set_msw_background_color(self)  # If windows, change the background color
+        set_frame_icon(self)
 
         self.options = options
 

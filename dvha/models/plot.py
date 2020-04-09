@@ -1673,6 +1673,8 @@ class PlotControlChart(Plot):
             glyph = getattr(self, '%splot_patch' % plot_type).glyph
             glyph.fill_color = getattr(self.options, 'CONTROL_CHART_PATCH_COLOR')
             glyph.fill_alpha = getattr(self.options, 'CONTROL_CHART_PATCH_ALPHA')
+            glyph.line_color = getattr(self.options, 'CONTROL_CHART_PATCH_COLOR')
+            glyph.line_alpha = getattr(self.options, 'CONTROL_CHART_PATCH_ALPHA')
 
 
 class PlotMachineLearning(Plot):
