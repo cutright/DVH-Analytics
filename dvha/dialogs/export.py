@@ -46,7 +46,7 @@ def save_data_to_file(frame, title, data, wildcard="CSV files (*.csv)|*.csv", da
 
         if data_type == 'string':
             try:
-                with open(pathname, 'w') as file:
+                with open(pathname, 'w', encoding="utf-8") as file:
                     file.write(data)
             except IOError:
                 wx.LogError("Cannot save current data in file '%s'." % pathname)

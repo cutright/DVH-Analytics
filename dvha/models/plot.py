@@ -1936,6 +1936,15 @@ class PlotMachineLearning(Plot):
                 glyph.fill_color = getattr(self.options, 'MACHINE_LEARNING_COLOR_%s' % color_modifier)
                 glyph.fill_alpha = getattr(self.options, 'MACHINE_LEARNING_ALPHA_DIFF')
 
+    def export_svg(self, file_name):
+        for fig_type_1 in self.figures.keys():
+            for fig in self.figures[fig_type_1].values():
+                fig.output_backend = "svg"
+        export_svgs(self.bokeh_layout, filename=file_name)
+        for fig_type_1 in self.figures.keys():
+            for fig in self.figures[fig_type_1].values():
+                fig.output_backend = "canvas"
+
 
 class PlotFeatureImportance(Plot):
     def __init__(self, parent, options, x_variables, feature_importances, title):

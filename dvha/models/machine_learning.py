@@ -20,6 +20,7 @@ from dvha.dialogs.export import save_data_to_file
 from dvha.options import DefaultOptions
 from dvha.paths import MODELS_DIR
 from dvha.models.plot import PlotMachineLearning, PlotFeatureImportance
+from dvha.tools.errors import ErrorDialog
 from dvha.tools.stats import MultiVariableRegression
 from dvha.tools.utilities import set_msw_background_color, get_window_size, load_object_from_file, set_frame_icon
 
@@ -63,7 +64,8 @@ class MachineLearningFrame(wx.Frame):
         self.button_calculate = wx.Button(self, wx.ID_ANY, "Calculate")
         self.button_importance = wx.Button(self, wx.ID_ANY, "Importance Plot")
         self.button_export_data = wx.Button(self, wx.ID_ANY, "Export Data")
-        self.button_save_plot = wx.Button(self, wx.ID_ANY, "Save Plot")
+        self.button_save_html = wx.Button(self, wx.ID_ANY, "Save Plot to HTML")
+        self.button_save_svg = wx.Button(self, wx.ID_ANY, "Save Plot to SVG")
         self.button_save_model = wx.Button(self, wx.ID_ANY, "Save Model")
 
         self.do_bind()
@@ -72,7 +74,8 @@ class MachineLearningFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_calculate, id=self.button_calculate.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_feature_importance, id=self.button_importance.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export_data.GetId())
-        self.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_save_html, id=self.button_save_html.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_save_svg, id=self.button_save_svg.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_model, id=self.button_save_model.GetId())
         self.Bind(wx.EVT_SIZE, self.on_resize)
 
@@ -115,7 +118,8 @@ class MachineLearningFrame(wx.Frame):
         sizer_actions.Add(self.button_calculate, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         sizer_actions.Add(self.button_importance, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         sizer_actions.Add(self.button_export_data, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        sizer_actions.Add(self.button_save_plot, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        sizer_actions.Add(self.button_save_html, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        sizer_actions.Add(self.button_save_svg, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_actions.Add(self.button_save_model, 1, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_side_bar.Add(sizer_actions, 0, wx.ALL | wx.EXPAND, 5)
 
@@ -274,9 +278,16 @@ class MachineLearningFrame(wx.Frame):
     def on_export(self, evt):
         save_data_to_file(self, 'Save machine learning data to csv', self.plot.get_csv())
 
-    def on_save_plot(self, evt):
-        save_data_to_file(self, 'Save random forest plot', self.plot.html_str,
+    def on_save_html(self, evt):
+        save_data_to_file(self, 'Save %s Plot' % self.title.title(), self.plot.html_str,
                           wildcard="HTML files (*.html)|*.html")
+
+    def on_save_svg(self, *evt):
+        try:
+            save_data_to_file(self, 'Save %s plot to .svg' % self.title.title(), self.plot.export_svg, initial_dir="",
+                              data_type='function', wildcard="SVG files (*.svg)|*.svg")
+        except Exception as e:
+            ErrorDialog(self, str(e), "Save Error")
 
     def on_save_model(self, evt):
         data = {'y_variable': self.plot.y_variable,

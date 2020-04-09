@@ -11,6 +11,7 @@ Class to view and calculate linear regressions
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx
+from functools import partial
 from pubsub import pub
 from dvha.tools.errors import ErrorDialog
 from dvha.models.plot import PlotRegression, PlotMultiVarRegression
@@ -436,7 +437,8 @@ class MultiVarResultsFrame(wx.Frame):
 
         self.button_back_elimination = wx.Button(self, wx.ID_ANY, 'Backward Elimination')
         self.button_export = wx.Button(self, wx.ID_ANY, 'Export Plot Data')
-        self.button_save_plot = wx.Button(self, wx.ID_ANY, 'Save Plot')
+        self.button_save_html = wx.Button(self, wx.ID_ANY, 'Save Plot to HTML')
+        self.button_save_svg = wx.Button(self, wx.ID_ANY, 'Save Plot to SVG')
         self.button_save_model = wx.Button(self, wx.ID_ANY, 'Save MVR Model')
         self.button_load_mlr_model = wx.Button(self, wx.ID_ANY, 'Load ML Model')
         algorithms = ['Random Forest', 'Support Vector Machine', 'Decision Tree', 'Gradient Boosting']
@@ -464,7 +466,8 @@ class MultiVarResultsFrame(wx.Frame):
                   id=self.button['Support Vector Machine'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_back_elimination, id=self.button_back_elimination.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())
-        self.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_save_html, id=self.button_save_html.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_save_svg, id=self.button_save_svg.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_model, id=self.button_save_model.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_load_mlr_model, id=self.button_load_mlr_model.GetId())
         self.Bind(wx.EVT_SIZE, self.on_resize)
@@ -479,7 +482,8 @@ class MultiVarResultsFrame(wx.Frame):
         sizer_export_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_export_buttons.Add(self.button_back_elimination, 0, wx.ALL, 5)
         sizer_export_buttons.Add(self.button_export, 0, wx.ALL, 5)
-        sizer_export_buttons.Add(self.button_save_plot, 0, wx.ALL, 5)
+        sizer_export_buttons.Add(self.button_save_html, 0, wx.ALL, 5)
+        sizer_export_buttons.Add(self.button_save_svg, 0, wx.ALL, 5)
         sizer_export_buttons.Add(self.button_save_model, 0, wx.ALL, 5)
         sizer_algo_wrapper.Add(sizer_export_buttons, 0, wx.ALL, 5)
         text = wx.StaticText(self, wx.ID_ANY, "Compare with Machine Learning Module")
@@ -526,9 +530,16 @@ class MultiVarResultsFrame(wx.Frame):
         del wait
         self.radiobox_include_back_elim.Enable()
 
-    def on_save_plot(self, evt):
-        save_data_to_file(self, 'Save multi-variable regression plot', self.plot.html_str,
+    def on_save_html(self, *evt):
+        save_data_to_file(self, 'Save multi-variable regression plot to .html', self.plot.html_str,
                           wildcard="HTML files (*.html)|*.html")
+
+    def on_save_svg(self, *evt):
+        try:
+            save_data_to_file(self, 'Save multi-variable regression plot to .svg', self.plot.export_svg, initial_dir="",
+                              data_type='function', wildcard="SVG files (*.svg)|*.svg")
+        except Exception as e:
+            ErrorDialog(self, str(e), "Save Error")
 
     def on_save_model(self, evt):
         data = {'y_variable': self.plot.y_variable,
