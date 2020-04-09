@@ -284,7 +284,8 @@ class MachineLearningFrame(wx.Frame):
         title = 'Save %s Plot to .html' % self.title.title()
         try:
             if self.main_app_frame.export_figure is None:
-                save_data_to_file(self, title, self.plot.html_str, wildcard="HTML files (*.html)|*.html")
+                save_data_to_file(self, title, self.plot.html_str,
+                                  initial_dir="",wildcard="HTML files (*.html)|*.html")
             else:
                 self.save_fig_with_attr('html')
         except Exception as e:

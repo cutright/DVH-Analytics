@@ -536,7 +536,7 @@ class MultiVarResultsFrame(wx.Frame):
         try:
             if self.main_app_frame.export_figure is None:
                 save_data_to_file(self, 'Save multi-variable regression plot to .html', self.plot.html_str,
-                                  wildcard="HTML files (*.html)|*.html")
+                                  initial_dir="", wildcard="HTML files (*.html)|*.html")
             else:
                 fig_attr_dict = self.main_app_frame.export_figure.fig_attr_dict
                 func = partial(self.plot.save_figure, 'html', fig_attr_dict)

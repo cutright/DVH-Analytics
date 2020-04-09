@@ -259,7 +259,6 @@ class ExportFigure(wx.Frame):
         self.options = parent.options
         self.plots = {'DVHs': parent.plot,
                       'Time Series': parent.time_series.plot,
-                      'Correlation': parent.correlation.plot,
                       'Regression': parent.regression.plot,
                       'Control Chart': parent.control_chart.plot}
 
