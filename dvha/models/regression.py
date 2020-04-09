@@ -402,7 +402,7 @@ class MultiVarResultsFrame(wx.Frame):
     """
     Class to view multi-variable regression with data passed from RegressionFrame
     """
-    def __init__(self, y_variable, x_variables, group_data, group, options, auto_update_plot=True):
+    def __init__(self, main_app_frame, y_variable, x_variables, group_data, group, options, auto_update_plot=True):
         """
         :param y_variable: dependent variable
         :type y_variable: str
@@ -415,6 +415,7 @@ class MultiVarResultsFrame(wx.Frame):
         """
         wx.Frame.__init__(self, None, title="Multi-Variable Model for %s: Group %s" % (y_variable, group))
 
+        self.main_app_frame = main_app_frame
         self.y_variable = y_variable
         self.x_variables = x_variables
         self.group_data = group_data
@@ -536,8 +537,13 @@ class MultiVarResultsFrame(wx.Frame):
 
     def on_save_svg(self, *evt):
         try:
-            save_data_to_file(self, 'Save multi-variable regression plot to .svg', self.plot.export_svg, initial_dir="",
-                              data_type='function', wildcard="SVG files (*.svg)|*.svg")
+            if self.main_app_frame.export_figure is None:
+                save_data_to_file(self, 'Save multi-variable regression plot to .svg', self.plot.export_svg,
+                                  initial_dir="", data_type='function', wildcard="SVG files (*.svg)|*.svg")
+            else:
+                save_func = self.main_app_frame.export_figure.save_plot_function
+                save_data_to_file(self, 'Save multi-variable regression plot to .svg', save_func,
+                                  initial_dir="", data_type='function', wildcard="SVG files (*.svg)|*.svg")
         except Exception as e:
             ErrorDialog(self, str(e), "Save Error")
 
@@ -592,7 +598,7 @@ class MultiVarResultsFrame(wx.Frame):
 
 
 class LoadMultiVarModelFrame(MultiVarResultsFrame):
-    def __init__(self, model_file_path, group_data, group, options):
+    def __init__(self, main_app_frame, model_file_path, group_data, group, options):
         self.loaded_data = load_object_from_file(model_file_path)
         self.stats_data = group_data[group]['stats_data']
         try:
@@ -601,7 +607,7 @@ class LoadMultiVarModelFrame(MultiVarResultsFrame):
                 x_variables = self.loaded_data['x_variables']
                 stats_data = group_data[group]['stats_data']
 
-                MultiVarResultsFrame.__init__(self, y_variable, x_variables, group_data, group, options,
+                MultiVarResultsFrame.__init__(self, main_app_frame, y_variable, x_variables, group_data, group, options,
                                               auto_update_plot=False)
                 X, y = stats_data.get_X_and_y(y_variable, x_variables)
 
