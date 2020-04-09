@@ -347,12 +347,15 @@ def update_ptv_data(tv, study_instance_uid):
             cnx.update('Plans', key, value, "study_instance_uid = '%s'" % study_instance_uid)
 
 
-def get_total_treatment_volume_of_study(study_instance_uid):
+def get_total_treatment_volume_of_study(study_instance_uid, ptvs=None):
     """
     Calculate combined PTV for the provided study_instance_uid
     """
-    ptv_coordinates_strings = query('dvhs', 'roi_coord_string',
-                                    "study_instance_uid = '%s' and roi_type like 'PTV%%'" % study_instance_uid)
+
+    condition = "study_instance_uid = '%s' and roi_type like 'PTV%%'" % study_instance_uid
+    if ptvs:
+        condition += " and roi_name in ('%s')" % "','".join(ptvs)
+    ptv_coordinates_strings = query('dvhs', 'roi_coord_string', condition)
 
     ptvs = [roi_form.get_planes_from_string(ptv[0]) for ptv in ptv_coordinates_strings]
 

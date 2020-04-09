@@ -11,7 +11,7 @@ A setuptools setup file for DVH Analytics
 #    available at https://github.com/cutright/DVH-Analytics
 
 from setuptools import setup, find_packages
-from dvha.options import DefaultOptions
+from dvha._version import __version__
 
 
 with open('requirements.txt', 'r') as doc:
@@ -26,13 +26,13 @@ setup(
     include_package_data=True,
     python_requires='>3.5',
     packages=find_packages(),
-    version=DefaultOptions().VERSION,
+    version=__version__,
     description='Create a database of DVHs, GUI with wxPython, plots with Bokeh',
     author='Dan Cutright',
     author_email='dan.cutright@gmail.com',
     url='https://github.com/cutright/DVH-Analytics-Desktop',
     download_url='https://github.com/cutright/DVH-Analytics-Desktop/archive/master.zip',
-    license="MIT License",
+    license="BSD License",
     keywords=['dvh', 'radiation therapy', 'research', 'dicom', 'dicom-rt', 'bokeh', 'analytics', 'wxpython'],
     classifiers=[],
     install_requires=requires,

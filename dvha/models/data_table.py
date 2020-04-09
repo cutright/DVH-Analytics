@@ -107,6 +107,8 @@ class DataTable:
         if self.widths:
             self.set_column_widths()
 
+        self.sort_indices = None  # If len of new data is different than previous, sorting may crash
+
     def set_layout_columns(self):
         self.layout.DeleteAllColumns()
         for i, col in enumerate(self.columns):
@@ -295,18 +297,18 @@ class DataTable:
         """
         self.layout.SetColumnWidth(index, width)
 
-    def set_column_widths(self):
-        """
-        Set all widths in layout based on self.widths
-        """
-        if self.widths is not None:
-            for i, width in enumerate(self.widths):
-                self.set_column_width(i, width)
+    def set_column_widths(self, auto=False):
+        """Set all widths in layout based on self.widths"""
+        if auto:
+            for i in range(len(self.columns)):
+                self.set_column_width(i, wx.LIST_AUTOSIZE_USEHEADER)
+        else:
+            if self.widths is not None:
+                for i, width in enumerate(self.widths):
+                    self.set_column_width(i, width)
 
     def clear(self):
-        """
-        Delete all data in self.data and clear the table view
-        """
+        """Delete all data in self.data and clear the table view"""
         self.delete_all_rows()
         self.layout.DeleteAllColumns()
 
@@ -387,6 +389,10 @@ class DataTable:
         """
         return [self.get_row(index) for index in get_selected_listctrl_items(self.layout)]
 
+    @property
+    def selected_row_data_with_index(self):
+        return [[index, self.get_row(index)] for index in get_selected_listctrl_items(self.layout)]
+
     def apply_selection_to_all(self, state):
         """
         Select or Deselect all rows in the layout
@@ -423,3 +429,6 @@ class DataTable:
         if self.sort_indices is None:
             return self.data
         return {column: [self.data[column][i] for i in self.sort_indices] for column in self.columns}
+
+    def get_unique_values(self, column):
+        return sorted(set(self.data[column]))

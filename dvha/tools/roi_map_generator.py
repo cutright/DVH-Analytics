@@ -12,8 +12,13 @@ class ROIMapGenerator:
             for line in doc:
                 if 'xx' not in line:  # ignore the rows with generic expansions
                     for col, value in enumerate(line.split(',')):
+                        if value == '':
+                            value = 'None'
                         self.tg_263[keys[col]].append(value.strip().replace('^', ','))
             self.keys = keys
+            self.keys.append(self.keys.pop(0))  # Move Target Type to the end
+
+        self.key_map = {key: key for key in keys}
 
     def __call__(self, map_file_name, body_sites=None, data_filter=None, roi_uid_type='primary'):
         """
@@ -45,6 +50,22 @@ class ROIMapGenerator:
                 doc.write(": ".join([roi_uid] * 3) + '\n')
         return file_path
 
+    def prep_data_for_roi_map_gui(self):
+        ignored = [c for c in self.keys if 'Reverse' in c or 'Character' in c or 'FMAID' in c]
+        for c in ignored:
+            self.drop_column(c)
+
+        str_map = {'Category': 'Cat.', 'Anatomic': 'Anat.', 'TG263-': ''}
+        for c in self.keys:
+            if any([key in c for key in list(str_map)]):
+                new_key = c
+                for key, value in str_map.items():
+                    new_key = new_key.replace(key, value)
+                self.key_map[c] = new_key
+                key_index = self.keys.index(c)
+                self.tg_263[new_key] = self.drop_column(c, return_data=True)
+                self.keys.insert(key_index, new_key)
+
     ##########################################################
     # Generalized Tools
     ##########################################################
@@ -56,6 +77,10 @@ class ROIMapGenerator:
         :return: subset of tg_263 with the data_filter applied
         :type: dict
         """
+
+        for key in list(data_filter):
+            if data_filter[key].lower() == 'all':
+                data_filter.pop(key)
 
         data = {key: [] for key in self.keys}
         for row in range(len(self.tg_263[self.keys[0]])):
@@ -72,9 +97,7 @@ class ROIMapGenerator:
         :return: list of unique values for the provided column
         """
         data = self.tg_263 if data is None else data
-        values = [value for value in set(data[column]) if value]
-        values.sort()
-        return values
+        return sorted([value for value in set(data[column]) if value])
 
     def get_value_from_uid(self, roi_uid, output_type, reverse_name=False):
         """
@@ -87,7 +110,8 @@ class ROIMapGenerator:
         :return: another column value of the provided roi_uid
         """
         input_type = 'FMAID' if roi_uid.isdigit() else ['TG-263-Reverse Order Name', 'TG263-Primary Name'][reverse_name]
-        return self._get_value_from_uid(roi_uid, input_type=input_type, output_type=output_type)
+        return self._get_value_from_uid(roi_uid, input_type=self.key_map[input_type],
+                                        output_type=self.key_map[output_type])
 
     def _get_value_from_uid(self, input_value, input_type, output_type):
         """Generic function to look up another column with a given input value and type"""
@@ -95,32 +119,44 @@ class ROIMapGenerator:
             index = self.tg_263[input_type].index(input_value)
             return self.tg_263[output_type][index]
 
+    def drop_column(self, column, return_data=False):
+        """Remove a column from tg_263 data and update keys"""
+        if column in self.keys and column in list(self.tg_263):
+            self.keys.pop(self.keys.index(column))
+            popped_data = self.tg_263.pop(column)
+        if return_data:
+            return popped_data
+
     ##########################################################
     # Properties for coding ease
     ##########################################################
     @property
+    def target_types(self):
+        return self.get_unique_values(self.key_map['Target Type'])
+
+    @property
     def anatomic_groups(self):
-        return self.get_unique_values('Anatomic Group')
+        return self.get_unique_values(self.key_map['Anatomic Group'])
 
     @property
     def major_categories(self):
-        return self.get_unique_values('Major Category')
+        return self.get_unique_values(self.key_map['Major Category'])
 
     @property
     def minor_categories(self):
-        return self.get_unique_values('Minor Category')
+        return self.get_unique_values(self.key_map['Minor Category'])
 
     @property
     def primary_names(self):
-        return self.get_unique_values('TG263-Primary Name')
+        return self.get_unique_values(self.key_map['TG263-Primary Name'])
 
     @property
     def reverse_order_primary_names(self):
-        return self.get_unique_values('TG-263-Reverse Order Name')
+        return self.get_unique_values(self.key_map['TG-263-Reverse Order Name'])
 
     @property
     def fmaids(self):
-        return self.get_unique_values('FMAID')
+        return self.get_unique_values(self.key_map['FMAID'])
 
     def get_primary_name(self, fmaid):
         return self._get_value_from_uid(fmaid, input_type='FMAID', output_type='TG263-Primary Name')
@@ -145,4 +181,3 @@ class ROIMapGenerator:
 
     def get_description(self, roi_uid):
         return self.get_value_from_uid(roi_uid, output_type='Description')
-

@@ -71,7 +71,7 @@ Dependencies
 ---------
 * [Python](https://www.python.org) >3.5
 * [wxPython Phoenix](https://github.com/wxWidgets/Phoenix) >= 4.0.4
-* [Pydicom](https://github.com/darcymason/pydicom) >=1.0
+* [Pydicom](https://github.com/darcymason/pydicom) >=1.4.0
 * [dicompyler-core](https://pypi.python.org/pypi/dicompyler-core) 0.5.3
 * [Bokeh](http://bokeh.pydata.org/en/latest/index.html) >= 1.2.0, < 2.0.0
 * [PostgreSQL](https://www.postgresql.org/) (optional) and [psycopg2](http://initd.org/psycopg/)
@@ -83,6 +83,7 @@ Dependencies
 * [Scikit-learn](http://scikit-learn.org) >= 0.21.0
 * [regressors](https://pypi.org/project/regressors/)
 * [FuzzyWuzzy](https://github.com/seatgeek/fuzzywuzzy)
+* [selenium](https://github.com/SeleniumHQ/selenium/)
 
 
 Support

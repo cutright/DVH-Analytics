@@ -26,8 +26,7 @@ from subprocess import check_output
 import sys
 import tracemalloc
 from dvha.db.sql_connector import DVH_SQL
-from dvha.paths import SQL_CNF_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,\
-    APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, BACKUP_DIR, TEMP_DIR, MODELS_DIR, WIN_APP_ICON, PIP_LIST_PATH
+from dvha.paths import SQL_CNF_PATH, WIN_APP_ICON, PIP_LIST_PATH, DIRECTORIES
 
 
 IGNORED_FILES = ['.ds_store']
@@ -37,9 +36,9 @@ def is_windows():
     return wx.Platform == '__WXMSW__'
 
 
-def set_msw_background_color(parent):
+def set_msw_background_color(window_obj, color='lightgrey'):
     if is_windows():
-        parent.SetBackgroundColour('lightgrey')
+        window_obj.SetBackgroundColour(color)
 
 
 def is_linux():
@@ -51,15 +50,20 @@ def is_mac():
 
 
 def initialize_directories():
-    """
-    Based on paths.py, create required directories if they do not exist
-    :return:
-    """
-    directories = [APPS_DIR, APP_DIR, PREF_DIR, DATA_DIR, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR,
-                   BACKUP_DIR, TEMP_DIR, MODELS_DIR]
-    for directory in directories:
+    """Based on paths.py, create required directories if they do not exist"""
+    for directory in DIRECTORIES.values():
         if not isdir(directory):
             mkdir(directory)
+    initialize_protocols()
+
+
+def initialize_protocols():
+    """If no protocols are found in PROTOCOL_DIR, copy defaults"""
+    current_protocols = [f for f in listdir(DIRECTORIES['PROTOCOL']) if splitext(f)[1].lower() == '.scp']
+    if not current_protocols:
+        file_names = [f for f in listdir(DIRECTORIES['PROTOCOL_DEFAULT']) if splitext(f)[1].lower() == '.scp']
+        file_paths = [join(DIRECTORIES['PROTOCOL_DEFAULT'], f) for f in file_names]
+        move_files_to_new_path(file_paths, DIRECTORIES['PROTOCOL'], copy_files=True)
 
 
 def write_sql_connection_settings(config):

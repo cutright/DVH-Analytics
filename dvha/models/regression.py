@@ -11,6 +11,7 @@ Class to view and calculate linear regressions
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx
+from functools import partial
 from pubsub import pub
 from dvha.tools.errors import ErrorDialog
 from dvha.models.plot import PlotRegression, PlotMultiVarRegression
@@ -21,14 +22,15 @@ from dvha.dialogs.main import SelectRegressionVariablesDialog
 from dvha.options import DefaultOptions
 from dvha.paths import ICONS, MODELS_DIR
 from dvha.tools.stats import MultiVariableRegression
-from dvha.tools.utilities import set_msw_background_color, get_tree_ctrl_image, get_window_size, load_object_from_file
+from dvha.tools.utilities import set_msw_background_color, get_tree_ctrl_image, get_window_size, load_object_from_file,\
+    set_frame_icon
 
 
 class RegressionFrame:
     """
     Object to be passed into notebook panel for the Regression tab
     """
-    def __init__(self, parent, group_data, options):
+    def __init__(self, parent, group_data, options, main_app_frame):
         """
         :param parent:  notebook panel in main view
         :type parent: Panel
@@ -40,6 +42,7 @@ class RegressionFrame:
         self.parent = parent
         self.options = options
         self.group_data = group_data
+        self.main_app_frame = main_app_frame
         self.group = 1
         self.choices = []
 
@@ -54,6 +57,8 @@ class RegressionFrame:
         self.tree_ctrl_root = self.tree_ctrl.AddRoot('Regressions')
 
         self.mvr_frames = []
+
+        set_msw_background_color(self.window, color='white')
 
     def __define_gui_objects(self):
         self.window = wx.SplitterWindow(self.parent, wx.ID_ANY)
@@ -285,7 +290,7 @@ class RegressionFrame:
                 x_variables = list(self.x_variable_nodes[y_variable])
 
                 try:
-                    self.mvr_frames.append(MultiVarResultsFrame(y_variable, x_variables,
+                    self.mvr_frames.append(MultiVarResultsFrame(self.main_app_frame, y_variable, x_variables,
                                                                 self.group_data, self.group, self.options))
                     self.mvr_frames[-1].Show()
                 except Exception as e:
@@ -385,12 +390,20 @@ class RegressionFrame:
                 except RuntimeError:
                     pass
 
+    def apply_plot_options(self):
+        self.plot.apply_options()
+        for mvr_frame in self.mvr_frames:
+            try:
+                mvr_frame.apply_plot_options()
+            except RuntimeError:
+                pass
+
 
 class MultiVarResultsFrame(wx.Frame):
     """
     Class to view multi-variable regression with data passed from RegressionFrame
     """
-    def __init__(self, y_variable, x_variables, group_data, group, options, auto_update_plot=True):
+    def __init__(self, main_app_frame, y_variable, x_variables, group_data, group, options, auto_update_plot=True):
         """
         :param y_variable: dependent variable
         :type y_variable: str
@@ -403,6 +416,7 @@ class MultiVarResultsFrame(wx.Frame):
         """
         wx.Frame.__init__(self, None, title="Multi-Variable Model for %s: Group %s" % (y_variable, group))
 
+        self.main_app_frame = main_app_frame
         self.y_variable = y_variable
         self.x_variables = x_variables
         self.group_data = group_data
@@ -410,6 +424,7 @@ class MultiVarResultsFrame(wx.Frame):
         self.stats_data = group_data[group]['stats_data']
 
         set_msw_background_color(self)  # If windows, change the background color
+        set_frame_icon(self)
 
         self.options = options
 
@@ -424,7 +439,8 @@ class MultiVarResultsFrame(wx.Frame):
 
         self.button_back_elimination = wx.Button(self, wx.ID_ANY, 'Backward Elimination')
         self.button_export = wx.Button(self, wx.ID_ANY, 'Export Plot Data')
-        self.button_save_plot = wx.Button(self, wx.ID_ANY, 'Save Plot')
+        self.button_save_html = wx.Button(self, wx.ID_ANY, 'Save Plot to HTML')
+        self.button_save_svg = wx.Button(self, wx.ID_ANY, 'Save Plot to SVG')
         self.button_save_model = wx.Button(self, wx.ID_ANY, 'Save MVR Model')
         self.button_load_mlr_model = wx.Button(self, wx.ID_ANY, 'Load ML Model')
         algorithms = ['Random Forest', 'Support Vector Machine', 'Decision Tree', 'Gradient Boosting']
@@ -452,7 +468,8 @@ class MultiVarResultsFrame(wx.Frame):
                   id=self.button['Support Vector Machine'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_back_elimination, id=self.button_back_elimination.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())
-        self.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_save_html, id=self.button_save_html.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_save_svg, id=self.button_save_svg.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_model, id=self.button_save_model.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_load_mlr_model, id=self.button_load_mlr_model.GetId())
         self.Bind(wx.EVT_SIZE, self.on_resize)
@@ -467,7 +484,8 @@ class MultiVarResultsFrame(wx.Frame):
         sizer_export_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_export_buttons.Add(self.button_back_elimination, 0, wx.ALL, 5)
         sizer_export_buttons.Add(self.button_export, 0, wx.ALL, 5)
-        sizer_export_buttons.Add(self.button_save_plot, 0, wx.ALL, 5)
+        sizer_export_buttons.Add(self.button_save_html, 0, wx.ALL, 5)
+        sizer_export_buttons.Add(self.button_save_svg, 0, wx.ALL, 5)
         sizer_export_buttons.Add(self.button_save_model, 0, wx.ALL, 5)
         sizer_algo_wrapper.Add(sizer_export_buttons, 0, wx.ALL, 5)
         text = wx.StaticText(self, wx.ID_ANY, "Compare with Machine Learning Module")
@@ -494,16 +512,16 @@ class MultiVarResultsFrame(wx.Frame):
         return self.plot.get_final_stats_data(include_all=self.ml_include_all)
 
     def on_random_forest(self, evt):
-        self.ml_frames.append(RandomForestFrame(self.final_stats_data))
+        self.ml_frames.append(RandomForestFrame(self.main_app_frame, self.final_stats_data))
 
     def on_gradient_boosting(self, evt):
-        self.ml_frames.append(GradientBoostingFrame(self.final_stats_data))
+        self.ml_frames.append(GradientBoostingFrame(self.main_app_frame, self.final_stats_data))
 
     def on_decision_tree(self, evt):
-        self.ml_frames.append(DecisionTreeFrame(self.final_stats_data))
+        self.ml_frames.append(DecisionTreeFrame(self.main_app_frame, self.final_stats_data))
 
     def on_support_vector_regression(self, evt):
-        self.ml_frames.append(SupportVectorRegressionFrame(self.final_stats_data))
+        self.ml_frames.append(SupportVectorRegressionFrame(self.main_app_frame, self.final_stats_data))
 
     def on_export(self, evt):
         save_data_to_file(self, 'Save multi-variable regression data to csv', self.plot.get_csv_data())
@@ -514,9 +532,31 @@ class MultiVarResultsFrame(wx.Frame):
         del wait
         self.radiobox_include_back_elim.Enable()
 
-    def on_save_plot(self, evt):
-        save_data_to_file(self, 'Save multi-variable regression plot', self.plot.html_str,
-                          wildcard="HTML files (*.html)|*.html")
+    def on_save_html(self, *evt):
+        try:
+            if self.main_app_frame.export_figure is None:
+                save_data_to_file(self, 'Save multi-variable regression plot to .html', self.plot.html_str,
+                                  initial_dir="", wildcard="HTML files (*.html)|*.html")
+            else:
+                fig_attr_dict = self.main_app_frame.export_figure.fig_attr_dict
+                func = partial(self.plot.save_figure, 'html', fig_attr_dict)
+                save_data_to_file(self, 'Save multi-variable regression plot to .html', func,
+                                  initial_dir="", data_type='function', wildcard="HTML files (*.html)|*.html")
+        except Exception as e:
+            ErrorDialog(self, str(e), "Save Error")
+
+    def on_save_svg(self, *evt):
+        try:
+            if self.main_app_frame.export_figure is None:
+                save_data_to_file(self, 'Save multi-variable regression plot to .svg', self.plot.export_svg,
+                                  initial_dir="", data_type='function', wildcard="SVG files (*.svg)|*.svg")
+            else:
+                fig_attr_dict = self.main_app_frame.export_figure.fig_attr_dict
+                func = partial(self.plot.save_figure, 'svg', fig_attr_dict)
+                save_data_to_file(self, 'Save multi-variable regression plot to .svg', func,
+                                  initial_dir="", data_type='function', wildcard="SVG files (*.svg)|*.svg")
+        except Exception as e:
+            ErrorDialog(self, str(e), "Save Error")
 
     def on_save_model(self, evt):
         data = {'y_variable': self.plot.y_variable,
@@ -557,9 +597,19 @@ class MultiVarResultsFrame(wx.Frame):
                 except RuntimeError:
                     pass
 
+    def apply_plot_options(self):
+        self.plot.apply_options()
+        self.plot.redraw_plot()
+        for frame in self.ml_frames:
+            try:
+                frame.plot.apply_options()
+                frame.plot.redraw_plot()
+            except RuntimeError:
+                pass
+
 
 class LoadMultiVarModelFrame(MultiVarResultsFrame):
-    def __init__(self, model_file_path, group_data, group, options):
+    def __init__(self, main_app_frame, model_file_path, group_data, group, options):
         self.loaded_data = load_object_from_file(model_file_path)
         self.stats_data = group_data[group]['stats_data']
         try:
@@ -568,7 +618,7 @@ class LoadMultiVarModelFrame(MultiVarResultsFrame):
                 x_variables = self.loaded_data['x_variables']
                 stats_data = group_data[group]['stats_data']
 
-                MultiVarResultsFrame.__init__(self, y_variable, x_variables, group_data, group, options,
+                MultiVarResultsFrame.__init__(self, main_app_frame, y_variable, x_variables, group_data, group, options,
                                               auto_update_plot=False)
                 X, y = stats_data.get_X_and_y(y_variable, x_variables)
 

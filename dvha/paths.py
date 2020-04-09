@@ -26,6 +26,9 @@ REVIEW_DIR = join(DATA_DIR, 'review')
 BACKUP_DIR = join(DATA_DIR, 'backup')
 TEMP_DIR = join(DATA_DIR, 'temp')
 MODELS_DIR = join(DATA_DIR, 'models')
+PROTOCOL_DIR = join(DATA_DIR, 'protocols')
+PROTOCOL_DEFAULT_DIR = join(SCRIPT_DIR, 'protocols')
+DIRECTORIES = {key[:-4]: value for key, value in locals().items() if key.endswith('_DIR')}
 
 OPTIONS_PATH = join(PREF_DIR, '.options')
 OPTIONS_CHECKSUM_PATH = join(PREF_DIR, '.options_checksum')
@@ -57,7 +60,8 @@ ICONS = {'Open': "iconfinder_Open_1493293.png",
          'studies': "iconfinder_User_Customers_1218712.png",
          'study': "iconfinder_Travel-Filled-07_3671983.png",
          'plan': "iconfinder_Clipboard-Plan_379537_zoom.png",
-         'patient': "iconfinder_User_Yuppie_3_1218716.png"}
+         'patient': "iconfinder_User_Yuppie_3_1218716.png",
+         'Image': "iconfinder_m-52_4230522.png"}
 for key, value in ICONS.items():
     ICONS[key] = join(ICONS_DIR, value)
 

@@ -10,11 +10,19 @@ Class to retrieve DVH data from SQL, calculate parameters dependent on DVHs, and
 #    See the file LICENSE included with this distribution, also
 #    available at https://github.com/cutright/DVH-Analytics
 
+from copy import deepcopy
+from dateutil.parser import parse as date_parser
 import numpy as np
 from dvha.db.sql_connector import DVH_SQL
 from dvha.db.sql_to_python import QuerySQL
-from copy import deepcopy
-from dateutil.parser import parse as date_parser
+import operator as operator_lib
+from os import listdir
+from os.path import join, basename, splitext
+from dvha.options import Options
+from dvha.paths import PROTOCOL_DIR
+
+
+MAX_DOSE_VOLUME = Options().MAX_DOSE_VOLUME
 
 
 # This class retrieves DVH data from the SQL database and calculates statistical DVHs (min, max, quartiles)
@@ -102,6 +110,8 @@ class DVH:
             self.fx_dose = self.get_rx_values('fx_dose')
         else:
             self.count = 0
+
+        self.protocols = Protocols()
 
     def get_plan_values(self, plan_column):
         """
@@ -372,6 +382,36 @@ class DVH:
     def has_data(self):
         return bool(len(self.mrn))
 
+    def evaluate_constraint(self, index, constraint):
+        """
+
+        :param index: The index of the dvh to be evaluated (self.dvh[:, index])
+        :type index: int
+        :param constraint: dvh endpoint constraint
+        :type constraint: Constraint
+        :return: True if the dvh meets the constraint
+        :rtype: bool
+        """
+        return constraint(self.dvh[:, index], self.mean_dose[index], self.volume[index], self.dvh_bin_width)
+
+    def evaluate_dvh(self, index, protocol_roi, protocol_name, fractionation):
+        """
+
+        :param index: The index of the dvh to be evaluated (self.dvh[:, index])
+        :type index: int
+        :param protocol_roi: the name of the roi as defined in the protocol
+        :type protocol_roi: str
+        :param protocol_name: name of the protocol (e.g., TG101, PEMBRO)
+        :type protocol_name: str
+        :param fractionation: number of fractions associated with constraints, str(int) or 'Std'
+        :type fractionation: str
+        :return: evaluation of all constraints for the protocol_roi with provided dvh
+        :rtype: dict
+        """
+        constraints = self.protocols.get_roi_constraints(protocol_roi, protocol_name, fractionation,
+                                                         roi_type=self.roi_type[index])
+        return {str(c): self.evaluate_constraint(index, c) for c in constraints}
+
 
 # Returns the isodose level outlining the given volume
 def dose_to_volume(dvh, rel_volume, dvh_bin_width=1):
@@ -436,4 +476,242 @@ def calc_eud(dvh, a, dvh_bin_width=1):
 
 
 def calc_tcp(gamma_50, td_tcd, eud):
-    return 1 / (1 + (td_tcd / eud) ** (4. * gamma_50))
+    return 1. / (1. + (td_tcd / eud) ** (4. * gamma_50))
+
+
+class Protocols:
+    """Parse all protocols in user's PROTOCOL_DIR"""
+    def __init__(self, max_dose_volume=MAX_DOSE_VOLUME):
+        self.max_dose_volume = max_dose_volume
+
+        # Collect .scp files, parse, store in self.data
+        self.data = {}
+        for f in self.file_paths:
+            file_name = splitext(str(basename(f)))[0]
+            protocol_name, fxs = tuple(file_name.split('_'))
+            if protocol_name not in list(self.data):
+                self.data[protocol_name] = {}
+            fxs_key = fxs.lower().replace('fx', '').strip()
+            self.data[protocol_name][fxs_key] = self.parse_protocol_file(f)
+
+    @property
+    def file_paths(self):
+        files = listdir(PROTOCOL_DIR)
+        return [join(PROTOCOL_DIR, f) for f in files if self.is_protocol_file(f) and f.count('_') == 1]
+
+    @staticmethod
+    def is_protocol_file(file_path):
+        return splitext(file_path)[1].lower() == '.scp'
+
+    @staticmethod
+    def parse_protocol_file(file_path):
+        constraints = {}
+        current_key = None
+        with open(file_path, 'r') as document:
+            for line in document:
+                if not(line.startswith('#') or line.strip() == ''):  # Skip line if empty or starts with #
+                    if line[0] not in {'\t', ' '}:  # Constraint
+                        current_key = line.strip()
+                        constraints[current_key] = {}
+                    else:  # OAR Name
+                        line_data = line.split()
+                        operator = '<' if len(line_data) < 3 else line_data[-2]
+                        # constraints[current_key][line_data[0]] = {'threshold': line_data[-1],
+                        #                                           'operator': operator}
+                        constraints[current_key][line_data[0]] = Constraint(line_data[0], operator, line_data[-1])
+        return constraints
+
+    @property
+    def protocol_names(self):
+        return sorted(list(self.data))
+
+    def get_fractionations(self, protocol_name):
+        return [fx.replace('Fx', '') for fx in sorted(list(self.data[protocol_name]))]
+
+    def get_rois(self, protocol_name, fractionation):
+        return sorted(list(self.data[protocol_name][fractionation]))
+
+    def get_constraints(self, protocol_name, fractionation, roi_name):
+        return self.data[protocol_name][fractionation][roi_name]
+
+    def get_column_data(self, protocol_name, fractionation, roi=None):
+
+        columns = ['Structure', 'ROI Type', 'Constraint']
+        data = {key: [] for key in columns}
+        rois = [roi] if roi is not None else self.get_rois(protocol_name, fractionation)
+        for roi in rois:
+            constraints = self.get_roi_constraints(roi, protocol_name, fractionation)
+            for i, constraint in enumerate(constraints):
+                if i:
+                    data['Structure'].append('')
+                    data['ROI Type'].append('')
+                else:
+                    data['Structure'].append(roi)
+                    data['ROI Type'].append(constraint.roi_type)
+                data['Constraint'].append(str(constraint))
+            if len(constraints) and roi != rois[-1]:
+                for col in columns:
+                    data[col].append('')
+
+        return data, columns
+
+    def get_roi_constraints(self, protocol_roi, protocol_name, fractionation):
+        return self.get_constraints(protocol_name, fractionation, protocol_roi).values()
+
+    @staticmethod
+    def get_roi_type(roi_name):
+        roi_name = roi_name.lower()
+        if any([t in roi_name for t in {'gtv', 'ctv', 'itv', 'ptv'}]):
+            return 'TARGET'
+        return 'OAR'
+
+    def delete_protocol(self, protocol_name):
+        if protocol_name in list(self.data):
+            self.data.pop(protocol_name, None)
+
+    def delete_fractionation(self, protocol_name, fractionation):
+        if protocol_name in list(self.data) and fractionation in list(self.data[protocol_name]):
+            self.data[protocol_name].pop(fractionation, None)
+
+    def delete_constraint(self, protocol_name, fractionation, roi, constraint_label):
+        try:
+            self.data[protocol_name][fractionation][roi].pop(constraint_label, None)
+        except KeyError:
+            pass
+
+    def add_constraint(self, protocol_name, fractionation, roi_name, constraint):
+        protocol = self.data[protocol_name][fractionation]
+        if roi_name not in list(protocol):
+            protocol[roi_name] = {}
+        protocol[roi_name][str(constraint)] = constraint
+
+    def save_old(self, protocol, fractionation):
+        file_path = join(PROTOCOL_DIR, "%s_%s.scp_test" % (protocol, fractionation))
+        with open(file_path, 'w') as doc:
+            lines = []
+            for roi, constraints in self.data[protocol][fractionation].items():
+                lines.append(roi)
+                for name, threshold in constraints.items():
+                    lines.append("\t%s\t<\t%s" % (name, threshold))
+            doc.write('\n'.join(lines))
+
+
+class Constraint:
+    def __init__(self, label, operator, threshold, roi_type='OAR', max_dose_volume=MAX_DOSE_VOLUME):
+        self.label = label
+        self.operator = operator
+        self.threshold = threshold
+        self.roi_type = roi_type
+        self.max_dose_volume = max_dose_volume
+
+    def __str__(self):
+        return "%s %s %s" % (self.label_with_units, self.operator, self.threshold_with_units)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __call__(self, dvh, volume, bin_width=1, mean_dose=None):
+        """
+        Determine if a DVH meets this constraint
+        :param dvh: a relative DVH
+        :type dvh: np.array
+        :param volume: ROI volume
+        :type volume: float
+        :param bin_width: dose distance between elements of dvh, default value is 1
+        :type bin_width: int
+        :param mean_dose: optionally provide ROI mean dose for efficiency
+        :type mean_dose: float
+        :return: the pass/fail status of the dvh with this constraint
+        :rtype: bool
+        """
+        if mean_dose is None:  # if mean dose not provided, calculate it
+            diff = abs(np.diff(np.append(dvh, 0)))  # per dicompyler-core
+            mean_dose = (diff.bincenters * diff.counts).sum() / diff.counts.sum()
+
+        calc_type = self.calc_type  # calculate only once
+        if calc_type == 'Volume':
+            endpoint = dose_to_volume(dvh, self.input_value, dvh_bin_width=bin_width)
+        elif calc_type == 'Dose':
+            endpoint = volume_of_dose(dvh, self.input_value, dvh_bin_width=bin_width)
+        elif calc_type == 'Mean':
+            endpoint = mean_dose
+        elif calc_type == 'MVS':
+            endpoint = volume - volume_of_dose(dvh, self.input_value, dvh_bin_width=bin_width)
+        else:
+            return
+
+        func = operator_lib.lt if self.operator == '<' else operator_lib.gt
+        return func(endpoint, self.threshold_value)
+
+    @property
+    def threshold_value(self):
+        if '%' in self.threshold:
+            return float(self.threshold.replace('%', '')) / 100.
+        return float(self.threshold)
+
+    @property
+    def output_type(self):
+        if self.label == 'Mean':
+            return 'D'
+        return self.label.split('_')[0]
+
+    @property
+    def output_units(self):
+        return ['Gy', 'cc'][self.output_type in {'V', 'MVS'}]
+
+    @property
+    def input(self):
+        if self.label == 'Mean':
+            return None
+        return self.label.split('_')[1]
+
+    @property
+    def input_type(self):
+        return ['Volume', 'Dose'][self.output_type in {'V', 'MVS'}]
+
+    @property
+    def calc_type(self):
+        if 'MVS' in self.label:
+            return 'MVS'
+        if 'Mean' in self.label:
+            return 'Mean'
+        return self.input_type
+
+    @property
+    def input_value(self):
+        if self.input is None:
+            return None
+        if 'max' in self.input:
+            return self.max_dose_volume
+        return float(self.input.replace('%', '').replace('_', ''))
+
+    @property
+    def input_scale(self):
+        if self.input is None:
+            return None
+        return ['absolute', 'relative']['%' in self.input]
+
+    @property
+    def output_scale(self):
+        return ['absolute', 'relative']['%' in self.threshold]
+
+    @property
+    def input_units(self):
+        if self.input is None:
+            return None
+        scale = ['absolute', 'relative']['%' in self.input]
+        abs_units = ['cc', 'Gy'][self.input_type == 'Dose']
+        return ['%', abs_units][scale == 'absolute']
+
+    @property
+    def label_with_units(self):
+        input_units = self.input_units
+        if '%' not in self.label and not self.label.lower().endswith('max') and input_units:
+            return self.label + input_units
+        return self.label
+
+    @property
+    def threshold_with_units(self):
+        if '%' not in self.threshold:
+            return self.threshold + self.output_units
+        return self.threshold

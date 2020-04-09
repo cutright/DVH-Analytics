@@ -46,12 +46,16 @@ class CorrelationFrame:
         self.button_var_select = wx.Button(self.parent, wx.ID_ANY, 'Select Variables')
         self.button_var_default = wx.Button(self.parent, wx.ID_ANY, 'Default Variables')
         self.button_export_csv = wx.Button(self.parent, wx.ID_ANY, 'Export')
+        self.button_save_html = wx.Button(self.parent, wx.ID_ANY, 'Save HTML')
+        self.button_save_svg = wx.Button(self.parent, wx.ID_ANY, 'Save SVG')
         self.plot = PlotCorrelation(self.parent, self.options)
 
     def __do_bind(self):
         self.parent.Bind(wx.EVT_BUTTON, self.on_var_select, id=self.button_var_select.GetId())
         self.parent.Bind(wx.EVT_BUTTON, self.on_var_default, id=self.button_var_default.GetId())
         self.parent.Bind(wx.EVT_BUTTON, self.export_csv, id=self.button_export_csv.GetId())
+        self.parent.Bind(wx.EVT_BUTTON, self.save_html, id=self.button_save_html.GetId())
+        self.parent.Bind(wx.EVT_BUTTON, self.save_svg, id=self.button_save_svg.GetId())
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -61,6 +65,8 @@ class CorrelationFrame:
         sizer_buttons.Add(self.button_var_select, 0, wx.RIGHT, 5)
         sizer_buttons.Add(self.button_var_default, 0, wx.RIGHT, 5)
         sizer_buttons.Add(self.button_export_csv, 0, wx.RIGHT, 5)
+        sizer_buttons.Add(self.button_save_html, 0, wx.RIGHT, 5)
+        sizer_buttons.Add(self.button_save_svg, 0, wx.RIGHT, 5)
 
         sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
 
@@ -106,4 +112,16 @@ class CorrelationFrame:
 
     def export_csv(self, evt):
         save_data_to_file(self.parent, "Export Correlation data to CSV", self.plot.get_csv())
+
+    def save_html(self, *evt):
+        save_data_to_file(self.parent, 'Save Correlation to HTML', self.plot.html_str, initial_dir="",
+                          wildcard="HTML files (*.html)|*.html")
+
+    def save_svg(self, *evt):
+        try:
+            save_data_to_file(self.parent, 'Save Correlation to SVG', self.plot.export_svg,
+                              initial_dir="", data_type='function', wildcard="SVG files (*.svg)|*.svg")
+        except Exception as e:
+            ErrorDialog(self.parent, str(e), "Save Error")
+
 

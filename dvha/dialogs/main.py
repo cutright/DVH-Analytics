@@ -18,7 +18,7 @@ import numpy as np
 import time
 from os.path import isdir
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_window_size,\
-    get_installed_python_libraries
+    get_installed_python_libraries, set_msw_background_color, set_frame_icon
 from dvha.db import sql_columns
 from dvha.db.sql_connector import DVH_SQL
 from dvha.models.data_table import DataTable
@@ -618,18 +618,18 @@ class QueryNumericalDialog(wx.Dialog):
                 pass
 
 
-class UserSettings(wx.Dialog):
+class UserSettings(wx.Frame):
     """
     Customize directories and visual settings for DVHA
     """
-    def __init__(self, options):
+    def __init__(self, parent):
         """
-        :param options: user settings object
-        :type options: Options
+        :param parent: main application frame
         """
-        wx.Dialog.__init__(self, None, title="User Settings")
+        wx.Frame.__init__(self, None, title="User Settings")
 
-        self.options = options
+        self.parent = parent
+        self.options = parent.options
 
         colors = list(plot_colors.cnames)
         colors.sort()
@@ -642,11 +642,13 @@ class UserSettings(wx.Dialog):
 
         line_style_options = ['solid', 'dashed', 'dotted', 'dotdash', 'dashdot']
 
-        self.SetSize((500, 580))
+        # self.SetSize((500, 580))
         self.text_ctrl_inbox = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_DONTWRAP)
         self.button_inbox = wx.Button(self, wx.ID_ANY, u"…")
         self.text_ctrl_imported = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_DONTWRAP)
         self.button_imported = wx.Button(self, wx.ID_ANY, u"…")
+
+        self.checkbox_dicom_dvh = wx.CheckBox(self, wx.ID_ANY, "Import DICOM DVH if available")
         self.dvh_bin_width_input = wx.TextCtrl(self, wx.ID_ANY, str(self.options.dvh_bin_width))
         self.combo_box_colors_category = wx.ComboBox(self, wx.ID_ANY, choices=color_variables,
                                                      style=wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -664,10 +666,11 @@ class UserSettings(wx.Dialog):
                                                            style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_alpha_category = wx.ComboBox(self, wx.ID_ANY, choices=alpha_variables,
                                                     style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.spin_ctrl_alpha_input = wx.SpinCtrlDouble(self, wx.ID_ANY, "0", min=0.1, max=1.0, style=wx.SP_ARROW_KEYS)
+        self.spin_ctrl_alpha_input = wx.SpinCtrlDouble(self, wx.ID_ANY, "0", min=0, max=1.0, style=wx.SP_ARROW_KEYS)
         self.button_restore_defaults = wx.Button(self, wx.ID_ANY, "Restore Defaults")
         self.button_ok = wx.Button(self, wx.ID_OK, "OK")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+        self.button_apply = wx.Button(self, wx.ID_ANY, 'Apply')
 
         self.__set_properties()
         self.__do_layout()
@@ -676,7 +679,10 @@ class UserSettings(wx.Dialog):
         self.refresh_options()
         self.load_paths()
 
-        self.run()
+        self.is_edited = False
+
+        set_msw_background_color(self)
+        set_frame_icon(self)
 
     def __set_properties(self):
         self.text_ctrl_inbox.SetToolTip("Default directory for batch processing of incoming DICOM files")
@@ -685,6 +691,9 @@ class UserSettings(wx.Dialog):
         self.text_ctrl_imported.SetToolTip("Directory for post-processed DICOM files")
         self.text_ctrl_imported.SetMinSize((100, 21))
         self.button_imported.SetMinSize((40, 21))
+        self.checkbox_dicom_dvh.SetValue(self.options.USE_DICOM_DVH)
+        self.checkbox_dicom_dvh.SetToolTip("If a DICOM RT-Dose file has a DVH Sequence, use this DVH instead of "
+                                           "recalculating during import.")
         self.dvh_bin_width_input.SetToolTip("Value must be an integer.")
         self.dvh_bin_width_input.SetMinSize((50, 21))
         self.combo_box_colors_category.SetMinSize((250, self.combo_box_colors_category.GetSize()[1]))
@@ -702,15 +711,16 @@ class UserSettings(wx.Dialog):
 
         # Windows needs this done explicitly or the value will be an empty string
         self.combo_box_alpha_category.SetSelection(7)  # IQR Alpha
-        self.combo_box_colors_category.SetSelection(5)  # Plot Color
+        self.combo_box_colors_category.SetSelection(14)  # Plot Color
         self.combo_box_line_styles_category.SetSelection(4)  # DVH Line Dash
         self.combo_box_line_widths_category.SetSelection(4)  # DVH Line Width
-        self.combo_box_sizes_category.SetSelection(3)  # Plot Axis Label Font Size
+        self.combo_box_sizes_category.SetSelection(6)  # Plot Axis Label Font Size
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_ok_cancel = wx.BoxSizer(wx.HORIZONTAL)
         sizer_plot_options = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Plot Options"), wx.VERTICAL)
+        sizer_dvh_options = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "DVH Options"), wx.VERTICAL)
         sizer_dvh_bin_width = wx.BoxSizer(wx.HORIZONTAL)
         sizer_alpha = wx.BoxSizer(wx.VERTICAL)
         sizer_alpha_input = wx.BoxSizer(wx.HORIZONTAL)
@@ -748,6 +758,9 @@ class UserSettings(wx.Dialog):
         sizer_imported_wrapper.Add(sizer_imported, 1, wx.EXPAND, 0)
         sizer_dicom_directories.Add(sizer_imported_wrapper, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_dicom_directories, 0, wx.ALL | wx.EXPAND, 10)
+
+        sizer_dvh_options.Add(self.checkbox_dicom_dvh, 0, wx.ALL, 5)
+        sizer_wrapper.Add(sizer_dvh_options, 0, wx.ALL | wx.EXPAND, 10)
 
         label_dvh_bin_width = wx.StaticText(self, wx.ID_ANY, "DVH Bin Width (cGy):")
         label_dvh_bin_width.SetToolTip("Value must be an integer")
@@ -797,17 +810,21 @@ class UserSettings(wx.Dialog):
         sizer_wrapper.Add(sizer_plot_options, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10)
 
         sizer_ok_cancel.Add(self.button_restore_defaults, 0, wx.RIGHT, 20)
+        sizer_ok_cancel.Add(self.button_apply, 0, wx.LEFT | wx.RIGHT, 5)
         sizer_ok_cancel.Add(self.button_ok, 0, wx.LEFT | wx.RIGHT, 5)
         sizer_ok_cancel.Add(self.button_cancel, 0, wx.LEFT | wx.RIGHT, 5)
         sizer_wrapper.Add(sizer_ok_cancel, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
 
         self.SetSizer(sizer_wrapper)
         self.Layout()
+        self.Fit()
         self.Center()
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.inbox_dir_dlg, id=self.button_inbox.GetId())
         self.Bind(wx.EVT_BUTTON, self.imported_dir_dlg, id=self.button_imported.GetId())
+
+        self.Bind(wx.EVT_CHECKBOX, self.on_use_dicom_dvh, id=self.checkbox_dicom_dvh.GetId())
 
         self.Bind(wx.EVT_TEXT, self.update_dvh_bin_width_val, id=self.dvh_bin_width_input.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.update_input_colors_var, id=self.combo_box_colors_category.GetId())
@@ -823,13 +840,26 @@ class UserSettings(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self.update_alpha_val, id=self.spin_ctrl_alpha_input.GetId())
 
         self.Bind(wx.EVT_BUTTON, self.restore_defaults, id=self.button_restore_defaults.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_apply, id=self.button_apply.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_ok, id=wx.ID_OK)
+        self.Bind(wx.EVT_BUTTON, self.on_cancel, id=wx.ID_CANCEL)
 
-    def run(self):
-        res = self.ShowModal()
-        if res == wx.ID_OK:
-            self.options.save()
-        else:
-            self.options.load()
+        self.Bind(wx.EVT_CLOSE, self.close)
+
+    def on_ok(self, *evt):
+        self.options.save()
+        if self.is_edited:
+            self.apply_and_redraw_plots()
+        self.close()
+
+    def on_cancel(self, *evt):
+        self.options.load()
+        if self.is_edited:
+            self.apply_and_redraw_plots()
+        self.close()
+
+    def close(self, *evt):
+        self.parent.user_settings = None
         self.Destroy()
 
     def inbox_dir_dlg(self, evt):
@@ -992,12 +1022,23 @@ class UserSettings(wx.Dialog):
         self.update_size_val()
         self.refresh_options()
 
+    def on_use_dicom_dvh(self, *evt):
+        self.options.set_option('USE_DICOM_DVH', self.checkbox_dicom_dvh.GetValue())
+
+    def on_apply(self, *evt):
+        self.apply_and_redraw_plots()
+        self.is_edited = True
+
+    def apply_and_redraw_plots(self):
+        self.parent.apply_plot_options()
+        self.parent.redraw_plots()
+
 
 class About(wx.Dialog):
     """
     Simple dialog to display the LICENSE file and a brief text header in a scrollable window
     """
-    def __init__(self):
+    def __init__(self, *evt):
         wx.Dialog.__init__(self, None, title='About DVH Analytics')
 
         scrolled_window = wx.ScrolledWindow(self, wx.ID_ANY)
@@ -1029,7 +1070,7 @@ class About(wx.Dialog):
 
 class PythonLibraries(wx.Dialog):
     """Simple dialog to display the installed python libraries"""
-    def __init__(self):
+    def __init__(self, *evt):
         wx.Dialog.__init__(self, None, title='Installed Python Libraries')
 
         self.list_ctrl = wx.ListCtrl(self, wx.ID_ANY,

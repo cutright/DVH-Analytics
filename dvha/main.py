@@ -19,7 +19,8 @@ from dvha.db.sql_to_python import QuerySQL
 from dvha.db.sql_connector import echo_sql_db, initialize_db
 from dvha.dialogs.main import query_dlg, UserSettings, About, PythonLibraries
 from dvha.dialogs.database import SQLSettingsDialog
-from dvha.dialogs.export import ExportCSVDialog, save_data_to_file
+from dvha.dialogs.export import ExportCSVDialog, ExportFigure
+from dvha.dialogs.protocols import ProtocolsEditor
 from dvha.models.import_dicom import ImportDicomFrame
 from dvha.models.database_editor import DatabaseEditorFrame
 from dvha.models.data_table import DataTable
@@ -68,7 +69,7 @@ class DVHAMainFrame(wx.Frame):
                                'data': {key: None for key in ['Plans', 'Beams', 'Rxs']},
                                'stats_data': None}}
 
-        self.toolbar_keys = ['Open', 'Close', 'Save', 'Export', 'Import', 'Database', 'ROI Map', 'Settings']
+        self.toolbar_keys = ['Open', 'Close', 'Save', 'Export', 'Image', 'Import', 'Database', 'ROI Map', 'Settings']
         self.toolbar_ids = {key: i + 1000 for i, key in enumerate(self.toolbar_keys)}
 
         # sql_columns.py contains dictionaries of all queryable variables along with their
@@ -109,6 +110,9 @@ class DVHAMainFrame(wx.Frame):
 
         self.Bind(wx.EVT_CLOSE, self.on_quit)
         self.tool_bar_windows = {key: None for key in ['import', 'database', 'roi_map']}
+        self.loaded_mvr_ml_frames = []
+        self.user_settings = None
+        self.export_figure = None
 
         wx.CallAfter(self.__catch_failed_sql_connection_on_app_launch)
 
@@ -123,6 +127,7 @@ class DVHAMainFrame(wx.Frame):
                        'Save': "Save queried data",
                        # 'Print': "Print a report",
                        'Export': "Export data to CSV",
+                       'Image': "Export a plot to SVG/HTML",
                        'Import': "DICOM import wizard",
                        'Settings': "User Settings",
                        'Database': "Database Administrator Tools",
@@ -135,12 +140,15 @@ class DVHAMainFrame(wx.Frame):
             self.frame_toolbar.AddTool(self.toolbar_ids[key], key, bitmap,
                                        wx.NullBitmap, wx.ITEM_NORMAL, description[key], "")
 
-            if key in {'Close', 'Export', 'ROI Map'}:
-                self.frame_toolbar.AddSeparator()
+            if key in {'Close', 'Image', 'ROI Map'}:
+                separator_count = 4 if is_windows() else 1  # MSW separator is very thin compared to mac
+                for _ in range(separator_count):
+                    self.frame_toolbar.AddSeparator()
 
         self.Bind(wx.EVT_TOOL, self.on_save, id=self.toolbar_ids['Save'])
         self.Bind(wx.EVT_TOOL, self.on_open, id=self.toolbar_ids['Open'])
         self.Bind(wx.EVT_TOOL, self.on_export, id=self.toolbar_ids['Export'])
+        self.Bind(wx.EVT_TOOL, self.on_export_figure, id=self.toolbar_ids['Image'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_database, id=self.toolbar_ids['Database'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_settings, id=self.toolbar_ids['Settings'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_roi_map, id=self.toolbar_ids['ROI Map'])
@@ -152,7 +160,6 @@ class DVHAMainFrame(wx.Frame):
         self.frame_menubar = wx.MenuBar()
 
         file_menu = wx.Menu()
-        # file_menu.Append(wx.ID_NEW, '&New')
         menu_open = file_menu.Append(wx.ID_OPEN, '&Open\tCtrl+O')
         menu_import = file_menu.Append(wx.ID_OPEN, '&Import DICOM\tCtrl+I')
         menu_save = file_menu.Append(wx.ID_ANY, '&Save\tCtrl+S')
@@ -162,16 +169,9 @@ class DVHAMainFrame(wx.Frame):
         load_model_mvr = load_model.Append(wx.ID_ANY, 'Multi-Variable Regression')
         load_model_ml = load_model.Append(wx.ID_ANY, 'Machine Learning')
 
-        export_plot = wx.Menu()
-        export_dvhs = export_plot.Append(wx.ID_ANY, 'DVHs')
-        export_time_series = export_plot.Append(wx.ID_ANY, 'Time Series')
-        export_correlation = export_plot.Append(wx.ID_ANY, 'Correlation')
-        export_regression = export_plot.Append(wx.ID_ANY, 'Regression')
-        export_control_chart = export_plot.Append(wx.ID_ANY, 'Control Chart')
-
         export = wx.Menu()
         export_csv = export.Append(wx.ID_ANY, 'Data to csv\tCtrl+E')
-        export.AppendSubMenu(export_plot, 'Plot to html')
+        export_figure = export.Append(wx.ID_ANY, 'Plot to file')
         file_menu.AppendSeparator()
 
         qmi = file_menu.Append(wx.ID_ANY, '&Quit\tCtrl+Q')
@@ -182,6 +182,7 @@ class DVHAMainFrame(wx.Frame):
         menu_db_admin = self.data_menu.Append(wx.ID_ANY, 'Database Administrator')
         self.data_menu.AppendSubMenu(load_model, 'Load &Model')
         self.data_menu.AppendSubMenu(export, '&Export')
+        self.data_menu.AppendSeparator()
         self.data_menu_items = {'DVHs': self.data_menu.Append(wx.ID_ANY, 'Show DVHs\tCtrl+1'),
                                 'Plans': self.data_menu.Append(wx.ID_ANY, 'Show Plans\tCtrl+2'),
                                 'Rxs': self.data_menu.Append(wx.ID_ANY, 'Show Rxs\tCtrl+3'),
@@ -194,8 +195,12 @@ class DVHAMainFrame(wx.Frame):
         menu_sql = settings_menu.Append(wx.ID_ANY, '&Database Connection\tCtrl+D')
         menu_roi_map = settings_menu.Append(wx.ID_ANY, '&ROI Map\tCtrl+R')
 
+        # plan_eval_menu = wx.Menu()
+        # menu_protocol_editor = plan_eval_menu.Append(wx.ID_ANY, 'Protocol Editor')
+
         help_menu = wx.Menu()
         menu_github = help_menu.Append(wx.ID_ANY, 'GitHub Page')
+        menu_dvha_edit = help_menu.Append(wx.ID_ANY, 'DVHA DICOM Editor')
         menu_python_libraries = help_menu.Append(wx.ID_ANY, 'Python Libraries Used')
         menu_report_issue = help_menu.Append(wx.ID_ANY, 'Report an Issue')
         menu_about = help_menu.Append(wx.ID_ANY, '&About')
@@ -207,23 +212,20 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_load_ml_model, load_model_ml)
         self.Bind(wx.EVT_MENU, self.on_close, menu_close)
         self.Bind(wx.EVT_MENU, self.on_export, export_csv)
+        self.Bind(wx.EVT_MENU, self.on_export_figure, export_figure)
         self.Bind(wx.EVT_MENU, self.on_save, menu_save)
         self.Bind(wx.EVT_MENU, self.on_pref, menu_pref)
         self.Bind(wx.EVT_MENU, self.on_githubpage, menu_github)
         self.Bind(wx.EVT_MENU, self.on_report_issue, menu_report_issue)
-        self.Bind(wx.EVT_MENU, self.on_python_libraries, menu_python_libraries)
-        self.Bind(wx.EVT_MENU, self.on_about, menu_about)
+        self.Bind(wx.EVT_MENU, self.on_dvha_edit, menu_dvha_edit)
+        self.Bind(wx.EVT_MENU, PythonLibraries, menu_python_libraries)
+        self.Bind(wx.EVT_MENU, About, menu_about)
         self.Bind(wx.EVT_MENU, self.on_sql, menu_sql)
         self.Bind(wx.EVT_MENU, self.on_toolbar_roi_map, menu_roi_map)
         if is_mac():
             menu_user_settings = settings_menu.Append(wx.ID_ANY, '&Preferences\tCtrl+,')
             self.Bind(wx.EVT_MENU, self.on_pref, menu_user_settings)
 
-        self.Bind(wx.EVT_MENU, self.on_save_plot_dvhs, export_dvhs)
-        self.Bind(wx.EVT_MENU, self.on_save_plot_time_series, export_time_series)
-        self.Bind(wx.EVT_MENU, self.on_save_plot_correlation, export_correlation)
-        self.Bind(wx.EVT_MENU, self.on_save_plot_regression, export_regression)
-        self.Bind(wx.EVT_MENU, self.on_save_plot_control_chart, export_control_chart)
         self.Bind(wx.EVT_MENU, self.on_toolbar_database, menu_db_admin)
         self.Bind(wx.EVT_MENU, self.on_view_dvhs, self.data_menu_items['DVHs'])
         self.Bind(wx.EVT_MENU, self.on_view_plans, self.data_menu_items['Plans'])
@@ -232,9 +234,12 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_view_stats_data_1, self.data_menu_items['StatsData1'])
         self.Bind(wx.EVT_MENU, self.on_view_stats_data_2, self.data_menu_items['StatsData2'])
 
+        # self.Bind(wx.EVT_MENU, self.on_protocol_editor, menu_protocol_editor)
+
         self.frame_menubar.Append(file_menu, '&File')
         self.frame_menubar.Append(self.data_menu, '&Data')
         self.frame_menubar.Append(settings_menu, '&Settings')
+        # self.frame_menubar.Append(plan_eval_menu, '&Plan Evaluation')
         self.frame_menubar.Append(help_menu, '&Help')
         self.SetMenuBar(self.frame_menubar)
 
@@ -309,7 +314,7 @@ class DVHAMainFrame(wx.Frame):
         self.plot = PlotStatDVH(self.notebook_tab['DVHs'], self.group_data, self.options)
         self.time_series = TimeSeriesFrame(self.notebook_tab['Time Series'], self.group_data, self.options)
         self.correlation = CorrelationFrame(self.notebook_tab['Correlation'], self.group_data, self.options)
-        self.regression = RegressionFrame(self.notebook_tab['Regression'], self.group_data, self.options)
+        self.regression = RegressionFrame(self.notebook_tab['Regression'], self.group_data, self.options, self)
         self.control_chart = ControlChartFrame(self.notebook_tab['Control Chart'], self.group_data, self.options)
         self.radbio = RadBioFrame(self.notebook_tab['Rad Bio'], self.group_data, self.time_series, self.regression,
                                   self.control_chart)
@@ -336,7 +341,7 @@ class DVHAMainFrame(wx.Frame):
         sizer_query_categorical.Add(self.table_categorical, 1, wx.ALL | wx.EXPAND, 10)
 
         sizer_query_numerical.Add(sizer_numerical_buttons, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_query_numerical.Add(self.table_numerical, 1, wx.TOP | wx.LEFT | wx.RIGHT | wx.EXPAND, 10)
+        sizer_query_numerical.Add(self.table_numerical, 1, wx.ALL | wx.EXPAND, 10)
 
         sizer_summary.Add(self.text_summary)
 
@@ -412,7 +417,7 @@ class DVHAMainFrame(wx.Frame):
         self.SetSizer(sizer_main)
         self.Layout()
 
-        self.SetSize(get_window_size(0.833, 0.857))
+        self.SetSize(get_window_size(0.833, 0.875))
 
         self.Center()
 
@@ -512,11 +517,13 @@ class DVHAMainFrame(wx.Frame):
             if dlg.ShowModal() == wx.ID_OK:
                 model_file_path = dlg.GetPath()
                 dlg.Destroy()
-                LoadMultiVarModelFrame(model_file_path, self.group_data, self.selected_group, self.options)
+                self.loaded_mvr_ml_frames.append(LoadMultiVarModelFrame(model_file_path, self.group_data,
+                                                                        self.selected_group, self.options))
 
     def on_load_ml_model(self, *evt):
         if self.group_data[self.selected_group]['stats_data']:
-            MachineLearningModelViewer(self, self.group_data, self.selected_group, self.options)
+            self.loaded_mvr_ml_frames.append(MachineLearningModelViewer(self, self.group_data,
+                                                                        self.selected_group, self.options))
         else:
             wx.MessageBox('No data as been queried for Group %s.' % self.selected_group, 'Error',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
@@ -859,43 +866,34 @@ class DVHAMainFrame(wx.Frame):
         webbrowser.open_new_tab("http://dvhanalytics.com/")
 
     @staticmethod
+    def on_dvha_edit(evt):
+        webbrowser.open_new_tab("https://github.com/cutright/DVHA-DICOM-Editor")
+
+    @staticmethod
     def on_report_issue(evt):
         webbrowser.open_new_tab("https://github.com/cutright/DVH-Analytics/issues")
 
-    @staticmethod
-    def on_python_libraries(evt):
-        PythonLibraries()
-
-    @staticmethod
-    def on_about(evt):
-        About()
-
     def on_pref(self, *args):
-        UserSettings(self.options)
+        if self.user_settings is None:
+            self.user_settings = UserSettings(self)
+            self.user_settings.Show()
+        else:
+            self.user_settings.Raise()
 
     def on_sql(self, *args):
         SQLSettingsDialog(self.options)
         [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db()]()
 
-    def on_save_plot_dvhs(self, evt):
-        save_data_to_file(self, 'Save DVHs plot', self.plot.html_str,
-                          wildcard="HTML files (*.html)|*.html")
-
-    def on_save_plot_time_series(self, evt):
-        save_data_to_file(self, 'Save Time Series plot', self.time_series.plot.html_str,
-                          wildcard="HTML files (*.html)|*.html")
-
-    def on_save_plot_correlation(self, evt):
-        save_data_to_file(self, 'Save Correlation plot', self.correlation.plot.html_str,
-                          wildcard="HTML files (*.html)|*.html")
-
-    def on_save_plot_regression(self, evt):
-        save_data_to_file(self, 'Save Regression plot', self.regression.plot.html_str,
-                          wildcard="HTML files (*.html)|*.html")
-
-    def on_save_plot_control_chart(self, evt):
-        save_data_to_file(self, 'Save Control Chart plot', self.control_chart.plot.html_str,
-                          wildcard="HTML files (*.html)|*.html")
+    def on_export_figure(self, evt):
+        if self.save_data:
+            if self.export_figure is None:
+                self.export_figure = ExportFigure(self)
+                self.export_figure.Show()
+            else:
+                self.export_figure.Raise()
+        else:
+            wx.MessageBox('There is no data to save. Please query/open some data first.', 'Save Error',
+                          wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
 
     def on_view_dvhs(self, evt):
         self.view_table_data('DVHs')
@@ -957,6 +955,9 @@ class DVHAMainFrame(wx.Frame):
         else:
             self.no_queried_data_dlg()
 
+    def on_protocol_editor(self, *evt):
+        ProtocolsEditor(self.roi_map)
+
     def no_queried_data_dlg(self):
         dlg = wx.MessageDialog(self, 'Please query/open some data first.', 'ERROR!', wx.ICON_ERROR | wx.OK_DEFAULT)
         dlg.ShowModal()
@@ -973,6 +974,19 @@ class DVHAMainFrame(wx.Frame):
             self.correlation.plot.redraw_plot()
             self.regression.plot.redraw_plot()
             self.control_chart.plot.redraw_plot()
+
+    def apply_plot_options(self):
+        self.plot.apply_options()
+        self.time_series.plot.apply_options()
+        self.correlation.plot.apply_options()
+        self.regression.apply_plot_options()  # applies to MVR frames too
+        self.control_chart.plot.apply_options()
+
+        for frame in self.loaded_mvr_ml_frames:
+            try:
+                frame.apply_plot_options()
+            except RuntimeError:
+                pass
 
     def update_stats_data_plots(self):
         if self.group_data[1]['dvh']:

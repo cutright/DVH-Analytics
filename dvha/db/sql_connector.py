@@ -168,13 +168,12 @@ class DVH_SQL:
         :return: The current time as seen by the SQL database
         :rtype: datetime
         """
-
         return self.query_generic("SELECT %s" % self.sql_cmd_now)[0][0]
 
     @property
     def sql_cmd_now(self):
         if self.db_type == 'sqlite':
-            sql_cmd = "date('now')"
+            sql_cmd = "strftime('%Y-%m-%d %H:%M:%f', 'now', 'localtime')"
         else:
             sql_cmd = "NOW()"
         return sql_cmd
@@ -217,7 +216,12 @@ class DVH_SQL:
             raise SQLError(str(e), update)
 
     def is_study_instance_uid_in_table(self, table_name, study_instance_uid):
-        return self.is_value_in_table(table_name, study_instance_uid, 'study_instance_uid')
+        # As of DVH v0.7.5, study_instance_uid may end with _N where N is the nth plan of a file set
+        query = "SELECT DISTINCT study_instance_uid FROM %s WHERE study_instance_uid LIKE '%s%%';" % \
+                (table_name, study_instance_uid)
+        self.cursor.execute(query)
+        results = self.cursor.fetchall()
+        return bool(results)
 
     def is_mrn_in_table(self, table_name, mrn):
         return self.is_value_in_table(table_name, mrn, 'mrn')
@@ -366,9 +370,7 @@ class DVH_SQL:
                     "roi_name = '%s' and study_instance_uid = '%s'" % (variation, study_instance_uid))
 
     def drop_tables(self):
-        """
-        Delete all tables in the database if they exist
-        """
+        """Delete all tables in the database if they exist"""
         for table in self.tables:
             self.cursor.execute("DROP TABLE IF EXISTS %s;" % table)
             self.cnx.commit()
@@ -383,18 +385,26 @@ class DVH_SQL:
         self.cnx.commit()
 
     def initialize_database(self):
-        """
-        Ensure that all of the latest SQL columns exist in the user's database
-        """
+        """Ensure that all of the latest SQL columns exist in the user's database"""
         create_tables_file = [CREATE_PGSQL_TABLES, CREATE_SQLITE_TABLES][self.db_type == 'sqlite']
         self.execute_file(create_tables_file)
 
     def reinitialize_database(self):
-        """
-        Delete all data and create all tables with latest columns
-        """
+        """Delete all data and create all tables with latest columns"""
         self.drop_tables()
+        self.vacuum()
         self.initialize_database()
+
+    def vacuum(self):
+        """Call to reclaim space in the database"""
+        if self.db_type == 'sqlite':
+            self.cnx.isolation_level = None
+            self.cnx.execute('VACUUM')
+            self.cnx.isolation_level = ''
+        else:
+            # TODO: PGSQL VACUUM needs testing
+            # self.cnx.execute('VACUUM')
+            pass
 
     def does_db_exist(self):
         """

@@ -1,5 +1,21 @@
 # Change log of DVH Analytics
 
+v0.7.5 (2020.04.09)
+--------------------
+ - [Import] Option to import DVH stored in DICOM RT-Dose rather than calculate it. NOTE: Currently the source of the DVH
+  is not stored in the database.
+ - [Import] Fixed bug that caused datetime parsing to fail if DICOM timestamp had fractional seconds
+ (avoid the "unconverted data remains" error).
+ - [Import] Option to turn off automatic dose summation: [#57](https://github.com/cutright/DVH-Analytics/issues/57)
+ - [Import] Bug fix: [#59](https://github.com/cutright/DVH-Analytics/issues/59)
+ - [Import] SQLite import_time_stamp now actually includes time, and is in your local timezone
+ - [Import] SoftwareVersions and Deferred read error fix: [#36](https://github.com/cutright/DVH-Analytics/issues/36)
+ - [Import] Treatment modalities are sorted before importing so database doesn't have ModalityA,ModalityB and 
+ ModalityB,ModalityA
+ - [Export] New figure export implementation in tool bar, supports SVG and HTML. Note that SVG export requires 
+ phantomJS to be installed, which is not a python library.
+ - [Plots] Plot options in User Settings no longer require DVHA to be restarted to be applied.
+
 v0.7.4 (2020.03.13)
 --------------------
  - [Endpoints] Fixed a bug where endpoint short-hand would not display on MS Windows
