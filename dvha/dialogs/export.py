@@ -410,5 +410,10 @@ class ExportFigure(wx.Frame):
         wx.CallAfter(self.on_close)
 
     def on_close(self, *evt):
+        self.save_options()
         self.parent.export_figure = None
         self.Destroy()
+
+    def save_options(self):
+        self.options.save_fig_param = {key: getattr(self, key) for key in self.keys if key not in ['plot', 'format']}
+        self.options.save()

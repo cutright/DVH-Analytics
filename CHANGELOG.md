@@ -1,6 +1,6 @@
 # Change log of DVH Analytics
 
-v0.7.5 (TBD)
+v0.7.5 (2020.04.09)
 --------------------
  - [Import] Option to import DVH stored in DICOM RT-Dose rather than calculate it. NOTE: Currently the source of the DVH
   is not stored in the database.
