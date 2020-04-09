@@ -171,6 +171,11 @@ class DVH_SQL:
         return self.query_generic("SELECT %s" % self.sql_cmd_now)[0][0]
 
     @property
+    def now_str(self):
+        now = self.now.replace('-', '').replace(' ', '').replace(':', '').split('.')
+        return now[0] + now[1][:3]
+
+    @property
     def sql_cmd_now(self):
         if self.db_type == 'sqlite':
             sql_cmd = "datetime('now', 'localtime')"
@@ -245,6 +250,7 @@ class DVH_SQL:
         for column in columns:
             if row[column] is None or row[column][0] is None or row[column][0] == '':
                 if column == 'import_time_stamp':
+                    now = self.now
                     values.append(self.sql_cmd_now)
                 else:
                     values.append("NULL")

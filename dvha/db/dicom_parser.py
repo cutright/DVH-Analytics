@@ -110,7 +110,7 @@ class DICOM_Parser:
 
     def update_stored_values(self):
         keys = ['study_instance_uid_to_be_imported', 'patient_name', 'mrn', 'sim_study_date', 'birth_date',
-                'rx_dose', 'ptv_names', 'physician', 'ptv_exists', 'tx_site']
+                'rx_dose', 'ptv_names', 'physician', 'ptv_exists', 'tx_site', 'patient_orientation']
         self.stored_values = {key: getattr(self, key) for key in keys}
 
     def __initialize_rx_beam_and_ref_beam_data(self):
@@ -622,11 +622,11 @@ class DICOM_Parser:
 
     @property
     def patient_orientation(self):
+        # TODO: database assumes only one orientation (i.e., three characters)
         seq = self.get_attribute('plan', 'PatientSetupSequence')
         if seq is not None:
-            return ','.join([setup.PatientPosition for setup in seq])
-        else:
-            return 'None'
+            # return ','.join([setup.PatientPosition for setup in seq])
+            return str(seq[0].PatientPosition)[:3]
 
     @property
     def plan_time_stamp(self):
@@ -1499,6 +1499,10 @@ class PreImportData:
         else:
             ans = self.stored_values['tx_site']
         return self.process_global_over_ride('tx_site', ans)
+
+    @property
+    def patient_orientation(self):
+        return self.stored_values['patient_orientation']
 
     def process_global_over_ride(self, key, pre_over_ride_value):
         if self.global_plan_over_rides:

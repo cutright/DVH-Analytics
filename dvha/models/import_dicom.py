@@ -32,6 +32,7 @@ from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, DelPhysicianROI,
 from dvha.models.data_table import DataTable
 from dvha.paths import ICONS, TEMP_DIR
 from dvha.tools.dicom_dose_sum import DoseGrid
+from dvha.tools.errors import ErrorDialog
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
     set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size,\
@@ -793,6 +794,8 @@ class ImportDicomFrame(wx.Frame):
 
     def on_import(self, evt):
         if self.parsed_dicom_data and self.dicom_importer.checked_plans:
+            self.patient_orientation_warning()
+
             self.roi_map.write_to_file()
             self.options.set_option('KEEP_IN_INBOX', self.checkbox_keep_in_inbox.GetValue())
             self.options.set_option('AUTO_SUM_DOSE', self.checkbox_auto_sum_dose.GetValue())
@@ -963,6 +966,15 @@ class ImportDicomFrame(wx.Frame):
         self.dicom_importer.update_mapped_roi_status(physician)
         self.update_input_roi_physician_enable()
 
+    def patient_orientation_warning(self):
+        dsets = self.parsed_dicom_data
+        non_hfs = {ds.mrn: ds.patient_orientation for ds in dsets.values() if ds.patient_orientation != 'HFS'}
+        if non_hfs:
+            caption = "Non-HFS Orientations Detected"
+            msg = "WARNGING: Due to a bug in dicompyler-core <=0.5.5, DVHs may be incorrect for non-HFS orientations." \
+                  " Please verify the following patients (MRNs):\n%s" % ', '.join(sorted(list(non_hfs)))
+            ErrorDialog(self, msg, caption)
+
 
 class ImportStatusDialog(wx.Dialog):
     """
@@ -1111,7 +1123,10 @@ class StudyImporter:
 
         # Store SQL time for deleting a partially imported plan
         with DVH_SQL() as cnx:
-            self.last_import_time = cnx.now
+            if cnx.db_type == 'sqlite':
+                self.last_import_time = cnx.now_str
+            else:
+                self.last_import_time = cnx.now
 
         self.init_params = init_params
         self.msg = msg
@@ -1322,7 +1337,7 @@ class StudyImporter:
         """
         with DVH_SQL() as cnx:
             if cnx.db_type == 'sqlite':
-                cnx.delete_rows("import_time_stamp > date(%s)" % self.last_import_time)
+                cnx.delete_rows("import_time_stamp BETWEEN %s and %s" % (self.last_import_time, cnx.now_str))
             else:
                 cnx.delete_rows("import_time_stamp > '%s'::date" % self.last_import_time)
 
