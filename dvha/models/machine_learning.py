@@ -967,3 +967,7 @@ class MachineLearningModelViewer:
     @property
     def stats_data_has_y(self):
         return self.y_variable in list(self.stats_data.data)
+
+    def apply_plot_options(self):
+        self.ml_frame.plot.apply_options()
+        self.ml_frame.redraw_plot()

@@ -110,6 +110,9 @@ class DVHAMainFrame(wx.Frame):
 
         self.Bind(wx.EVT_CLOSE, self.on_quit)
         self.tool_bar_windows = {key: None for key in ['import', 'database', 'roi_map']}
+        self.loaded_mvr_ml_frames = []
+        self.user_settings = None
+        self.export_figure = None
 
         wx.CallAfter(self.__catch_failed_sql_connection_on_app_launch)
 
@@ -510,11 +513,13 @@ class DVHAMainFrame(wx.Frame):
             if dlg.ShowModal() == wx.ID_OK:
                 model_file_path = dlg.GetPath()
                 dlg.Destroy()
-                LoadMultiVarModelFrame(model_file_path, self.group_data, self.selected_group, self.options)
+                self.loaded_mvr_ml_frames.append(LoadMultiVarModelFrame(model_file_path, self.group_data,
+                                                                        self.selected_group, self.options))
 
     def on_load_ml_model(self, *evt):
         if self.group_data[self.selected_group]['stats_data']:
-            MachineLearningModelViewer(self, self.group_data, self.selected_group, self.options)
+            self.loaded_mvr_ml_frames.append(MachineLearningModelViewer(self, self.group_data,
+                                                                        self.selected_group, self.options))
         else:
             wx.MessageBox('No data as been queried for Group %s.' % self.selected_group, 'Error',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
@@ -865,8 +870,11 @@ class DVHAMainFrame(wx.Frame):
         webbrowser.open_new_tab("https://github.com/cutright/DVH-Analytics/issues")
 
     def on_pref(self, *args):
-        frame = UserSettings(self)
-        frame.Show()
+        if self.user_settings is None:
+            self.user_settings = UserSettings(self)
+            self.user_settings.Show()
+        else:
+            self.user_settings.Raise()
 
     def on_sql(self, *args):
         SQLSettingsDialog(self.options)
@@ -874,8 +882,11 @@ class DVHAMainFrame(wx.Frame):
 
     def on_export_figure(self, evt):
         if self.save_data:
-            frame = ExportFigure(self)
-            frame.Show()
+            if self.export_figure is None:
+                self.export_figure = ExportFigure(self)
+                self.export_figure.Show()
+            else:
+                self.export_figure.Raise()
         else:
             wx.MessageBox('There is no data to save. Please query/open some data first.', 'Save Error',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
@@ -961,12 +972,17 @@ class DVHAMainFrame(wx.Frame):
             self.control_chart.plot.redraw_plot()
 
     def apply_plot_options(self):
-        if self.group_data[1]['dvh']:
-            self.plot.apply_options()
-            self.time_series.plot.apply_options()
-            self.correlation.plot.apply_options()
-            self.regression.plot.apply_options()
-            self.control_chart.plot.apply_options()
+        self.plot.apply_options()
+        self.time_series.plot.apply_options()
+        self.correlation.plot.apply_options()
+        self.regression.apply_plot_options()  # applies to MVR frames too
+        self.control_chart.plot.apply_options()
+
+        for frame in self.loaded_mvr_ml_frames:
+            try:
+                frame.apply_plot_options()
+            except RuntimeError:
+                pass
 
     def update_stats_data_plots(self):
         if self.group_data[1]['dvh']:

@@ -300,6 +300,7 @@ class ExportFigure(wx.Frame):
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button['Export'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_dismiss, id=wx.ID_CANCEL)
+        self.Bind(wx.EVT_CLOSE, self.on_close)
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -402,4 +403,8 @@ class ExportFigure(wx.Frame):
         return {key: getattr(self, key) for key in self.fig_attr_keys}
 
     def on_dismiss(self, *evt):
-        wx.CallAfter(self.Destroy)
+        wx.CallAfter(self.on_close)
+
+    def on_close(self, *evt):
+        self.parent.export_figure = None
+        self.Destroy()

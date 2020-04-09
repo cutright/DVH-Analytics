@@ -385,6 +385,14 @@ class RegressionFrame:
                 except RuntimeError:
                     pass
 
+    def apply_plot_options(self):
+        self.plot.apply_options()
+        for mvr_frame in self.mvr_frames:
+            try:
+                mvr_frame.apply_plot_options()
+            except RuntimeError:
+                pass
+
 
 class MultiVarResultsFrame(wx.Frame):
     """
@@ -556,6 +564,16 @@ class MultiVarResultsFrame(wx.Frame):
                     frame.Close()
                 except RuntimeError:
                     pass
+
+    def apply_plot_options(self):
+        self.plot.apply_options()
+        self.plot.redraw_plot()
+        for frame in self.ml_frames:
+            try:
+                frame.plot.apply_options()
+                frame.plot.redraw_plot()
+            except RuntimeError:
+                pass
 
 
 class LoadMultiVarModelFrame(MultiVarResultsFrame):
