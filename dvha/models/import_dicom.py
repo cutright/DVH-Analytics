@@ -1123,10 +1123,7 @@ class StudyImporter:
 
         # Store SQL time for deleting a partially imported plan
         with DVH_SQL() as cnx:
-            if cnx.db_type == 'sqlite':
-                self.last_import_time = cnx.now_str
-            else:
-                self.last_import_time = cnx.now
+            self.last_import_time = cnx.now
 
         self.init_params = init_params
         self.msg = msg
@@ -1337,7 +1334,7 @@ class StudyImporter:
         """
         with DVH_SQL() as cnx:
             if cnx.db_type == 'sqlite':
-                cnx.delete_rows("import_time_stamp BETWEEN %s and %s" % (self.last_import_time, cnx.now_str))
+                cnx.delete_rows("DATETIME(import_time_stamp) > DATETIME('%s')" % self.last_import_time)
             else:
                 cnx.delete_rows("import_time_stamp > '%s'::date" % self.last_import_time)
 
