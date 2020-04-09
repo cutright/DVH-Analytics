@@ -11,6 +11,7 @@ Classes to view and calculate Machine Learning predictions
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx
+from functools import partial
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.model_selection import train_test_split
@@ -26,9 +27,10 @@ from dvha.tools.utilities import set_msw_background_color, get_window_size, load
 
 
 class MachineLearningFrame(wx.Frame):
-    def __init__(self, data, title, regressor=None, tool_tips=None, include_test_data=True):
+    def __init__(self, main_app_frame, data, title, regressor=None, tool_tips=None, include_test_data=True):
         wx.Frame.__init__(self, None)
 
+        self.main_app_frame = main_app_frame
         self.data = data
         self.title = title
         self.regressor = [regressor, ALGORITHMS[title]['regressor']][regressor is None]
@@ -278,16 +280,33 @@ class MachineLearningFrame(wx.Frame):
     def on_export(self, evt):
         save_data_to_file(self, 'Save machine learning data to csv', self.plot.get_csv())
 
-    def on_save_html(self, evt):
-        save_data_to_file(self, 'Save %s Plot' % self.title.title(), self.plot.html_str,
-                          wildcard="HTML files (*.html)|*.html")
-
-    def on_save_svg(self, *evt):
+    def on_save_html(self, *evt):
+        title = 'Save %s Plot to .html' % self.title.title()
         try:
-            save_data_to_file(self, 'Save %s plot to .svg' % self.title.title(), self.plot.export_svg, initial_dir="",
-                              data_type='function', wildcard="SVG files (*.svg)|*.svg")
+            if self.main_app_frame.export_figure is None:
+                save_data_to_file(self, title, self.plot.html_str, wildcard="HTML files (*.html)|*.html")
+            else:
+                self.save_fig_with_attr('html')
         except Exception as e:
             ErrorDialog(self, str(e), "Save Error")
+
+    def on_save_svg(self, *evt):
+        title = 'Save %s Plot to .svg' % self.title.title()
+        try:
+            if self.main_app_frame.export_figure is None:
+                save_data_to_file(self, title, self.plot.export_svg,
+                                  initial_dir="", data_type='function', wildcard="SVG files (*.svg)|*.svg")
+            else:
+                self.save_fig_with_attr('svg')
+        except Exception as e:
+            ErrorDialog(self, str(e), "Save Error")
+
+    def save_fig_with_attr(self, format_):
+        title = 'Save %s Plot to .%s' % (self.title.title(), format_)
+        fig_attr_dict = self.main_app_frame.export_figure.fig_attr_dict
+        func = partial(self.plot.save_figure, format_, fig_attr_dict)
+        save_data_to_file(self, title, func, initial_dir="", data_type='function',
+                          wildcard="%s files (*.%s)|*.%s" % (format_.upper(), format_, format_))
 
     def on_save_model(self, evt):
         data = {'y_variable': self.plot.y_variable,
@@ -325,8 +344,8 @@ class MachineLearningFrame(wx.Frame):
 
 
 class RandomForestFrame(MachineLearningFrame):
-    def __init__(self, data, include_test_data=True):
-        MachineLearningFrame.__init__(self, data, 'Random Forest', include_test_data=include_test_data)
+    def __init__(self, main_app_frame, data, include_test_data=True):
+        MachineLearningFrame.__init__(self, main_app_frame, data, 'Random Forest', include_test_data=include_test_data)
 
         self.input = {'n_estimators': wx.TextCtrl(self, wx.ID_ANY, "100"),
                       'criterion': wx.ComboBox(self, wx.ID_ANY, choices=["mse", "mae"],
@@ -377,8 +396,9 @@ class RandomForestFrame(MachineLearningFrame):
 
 
 class GradientBoostingFrame(MachineLearningFrame):
-    def __init__(self, data, include_test_data=True):
-        MachineLearningFrame.__init__(self, data, 'Gradient Boosting', include_test_data=include_test_data)
+    def __init__(self, main_app_frame, data, include_test_data=True):
+        MachineLearningFrame.__init__(self, main_app_frame, data, 'Gradient Boosting',
+                                      include_test_data=include_test_data)
 
         self.input = {'loss': wx.ComboBox(self, wx.ID_ANY, choices=["ls", "lad", "huber", "quantile"],
                                           style=wx.CB_DROPDOWN | wx.CB_READONLY),
@@ -448,8 +468,8 @@ class GradientBoostingFrame(MachineLearningFrame):
 
 
 class DecisionTreeFrame(MachineLearningFrame):
-    def __init__(self, data, include_test_data=True):
-        MachineLearningFrame.__init__(self, data, 'Decision Tree', include_test_data=include_test_data)
+    def __init__(self, main_app_frame, data, include_test_data=True):
+        MachineLearningFrame.__init__(self, main_app_frame, data, 'Decision Tree', include_test_data=include_test_data)
 
         self.input = {'criterion': wx.ComboBox(self, wx.ID_ANY, choices=["mse", "friedman_mse", "mae"],
                                                style=wx.CB_DROPDOWN | wx.CB_READONLY),
@@ -494,8 +514,9 @@ class DecisionTreeFrame(MachineLearningFrame):
 
 
 class SupportVectorRegressionFrame(MachineLearningFrame):
-    def __init__(self, data, include_test_data=True):
-        MachineLearningFrame.__init__(self, data, 'Support Vector Machine', include_test_data=include_test_data)
+    def __init__(self, main_app_frame, data, include_test_data=True):
+        MachineLearningFrame.__init__(self, main_app_frame, data, 'Support Vector Machine',
+                                      include_test_data=include_test_data)
 
         self.input = {'kernel': wx.ComboBox(self, wx.ID_ANY, "rbf",
                                             choices=["linear", "poly", "rbf", "sigmoid", "precomputed"],

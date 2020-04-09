@@ -314,7 +314,7 @@ class DVHAMainFrame(wx.Frame):
         self.plot = PlotStatDVH(self.notebook_tab['DVHs'], self.group_data, self.options)
         self.time_series = TimeSeriesFrame(self.notebook_tab['Time Series'], self.group_data, self.options)
         self.correlation = CorrelationFrame(self.notebook_tab['Correlation'], self.group_data, self.options)
-        self.regression = RegressionFrame(self.notebook_tab['Regression'], self.group_data, self.options)
+        self.regression = RegressionFrame(self.notebook_tab['Regression'], self.group_data, self.options, self)
         self.control_chart = ControlChartFrame(self.notebook_tab['Control Chart'], self.group_data, self.options)
         self.radbio = RadBioFrame(self.notebook_tab['Rad Bio'], self.group_data, self.time_series, self.regression,
                                   self.control_chart)

@@ -30,7 +30,7 @@ class RegressionFrame:
     """
     Object to be passed into notebook panel for the Regression tab
     """
-    def __init__(self, parent, group_data, options):
+    def __init__(self, parent, group_data, options, main_app_frame):
         """
         :param parent:  notebook panel in main view
         :type parent: Panel
@@ -42,6 +42,7 @@ class RegressionFrame:
         self.parent = parent
         self.options = options
         self.group_data = group_data
+        self.main_app_frame = main_app_frame
         self.group = 1
         self.choices = []
 
@@ -289,7 +290,7 @@ class RegressionFrame:
                 x_variables = list(self.x_variable_nodes[y_variable])
 
                 try:
-                    self.mvr_frames.append(MultiVarResultsFrame(y_variable, x_variables,
+                    self.mvr_frames.append(MultiVarResultsFrame(self.main_app_frame, y_variable, x_variables,
                                                                 self.group_data, self.group, self.options))
                     self.mvr_frames[-1].Show()
                 except Exception as e:
@@ -511,16 +512,16 @@ class MultiVarResultsFrame(wx.Frame):
         return self.plot.get_final_stats_data(include_all=self.ml_include_all)
 
     def on_random_forest(self, evt):
-        self.ml_frames.append(RandomForestFrame(self.final_stats_data))
+        self.ml_frames.append(RandomForestFrame(self.main_app_frame, self.final_stats_data))
 
     def on_gradient_boosting(self, evt):
-        self.ml_frames.append(GradientBoostingFrame(self.final_stats_data))
+        self.ml_frames.append(GradientBoostingFrame(self.main_app_frame, self.final_stats_data))
 
     def on_decision_tree(self, evt):
-        self.ml_frames.append(DecisionTreeFrame(self.final_stats_data))
+        self.ml_frames.append(DecisionTreeFrame(self.main_app_frame, self.final_stats_data))
 
     def on_support_vector_regression(self, evt):
-        self.ml_frames.append(SupportVectorRegressionFrame(self.final_stats_data))
+        self.ml_frames.append(SupportVectorRegressionFrame(self.main_app_frame, self.final_stats_data))
 
     def on_export(self, evt):
         save_data_to_file(self, 'Save multi-variable regression data to csv', self.plot.get_csv_data())
@@ -532,8 +533,17 @@ class MultiVarResultsFrame(wx.Frame):
         self.radiobox_include_back_elim.Enable()
 
     def on_save_html(self, *evt):
-        save_data_to_file(self, 'Save multi-variable regression plot to .html', self.plot.html_str,
-                          wildcard="HTML files (*.html)|*.html")
+        try:
+            if self.main_app_frame.export_figure is None:
+                save_data_to_file(self, 'Save multi-variable regression plot to .html', self.plot.html_str,
+                                  wildcard="HTML files (*.html)|*.html")
+            else:
+                fig_attr_dict = self.main_app_frame.export_figure.fig_attr_dict
+                func = partial(self.plot.save_figure, 'html', fig_attr_dict)
+                save_data_to_file(self, 'Save multi-variable regression plot to .html', func,
+                                  initial_dir="", data_type='function', wildcard="HTML files (*.html)|*.html")
+        except Exception as e:
+            ErrorDialog(self, str(e), "Save Error")
 
     def on_save_svg(self, *evt):
         try:
@@ -541,8 +551,9 @@ class MultiVarResultsFrame(wx.Frame):
                 save_data_to_file(self, 'Save multi-variable regression plot to .svg', self.plot.export_svg,
                                   initial_dir="", data_type='function', wildcard="SVG files (*.svg)|*.svg")
             else:
-                save_func = self.main_app_frame.export_figure.save_plot_function
-                save_data_to_file(self, 'Save multi-variable regression plot to .svg', save_func,
+                fig_attr_dict = self.main_app_frame.export_figure.fig_attr_dict
+                func = partial(self.plot.save_figure, 'svg', fig_attr_dict)
+                save_data_to_file(self, 'Save multi-variable regression plot to .svg', func,
                                   initial_dir="", data_type='function', wildcard="SVG files (*.svg)|*.svg")
         except Exception as e:
             ErrorDialog(self, str(e), "Save Error")
