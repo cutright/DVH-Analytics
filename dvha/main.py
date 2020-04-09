@@ -141,7 +141,9 @@ class DVHAMainFrame(wx.Frame):
                                        wx.NullBitmap, wx.ITEM_NORMAL, description[key], "")
 
             if key in {'Close', 'Image', 'ROI Map'}:
-                self.frame_toolbar.AddSeparator()
+                separator_count = 4 if is_windows() else 1  # MSW separator is very thin compared to mac
+                for _ in range(separator_count):
+                    self.frame_toolbar.AddSeparator()
 
         self.Bind(wx.EVT_TOOL, self.on_save, id=self.toolbar_ids['Save'])
         self.Bind(wx.EVT_TOOL, self.on_open, id=self.toolbar_ids['Open'])
