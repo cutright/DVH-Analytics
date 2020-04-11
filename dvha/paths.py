@@ -13,9 +13,10 @@ A collection of directories and paths updated with the script directory and user
 from os.path import join, dirname, expanduser
 
 SCRIPT_DIR = dirname(__file__)
-ICONS_DIR = join(SCRIPT_DIR, 'icons')
+RESOURCES_DIR = join(SCRIPT_DIR, 'resources')
+ICONS_DIR = join(RESOURCES_DIR, 'icons')
 WIN_APP_ICON = join(ICONS_DIR, 'dvha.ico')
-LOGO_PATH = join(SCRIPT_DIR, 'logo.png')
+LOGO_PATH = join(RESOURCES_DIR, 'logo.png')
 APPS_DIR = join(expanduser('~'), 'Apps')
 APP_DIR = join(APPS_DIR, 'dvh_analytics')
 PREF_DIR = join(APP_DIR, 'preferences')
@@ -27,7 +28,7 @@ BACKUP_DIR = join(DATA_DIR, 'backup')
 TEMP_DIR = join(DATA_DIR, 'temp')
 MODELS_DIR = join(DATA_DIR, 'models')
 PROTOCOL_DIR = join(DATA_DIR, 'protocols')
-PROTOCOL_DEFAULT_DIR = join(SCRIPT_DIR, 'protocols')
+PROTOCOL_DEFAULT_DIR = join(RESOURCES_DIR, 'protocols')
 DIRECTORIES = {key[:-4]: value for key, value in locals().items() if key.endswith('_DIR')}
 
 OPTIONS_PATH = join(PREF_DIR, '.options')

@@ -1,0 +1,50 @@
+// Script by Dan Cutright, PhD
+// Northwestern Medince
+// March 30, 2017
+// Creates a point with name describing current trial's Rx
+
+Store.StringAt.MaxDose = "Max Dose";
+Store.StringAt.ROIMin = "ROI Min";
+Store.StringAt.ROIMean = "ROI Mean";
+Store.StringAt.ROIMax = "ROI Max";
+Store.StringAt.PointDose = "Point Dose";
+
+Store.StringAt.Rx = "rx";
+Store.At.Rx.AppendString = Store.At.RxCount.Round;
+Store.At.Rx.AppendString = ": ";
+Store.At.Rx.AppendString = TrialList .Current .PrescriptionList .Current .Name.String;
+Store.At.Rx.AppendString = ": ";
+
+Store.At.Rx.AppendString = TrialList .Current .PrescriptionList .Current .PrescriptionDose.String;
+Store.At.Rx.AppendString = " cGy x";
+Store.At.Rx.AppendString = TrialList .Current .PrescriptionList .Current .NumberOfFractions. String;
+Store.At.Rx.AppendString = " to";
+Store.At.Rx.AppendString = TrialList .Current .PrescriptionList .Current .PrescriptionPercent.String;
+
+IF.TrialList .Current .PrescriptionList .Current .NormalizationMethod.String.STRINGEQUALTO.Store.StringAt.MaxDose.String.
+	THEN.Store.At.Rx.AppendString = "%: plan_max";
+
+IF.TrialList .Current .PrescriptionList .Current .NormalizationMethod.String.STRINGEQUALTO.Store.StringAt.ROIMin.String.
+	THEN.Store.At.Rx.AppendString = "%: roi_min: ";
+IF.TrialList .Current .PrescriptionList .Current .NormalizationMethod.String.STRINGEQUALTO.Store.StringAt.ROIMin.String.
+	THEN.Store.At.Rx.AppendString = TrialList .Current .PrescriptionList .Current .PrescriptionRoi.String;
+
+IF.TrialList .Current .PrescriptionList .Current .NormalizationMethod.String.STRINGEQUALTO.Store.StringAt.ROIMean.String.
+	THEN.Store.At.Rx.AppendString = "%: roi_mean: ";
+IF.TrialList .Current .PrescriptionList .Current .NormalizationMethod.String.STRINGEQUALTO.Store.StringAt.ROIMean.String.
+	THEN.Store.At.Rx.AppendString = TrialList .Current .PrescriptionList .Current .PrescriptionRoi.String;
+
+IF.TrialList .Current .PrescriptionList .Current .NormalizationMethod.String.STRINGEQUALTO.Store.StringAt.ROIMax.String.
+	THEN.Store.At.Rx.AppendString = "%: roi_max: ";
+IF.TrialList .Current .PrescriptionList .Current .NormalizationMethod.String.STRINGEQUALTO.Store.StringAt.ROIMax.String.
+	THEN.Store.At.Rx.AppendString = TrialList .Current .PrescriptionList .Current .PrescriptionRoi.String;
+
+IF.TrialList .Current .PrescriptionList .Current .NormalizationMethod.String.STRINGEQUALTO.Store.StringAt.PointDose.String.
+	THEN.Store.At.Rx.AppendString = "%: pt: ";
+IF.TrialList .Current .PrescriptionList .Current .NormalizationMethod.String.STRINGEQUALTO.Store.StringAt.PointDose.String.
+	THEN.Store.At.Rx.AppendString = TrialList .Current .PrescriptionList .Current .PrescriptionPoint.String;
+
+CreateNewPOI = "Add Point";
+PoiList .Current .Name = Store.At.Rx.String;
+
+Store.At.RxCount.Add = 1;

@@ -1,0 +1,35 @@
+// Script by Dan Cutright, PhD
+// Northwestern Medince
+// March 30, 2017
+// Executes DC-Create-Rx-POI.Script.p3rtp for each Rx
+// Adds a a tx site point
+
+Store.FloatAt.RxCount = 1;
+TrialList.Current.PrescriptionList.ChildrenEachCurrent.#"@".Script.ExecuteNow = "/usr/local/adacnew/PinnacleSiteData/Scripts/DVH-Analytics_Create-Rx-POI.Script.p3rtp";
+
+Store.FreeAt.RxCount = "";
+Store.FreeAt.MaxDose = "Max Dose";
+Store.FreeAt.ROIMin = "ROI Min";
+Store.FreeAt.ROIMean = "ROI Mean";
+Store.FreeAt.ROIMax = "ROI Max";
+Store.FreeAt.PointDose = "Point Dose";
+
+Store.FreeAt.Rx = "";
+
+Store.At.TxSite = SimpleString{};
+WindowList.TempStoreEditor.CreateStoreEditor = "Store.Address";
+WindowList.TempStoreEditor.Unrealize = "";
+WindowList.TempStoreEditor.IsModal = 1;
+WindowList.TempStoreEditor.Create = "";
+WindowList.TempStoreEditor.Destroy = "";
+Store.At.FileID = Store.At.TxSite.String;
+
+Store.At.TxSiteString = SimpleString{};
+Store.At.TxSiteString.AppendString = "tx: ";
+Store.At.TxSiteString.AppendString = Store.At.TxSite.String;
+
+CreateNewPOI = "Add Point";
+PoiList .Current .Name = Store.At.TxSiteString.String;
+Store.FreeAt.TxSiteString = "";
+// Store.FreeAt.TxSite = "";
+Store.FreeAt.FileID = "";
