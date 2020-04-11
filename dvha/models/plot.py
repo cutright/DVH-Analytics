@@ -180,7 +180,8 @@ class Plot:
             fig.output_backend = "canvas"
 
     def export_png(self, file_name):
-        export_png(self.bokeh_layout, filename=file_name)
+        for fig in self.figures:
+            export_png(fig, filename=file_name)
 
     def export_html(self, file_name):
         with open(file_name, 'w') as doc:
@@ -1955,6 +1956,10 @@ class PlotMachineLearning(Plot):
         export_svgs(self.bokeh_layout, filename=file_name)
         for fig in self.figures_list:
             fig.output_backend = "canvas"
+
+    def export_png(self, file_name):
+        for fig in self.figures_list:
+            export_png(fig, filename=file_name)
 
     def save_figure(self, fig_attr_dict, file_name):
         figure_format = splitext(file_name)[1][1:].lower()

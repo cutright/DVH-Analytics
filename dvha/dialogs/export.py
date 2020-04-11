@@ -325,7 +325,8 @@ class ExportFigure(wx.Frame):
         self.SetSizer(sizer_wrapper)
         self.Fit()
         self.Layout()
-        self.Center()
+
+        self.options.set_window_position(self, 'export_figure')
 
     @property
     def plot(self):
@@ -395,6 +396,7 @@ class ExportFigure(wx.Frame):
         wx.CallAfter(self.on_close)
 
     def on_close(self, *evt):
+        self.options.save_window_position(self, 'user_settings')
         self.save_options()
         self.parent.export_figure = None
         self.Destroy()

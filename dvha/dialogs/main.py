@@ -630,6 +630,7 @@ class UserSettings(wx.Frame):
 
         self.parent = parent
         self.options = parent.options
+        self.options.edit_detected = False
 
         colors = list(plot_colors.cnames)
         colors.sort()
@@ -764,7 +765,7 @@ class UserSettings(wx.Frame):
 
         label_dvh_bin_width = wx.StaticText(self, wx.ID_ANY, "DVH Bin Width (cGy):")
         label_dvh_bin_width.SetToolTip("Value must be an integer")
-        sizer_dvh_bin_width.Add(label_dvh_bin_width, 0, wx.EXPAND | wx.RIGHT, 10)
+        sizer_dvh_bin_width.Add(label_dvh_bin_width, 0, wx.EXPAND | wx.RIGHT | wx.TOP, 7)
         sizer_dvh_bin_width.Add(self.dvh_bin_width_input, 1, wx.ALL, 5)
         sizer_plot_options.Add(sizer_dvh_bin_width, 0, wx.BOTTOM, 10)
 
@@ -818,7 +819,8 @@ class UserSettings(wx.Frame):
         self.SetSizer(sizer_wrapper)
         self.Layout()
         self.Fit()
-        self.Center()
+
+        self.options.set_window_position(self, 'user_settings')
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.inbox_dir_dlg, id=self.button_inbox.GetId())
@@ -844,23 +846,27 @@ class UserSettings(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_ok, id=wx.ID_OK)
         self.Bind(wx.EVT_BUTTON, self.on_cancel, id=wx.ID_CANCEL)
 
-        self.Bind(wx.EVT_CLOSE, self.close)
+        self.Bind(wx.EVT_CLOSE, self.on_cancel)
 
     def on_ok(self, *evt):
-        self.options.save()
-        if self.is_edited:
+        if self.options.is_edited:  # Tracks edits since last redraw
             self.apply_and_redraw_plots()
         self.close()
 
     def on_cancel(self, *evt):
-        self.options.load()
-        if self.is_edited:
+        if self.is_edited:  # Tracks edits since last options save
+            self.options.load()
             self.apply_and_redraw_plots()
         self.close()
 
     def close(self, *evt):
+        self.save_window_position()
+        self.options.save()
         self.parent.user_settings = None
         self.Destroy()
+
+    def save_window_position(self):
+        self.options.save_window_position(self, 'user_settings')
 
     def inbox_dir_dlg(self, evt):
         self.dir_dlg('inbox', self.text_ctrl_inbox)
@@ -1027,7 +1033,8 @@ class UserSettings(wx.Frame):
 
     def on_apply(self, *evt):
         self.apply_and_redraw_plots()
-        self.is_edited = True
+        self.is_edited = True  # Used to track edits since last options save
+        self.options.is_edited = False  # Used to track edits since redraw, is set to True on options.set_option()
 
     def apply_and_redraw_plots(self):
         self.parent.apply_plot_options()

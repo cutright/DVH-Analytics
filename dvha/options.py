@@ -23,6 +23,7 @@ class DefaultOptions:
     """Create default options, to be inherited by Options class"""
     def __init__(self):
         self.VERSION = __version__
+        self.is_edited = False
 
         self.DB_TYPE = 'sqlite'
         self.SQL_PGSQL_IP_HIST = []
@@ -178,6 +179,9 @@ class DefaultOptions:
                                'plot_height': 600,
                                'plot_width': 820}
 
+        self.positions = {'user_settings': None,
+                          'export_figure': None}
+
 
 class Options(DefaultOptions):
     def __init__(self):
@@ -194,7 +198,7 @@ class Options(DefaultOptions):
         self.option_attr = option_attr
 
     def load(self):
-
+        self.is_edited = False
         if isfile(OPTIONS_PATH) and self.validate_options_file():
             try:
                 with open(OPTIONS_PATH, 'rb') as infile:
@@ -208,7 +212,7 @@ class Options(DefaultOptions):
                     setattr(self, key, value)
 
     def save(self):
-
+        self.is_edited = False
         out_options = {}
         for attr in self.option_attr:
             out_options[attr] = getattr(self, attr)
@@ -227,6 +231,7 @@ class Options(DefaultOptions):
         if not hasattr(self, attr):
             print('WARNING: This option did not previously exist!')
         setattr(self, attr, value)
+        self.is_edited = True
 
     def save_checksum(self):
         check_sum = self.calculate_checksum()
@@ -261,6 +266,7 @@ class Options(DefaultOptions):
             return False
 
     def restore_defaults(self):
+        """Delete the store options file and checksum, load defaults"""
         if isfile(OPTIONS_PATH):
             unlink(OPTIONS_PATH)
         if isfile(OPTIONS_CHECKSUM_PATH):
@@ -270,4 +276,19 @@ class Options(DefaultOptions):
         for attr in default_options.__dict__:
             if not attr.startswith('_') and attr not in self._sql_vars:
                 setattr(self, attr, getattr(default_options, attr))
+
+    def clear_positions(self, *evt):
+        """Clear all stored window positions, may be useful if window is off screen on Show"""
+        self.positions = {key: None for key in list(self.positions)}
+
+    def set_window_position(self, frame, position_key):
+        """Given a frame, set to previously stored window position or center it"""
+        if self.positions[position_key] is not None:
+            frame.SetPosition(self.positions[position_key])
+        else:
+            frame.Center()
+
+    def save_window_position(self, frame, position_key):
+        """Store the position of the provided frame"""
+        self.positions[position_key] = frame.GetPosition()
 

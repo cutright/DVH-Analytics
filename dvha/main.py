@@ -225,6 +225,8 @@ class DVHAMainFrame(wx.Frame):
         if is_mac():
             menu_user_settings = settings_menu.Append(wx.ID_ANY, '&Preferences\tCtrl+,')
             self.Bind(wx.EVT_MENU, self.on_pref, menu_user_settings)
+        menu_win_pos = settings_menu.Append(wx.ID_ANY, 'Reset Window Positions')
+        self.Bind(wx.EVT_MENU, self.options.clear_positions, menu_win_pos)
 
         self.Bind(wx.EVT_MENU, self.on_toolbar_database, menu_db_admin)
         self.Bind(wx.EVT_MENU, self.on_view_dvhs, self.data_menu_items['DVHs'])
