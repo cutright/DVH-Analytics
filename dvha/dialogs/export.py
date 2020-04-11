@@ -18,7 +18,7 @@ from dvha.models.data_table import DataTable
 from dvha.paths import DATA_DIR
 from dvha.tools.errors import ErrorDialog
 from dvha.tools.utilities import get_selected_listctrl_items, save_object_to_file,\
-    set_msw_background_color, set_frame_icon
+    set_msw_background_color, set_frame_icon, get_wildcards
 
 
 def save_data_to_file(frame, title, data, wildcard="CSV files (*.csv)|*.csv", data_type='string', initial_dir=DATA_DIR):
@@ -266,7 +266,7 @@ class ExportFigure(wx.Frame):
         self.text_ctrl = {key: wx.TextCtrl(self, wx.ID_ANY, str(self.options.save_fig_param[key])) for key in keys_tc}
         self.label = {key: wx.StaticText(self, wx.ID_ANY, key.replace('_', ' ').title() + ':') for key in keys_tc}
 
-        self.keys_cb = ['background_fill_color', 'border_fill_color', 'plot', 'format']
+        self.keys_cb = ['background_fill_color', 'border_fill_color', 'plot']
         self.combo_box = {key: wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.TE_READONLY)
                           for key in self.keys_cb}
         for key in self.keys_cb:
@@ -278,6 +278,8 @@ class ExportFigure(wx.Frame):
 
         self.keys = keys_tc + self.keys_cb
         self.fig_attr_keys = keys_tc + ['background_fill_color', 'border_fill_color']
+
+        self.extensions = ['svg', 'html', 'png']
 
         self.__set_properties()
         self.__do_bind()
@@ -291,9 +293,6 @@ class ExportFigure(wx.Frame):
 
         self.combo_box['plot'].SetItems(sorted(list(self.plots)))
         self.combo_box['plot'].SetValue('DVHs')
-
-        self.combo_box['format'].SetItems(['HTML', 'SVG'])
-        self.combo_box['format'].SetValue('SVG')
 
         color_options = ['none'] + list(plot_colors.cnames)
         for key in ['background_fill_color', 'border_fill_color']:
@@ -333,26 +332,13 @@ class ExportFigure(wx.Frame):
         return self.plots[self.combo_box['plot'].GetValue()]
 
     @property
-    def export_title(self):
-        return "Save %s plot as .%s" % (self.combo_box['plot'].GetValue(), self.format.lower())
-
-    @property
-    def wildcard(self):
-        ext = self.combo_box['format'].GetValue()
-        return "%s files (*.%s)|*.%s" % (ext.upper(), ext.lower(), ext.lower())
-
-    @property
-    def format(self):
-        return self.combo_box['format'].GetValue()
-
-    @property
     def save_plot_function(self):
-        return partial(self.plot.save_figure, self.format.lower(), self.fig_attr_dict)
+        return partial(self.plot.save_figure, self.fig_attr_dict)
 
     def on_export(self, *evt):
         try:
-            save_data_to_file(self, self.export_title, self.save_plot_function, initial_dir="",
-                              data_type='function', wildcard=self.wildcard)
+            save_data_to_file(self, 'Export figure to file', self.save_plot_function, initial_dir="",
+                              data_type='function', wildcard=get_wildcards(self.extensions))
         except Exception as e:
             ErrorDialog(self, str(e), "Save Error")
 

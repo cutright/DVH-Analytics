@@ -10,9 +10,12 @@ A collection of directories and paths updated with the script directory and user
 #    See the file LICENSE included with this distribution, also
 #    available at https://github.com/cutright/DVH-Analytics
 
-from os.path import join, dirname, expanduser
+import sys
+from os import environ
+from os.path import join, dirname, expanduser, pathsep
 
 SCRIPT_DIR = dirname(__file__)
+PARENT_DIR = getattr(sys, '_MEIPASS', dirname(SCRIPT_DIR))  # PyInstaller compatibility
 RESOURCES_DIR = join(SCRIPT_DIR, 'resources')
 ICONS_DIR = join(RESOURCES_DIR, 'icons')
 WIN_APP_ICON = join(ICONS_DIR, 'dvha.ico')
@@ -35,7 +38,7 @@ OPTIONS_PATH = join(PREF_DIR, '.options')
 OPTIONS_CHECKSUM_PATH = join(PREF_DIR, '.options_checksum')
 IMPORT_SETTINGS_PATH = join(PREF_DIR, 'import_settings.txt')
 SQL_CNF_PATH = join(PREF_DIR, 'sql_connection.cnf')
-LICENSE_PATH = join(SCRIPT_DIR, 'LICENSE.txt')
+LICENSE_PATH = join(PARENT_DIR, 'LICENSE.txt')
 CREATE_PGSQL_TABLES = join(SCRIPT_DIR, 'db', 'create_tables.sql')
 CREATE_SQLITE_TABLES = join(SCRIPT_DIR, 'db', 'create_tables_sqlite.sql')
 TG263_CSV = join(SCRIPT_DIR, 'tools', 'TG263_Nomenclature_Worksheet_20170815.csv')
@@ -67,20 +70,8 @@ for key, value in ICONS.items():
     ICONS[key] = join(ICONS_DIR, value)
 
 
-def parse_settings_file(abs_file_path):
-    with open(abs_file_path, 'r') as document:
-        settings = {}
-        for line in document:
-            line = line.split()
-            if not line:
-                continue
-            if len(line) > 1:
-                settings[line[0]] = line[1:][0]
-                # Convert strings to boolean
-                if line[1:][0].lower() == 'true':
-                    settings[line[0]] = True
-                elif line[1:][0].lower() == 'false':
-                    settings[line[0]] = False
-            else:
-                settings[line[0]] = ''
-    return settings
+def set_phantom_js_path_environment():
+    """Edit the PATH environment for PhantomJS (for Bokeh's .svg export)"""
+    phantom_js_path = getattr(sys, '_MEIPASS', APP_DIR)
+    if phantom_js_path not in environ["PATH"]:
+        environ["PATH"] += pathsep + phantom_js_path

@@ -11,6 +11,7 @@ Classes for DVHA specific error handling
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx
+from dvha.paths import APP_DIR
 
 
 class SQLError(Exception):
@@ -44,6 +45,15 @@ class ROIVariationError(Exception):
 class PlottingMemoryError(Exception):
     def __init__(self, error_message):
         self.message = error_message
+
+    def __str__(self):
+        return self.message
+
+
+class PhantomJSError(Exception):
+    def __init__(self):
+        self.message = "PhantomJS could not be located. Download from https://phantomjs.org/download.html, then " \
+                       "place the executable file (phantomjs or phantomjs.exe) in %s" % APP_DIR
 
     def __str__(self):
         return self.message

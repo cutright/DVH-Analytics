@@ -769,3 +769,9 @@ def get_installed_python_libraries():
 
 def save_pip_list():
     save_object_to_file(get_installed_python_libraries(), PIP_LIST_PATH)
+
+
+def get_wildcards(extensions):
+    if type(extensions) is not list:
+        extensions = [extensions]
+    return '|'.join(["%s (*.%s)|*.%s" % (ext.upper(), ext, ext) for ext in extensions])

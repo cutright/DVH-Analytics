@@ -12,14 +12,14 @@ Classes to generate bokeh plots
 
 import wx.html2
 from bokeh.plotting import figure
-from bokeh.io.export import get_layout_html, export_svgs
+from bokeh.io.export import get_layout_html, export_svgs, export_png
 from bokeh.models import Legend, HoverTool, ColumnDataSource, DataTable, TableColumn,\
     NumberFormatter, Div, Range1d, LabelSet
 from bokeh.layouts import column, row
 from bokeh.palettes import Colorblind8 as palette
 import itertools
 import numpy as np
-from os.path import join, isdir
+from os.path import join, isdir, splitext
 from os import mkdir
 from scipy.stats import ttest_ind, ranksums, normaltest
 from dvha.tools.errors import PlottingMemoryError
@@ -166,8 +166,8 @@ class Plot:
                 else:
                     setattr(fig, key, value)
 
-    def save_figure(self, figure_format, fig_attr_dict, file_name):
-
+    def save_figure(self, fig_attr_dict, file_name):
+        figure_format = splitext(file_name)[1][1:].lower()
         self.set_fig_attr(fig_attr_dict)  # apply custom figure properties
         getattr(self, 'export_%s' % figure_format)(file_name)
         self.load_stored_fig_attr()  # restore previous figure properties
@@ -178,6 +178,9 @@ class Plot:
         export_svgs(self.bokeh_layout, filename=file_name)
         for fig in self.figures:
             fig.output_backend = "canvas"
+
+    def export_png(self, file_name):
+        export_png(self.bokeh_layout, filename=file_name)
 
     def export_html(self, file_name):
         with open(file_name, 'w') as doc:
@@ -1953,7 +1956,8 @@ class PlotMachineLearning(Plot):
         for fig in self.figures_list:
             fig.output_backend = "canvas"
 
-    def save_figure(self, figure_format, fig_attr_dict, file_name):
+    def save_figure(self, fig_attr_dict, file_name):
+        figure_format = splitext(file_name)[1][1:].lower()
         self.set_fig_attr(fig_attr_dict, figures=self.figures_list)  # apply custom figure properties
         getattr(self, 'export_%s' % figure_format)(file_name)
         self.load_stored_fig_attr(figures=self.figures_list)  # restore previous figure properties

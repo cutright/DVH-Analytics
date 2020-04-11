@@ -691,7 +691,8 @@ class DVHAMainFrame(wx.Frame):
                 return
 
         count = self.group_data[group]['dvh'].count
-        if count > 1:
+        min_dvh_count = 3
+        if count >= min_dvh_count:
             try:
                 self.endpoint.update_dvh(self.group_data)
                 self.set_summary_text(group)
@@ -716,7 +717,8 @@ class DVHAMainFrame(wx.Frame):
                 self.on_plotting_memory_error(str(e))
         else:
             wx.EndBusyCursor()
-            msg = "%s DVHs returned. Please modify query or import more data." % ['Less than 2', 'No'][count == 0]
+            msg = "%s DVHs returned. Please modify query or import more data." % \
+                  ['Less than %s' % min_dvh_count, 'No'][count == 0]
             wx.MessageBox(msg, 'Query Error', wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
             self.group_data[group]['dvh'] = None
 
