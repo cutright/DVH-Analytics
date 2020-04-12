@@ -171,7 +171,7 @@ class DVHAMainFrame(wx.Frame):
 
         export = wx.Menu()
         export_csv = export.Append(wx.ID_ANY, 'Data to csv\tCtrl+E')
-        export_figure = export.Append(wx.ID_ANY, 'Plot to file')
+        export_figure = export.Append(wx.ID_ANY, '&Plot to file\tCtrl+P')
         file_menu.AppendSeparator()
 
         qmi = file_menu.Append(wx.ID_ANY, '&Quit\tCtrl+Q')
@@ -314,14 +314,12 @@ class DVHAMainFrame(wx.Frame):
 
     def __add_notebook_frames(self):
         self.plot = PlotStatDVH(self.notebook_tab['DVHs'], self.group_data, self.options)
-        self.time_series = TimeSeriesFrame(self.notebook_tab['Time Series'], self.group_data, self.options)
-        self.correlation = CorrelationFrame(self.notebook_tab['Correlation'], self.group_data, self.options)
-        self.regression = RegressionFrame(self.notebook_tab['Regression'], self.group_data, self.options, self)
-        self.control_chart = ControlChartFrame(self.notebook_tab['Control Chart'], self.group_data, self.options)
-        self.radbio = RadBioFrame(self.notebook_tab['Rad Bio'], self.group_data, self.time_series, self.regression,
-                                  self.control_chart)
-        self.endpoint = EndpointFrame(self.notebook_tab['Endpoints'], self.group_data, self.time_series, self.regression,
-                                      self.control_chart)
+        self.time_series = TimeSeriesFrame(self)
+        self.correlation = CorrelationFrame(self)
+        self.regression = RegressionFrame(self)
+        self.control_chart = ControlChartFrame(self)
+        self.radbio = RadBioFrame(self)
+        self.endpoint = EndpointFrame(self)
 
     def __do_layout(self):
         sizer_summary = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Summary"), wx.HORIZONTAL)

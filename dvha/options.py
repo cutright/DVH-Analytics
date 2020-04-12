@@ -172,8 +172,9 @@ class DefaultOptions:
         self.AUTO_SUM_DOSE = True
 
         self.save_fig_param = {'figure': {'y_range_start': -0.0005,
-                                          'x_range_start': 0,
+                                          'x_range_start': 0.,
                                           'y_range_end': 1.0005,
+                                          'x_range_end': 10000.,
                                           'background_fill_color': 'none',
                                           'border_fill_color': 'none',
                                           'plot_height': 600,
@@ -183,6 +184,7 @@ class DefaultOptions:
                                           'border_line_color': 'white',
                                           'border_line_alpha': 1,
                                           'border_line_width': 1}}
+        self.apply_range_edits = False
 
         self.positions = {'user_settings': None,
                           'export_figure': None}

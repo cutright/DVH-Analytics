@@ -11,7 +11,6 @@ Class to view and calculate linear regressions
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx
-from functools import partial
 from pubsub import pub
 from dvha.tools.errors import ErrorDialog
 from dvha.models.plot import PlotRegression, PlotMultiVarRegression
@@ -30,19 +29,12 @@ class RegressionFrame:
     """
     Object to be passed into notebook panel for the Regression tab
     """
-    def __init__(self, parent, group_data, options, main_app_frame):
-        """
-        :param parent:  notebook panel in main view
-        :type parent: Panel
-        :param group_data: object containing queried data applicable/parsed for statistical analysis
-        :type group_data: dict
-        :param options: user options containing visual preferences
-        :type options: Options
-        """
-        self.parent = parent
-        self.options = options
-        self.group_data = group_data
+    def __init__(self, main_app_frame):
+
         self.main_app_frame = main_app_frame
+        self.parent = main_app_frame.notebook_tab['Regression']
+        self.options = main_app_frame.options
+        self.group_data = main_app_frame.group_data
         self.group = 1
         self.choices = []
 
@@ -75,8 +67,8 @@ class RegressionFrame:
         self.plot = PlotRegression(self.pane_plot, self.options)
         self.button_multi_var_reg_model = wx.Button(self.pane_tree, wx.ID_ANY, 'Run Multi-Variable Regressions')
         self.button_multi_var_quick_select = wx.Button(self.pane_tree, wx.ID_ANY, 'Variable Quick Select')
-        self.button_single_var_export = wx.Button(self.pane_tree, wx.ID_ANY, 'Export Plot Data')
-        self.button_single_var_plot_save = wx.Button(self.pane_tree, wx.ID_ANY, 'Save Plot')
+        self.button_single_var_export = wx.Button(self.pane_tree, wx.ID_ANY, 'Export CSV')
+        self.button_single_var_plot_save = wx.Button(self.pane_tree, wx.ID_ANY, 'Save Figure')
 
     def __set_properties(self):
         self.pane_tree.SetScrollRate(20, 20)
@@ -121,7 +113,7 @@ class RegressionFrame:
         sizer_tree.Add(self.button_multi_var_reg_model, 0, wx.EXPAND | wx.TOP | wx.LEFT | wx.RIGHT, 5)
         sizer_tree.Add(self.button_multi_var_quick_select, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
         sizer_tree.Add(self.tree_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        sizer_single_var_export.Add(self.button_single_var_export, 0, wx.EXPAND | wx.BOTTOM | wx.RIGHT, 5)
+        sizer_single_var_export.Add(self.button_single_var_export, 1, wx.EXPAND | wx.BOTTOM | wx.RIGHT, 5)
         sizer_single_var_export.Add(self.button_single_var_plot_save, 1, wx.EXPAND | wx.LEFT | wx.BOTTOM, 5)
         sizer_tree.Add(sizer_single_var_export, 0, wx.EXPAND | wx.ALL, 5)
         self.pane_tree.SetSizer(sizer_tree)
@@ -349,9 +341,11 @@ class RegressionFrame:
     def has_data(self):
         return bool(len(list(self.y_variable_nodes)))
 
-    def on_save_plot(self, evt):
-        save_data_to_file(self.pane_tree, 'Save linear regression plot', self.plot.html_str,
-                          wildcard="HTML files (*.html)|*.html")
+    def on_save_plot(self, *evt):
+        title = 'Save Linear Regression Plot'
+        export_frame = self.main_app_frame.export_figure
+        attr_dicts = None if export_frame is None else export_frame.attr_dicts
+        self.plot.save_figure_dlg(self.pane_tree, title, attr_dicts=attr_dicts)
 
     def on_export(self, evt):
         save_data_to_file(self.pane_tree, 'Export linear regression data', self.plot.get_csv_data())
@@ -438,9 +432,8 @@ class MultiVarResultsFrame(wx.Frame):
             pub.sendMessage('control_chart_set_model', **msg)
 
         self.button_back_elimination = wx.Button(self, wx.ID_ANY, 'Backward Elimination')
-        self.button_export = wx.Button(self, wx.ID_ANY, 'Export Plot Data')
-        self.button_save_html = wx.Button(self, wx.ID_ANY, 'Save Plot to HTML')
-        self.button_save_svg = wx.Button(self, wx.ID_ANY, 'Save Plot to SVG')
+        self.button_export = wx.Button(self, wx.ID_ANY, 'Export CSV')
+        self.button_save_figure = wx.Button(self, wx.ID_ANY, 'Save Figure')
         self.button_save_model = wx.Button(self, wx.ID_ANY, 'Save MVR Model')
         self.button_load_mlr_model = wx.Button(self, wx.ID_ANY, 'Load ML Model')
         algorithms = ['Random Forest', 'Support Vector Machine', 'Decision Tree', 'Gradient Boosting']
@@ -468,8 +461,7 @@ class MultiVarResultsFrame(wx.Frame):
                   id=self.button['Support Vector Machine'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_back_elimination, id=self.button_back_elimination.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())
-        self.Bind(wx.EVT_BUTTON, self.on_save_html, id=self.button_save_html.GetId())
-        self.Bind(wx.EVT_BUTTON, self.on_save_svg, id=self.button_save_svg.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_save_figure, id=self.button_save_figure.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_model, id=self.button_save_model.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_load_mlr_model, id=self.button_load_mlr_model.GetId())
         self.Bind(wx.EVT_SIZE, self.on_resize)
@@ -484,8 +476,7 @@ class MultiVarResultsFrame(wx.Frame):
         sizer_export_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_export_buttons.Add(self.button_back_elimination, 0, wx.ALL, 5)
         sizer_export_buttons.Add(self.button_export, 0, wx.ALL, 5)
-        sizer_export_buttons.Add(self.button_save_html, 0, wx.ALL, 5)
-        sizer_export_buttons.Add(self.button_save_svg, 0, wx.ALL, 5)
+        sizer_export_buttons.Add(self.button_save_figure, 0, wx.ALL, 5)
         sizer_export_buttons.Add(self.button_save_model, 0, wx.ALL, 5)
         sizer_algo_wrapper.Add(sizer_export_buttons, 0, wx.ALL, 5)
         text = wx.StaticText(self, wx.ID_ANY, "Compare with Machine Learning Module")
@@ -532,31 +523,11 @@ class MultiVarResultsFrame(wx.Frame):
         del wait
         self.radiobox_include_back_elim.Enable()
 
-    def on_save_html(self, *evt):
-        try:
-            if self.main_app_frame.export_figure is None:
-                save_data_to_file(self, 'Save multi-variable regression plot to .html', self.plot.html_str,
-                                  initial_dir="", wildcard="HTML files (*.html)|*.html")
-            else:
-                fig_attr_dict = self.main_app_frame.export_figure.fig_attr_dict
-                func = partial(self.plot.save_figure, 'html', fig_attr_dict)
-                save_data_to_file(self, 'Save multi-variable regression plot to .html', func,
-                                  initial_dir="", data_type='function', wildcard="HTML files (*.html)|*.html")
-        except Exception as e:
-            ErrorDialog(self, str(e), "Save Error")
-
-    def on_save_svg(self, *evt):
-        try:
-            if self.main_app_frame.export_figure is None:
-                save_data_to_file(self, 'Save multi-variable regression plot to .svg', self.plot.export_svg,
-                                  initial_dir="", data_type='function', wildcard="SVG files (*.svg)|*.svg")
-            else:
-                fig_attr_dict = self.main_app_frame.export_figure.fig_attr_dict
-                func = partial(self.plot.save_figure, 'svg', fig_attr_dict)
-                save_data_to_file(self, 'Save multi-variable regression plot to .svg', func,
-                                  initial_dir="", data_type='function', wildcard="SVG files (*.svg)|*.svg")
-        except Exception as e:
-            ErrorDialog(self, str(e), "Save Error")
+    def on_save_figure(self, *evt):
+        title = 'Save multi-variable regression plot'
+        export_frame = self.main_app_frame.export_figure
+        attr_dicts = None if export_frame is None else export_frame.attr_dicts
+        self.plot.save_figure_dlg(self, title, attr_dicts=attr_dicts)
 
     def on_save_model(self, evt):
         data = {'y_variable': self.plot.y_variable,
@@ -568,14 +539,6 @@ class MultiVarResultsFrame(wx.Frame):
                           wildcard="MVR files (*.mvr)|*.mvr", data_type='pickle', initial_dir=MODELS_DIR)
 
     def on_load_mlr_model(self, evt):
-        # with wx.FileDialog(self, "Load a machine learning model", "", wildcard='*.mlr',
-        #                    style=wx.FD_FILE_MUST_EXIST | wx.FD_OPEN) as dlg:
-        #     dlg.SetDirectory(MODELS_DIR)
-        #     if dlg.ShowModal() == wx.ID_OK:
-        #         model_file_path = dlg.GetPath()
-        #         saved_data = load_object_from_file(model_file_path)
-        #         print(type(saved_data['regressor']))
-        #         self.ml_frames.append(RandomForestFrame(self.final_stats_data))
         MachineLearningModelViewer(self, self.group_data, self.group, self.options, mvr=self.plot.reg)
 
     def redraw_plot(self):

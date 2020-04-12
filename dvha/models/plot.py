@@ -11,6 +11,7 @@ Classes to generate bokeh plots
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx.html2
+from functools import partial
 from bokeh.plotting import figure
 from bokeh.io.export import get_layout_html, export_svgs, export_png
 from bokeh.models import Legend, HoverTool, ColumnDataSource, DataTable, TableColumn,\
@@ -22,8 +23,9 @@ import numpy as np
 from os.path import join, isdir, splitext
 from os import mkdir
 from scipy.stats import ttest_ind, ranksums, normaltest
-from dvha.tools.errors import PlottingMemoryError
-from dvha.tools.utilities import collapse_into_single_dates, moving_avg, is_windows
+from dvha.dialogs.export import save_data_to_file
+from dvha.tools.errors import PlottingMemoryError, ErrorDialog
+from dvha.tools.utilities import collapse_into_single_dates, moving_avg, is_windows, FIG_WILDCARDS
 from dvha.tools.stats import MultiVariableRegression, get_control_limits
 from dvha.paths import TEMP_DIR
 from math import pi
@@ -71,6 +73,7 @@ class Plot:
         self.figures_attr = []  # temporary storage of figure dimensions/colors during export
         self.legends = []
         self.legends_attr = []  # temporary storage of legend dimensions/colors during export
+        self.figures_attr_include_sub_keys = True
 
         self.source = {}  # Will be a dictionary of bokeh ColumnDataSources
 
@@ -133,26 +136,27 @@ class Plot:
         else:
             self.layout.SetPage(self.html_str, "")
 
-    def set_obj_attr(self, obj_attr_dict, objects=None, obj_type='figure'):
+    def set_obj_attr(self, obj_attr_dict, obj_type='figure'):
         """During plot export, user can supply custom figure properties, apply these and store original values"""
         if obj_type == 'legend':
             self.legends_attr = []
             obj_attr = self.legends_attr
-            objects = objects if objects is not None else self.legends
+            objects = self.legends
         else:
             self.figures_attr = []
             obj_attr = self.figures_attr
-            objects = objects if objects is not None else self.figures
+            objects = self.figures
 
         for obj in objects:
             top_keys = [key for key in obj_attr_dict.keys()
                         if (not key.endswith('_start') and not key.endswith('_end'))]
             sub_keys = set(obj_attr_dict.keys()) - set(top_keys)
             current_attr = {key: getattr(obj, key) for key in top_keys}
-            for key in sub_keys:
-                top_key = key[:key.rfind('_')]
-                sub_key = key[key.rfind('_')+1:]
-                current_attr[key] = getattr(getattr(obj, top_key), sub_key)
+            if self.figures_attr_include_sub_keys:
+                for key in sub_keys:
+                    top_key = key[:key.rfind('_')]
+                    sub_key = key[key.rfind('_')+1:]
+                    current_attr[key] = getattr(getattr(obj, top_key), sub_key)
 
             obj_attr.append(current_attr)
             for key, value in obj_attr_dict.items():
@@ -160,16 +164,17 @@ class Plot:
                     value = None if value == 'none' else value
                     if key in top_keys:
                         setattr(obj, key, value)
-                    else:
+                    elif self.figures_attr_include_sub_keys:
                         top_key = key[:key.rfind('_')]
                         sub_key = key[key.rfind('_') + 1:]
                         setattr(getattr(obj, top_key), sub_key, value)
 
-    def load_stored_obj_attr(self, objects=None, obj_type='figure'):
+    def load_stored_obj_attr(self, obj_type='figure'):
         """Restore the figure properties before set_fig_attr was called"""
+
         stored_attr = self.legends_attr if obj_type == 'legend' else self.figures_attr
-        if objects is None:
-            objects = self.figures if obj_type == 'figure' else self.legends
+        objects = self.figures if obj_type == 'figure' else self.legends
+
         for i, obj in enumerate(objects):
             for key, value in stored_attr[i].items():
                 if key.endswith('_start') or key.endswith('_end'):
@@ -179,26 +184,31 @@ class Plot:
                 else:
                     setattr(obj, key, value)
 
+    def set_obj_attrs(self, attr_dicts):
+        if attr_dicts:
+            for key, attr_dict in attr_dicts.items():
+                self.set_obj_attr(attr_dicts[key], obj_type=key)
+
+    def load_obj_attrs(self, attr_dicts):
+        if attr_dicts:
+            for key in attr_dicts.keys():
+                self.load_stored_obj_attr(obj_type=key)
+
     def save_figure(self, attr_dicts, file_name):
         figure_format = splitext(file_name)[1][1:].lower()
-        for key, attr_dict in attr_dicts.items():
-            self.set_obj_attr(attr_dicts[key], obj_type=key)
-
+        self.set_obj_attrs(attr_dicts)
         getattr(self, 'export_%s' % figure_format)(file_name)
-
-        for key, attr_dict in attr_dicts.items():
-            self.load_stored_obj_attr(obj_type=key)
+        self.load_obj_attrs(attr_dicts)
 
     def export_svg(self, file_name):
         for fig in self.figures:
             fig.output_backend = "svg"
-        export_svgs(self.bokeh_layout, filename=file_name)
+        export_svgs(self.bokeh_layout, filename=file_name, timeout=30)
         for fig in self.figures:
             fig.output_backend = "canvas"
 
     def export_png(self, file_name):
-        for fig in self.figures:
-            export_png(fig, filename=file_name)
+        export_png(self.bokeh_layout, filename=file_name, timeout=30)
 
     def export_html(self, file_name):
         with open(file_name, 'w') as doc:
@@ -239,6 +249,13 @@ class Plot:
 
     def apply_options(self):
         self.__apply_default_figure_options()
+
+    def save_figure_dlg(self, parent, title, attr_dicts=None):
+        try:
+            save_data_to_file(parent, title, partial(self.save_figure, attr_dicts),
+                              initial_dir="", data_type='function', wildcard=FIG_WILDCARDS)
+        except Exception as e:
+            ErrorDialog(parent, str(e), "Save Error")
 
 
 class PlotStatDVH(Plot):
@@ -1744,10 +1761,9 @@ class PlotMachineLearning(Plot):
                                                                     study_date=[])),
                                  'importance': ColumnDataSource(data=dict(x=[], top=[], width=[], variable=[]))}}
 
-        self.figure.xaxis.axis_label = "Study"
-
-        self.figures = {'train': {'data': figure(tools=DEFAULT_TOOLS),
-                                  'diff': figure(tools=DEFAULT_TOOLS)}}
+        self.ml_figures = {'train': {'data': figure(tools=DEFAULT_TOOLS),
+                                     'diff': figure(tools=DEFAULT_TOOLS)}}
+        self.figures.extend([self.ml_figures['train']['data'], self.ml_figures['train']['diff']])
 
         if self.include_test_data:
             self.plot_types.append('test')
@@ -1759,27 +1775,30 @@ class PlotMachineLearning(Plot):
                                    'multi_var': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
                                    'diff': ColumnDataSource(data=dict(x=[], y_ml=[], y_mvr=[], y0=[], mrn=[],
                                                                       study_date=[]))}
-            self.figures['test'] = {'data': figure(tools=DEFAULT_TOOLS),
-                                    'diff': figure(tools=DEFAULT_TOOLS)}
+            self.ml_figures['test'] = {'data': figure(tools=DEFAULT_TOOLS),
+                                       'diff': figure(tools=DEFAULT_TOOLS)}
+            self.figures.extend([self.ml_figures['test']['data'], self.ml_figures['test']['diff']])
 
         self.initialize_figures()
 
         self.__add_plot_data()
         self.__do_layout()
         self.__add_hover()
-        self.add_legend_ml()
+        self.__add_legend_ml()
 
         self.set_figure_dimensions()
         self.update_bokeh_layout_in_wx_python()
 
         self.apply_options()
 
+        self.figures_attr_include_sub_keys = False
+
     def __add_plot_data(self):
         self.renderers = {}
 
         for data_type in self.plot_types:
             srcs = self.source[data_type]
-            figs = self.figures[data_type]
+            figs = self.ml_figures[data_type]
             self.renderers[data_type] = {'data': figs['data'].cross('x', 'y', source=srcs['data']),
                                          'predict': figs['data'].circle('x', 'y', source=srcs['predict']),
                                          'multi_var': figs['data'].circle('x', 'y', source=srcs['multi_var']),
@@ -1789,68 +1808,76 @@ class PlotMachineLearning(Plot):
 
     def __do_layout(self):
         self.bokeh_layout = row(column(self.div_title['train'], self.div_mse['train'],
-                                       self.figures['train']['data'], self.figures['train']['diff']))
+                                       self.ml_figures['train']['data'], self.ml_figures['train']['diff']))
         if self.include_test_data:
             self.bokeh_layout.children.append(column(self.div_title['test'], self.div_mse['test'],
-                                                     self.figures['test']['data'], self.figures['test']['diff']))
+                                                     self.ml_figures['test']['data'], self.ml_figures['test']['diff']))
 
     def __add_hover(self):
         for data_type in self.plot_types:
-            self.figures[data_type]['data'].add_tools(HoverTool(show_arrow=True,
-                                                                tooltips=[('ID', '@mrn'),
-                                                                          ('Date', '@study_date{%F}'),
-                                                                          ('Study', '@x{int}'),
-                                                                          ('Value', '@y{0.2f}')],
-                                                                formatters={'study_date': 'datetime'}))
+            self.ml_figures[data_type]['data'].add_tools(HoverTool(show_arrow=True,
+                                                                   tooltips=[('ID', '@mrn'),
+                                                                             ('Date', '@study_date{%F}'),
+                                                                             ('Study', '@x{int}'),
+                                                                             ('Value', '@y{0.2f}')],
+                                                                   formatters={'study_date': 'datetime'}))
 
-            self.figures[data_type]['diff'].add_tools(HoverTool(show_arrow=True, mode='vline',
-                                                                tooltips=[('ID', '@mrn'),
-                                                                          ('Date', '@study_date{%F}'),
-                                                                          ('Study', '@x{int}'),
-                                                                          (self.ml_type_short, '@y_ml{0.2f}'),
-                                                                          ('MVR', '@y_mvr{0.2f}')],
-                                                                formatters={'study_date': 'datetime'}))
+            self.ml_figures[data_type]['diff'].add_tools(HoverTool(show_arrow=True, mode='vline',
+                                                                   tooltips=[('ID', '@mrn'),
+                                                                             ('Date', '@study_date{%F}'),
+                                                                             ('Study', '@x{int}'),
+                                                                             (self.ml_type_short, '@y_ml{0.2f}'),
+                                                                             ('MVR', '@y_mvr{0.2f}')],
+                                                                   formatters={'study_date': 'datetime'}))
 
-    def add_legend_ml(self):
+    def __add_legend_ml(self):
         legend = {}
         for data_type in self.plot_types:
             legend[data_type] = {'data': Legend(items=[("Data  ", [self.renderers[data_type]['data']]),
-                                                       ("%s  " % self.ml_type, [self.renderers[data_type]['predict']]),
-                                                       ("Multi-Variable Reg.  ", [self.renderers[data_type]['multi_var']])],
+                                                       ("%s  " % self.ml_type,
+                                                        [self.renderers[data_type]['predict']]),
+                                                       ("Multi-Variable Reg.  ",
+                                                        [self.renderers[data_type]['multi_var']])],
                                                 orientation='horizontal'),
-                                 'diff': Legend(items=[("%s  " % self.ml_type, [self.renderers[data_type]['diff_ml']]),
-                                                       ("Multi-Variable Reg.  ", [self.renderers[data_type]['diff_mvr']])],
+                                 'diff': Legend(items=[("%s  " % self.ml_type,
+                                                        [self.renderers[data_type]['diff_ml']]),
+                                                       ("Multi-Variable Reg.  ",
+                                                        [self.renderers[data_type]['diff_mvr']])],
                                                 orientation='horizontal')}
             for key in {'data', 'diff'}:
-                self.figures[data_type][key].add_layout(legend[data_type][key], 'above')
-                self.figures[data_type][key].legend.click_policy = "hide"
+                self.ml_figures[data_type][key].add_layout(legend[data_type][key], 'above')
+                self.ml_figures[data_type][key].legend.click_policy = "hide"
+
+        self.legends.extend([legend['train']['data'], legend['train']['diff']])
+        if 'test' in self.ml_figures.keys():
+            self.legends.extend([legend['test']['data'], legend['test']['diff']])
 
     def initialize_figures(self):
 
         for data_type in self.plot_types:
             for key in {'data', 'diff'}:
-                fig = self.figures[data_type][key]
+                fig = self.ml_figures[data_type][key]
                 fig.xaxis.axis_label = 'Study'
                 fig.yaxis.axis_label_text_baseline = "bottom"
                 if data_type == 'test':
                     fig.background_fill_color = "black"
                     fig.background_fill_alpha = 0.05
 
-            self.figures[data_type]['data'].yaxis.axis_label = self.y_variable
-            self.figures[data_type]['diff'].yaxis.axis_label = 'Residual'
+            self.ml_figures[data_type]['data'].yaxis.axis_label = self.y_variable
+            self.ml_figures[data_type]['diff'].yaxis.axis_label = 'Residual'
 
-        self.figures['train']['diff'].x_range = self.figures['train']['data'].x_range
+        self.ml_figures['train']['diff'].x_range = self.ml_figures['train']['data'].x_range
         if self.include_test_data:
-            self.figures['test']['data'].y_range = self.figures['train']['data'].y_range
-            self.figures['test']['diff'].y_range = self.figures['train']['diff'].y_range
-            self.figures['test']['diff'].x_range = self.figures['test']['data'].x_range
+            self.ml_figures['test']['data'].y_range = self.ml_figures['train']['data'].y_range
+            self.ml_figures['test']['diff'].y_range = self.ml_figures['train']['diff'].y_range
+            self.ml_figures['test']['diff'].x_range = self.ml_figures['test']['data'].x_range
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.frame_size
         for data_type in self.plot_types:
             for key in ['data', 'diff']:
-                self.figures[data_type][key].plot_width = int(self.size_factor['data'][0] * float(panel_width))
-                self.figures[data_type][key].plot_height = int(self.size_factor['data'][1] * float(panel_height))
+                self.ml_figures[data_type][key].plot_width = int(self.size_factor['data'][0] * float(panel_width))
+                self.ml_figures[data_type][key].plot_height = int(self.size_factor['data'][1] * float(panel_height))
 
     def update_data(self, plot_data):
         """
@@ -1932,7 +1959,7 @@ class PlotMachineLearning(Plot):
 
         for data_type in self.plot_types:
             for key in {'data', 'diff'}:
-                fig = self.figures[data_type][key]
+                fig = self.ml_figures[data_type][key]
                 fig.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
                 fig.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
                 fig.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
@@ -1958,31 +1985,6 @@ class PlotMachineLearning(Plot):
                 color_modifier = ['PREDICT', 'MULTI_VAR'][diff_type == 'mvr']
                 glyph.fill_color = getattr(self.options, 'MACHINE_LEARNING_COLOR_%s' % color_modifier)
                 glyph.fill_alpha = getattr(self.options, 'MACHINE_LEARNING_ALPHA_DIFF')
-
-    @property
-    def figures_list(self):
-        figures = []
-        for fig_type_1 in self.figures.keys():
-            for fig in self.figures[fig_type_1].values():
-                figures.append(fig)
-        return figures
-
-    def export_svg(self, file_name):
-        for fig in self.figures_list:
-            fig.output_backend = "svg"
-        export_svgs(self.bokeh_layout, filename=file_name)
-        for fig in self.figures_list:
-            fig.output_backend = "canvas"
-
-    def export_png(self, file_name):
-        for fig in self.figures_list:
-            export_png(fig, filename=file_name)
-
-    def save_figure(self, fig_attr_dict, file_name):
-        figure_format = splitext(file_name)[1][1:].lower()
-        self.set_fig_attr(fig_attr_dict, figures=self.figures_list)  # apply custom figure properties
-        getattr(self, 'export_%s' % figure_format)(file_name)
-        self.load_stored_fig_attr(figures=self.figures_list)  # restore previous figure properties
 
 
 class PlotFeatureImportance(Plot):

@@ -775,3 +775,6 @@ def get_wildcards(extensions):
     if type(extensions) is not list:
         extensions = [extensions]
     return '|'.join(["%s (*.%s)|*.%s" % (ext.upper(), ext, ext) for ext in extensions])
+
+
+FIG_WILDCARDS = get_wildcards(['svg', 'html', 'png'])
