@@ -69,6 +69,8 @@ class Plot:
 
         self.figures = [self.figure]  # keep track of all figures
         self.figures_attr = []  # temporary storage of figure dimensions/colors during export
+        self.legends = []
+        self.legends_attr = []  # temporary storage of legend dimensions/colors during export
 
         self.source = {}  # Will be a dictionary of bokeh ColumnDataSources
 
@@ -88,6 +90,7 @@ class Plot:
             legend_items = self.legend_items
         legend = Legend(items=legend_items,
                         orientation='horizontal')
+        self.legends.append(legend)
 
         # Add the layout outside the plot, clicking legend item hides the line
         fig.add_layout(legend, 'above')
@@ -130,47 +133,61 @@ class Plot:
         else:
             self.layout.SetPage(self.html_str, "")
 
-    def set_fig_attr(self, fig_attr_dict, figures=None):
+    def set_obj_attr(self, obj_attr_dict, objects=None, obj_type='figure'):
         """During plot export, user can supply custom figure properties, apply these and store original values"""
-        figures = figures if figures is not None else self.figures
-        self.figures_attr = []
-        for fig in figures:
-            top_keys = [key for key in fig_attr_dict.keys() if (not key.endswith('_start') and not key.endswith('_end'))]
-            sub_keys = set(fig_attr_dict.keys()) - set(top_keys)
-            current_attr = {key: getattr(fig, key) for key in top_keys}
+        if obj_type == 'legend':
+            self.legends_attr = []
+            obj_attr = self.legends_attr
+            objects = objects if objects is not None else self.legends
+        else:
+            self.figures_attr = []
+            obj_attr = self.figures_attr
+            objects = objects if objects is not None else self.figures
+
+        for obj in objects:
+            top_keys = [key for key in obj_attr_dict.keys()
+                        if (not key.endswith('_start') and not key.endswith('_end'))]
+            sub_keys = set(obj_attr_dict.keys()) - set(top_keys)
+            current_attr = {key: getattr(obj, key) for key in top_keys}
             for key in sub_keys:
                 top_key = key[:key.rfind('_')]
                 sub_key = key[key.rfind('_')+1:]
-                current_attr[key] = getattr(getattr(fig, top_key), sub_key)
+                current_attr[key] = getattr(getattr(obj, top_key), sub_key)
 
-            self.figures_attr.append(current_attr)
-            for key, value in fig_attr_dict.items():
+            obj_attr.append(current_attr)
+            for key, value in obj_attr_dict.items():
                 if value is not None:
                     value = None if value == 'none' else value
                     if key in top_keys:
-                        setattr(fig, key, value)
+                        setattr(obj, key, value)
                     else:
                         top_key = key[:key.rfind('_')]
                         sub_key = key[key.rfind('_') + 1:]
-                        setattr(getattr(fig, top_key), sub_key, value)
+                        setattr(getattr(obj, top_key), sub_key, value)
 
-    def load_stored_fig_attr(self, figures=None):
+    def load_stored_obj_attr(self, objects=None, obj_type='figure'):
         """Restore the figure properties before set_fig_attr was called"""
-        figures = figures if figures is not None else self.figures
-        for i, fig in enumerate(figures):
-            for key, value in self.figures_attr[i].items():
+        stored_attr = self.legends_attr if obj_type == 'legend' else self.figures_attr
+        if objects is None:
+            objects = self.figures if obj_type == 'figure' else self.legends
+        for i, obj in enumerate(objects):
+            for key, value in stored_attr[i].items():
                 if key.endswith('_start') or key.endswith('_end'):
                     top_key = key[:key.rfind('_')]
                     sub_key = key[key.rfind('_') + 1:]
-                    setattr(getattr(fig, top_key), sub_key, value)
+                    setattr(getattr(obj, top_key), sub_key, value)
                 else:
-                    setattr(fig, key, value)
+                    setattr(obj, key, value)
 
-    def save_figure(self, fig_attr_dict, file_name):
+    def save_figure(self, attr_dicts, file_name):
         figure_format = splitext(file_name)[1][1:].lower()
-        self.set_fig_attr(fig_attr_dict)  # apply custom figure properties
+        for key, attr_dict in attr_dicts.items():
+            self.set_obj_attr(attr_dicts[key], obj_type=key)
+
         getattr(self, 'export_%s' % figure_format)(file_name)
-        self.load_stored_fig_attr()  # restore previous figure properties
+
+        for key, attr_dict in attr_dicts.items():
+            self.load_stored_obj_attr(obj_type=key)
 
     def export_svg(self, file_name):
         for fig in self.figures:

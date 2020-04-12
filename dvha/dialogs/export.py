@@ -262,42 +262,49 @@ class ExportFigure(wx.Frame):
                       'Regression': parent.regression.plot,
                       'Control Chart': parent.control_chart.plot}
 
-        keys_tc = ['y_range_start', 'y_range_end', 'x_range_start', 'plot_height', 'plot_width']
-        self.text_ctrl = {key: wx.TextCtrl(self, wx.ID_ANY, str(self.options.save_fig_param[key])) for key in keys_tc}
-        self.label = {key: wx.StaticText(self, wx.ID_ANY, key.replace('_', ' ').title() + ':') for key in keys_tc}
-
-        self.keys_cb = ['background_fill_color', 'border_fill_color', 'plot']
-        self.combo_box = {key: wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.TE_READONLY)
-                          for key in self.keys_cb}
-        for key in self.keys_cb:
-            self.label[key] = wx.StaticText(self, wx.ID_ANY, key.replace('_', ' ').title() + ':')
-
-        self.button_keys = ['Export', 'Dismiss']
-        self.button = {'Export': wx.Button(self, wx.ID_ANY, 'Export'),
-                       'Dismiss': wx.Button(self, wx.ID_CANCEL, 'Dismiss')}
-
-        self.keys = keys_tc + self.keys_cb
-        self.fig_attr_keys = keys_tc + ['background_fill_color', 'border_fill_color']
+        button_keys = {'Export': wx.ID_ANY, 'Dismiss': wx.ID_CANCEL}
+        self.button = {key: wx.Button(self, button_id, key) for key, button_id in button_keys.items()}
 
         self.extensions = ['svg', 'html', 'png']
 
+        self.__set_input_widgets()
         self.__set_properties()
         self.__do_bind()
         self.__do_layout()
 
+        self.getter = {int: self.get_text_ctrl_int,
+                       float: self.get_text_ctrl_float,
+                       str: self.get_combo_box}
+
         set_msw_background_color(self)
         set_frame_icon(self)
+
+    def __set_input_widgets(self):
+        self.input = {key: [] for key in self.options.save_fig_param.keys()}
+        self.label = {key: [] for key in self.options.save_fig_param.keys()}
+        self.text_ctrl = {}
+        self.combo_box = {}
+        for obj_type, attr_dict in self.options.save_fig_param.items():
+            for attr, value in attr_dict.items():
+                self.label[obj_type].append(wx.StaticText(self, wx.ID_ANY, attr.replace('_', ' ').title() + ':'))
+                if type(value) is str:
+                    color_options = ['none'] + list(plot_colors.cnames)
+                    self.input[obj_type].append(wx.ComboBox(self, wx.ID_ANY, choices=color_options,
+                                                            style=wx.CB_DROPDOWN | wx.TE_READONLY))
+                    self.input[obj_type][-1].SetValue(value)
+                    self.combo_box[obj_type + '_' + attr] = self.input[obj_type][-1]
+                else:
+                    self.input[obj_type].append(wx.TextCtrl(self, wx.ID_ANY, str(value)))
+                    self.text_ctrl[obj_type + '_' + attr] = self.input[obj_type][-1]
+
+        self.label_plot = wx.StaticText(self, wx.ID_ANY, 'Plot:')
+        self.combo_plot = wx.ComboBox(self, wx.ID_ANY, style=wx.CB_DROPDOWN | wx.TE_READONLY)
 
     def __set_properties(self):
         self.SetTitle("Export Figure")
 
-        self.combo_box['plot'].SetItems(sorted(list(self.plots)))
-        self.combo_box['plot'].SetValue('DVHs')
-
-        color_options = ['none'] + list(plot_colors.cnames)
-        for key in ['background_fill_color', 'border_fill_color']:
-            self.combo_box[key].SetItems(color_options)
-            self.combo_box[key].SetValue(self.options.save_fig_param[key])
+        self.combo_plot.SetItems(sorted(list(self.plots)))
+        self.combo_plot.SetValue('DVHs')
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button['Export'].GetId())
@@ -307,17 +314,21 @@ class ExportFigure(wx.Frame):
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_main = wx.BoxSizer(wx.VERTICAL)
-        sizer_input = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.VERTICAL)
+        sizer_input = {key: wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, key.capitalize()), wx.VERTICAL)
+                       for key in ['figure', 'legend']}
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
 
-        for key in self.keys:
-            input_obj = self.combo_box[key] if key in self.keys_cb else self.text_ctrl[key]
-            sizer_input.Add(self.label[key], 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
-            sizer_input.Add(input_obj, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
-        sizer_main.Add(sizer_input, 0, wx.EXPAND | wx.ALL, 5)
+        for obj_type in ['figure', 'legend']:
+            for i, input_obj in enumerate(self.input[obj_type]):
+                sizer_input[obj_type].Add(self.label[obj_type][i], 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+                sizer_input[obj_type].Add(input_obj, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
+            sizer_main.Add(sizer_input[obj_type], 0, wx.EXPAND | wx.ALL, 5)
 
-        for key in self.button_keys:
-            sizer_buttons.Add(self.button[key], 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+        sizer_main.Add(self.label_plot, 0, wx.LEFT, 10)
+        sizer_main.Add(self.combo_plot, 0, wx.LEFT, 10)
+
+        sizer_buttons.Add(self.button['Export'], 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+        sizer_buttons.Add(self.button['Dismiss'], 0, wx.ALIGN_RIGHT | wx.ALL, 5)
         sizer_main.Add(sizer_buttons, 0, wx.EXPAND | wx.ALL, 5)
 
         sizer_wrapper.Add(sizer_main, 0, wx.EXPAND | wx.ALL, 5)
@@ -330,11 +341,11 @@ class ExportFigure(wx.Frame):
 
     @property
     def plot(self):
-        return self.plots[self.combo_box['plot'].GetValue()]
+        return self.plots[self.combo_plot.GetValue()]
 
     @property
     def save_plot_function(self):
-        return partial(self.plot.save_figure, self.fig_attr_dict)
+        return partial(self.plot.save_figure, self.attr_dicts)
 
     def on_export(self, *evt):
         try:
@@ -360,47 +371,23 @@ class ExportFigure(wx.Frame):
     def get_combo_box(self, key):
         return self.combo_box[key].GetValue()
 
-    @property
-    def y_range_start(self):
-        return self.get_text_ctrl_float('y_range_start')
+    def get_attr_dict(self, obj_type):
+        return {key: self.getter[type(value)](obj_type + '_' + key)
+                for key, value in self.options.save_fig_param[obj_type].items()}
 
     @property
-    def x_range_start(self):
-        return self.get_text_ctrl_float('x_range_start')
-
-    @property
-    def y_range_end(self):
-        return self.get_text_ctrl_float('y_range_end')
-
-    @property
-    def plot_height(self):
-        return self.get_text_ctrl_int('plot_height')
-
-    @property
-    def plot_width(self):
-        return self.get_text_ctrl_int('plot_width')
-
-    @property
-    def background_fill_color(self):
-        return self.get_combo_box('background_fill_color')
-
-    @property
-    def border_fill_color(self):
-        return self.get_combo_box('border_fill_color')
-
-    @property
-    def fig_attr_dict(self):
-        return {key: getattr(self, key) for key in self.fig_attr_keys}
+    def attr_dicts(self):
+        return {key: self.get_attr_dict(key) for key in self.input.keys()}
 
     def on_dismiss(self, *evt):
         wx.CallAfter(self.on_close)
 
     def on_close(self, *evt):
-        self.options.save_window_position(self, 'user_settings')
+        self.options.save_window_position(self, 'export_figure')
         self.save_options()
         self.parent.export_figure = None
         self.Destroy()
 
     def save_options(self):
-        self.options.save_fig_param = self.fig_attr_dict
+        self.options.save_fig_param = self.attr_dicts
         self.options.save()

@@ -1,5 +1,12 @@
 # Change log of DVH Analytics
 
+v0.7.6 (TBD)
+--------------------
+ - [Export] PNG support for figure export
+ - [Export] Bundle PhantomJS in executables or load from APP_DIR
+ - [Misc] Store last positions of certain windows (e.g., UserSettings, ExportFigure) 
+
+
 v0.7.5 (2020.04.09)
 --------------------
  - [Import] Option to import DVH stored in DICOM RT-Dose rather than calculate it. NOTE: Currently the source of the DVH

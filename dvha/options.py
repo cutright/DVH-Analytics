@@ -171,13 +171,18 @@ class DefaultOptions:
         self.USE_DICOM_DVH = False
         self.AUTO_SUM_DOSE = True
 
-        self.save_fig_param = {'y_range_start': -0.0005,
-                               'x_range_start': 0,
-                               'y_range_end': 1.0005,
-                               'background_fill_color': 'none',
-                               'border_fill_color': 'none',
-                               'plot_height': 600,
-                               'plot_width': 820}
+        self.save_fig_param = {'figure': {'y_range_start': -0.0005,
+                                          'x_range_start': 0,
+                                          'y_range_end': 1.0005,
+                                          'background_fill_color': 'none',
+                                          'border_fill_color': 'none',
+                                          'plot_height': 600,
+                                          'plot_width': 820},
+                               'legend': {'background_fill_color': 'white',
+                                          'background_fill_alpha': 1,
+                                          'border_line_color': 'white',
+                                          'border_line_alpha': 1,
+                                          'border_line_width': 1}}
 
         self.positions = {'user_settings': None,
                           'export_figure': None}
