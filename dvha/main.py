@@ -517,7 +517,7 @@ class DVHAMainFrame(wx.Frame):
             if dlg.ShowModal() == wx.ID_OK:
                 model_file_path = dlg.GetPath()
                 dlg.Destroy()
-                self.loaded_mvr_ml_frames.append(LoadMultiVarModelFrame(model_file_path, self.group_data,
+                self.loaded_mvr_ml_frames.append(LoadMultiVarModelFrame(self, model_file_path, self.group_data,
                                                                         self.selected_group, self.options))
 
     def on_load_ml_model(self, *evt):

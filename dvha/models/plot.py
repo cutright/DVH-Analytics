@@ -42,7 +42,7 @@ class Plot:
     Pass the layout property into a wx sizer
     """
     def __init__(self, parent, options, x_axis_label='X Axis', y_axis_label='Y Axis', x_axis_type='linear',
-                 tools=DEFAULT_TOOLS):
+                 tools=DEFAULT_TOOLS, apply_grid_options=True):
         """
         :param parent: the wx UI object where the plot will be displayed
         :param options: user options object for visual preferences
@@ -74,6 +74,7 @@ class Plot:
         self.legends = []
         self.legends_attr = []  # temporary storage of legend dimensions/colors during export
         self.figures_attr_include_sub_keys = True
+        self.apply_grid_options = apply_grid_options
 
         self.source = {}  # Will be a dictionary of bokeh ColumnDataSources
 
@@ -87,6 +88,12 @@ class Plot:
         self.figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
         self.figure.min_border = self.options.MIN_BORDER
         self.figure.yaxis.axis_label_text_baseline = "bottom"
+
+        if self.apply_grid_options:
+            for fig in self.figures:
+                fig.grid.grid_line_alpha = self.options.GRID_ALPHA
+                fig.grid.grid_line_width = self.options.GRID_LINE_WIDTH
+                fig.grid.grid_line_color = self.options.GRID_LINE_COLOR
 
     def add_legend(self, fig, legend_items=None):
         if legend_items is None:
@@ -799,7 +806,7 @@ class PlotCorrelation(Plot):
         :param options: user preferences
         :type options: Options
         """
-        Plot.__init__(self, parent, options)
+        Plot.__init__(self, parent, options, apply_grid_options=False)
 
         self.type = 'correlation'
         self.parent = parent

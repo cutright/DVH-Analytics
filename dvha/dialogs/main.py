@@ -660,7 +660,7 @@ class UserSettings(wx.Frame):
         self.spin_ctrl_sizes_input = wx.SpinCtrl(self, wx.ID_ANY, "0", min=6, max=20, style=wx.SP_ARROW_KEYS)
         self.combo_box_line_widths_category = wx.ComboBox(self, wx.ID_ANY, choices=width_variables,
                                                           style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.spin_ctrl_line_widths_input = wx.SpinCtrl(self, wx.ID_ANY, "0", min=1, max=5, style=wx.SP_ARROW_KEYS)
+        self.spin_ctrl_line_widths_input = wx.SpinCtrl(self, wx.ID_ANY, "0", min=1, max=10, style=wx.SP_ARROW_KEYS)
         self.combo_box_line_styles_category = wx.ComboBox(self, wx.ID_ANY, choices=line_dash_variables,
                                                           style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_line_styles_selection = wx.ComboBox(self, wx.ID_ANY, choices=line_style_options,
@@ -711,11 +711,11 @@ class UserSettings(wx.Frame):
         self.spin_ctrl_alpha_input.SetIncrement(0.1)
 
         # Windows needs this done explicitly or the value will be an empty string
-        self.combo_box_alpha_category.SetSelection(7)  # IQR Alpha
-        self.combo_box_colors_category.SetSelection(14)  # Plot Color
-        self.combo_box_line_styles_category.SetSelection(4)  # DVH Line Dash
-        self.combo_box_line_widths_category.SetSelection(4)  # DVH Line Width
-        self.combo_box_sizes_category.SetSelection(6)  # Plot Axis Label Font Size
+        self.combo_box_alpha_category.SetValue('IQR Alpha')
+        self.combo_box_colors_category.SetValue('Plot Color')
+        self.combo_box_line_styles_category.SetValue('DVH Line Dash')
+        self.combo_box_line_widths_category.SetValue('DVH Line Widht')
+        self.combo_box_sizes_category.SetValue('Plot Axis Label Font Size')
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)

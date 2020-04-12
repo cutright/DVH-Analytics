@@ -54,6 +54,11 @@ class DefaultOptions:
         self.PLOT_AXIS_LABEL_FONT_SIZE = "12pt"
         self.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE = "10pt"
 
+        # Grid line properties
+        self.GRID_LINE_COLOR = 'lightgrey'
+        self.GRID_LINE_WIDTH = 1
+        self.GRID_ALPHA = 1.
+
         # Number of data points are reduced by this factor during dynamic plot interaction to speed-up visualizations
         # This is only applied to the DVH plot since it has a large amount of data
         self.LOD_FACTOR = 100
