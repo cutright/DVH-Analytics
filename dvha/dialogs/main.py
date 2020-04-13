@@ -714,7 +714,7 @@ class UserSettings(wx.Frame):
         self.combo_box_alpha_category.SetValue('IQR Alpha')
         self.combo_box_colors_category.SetValue('Plot Color')
         self.combo_box_line_styles_category.SetValue('DVH Line Dash')
-        self.combo_box_line_widths_category.SetValue('DVH Line Widht')
+        self.combo_box_line_widths_category.SetValue('DVH Line Width')
         self.combo_box_sizes_category.SetValue('Plot Axis Label Font Size')
 
     def __do_layout(self):

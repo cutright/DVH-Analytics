@@ -4,7 +4,7 @@ v0.7.6 (TBD)
 --------------------
  - [Export] PNG support for figure export
  - [Export] Bundle PhantomJS in executables or load from APP_DIR
- - [Misc] Store last positions of certain windows (e.g., UserSettings, ExportFigure) 
+ - [Misc] Store last positions of certain windows (i.e., UserSettings, ExportFigure) 
  - [Plots] Grid line customization (color, thickness, alpha)
 
 
