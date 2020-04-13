@@ -2,6 +2,7 @@
 
 v0.7.6 (TBD)
 --------------------
+ - [Import] Using rapidfuzz for name prediction (for MIT licensing)
  - [Export] PNG support for figure export
  - [Export] Bundle PhantomJS in executables or load from APP_DIR
  - [Misc] Store last positions of certain windows (i.e., UserSettings, ExportFigure) 
