@@ -1,8 +1,4 @@
-import warnings
-with warnings.catch_warnings():  # ignore Install python-Levenshtein warning
-    warnings.simplefilter("ignore")
-    from fuzzywuzzy import fuzz
-
+from rapidfuzz import fuzz
 from dvha.tools.roi_name_manager import clean_name
 
 

@@ -82,7 +82,7 @@ Dependencies
 * [Statsmodels](https://github.com/statsmodels/statsmodels) >=0.8.0
 * [Scikit-learn](http://scikit-learn.org) >= 0.21.0
 * [regressors](https://pypi.org/project/regressors/)
-* [FuzzyWuzzy](https://github.com/seatgeek/fuzzywuzzy)
+* [RapidFuzz](https://github.com/rhasspy/rapidfuzz)
 * [selenium](https://github.com/SeleniumHQ/selenium/)
 
 
