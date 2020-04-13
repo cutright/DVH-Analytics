@@ -1721,7 +1721,8 @@ class AssignPTV(wx.Dialog):
 
     def close(self):
         for plan_uid, parsed_dicom_data in self.parsed_dicom_data.items():
-            parsed_dicom_data.plan_ptvs = list(self.ptvs[plan_uid])
+            if plan_uid in self.ptvs.values():
+                parsed_dicom_data.plan_ptvs = list(self.ptvs[plan_uid])
         self.continue_status = True
         self.Close()
 
