@@ -185,9 +185,9 @@ class DefaultOptions:
                                           'plot_height': 600,
                                           'plot_width': 820},
                                'legend': {'background_fill_color': 'white',
-                                          'background_fill_alpha': 1,
+                                          'background_fill_alpha': 1.,
                                           'border_line_color': 'white',
-                                          'border_line_alpha': 1,
+                                          'border_line_alpha': 1.,
                                           'border_line_width': 1}}
         self.apply_range_edits = False
 

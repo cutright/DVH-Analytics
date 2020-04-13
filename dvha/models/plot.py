@@ -209,13 +209,21 @@ class Plot:
 
     def export_svg(self, file_name):
         for fig in self.figures:
-            fig.output_backend = "svg"
-        export_svgs(self.bokeh_layout, filename=file_name, timeout=30)
-        for fig in self.figures:
-            fig.output_backend = "canvas"
+            if self.figure_has_data(fig):
+                fig.output_backend = "svg"
+                export_svgs(fig, filename=file_name, timeout=10)
+                fig.output_backend = "canvas"
+
+    @staticmethod
+    def figure_has_data(fig):
+        if fig.renderers:
+            data = fig.renderers[0].data_source.data
+            if data and data[list(data)[0]]:
+                return True
+        return False
 
     def export_png(self, file_name):
-        export_png(self.bokeh_layout, filename=file_name, timeout=30)
+        export_png(self.bokeh_layout, filename=file_name, timeout=10)
 
     def export_html(self, file_name):
         with open(file_name, 'w') as doc:

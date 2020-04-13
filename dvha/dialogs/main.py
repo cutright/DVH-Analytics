@@ -657,10 +657,10 @@ class UserSettings(wx.Frame):
                                                       style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_sizes_category = wx.ComboBox(self, wx.ID_ANY, choices=size_variables,
                                                     style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.spin_ctrl_sizes_input = wx.SpinCtrl(self, wx.ID_ANY, "0", min=6, max=20, style=wx.SP_ARROW_KEYS)
+        self.spin_ctrl_sizes_input = wx.SpinCtrl(self, wx.ID_ANY, "0", min=0, max=20, style=wx.SP_ARROW_KEYS)
         self.combo_box_line_widths_category = wx.ComboBox(self, wx.ID_ANY, choices=width_variables,
                                                           style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.spin_ctrl_line_widths_input = wx.SpinCtrl(self, wx.ID_ANY, "0", min=1, max=10, style=wx.SP_ARROW_KEYS)
+        self.spin_ctrl_line_widths_input = wx.SpinCtrl(self, wx.ID_ANY, "0", min=0, max=10, style=wx.SP_ARROW_KEYS)
         self.combo_box_line_styles_category = wx.ComboBox(self, wx.ID_ANY, choices=line_dash_variables,
                                                           style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_line_styles_selection = wx.ComboBox(self, wx.ID_ANY, choices=line_style_options,

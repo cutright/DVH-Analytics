@@ -291,7 +291,17 @@ class ExportFigure(wx.Frame):
                     self.input[obj_type][-1].SetValue(value)
                     self.combo_box[obj_type + '_' + attr] = self.input[obj_type][-1]
                 else:
-                    self.input[obj_type].append(wx.TextCtrl(self, wx.ID_ANY, str(value)))
+                    if 'alpha' in attr:
+                        self.input[obj_type].append(wx.SpinCtrlDouble(self, wx.ID_ANY, "0",
+                                                                      min=0, max=1, style=wx.SP_ARROW_KEYS))
+                        self.input[obj_type][-1].SetIncrement(0.1)
+                        self.input[obj_type][-1].SetValue(str(value))
+                    elif 'width' in attr and obj_type == 'legend':
+                        self.input[obj_type].append(wx.SpinCtrl(self, wx.ID_ANY, "0",
+                                                                min=0, max=20, style=wx.SP_ARROW_KEYS))
+                        self.input[obj_type][-1].SetValue(str(value))
+                    else:
+                        self.input[obj_type].append(wx.TextCtrl(self, wx.ID_ANY, str(value)))
                     self.text_ctrl[obj_type + '_' + attr] = self.input[obj_type][-1]
 
         self.label_plot = wx.StaticText(self, wx.ID_ANY, 'Plot:')
@@ -307,7 +317,8 @@ class ExportFigure(wx.Frame):
 
         range_init = self.options.apply_range_edits if hasattr(self.options, 'apply_range_edits') else False
         self.include_range.SetValue(range_init)
-        self.include_range.SetToolTip("Check this to alter the ranges from the current view.\n"
+        self.include_range.SetToolTip("Check this to alter the ranges from the current view. Leave a range field blank "
+                                      "to use the current view's value.\n"
                                       "NOTE: These range edits do not apply to Machine Learning plot saves.")
         self.on_checkbox()  # Disable Range input objects by default
 
@@ -358,6 +369,7 @@ class ExportFigure(wx.Frame):
         return partial(self.plot.save_figure, self.attr_dicts)
 
     def on_export(self, *evt):
+        self.validate_input()
         self.plot.save_figure_dlg(self, "Save %s Figure" % self.combo_plot.GetValue(), attr_dicts=self.attr_dicts)
 
     def get_text_ctrl_float(self, key):
@@ -388,12 +400,14 @@ class ExportFigure(wx.Frame):
 
     @property
     def save_attr_dicts(self):
-        return {key: self.get_attr_dict(key, save_mode=True) for key in self.input.keys()}
+        return {key: self.get_attr_dict(key, save_mode=True) for key in self.input.keys()
+                if self.get_attr_dict(key, save_mode=True) is not None}
 
     def on_dismiss(self, *evt):
         wx.CallAfter(self.on_close)
 
     def on_close(self, *evt):
+        self.validate_input()
         self.options.save_window_position(self, 'export_figure')
         self.save_options()
         self.parent.export_figure = None
@@ -409,3 +423,13 @@ class ExportFigure(wx.Frame):
             if 'Range' in self.label['figure'][i].GetLabel():
                 self.label['figure'][i].Enable(self.include_range.GetValue())
                 obj.Enable(self.include_range.GetValue())
+
+    def validate_input(self):
+        """If any TextCtrl is invalid, set to stored options"""
+        for key, obj in self.text_ctrl.items():
+            if obj.GetValue() == '':
+                obj_type, attr = key[:key.find('_')], key[key.find('_')+1:]
+                stored_value = self.options.save_fig_param[obj_type][attr]
+                new_value = self.getter[type(stored_value)](key)
+                if new_value is None:
+                    obj.SetValue(str(stored_value))
