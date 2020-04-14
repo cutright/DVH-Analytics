@@ -16,8 +16,8 @@ from datetime import datetime
 from dateutil.parser import parse as parse_date
 import linecache
 import numpy as np
-from os import walk, listdir, unlink, mkdir, rmdir, chdir, sep
-from os.path import join, isfile, isdir, splitext, basename, dirname, realpath
+from os import walk, listdir, unlink, mkdir, rmdir, chdir, sep, environ
+from os.path import join, isfile, isdir, splitext, basename, dirname, realpath, pathsep
 import pickle
 import pydicom
 from pydicom.uid import ImplicitVRLittleEndian
@@ -26,7 +26,7 @@ from subprocess import check_output
 import sys
 import tracemalloc
 from dvha.db.sql_connector import DVH_SQL
-from dvha.paths import SQL_CNF_PATH, WIN_APP_ICON, PIP_LIST_PATH, DIRECTORIES
+from dvha.paths import SQL_CNF_PATH, WIN_APP_ICON, PIP_LIST_PATH, DIRECTORIES, APP_DIR
 
 
 IGNORED_FILES = ['.ds_store']
@@ -778,3 +778,11 @@ def get_wildcards(extensions):
 
 
 FIG_WILDCARDS = get_wildcards(['svg', 'html', 'png'])
+
+
+def set_phantom_js_in_path():
+    bundle_dir = getattr(sys, '_MEIPASS', None)
+    phantom_js_path = APP_DIR if bundle_dir is None else bundle_dir
+
+    if phantom_js_path not in environ["PATH"]:
+        environ["PATH"] += pathsep + phantom_js_path

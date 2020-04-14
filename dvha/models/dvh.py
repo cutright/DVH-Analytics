@@ -107,7 +107,6 @@ class DVH:
         else:
             self.count = 0
 
-        self.protocols = Protocols()
 
     def get_plan_values(self, plan_column):
         """
@@ -389,24 +388,6 @@ class DVH:
         :rtype: bool
         """
         return constraint(self.dvh[:, index], self.mean_dose[index], self.volume[index], self.dvh_bin_width)
-
-    def evaluate_dvh(self, index, protocol_roi, protocol_name, fractionation):
-        """
-
-        :param index: The index of the dvh to be evaluated (self.dvh[:, index])
-        :type index: int
-        :param protocol_roi: the name of the roi as defined in the protocol
-        :type protocol_roi: str
-        :param protocol_name: name of the protocol (e.g., TG101, PEMBRO)
-        :type protocol_name: str
-        :param fractionation: number of fractions associated with constraints, str(int) or 'Std'
-        :type fractionation: str
-        :return: evaluation of all constraints for the protocol_roi with provided dvh
-        :rtype: dict
-        """
-        constraints = self.protocols.get_roi_constraints(protocol_roi, protocol_name, fractionation,
-                                                         roi_type=self.roi_type[index])
-        return {str(c): self.evaluate_constraint(index, c) for c in constraints}
 
 
 # Returns the isodose level outlining the given volume
