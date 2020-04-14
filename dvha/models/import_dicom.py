@@ -1241,8 +1241,8 @@ class StudyImporter:
                         query_return = cnx.query('DVHs', 'roi_type, physician_roi', condition)
                     if query_return:
                         roi_type, physician_roi = tuple(query_return[0])
-                        if roi_type.lower() in ['organ', 'ctv', 'gtv']:
-                            if not (physician_roi.lower() in
+                        if str(roi_type).lower() in ['organ', 'ctv', 'gtv']:
+                            if not (str(physician_roi).lower() in
                                     ['uncategorized', 'ignored', 'external', 'skin', 'body']
                                     or roi_name.lower() in ['external', 'skin', 'body']):
                                 post_import_rois.append(clean_name(roi_name_map[roi_key]))
@@ -1721,7 +1721,8 @@ class AssignPTV(wx.Dialog):
 
     def close(self):
         for plan_uid, parsed_dicom_data in self.parsed_dicom_data.items():
-            parsed_dicom_data.plan_ptvs = list(self.ptvs[plan_uid])
+            if plan_uid in self.ptvs.values():
+                parsed_dicom_data.plan_ptvs = list(self.ptvs[plan_uid])
         self.continue_status = True
         self.Close()
 
