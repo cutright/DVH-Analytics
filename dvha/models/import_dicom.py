@@ -1647,6 +1647,11 @@ class AssignPTV(wx.Dialog):
         sizer_main.Add(sizer_input, 1, wx.ALL | wx.EXPAND, 5)
         sizer_main.Add(sizer_buttons, 0, wx.ALIGN_RIGHT | wx.ALL | wx.EXPAND, 5)
 
+        note = wx.StaticText(self, wx.ID_ANY, "NOTE: Only StudyInstanceUIDs associated with multiple dose files "
+                                              "are included/needed in this PTV Assignment window.")
+        note.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
+        sizer_main.Add(note, 0, wx.ALL, 10)
+
         sizer_wrapper.Add(sizer_main, 1, wx.EXPAND, 0)
 
         self.SetSizer(sizer_wrapper)
@@ -1710,7 +1715,7 @@ class AssignPTV(wx.Dialog):
 
     def update_data(self, increment=0):
         self.current_index += increment
-        progress = 100 * float(self.current_index) / len(self.uids)
+        progress = 100 * float(self.current_index) / (len(self.uids) - 1)
         self.gauge.SetValue(progress)
         self.update_back_next_buttons()
         if self.current_index < len(self.uids):
