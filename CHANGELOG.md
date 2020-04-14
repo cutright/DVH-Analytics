@@ -3,8 +3,9 @@
 v0.7.6 (TBD)
 --------------------
  - [Import] Using rapidfuzz for name prediction (for MIT licensing)
+ - [Import] Fix for None-Type error with roi_type query during import
  - [Export] PNG support for figure export
- - [Export] Bundle PhantomJS in executables or load from APP_DIR
+ - [Export] Bundle PhantomJS in executables or load from ~/Apps/dvh_analytics
  - [Misc] Store last positions of certain windows (i.e., UserSettings, ExportFigure) 
  - [Plots] Grid line customization (color, thickness, alpha)
 

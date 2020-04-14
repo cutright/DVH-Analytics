@@ -270,7 +270,12 @@ class Plot:
             save_data_to_file(parent, title, partial(self.save_figure, attr_dicts),
                               initial_dir="", data_type='function', wildcard=FIG_WILDCARDS)
         except Exception as e:
-            ErrorDialog(parent, str(e), "Save Error")
+            if "phantomjs is not present" in str(e).lower():
+                msg = "Please download a phantomjs executable from https://phantomjs.org/download.html " \
+                      "and store in ~/Apps/dvh_analytics/ or try a phantomjs installation with conda or npm"
+            else:
+                msg = str(e)
+            ErrorDialog(parent, msg, "Save Error")
 
 
 class PlotStatDVH(Plot):
