@@ -11,5 +11,5 @@ python-dateutil
 statsmodels >= 0.8.0
 scikit-learn>=0.21.0
 regressors
-fuzzywuzzy
+rapidfuzz
 selenium

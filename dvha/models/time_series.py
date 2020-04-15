@@ -21,25 +21,20 @@ class TimeSeriesFrame:
     """
     Object to be passed into notebook panel for the Time Series tab
     """
-    def __init__(self, parent, group_data, options):
-        """
-        :param parent:  notebook panel in main view
-        :type parent: Panel
-        :param group_data: dvh data object
-        :type group_data: DVH
-        :param options: user options containing visual preferences
-        :type options: Options
-        """
-        self.parent = parent
-        self.options = options
-        self.stats_data = {grp: data['stats_data'] for grp, data in group_data.items()}
+    def __init__(self, main_app_frame):
+
+        self.main_app_frame = main_app_frame
+        self.parent = main_app_frame.notebook_tab['Time Series']
+        self.options = main_app_frame.options
+        self.stats_data = {grp: data['stats_data'] for grp, data in main_app_frame.group_data.items()}
 
         self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.text_input_bin_size = wx.TextCtrl(self.parent, wx.ID_ANY, "10", style=wx.TE_PROCESS_ENTER)
         self.text_input_lookback_distance = wx.TextCtrl(self.parent, wx.ID_ANY, "1", style=wx.TE_PROCESS_ENTER)
         self.text_inputs_percentile = wx.TextCtrl(self.parent, wx.ID_ANY, "90", style=wx.TE_PROCESS_ENTER)
         self.button_update_plot = wx.Button(self.parent, wx.ID_ANY, "Update Plot")
-        self.button_export_csv = wx.Button(self.parent, wx.ID_ANY, "Export")
+        self.button_export_csv = wx.Button(self.parent, wx.ID_ANY, "Export CSV")
+        self.button_save_figure = wx.Button(self.parent, wx.ID_ANY, "Save Figure")
 
         self.parent.Bind(wx.EVT_COMBOBOX, self.combo_box_y_axis_ticker, id=self.combo_box_y_axis.GetId())
         self.parent.Bind(wx.EVT_TEXT_ENTER, self.update_plot_ticker, id=self.text_input_bin_size.GetId())
@@ -51,6 +46,7 @@ class TimeSeriesFrame:
 
         self.parent.Bind(wx.EVT_BUTTON, self.update_plot_ticker, id=self.button_update_plot.GetId())
         self.parent.Bind(wx.EVT_BUTTON, self.export_csv, id=self.button_export_csv.GetId())
+        self.parent.Bind(wx.EVT_BUTTON, self.save_figure, id=self.button_save_figure.GetId())
 
         self.disable_buttons()
 
@@ -87,11 +83,11 @@ class TimeSeriesFrame:
         sizer_y_axis.Add(self.combo_box_y_axis, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(sizer_y_axis, 1, wx.EXPAND, 0)
 
-        label_histogram_bins = wx.StaticText(self.parent, wx.ID_ANY, "Histogram Bins:")
+        label_histogram_bins = wx.StaticText(self.parent, wx.ID_ANY, "Hist. Bins:")
         sizer_histogram_bins.Add(label_histogram_bins, 0, wx.LEFT, 5)
         sizer_histogram_bins.Add(self.text_input_bin_size, 0, wx.ALL | wx.EXPAND, 5)
 
-        label_lookback_distance = wx.StaticText(self.parent, wx.ID_ANY, "Lookback Distance:")
+        label_lookback_distance = wx.StaticText(self.parent, wx.ID_ANY, "Avg. Len:")
         sizer_lookback_distance.Add(label_lookback_distance, 0, wx.LEFT, 5)
         sizer_lookback_distance.Add(self.text_input_lookback_distance, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(sizer_lookback_distance, 1, wx.EXPAND, 0)
@@ -103,6 +99,7 @@ class TimeSeriesFrame:
         sizer_widgets.Add(sizer_histogram_bins, 1, wx.EXPAND, 0)
         sizer_widgets.Add(self.button_update_plot, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(self.button_export_csv, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_widgets.Add(self.button_save_figure, 0, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_widgets, 0, wx.BOTTOM | wx.EXPAND, 5)
 
         self.plot = PlotTimeSeries(self.parent, self.options)
@@ -273,6 +270,12 @@ class TimeSeriesFrame:
 
     def export_csv(self, evt):
         save_data_to_file(self.parent, "Export Time Series data to CSV", self.plot.get_csv())
+
+    def save_figure(self, *evt):
+        title = 'Save Time Series Figure'
+        export_frame = self.main_app_frame.export_figure
+        attr_dicts = None if export_frame is None else export_frame.attr_dicts
+        self.plot.save_figure_dlg(self.parent, title, attr_dicts=attr_dicts)
 
     @property
     def has_data(self):

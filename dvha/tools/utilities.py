@@ -16,8 +16,8 @@ from datetime import datetime
 from dateutil.parser import parse as parse_date
 import linecache
 import numpy as np
-from os import walk, listdir, unlink, mkdir, rmdir, chdir, sep
-from os.path import join, isfile, isdir, splitext, basename, dirname, realpath
+from os import walk, listdir, unlink, mkdir, rmdir, chdir, sep, environ
+from os.path import join, isfile, isdir, splitext, basename, dirname, realpath, pathsep
 import pickle
 import pydicom
 from pydicom.uid import ImplicitVRLittleEndian
@@ -26,7 +26,7 @@ from subprocess import check_output
 import sys
 import tracemalloc
 from dvha.db.sql_connector import DVH_SQL
-from dvha.paths import SQL_CNF_PATH, WIN_APP_ICON, PIP_LIST_PATH, DIRECTORIES
+from dvha.paths import SQL_CNF_PATH, WIN_APP_ICON, PIP_LIST_PATH, DIRECTORIES, APP_DIR, BACKUP_DIR, DATA_DIR
 
 
 IGNORED_FILES = ['.ds_store']
@@ -370,7 +370,7 @@ def calc_stats(data):
     return rtn_data
 
 
-def move_files_to_new_path(files, new_dir, copy_files=False):
+def move_files_to_new_path(files, new_dir, copy_files=False, new_file_names=None):
     """
     Move all files provided to the new directory
     :param files: absolute file paths
@@ -379,12 +379,15 @@ def move_files_to_new_path(files, new_dir, copy_files=False):
     :type new_dir: str
     :param copy_files: Set to True to keep original files and copy to new_dir, False to remove original files
     :type copy_files: bool
+    :param new_file_names: optionally provide a list of new names
+    :type new_file_names: None or list of str
     """
-    for file_path in files:
+    for i, file_path in enumerate(files):
         if isfile(file_path):
             file_name = basename(file_path)
             old_dir = dirname(file_path)
-            new = join(new_dir, file_name)
+            new_file_name = file_name if new_file_names is None else new_file_names[i]
+            new = join(new_dir, new_file_name)
             if not isdir(new_dir):
                 mkdir(new_dir)
             if old_dir != new_dir:
@@ -769,3 +772,39 @@ def get_installed_python_libraries():
 
 def save_pip_list():
     save_object_to_file(get_installed_python_libraries(), PIP_LIST_PATH)
+
+
+def get_wildcards(extensions):
+    if type(extensions) is not list:
+        extensions = [extensions]
+    return '|'.join(["%s (*.%s)|*.%s" % (ext.upper(), ext, ext) for ext in extensions])
+
+
+FIG_WILDCARDS = get_wildcards(['svg', 'html', 'png'])
+
+
+def set_phantom_js_in_path():
+    bundle_dir = getattr(sys, '_MEIPASS', None)
+    phantom_js_path = APP_DIR if bundle_dir is None else bundle_dir
+
+    if phantom_js_path not in environ["PATH"]:
+        environ["PATH"] += pathsep + phantom_js_path
+
+
+def backup_sqlite_db(options):
+    if options.DB_TYPE == 'sqlite':
+        db_file_name = basename(options.DEFAULT_CNF['sqlite']['host'])
+        file_append = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        new_file_name = splitext(db_file_name)[0] + '_' + file_append + '.db'
+        db_file_path = join(DATA_DIR, db_file_name)
+
+        # check if stored file_path is an absolute path
+        if not isfile(db_file_path):
+            db_file_path = options.DEFAULT_CNF['sqlite']['host']
+            if not isfile(db_file_path):
+                db_file_path = None
+
+        if db_file_path is not None:
+            move_files_to_new_path([db_file_path], BACKUP_DIR, copy_files=True, new_file_names=[new_file_name])
+
+            return [db_file_path, join(BACKUP_DIR, new_file_name)]

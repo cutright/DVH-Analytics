@@ -23,25 +23,14 @@ class RadBioFrame:
     """
     Object to be passed into notebook panel for the Rad Bio tab
     """
-    def __init__(self, parent, group_data, time_series, regression, control_chart):
-        """
-        :param parent:  notebook panel in main view
-        :type parent: Panel
-        :param group_data: dvh, table_data, and stats_data
-        :type group_data: dict
-        :param time_series: Time Series object in notebook
-        :type time_series: TimeSeriesFrame
-        :param regression: Regression frame object in notebook
-        :type regression: RegressionFrame
-        :param control_chart: Control Chart frame object in notebook
-        :type control_chart: ControlChartFrame
-        """
+    def __init__(self, main_app_frame):
 
-        self.parent = parent
-        self.group_data = group_data
-        self.time_series = time_series
-        self.regression = regression
-        self.control_chart = control_chart
+        self.main_app_frame = main_app_frame
+        self.parent = main_app_frame.notebook_tab['Rad Bio']
+        self.group_data = main_app_frame.group_data
+        self.time_series = main_app_frame.time_series
+        self.regression = main_app_frame.regression
+        self.control_chart = main_app_frame.control_chart
 
         self.table_published_values = wx.ListCtrl(self.parent, wx.ID_ANY,
                                                   style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)

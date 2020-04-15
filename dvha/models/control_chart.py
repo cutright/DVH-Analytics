@@ -22,17 +22,11 @@ class ControlChartFrame:
     """
     Object to be passed into notebook panel for the Control Chart tab
     """
-    def __init__(self, parent, group_data, options):
-        """
-        :param parent:  notebook panel in main view
-        :type parent: Panel
-        :param group_data: dvh, table, and stats data
-        :type group_data: dict
-        :param options: user options containing visual preferences
-        :type options: Options
-        """
-        self.parent = parent
-        self.group_data = group_data
+    def __init__(self, main_app_frame):
+
+        self.main_app_frame = main_app_frame
+        self.parent = main_app_frame.notebook_tab['Control Chart']
+        self.group_data = main_app_frame.group_data
         self.choices = []
         self.models = {grp: {} for grp in [1, 2]}
 
@@ -42,9 +36,9 @@ class ControlChartFrame:
 
         self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, style=wx.CB_DROPDOWN | wx.CB_READONLY)
 
-        self.button_export = wx.Button(self.parent, wx.ID_ANY, "Export")
-        self.button_save_plot = wx.Button(self.parent, wx.ID_ANY, "Save Plot")
-        self.plot = PlotControlChart(self.parent, options)
+        self.button_export = wx.Button(self.parent, wx.ID_ANY, "Export CSV")
+        self.button_save_figure = wx.Button(self.parent, wx.ID_ANY, "Save Figure")
+        self.plot = PlotControlChart(self.parent, main_app_frame.options)
 
         self.__do_bind()
         self.__set_properties()
@@ -53,7 +47,7 @@ class ControlChartFrame:
 
     def __do_bind(self):
         self.parent.Bind(wx.EVT_COMBOBOX, self.on_combo_box_y, id=self.combo_box_y_axis.GetId())
-        self.parent.Bind(wx.EVT_BUTTON, self.on_save_plot, id=self.button_save_plot.GetId())
+        self.parent.Bind(wx.EVT_BUTTON, self.save_figure, id=self.button_save_figure.GetId())
         self.parent.Bind(wx.EVT_BUTTON, self.export_csv, id=self.button_export.GetId())
 
     def __set_properties(self):
@@ -74,7 +68,7 @@ class ControlChartFrame:
         sizer_widgets.Add(sizer_y_axis, 0, wx.EXPAND, 0)
 
         sizer_widgets.Add(self.button_export, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_widgets.Add(self.button_save_plot, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_widgets.Add(self.button_save_figure, 0, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_widgets, 0, wx.EXPAND | wx.BOTTOM, 5)
         sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_plot, 1, wx.EXPAND, 0)
@@ -137,26 +131,6 @@ class ControlChartFrame:
         stats_data = self.group_data[self.group]['stats_data']
         return list(stats_data)
 
-    # def update_endpoints_and_radbio(self):
-    #     if self.dvhs:
-    #         if self.dvhs.endpoints['defs']:
-    #             for var in self.dvhs.endpoints['defs']['label']:
-    #                 if var not in self.variables:
-    #                     self.stats_data[var] = {'units': '',
-    #                                             'values': self.dvhs.endpoints['data'][var]}
-    #
-    #             for var in self.variables:
-    #                 if var[0:2] in {'D_', 'V_'}:
-    #                     if var not in self.dvhs.endpoints['defs']['label']:
-    #                         self.stats_data.pop(var)
-    #
-    #         if self.dvhs.eud:
-    #             self.stats_data['EUD'] = {'units': 'Gy',
-    #                                       'values': self.dvhs.eud}
-    #         if self.dvhs.ntcp_or_tcp:
-    #             self.stats_data['NTCP or TCP'] = {'units': '',
-    #                                               'values': self.dvhs.ntcp_or_tcp}
-
     def initialize_y_axis_options(self):
         for i in range(len(self.choices))[::-1]:
             c = self.choices[i]
@@ -175,9 +149,11 @@ class ControlChartFrame:
     def export_csv(self, evt):
         save_data_to_file(self.parent, "Export control chart data to CSV", self.plot.get_csv())
 
-    def on_save_plot(self, evt):
-        save_data_to_file(self.parent, 'Save control chart', self.plot.html_str,
-                          wildcard="HTML files (*.html)|*.html")
+    def save_figure(self, *evt):
+        title = 'Save Control Chart'
+        export_frame = self.main_app_frame.export_figure
+        attr_dicts = None if export_frame is None else export_frame.attr_dicts
+        self.plot.save_figure_dlg(self.parent, title, attr_dicts=attr_dicts)
 
     @property
     def has_data(self):

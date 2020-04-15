@@ -66,6 +66,8 @@ class DatabaseEditorFrame(wx.Frame):
                        'export_csv': wx.Button(self.window_pane_query, wx.ID_ANY, "Export"),
                        'remap_roi_names': wx.Button(self, wx.ID_ANY, "Remap ROI Names")}
 
+        self.checkbox_auto_backup = wx.CheckBox(self, wx.ID_ANY, "Auto Backup SQLite DB After Import")
+
         self.__set_properties()
         self.__do_layout()
         self.__do_bind()
@@ -93,6 +95,10 @@ class DatabaseEditorFrame(wx.Frame):
                 self.column_nodes[table][column] = self.tree_ctrl_db.AppendItem(self.table_nodes[table], column)
         self.combo_box_query_table.SetValue('Plans')
 
+        self.checkbox_auto_backup.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
+                                                  wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
+        self.checkbox_auto_backup.SetValue(self.options.AUTO_SQL_DB_BACKUP)
+
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_query = wx.BoxSizer(wx.VERTICAL)
@@ -115,6 +121,7 @@ class DatabaseEditorFrame(wx.Frame):
         sizer_dialog_buttons.Add(self.button['rebuild_db'], 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button['delete_all_data'], 0, wx.ALL, 5)
         sizer_dialog_buttons.Add(self.button['remap_roi_names'], 0, wx.ALL, 5)
+        sizer_dialog_buttons.Add(self.checkbox_auto_backup, 0, wx.LEFT | wx.ALIGN_CENTER_VERTICAL, 20)
         sizer_wrapper.Add(sizer_dialog_buttons, 0, wx.ALL, 5)
 
         sizer_db_tree.Add(self.tree_ctrl_db, 1, wx.EXPAND, 0)
@@ -164,6 +171,8 @@ class DatabaseEditorFrame(wx.Frame):
         # For example, query button calls on_query when clicked
         for key, button in self.button.items():
             self.Bind(wx.EVT_BUTTON, getattr(self, 'on_' + key), id=button.GetId())
+
+        self.Bind(wx.EVT_CHECKBOX, self.on_auto_backup, id=self.checkbox_auto_backup.GetId())
 
         self.Bind(wx.EVT_LIST_COL_CLICK, self.sort_query_results, self.list_ctrl_query_results)
 
@@ -258,3 +267,6 @@ class DatabaseEditorFrame(wx.Frame):
 
     def sort_query_results(self, evt):
         self.data_query_results.sort_table(evt)
+
+    def on_auto_backup(self, *evt):
+        self.options.AUTO_SQL_DB_BACKUP = self.checkbox_auto_backup.GetValue()

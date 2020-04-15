@@ -18,12 +18,13 @@ import numpy as np
 import time
 from os.path import isdir
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_window_size,\
-    get_installed_python_libraries, set_msw_background_color, set_frame_icon
+    get_installed_python_libraries, set_msw_background_color, set_frame_icon, backup_sqlite_db
 from dvha.db import sql_columns
 from dvha.db.sql_connector import DVH_SQL
 from dvha.models.data_table import DataTable
 from dvha.paths import LICENSE_PATH
 from dvha.options import DefaultOptions
+from dvha.tools.errors import ErrorDialog
 
 
 class DatePicker(wx.Dialog):
@@ -630,6 +631,7 @@ class UserSettings(wx.Frame):
 
         self.parent = parent
         self.options = parent.options
+        self.options.edit_detected = False
 
         colors = list(plot_colors.cnames)
         colors.sort()
@@ -656,10 +658,10 @@ class UserSettings(wx.Frame):
                                                       style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_sizes_category = wx.ComboBox(self, wx.ID_ANY, choices=size_variables,
                                                     style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.spin_ctrl_sizes_input = wx.SpinCtrl(self, wx.ID_ANY, "0", min=6, max=20, style=wx.SP_ARROW_KEYS)
+        self.spin_ctrl_sizes_input = wx.SpinCtrl(self, wx.ID_ANY, "0", min=0, max=20, style=wx.SP_ARROW_KEYS)
         self.combo_box_line_widths_category = wx.ComboBox(self, wx.ID_ANY, choices=width_variables,
                                                           style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.spin_ctrl_line_widths_input = wx.SpinCtrl(self, wx.ID_ANY, "0", min=1, max=5, style=wx.SP_ARROW_KEYS)
+        self.spin_ctrl_line_widths_input = wx.SpinCtrl(self, wx.ID_ANY, "0", min=0, max=10, style=wx.SP_ARROW_KEYS)
         self.combo_box_line_styles_category = wx.ComboBox(self, wx.ID_ANY, choices=line_dash_variables,
                                                           style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_line_styles_selection = wx.ComboBox(self, wx.ID_ANY, choices=line_style_options,
@@ -710,11 +712,11 @@ class UserSettings(wx.Frame):
         self.spin_ctrl_alpha_input.SetIncrement(0.1)
 
         # Windows needs this done explicitly or the value will be an empty string
-        self.combo_box_alpha_category.SetSelection(7)  # IQR Alpha
-        self.combo_box_colors_category.SetSelection(14)  # Plot Color
-        self.combo_box_line_styles_category.SetSelection(4)  # DVH Line Dash
-        self.combo_box_line_widths_category.SetSelection(4)  # DVH Line Width
-        self.combo_box_sizes_category.SetSelection(6)  # Plot Axis Label Font Size
+        self.combo_box_alpha_category.SetValue('IQR Alpha')
+        self.combo_box_colors_category.SetValue('Plot Color')
+        self.combo_box_line_styles_category.SetValue('DVH Line Dash')
+        self.combo_box_line_widths_category.SetValue('DVH Line Width')
+        self.combo_box_sizes_category.SetValue('Plot Axis Label Font Size')
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -764,7 +766,7 @@ class UserSettings(wx.Frame):
 
         label_dvh_bin_width = wx.StaticText(self, wx.ID_ANY, "DVH Bin Width (cGy):")
         label_dvh_bin_width.SetToolTip("Value must be an integer")
-        sizer_dvh_bin_width.Add(label_dvh_bin_width, 0, wx.EXPAND | wx.RIGHT, 10)
+        sizer_dvh_bin_width.Add(label_dvh_bin_width, 0, wx.EXPAND | wx.RIGHT | wx.TOP, 7)
         sizer_dvh_bin_width.Add(self.dvh_bin_width_input, 1, wx.ALL, 5)
         sizer_plot_options.Add(sizer_dvh_bin_width, 0, wx.BOTTOM, 10)
 
@@ -818,7 +820,8 @@ class UserSettings(wx.Frame):
         self.SetSizer(sizer_wrapper)
         self.Layout()
         self.Fit()
-        self.Center()
+
+        self.options.set_window_position(self, 'user_settings')
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.inbox_dir_dlg, id=self.button_inbox.GetId())
@@ -844,23 +847,27 @@ class UserSettings(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_ok, id=wx.ID_OK)
         self.Bind(wx.EVT_BUTTON, self.on_cancel, id=wx.ID_CANCEL)
 
-        self.Bind(wx.EVT_CLOSE, self.close)
+        self.Bind(wx.EVT_CLOSE, self.on_cancel)
 
     def on_ok(self, *evt):
-        self.options.save()
-        if self.is_edited:
+        if self.options.is_edited:  # Tracks edits since last redraw
             self.apply_and_redraw_plots()
         self.close()
 
     def on_cancel(self, *evt):
-        self.options.load()
-        if self.is_edited:
+        if self.is_edited:  # Tracks edits since last options save
+            self.options.load()
             self.apply_and_redraw_plots()
         self.close()
 
     def close(self, *evt):
+        self.save_window_position()
+        self.options.save()
         self.parent.user_settings = None
         self.Destroy()
+
+    def save_window_position(self):
+        self.options.save_window_position(self, 'user_settings')
 
     def inbox_dir_dlg(self, evt):
         self.dir_dlg('inbox', self.text_ctrl_inbox)
@@ -1027,7 +1034,8 @@ class UserSettings(wx.Frame):
 
     def on_apply(self, *evt):
         self.apply_and_redraw_plots()
-        self.is_edited = True
+        self.is_edited = True  # Used to track edits since last options save
+        self.options.is_edited = False  # Used to track edits since redraw, is set to True on options.set_option()
 
     def apply_and_redraw_plots(self):
         self.parent.apply_plot_options()
@@ -1110,3 +1118,26 @@ class PythonLibraries(wx.Dialog):
     def run(self):
         self.ShowModal()
         self.Destroy()
+
+
+def do_sqlite_backup(parent, options):
+    flags = wx.ICON_ERROR | wx.OK | wx.OK_DEFAULT
+    if options.DB_TYPE == 'sqlite':
+        try:
+            file_paths = backup_sqlite_db(options)
+            if file_paths is not None:
+                msg = "Current DB: %s\nCopied to: %s" % (tuple(file_paths))
+                caption = "SQLite DB Backup Successful"
+                flags = wx.OK | wx.OK_DEFAULT
+            else:
+                msg = "Your SQLite DB was not backed up for an unknown reason."
+                caption = "SQLite DB Backup Unsuccessful"
+        except Exception as e:
+            msg = str(e)
+            caption = "SQLite DB Backup Error"
+    else:
+        msg = "This feature only applies to SQLite users. PostgreSQL users should contact their DB " \
+              "administrator or look into the pg_dump command."
+        caption = "SQLite DB Backup Error"
+
+    ErrorDialog(parent, msg, caption, flags=flags)

@@ -1026,7 +1026,7 @@ class ImportStatusDialog(wx.Dialog):
         # sizer_error_window = wx.BoxSizer(wx.HORIZONTAL)
         # sizer_error_text = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.label_study_counter = wx.StaticText(self, wx.ID_ANY, "")
+        self.label_study_counter = wx.StaticText(self, wx.ID_ANY, "Plan 1 of 10", style=wx.ALIGN_CENTER)
         sizer_study.Add(self.label_study_counter, 0, wx.ALIGN_CENTER, 0)
         self.label_patient = wx.StaticText(self, wx.ID_ANY, "Patient:")
         sizer_study.Add(self.label_patient, 0, 0, 0)
@@ -1241,8 +1241,8 @@ class StudyImporter:
                         query_return = cnx.query('DVHs', 'roi_type, physician_roi', condition)
                     if query_return:
                         roi_type, physician_roi = tuple(query_return[0])
-                        if roi_type.lower() in ['organ', 'ctv', 'gtv']:
-                            if not (physician_roi.lower() in
+                        if str(roi_type).lower() in ['organ', 'ctv', 'gtv']:
+                            if not (str(physician_roi).lower() in
                                     ['uncategorized', 'ignored', 'external', 'skin', 'body']
                                     or roi_name.lower() in ['external', 'skin', 'body']):
                                 post_import_rois.append(clean_name(roi_name_map[roi_key]))
@@ -1401,6 +1401,8 @@ class ImportWorker(Thread):
             self.run_dose_sum()
 
         self.run_import()
+        if not self.terminate:
+            wx.CallAfter(pub.sendMessage, 'backup_sqlite_db')
         self.close()
 
     def close(self):
@@ -1562,6 +1564,7 @@ class AssignPTV(wx.Dialog):
 
         self.__initialize_uid_dict()
         self.__initialize_ptv_dict()
+        self.__initialize_patient_name_list()
         self.current_index = 0
 
         self.plan_uid, self.study_uid = self.uids[self.current_index]
@@ -1584,6 +1587,8 @@ class AssignPTV(wx.Dialog):
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
         self.button_back = wx.Button(self, wx.ID_ANY, "Back")
         self.button_next = wx.Button(self, wx.ID_ANY, "Next")
+
+        self.gauge = wx.Gauge(self, wx.ID_ANY, 100)
 
         self.__set_properties()
         self.__do_bind()
@@ -1614,6 +1619,7 @@ class AssignPTV(wx.Dialog):
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_cancel = wx.BoxSizer(wx.HORIZONTAL)
         sizer_back_next = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_gauge = wx.BoxSizer(wx.HORIZONTAL)
 
         # Add text_ctrl and label objects
         for key in self.input_keys:
@@ -1633,13 +1639,20 @@ class AssignPTV(wx.Dialog):
 
         # Cancel, Back, and Next buttons
         sizer_cancel.Add(self.button_cancel, 0, wx.ALL, 5)
-        sizer_buttons.Add(sizer_cancel, 1, wx.EXPAND, 0)
-        sizer_back_next.Add(self.button_back, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
-        sizer_back_next.Add(self.button_next, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
-        sizer_buttons.Add(sizer_back_next, 0, wx.ALIGN_RIGHT | wx.EXPAND, 0)
+        sizer_buttons.Add(sizer_cancel, 0, wx.EXPAND, 0)
+        sizer_gauge.Add(self.gauge, 1, wx.EXPAND | wx.ALL, 5)
+        sizer_buttons.Add(self.gauge, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 50)
+        sizer_back_next.Add(self.button_back, 0, wx.ALL, 5)
+        sizer_back_next.Add(self.button_next, 0, wx.ALL, 5)
+        sizer_buttons.Add(sizer_back_next, 0, wx.EXPAND, 0)
 
         sizer_main.Add(sizer_input, 1, wx.ALL | wx.EXPAND, 5)
         sizer_main.Add(sizer_buttons, 0, wx.ALIGN_RIGHT | wx.ALL | wx.EXPAND, 5)
+
+        note = wx.StaticText(self, wx.ID_ANY, "NOTE: Only StudyInstanceUIDs associated with multiple dose files "
+                                              "are included/needed in this PTV Assignment window.")
+        note.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
+        sizer_main.Add(note, 0, wx.ALL, 10)
 
         sizer_wrapper.Add(sizer_main, 1, wx.EXPAND, 0)
 
@@ -1651,9 +1664,15 @@ class AssignPTV(wx.Dialog):
     def __initialize_uid_dict(self):
         """Create a list of tuples (plan_uid, study_uid) for multi-plan studies"""
         self.uids = []
+        self.study_uid_list = []
+        self.plan_uid_lists = {}
         for study_uid, plan_uid_set in self.study_uid_dict.items():
             if len(plan_uid_set) > 1:
+                if study_uid not in self.study_uid_list:
+                    self.study_uid_list.append(study_uid)
+                    self.plan_uid_lists[study_uid] = []
                 for plan_uid in plan_uid_set:
+                    self.plan_uid_lists[study_uid].append(plan_uid)
                     self.uids.append((plan_uid, study_uid))
 
     def __initialize_ptv_dict(self):
@@ -1667,8 +1686,39 @@ class AssignPTV(wx.Dialog):
             ptvs = set(self.parsed_dicom_data[plan_uid].stored_values['ptv_names'])
             self.ptvs[study_uid] = self.ptvs[study_uid].union(ptvs)
 
+    def __initialize_patient_name_list(self):
+        self.patient_name_list = []
+        for study_uid in self.study_uid_list:
+            for plan_uid in self.plan_uid_lists[study_uid]:
+                patient_name = self.parsed_dicom_data[plan_uid].patient_name
+                if patient_name not in self.patient_name_list:
+                    self.patient_name_list.append(patient_name)
+
+    def update_labels(self):
+        study_index = self.study_uid_list.index(self.study_uid)
+        study_length = len(self.study_uid_list)
+        plan_uid_index = self.plan_uid_lists[self.study_uid].index(self.plan_uid)
+        plan_length = len(self.plan_uid_lists[self.study_uid])
+        pat_index = self.patient_name_list.index(self.text_ctrl['patient_name'].GetValue())
+        pat_length = len(self.patient_name_list)
+
+        study_label_end = ": (%s/%s)" % (study_index+1, study_length)
+        new_study_label = self.label['study_instance_uid'].GetLabel().split(':')[0] + study_label_end
+        self.label['study_instance_uid'].SetLabel(new_study_label)
+
+        plan_label_end = ": (%s/%s)" % (plan_uid_index + 1, plan_length)
+        new_plan_label = self.label['plan_uid'].GetLabel().split(':')[0] + plan_label_end
+        self.label['plan_uid'].SetLabel(new_plan_label)
+
+        pat_label_end = ": (%s/%s)" % (pat_index + 1, pat_length)
+        right_colon_index = self.label['patient_name'].GetLabel().rfind(':')
+        new_pat_label = self.label['patient_name'].GetLabel()[:right_colon_index] + pat_label_end
+        self.label['patient_name'].SetLabel(new_pat_label)
+
     def update_data(self, increment=0):
         self.current_index += increment
+        progress = 100 * float(self.current_index) / (len(self.uids) - 1)
+        self.gauge.SetValue(progress)
         self.update_back_next_buttons()
         if self.current_index < len(self.uids):
             self.plan_uid, self.study_uid = self.uids[self.current_index]
@@ -1683,6 +1733,7 @@ class AssignPTV(wx.Dialog):
                         pass
                 text_ctrl.SetValue(value)
             self.update_ptv_data_tables()
+            self.update_labels()
         else:
             self.close()
 

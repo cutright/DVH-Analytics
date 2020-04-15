@@ -11,7 +11,6 @@ Classes to view and calculate Machine Learning predictions
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx
-from functools import partial
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.model_selection import train_test_split
@@ -21,7 +20,6 @@ from dvha.dialogs.export import save_data_to_file
 from dvha.options import DefaultOptions
 from dvha.paths import MODELS_DIR
 from dvha.models.plot import PlotMachineLearning, PlotFeatureImportance
-from dvha.tools.errors import ErrorDialog
 from dvha.tools.stats import MultiVariableRegression
 from dvha.tools.utilities import set_msw_background_color, get_window_size, load_object_from_file, set_frame_icon
 
@@ -66,8 +64,7 @@ class MachineLearningFrame(wx.Frame):
         self.button_calculate = wx.Button(self, wx.ID_ANY, "Calculate")
         self.button_importance = wx.Button(self, wx.ID_ANY, "Importance Plot")
         self.button_export_data = wx.Button(self, wx.ID_ANY, "Export Data")
-        self.button_save_html = wx.Button(self, wx.ID_ANY, "Save Plot to HTML")
-        self.button_save_svg = wx.Button(self, wx.ID_ANY, "Save Plot to SVG")
+        self.button_save_figure = wx.Button(self, wx.ID_ANY, "Save Figure")
         self.button_save_model = wx.Button(self, wx.ID_ANY, "Save Model")
 
         self.do_bind()
@@ -76,8 +73,7 @@ class MachineLearningFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_calculate, id=self.button_calculate.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_feature_importance, id=self.button_importance.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export_data.GetId())
-        self.Bind(wx.EVT_BUTTON, self.on_save_html, id=self.button_save_html.GetId())
-        self.Bind(wx.EVT_BUTTON, self.on_save_svg, id=self.button_save_svg.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_save_figure, id=self.button_save_figure.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_model, id=self.button_save_model.GetId())
         self.Bind(wx.EVT_SIZE, self.on_resize)
 
@@ -120,8 +116,7 @@ class MachineLearningFrame(wx.Frame):
         sizer_actions.Add(self.button_calculate, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         sizer_actions.Add(self.button_importance, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         sizer_actions.Add(self.button_export_data, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        sizer_actions.Add(self.button_save_html, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        sizer_actions.Add(self.button_save_svg, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        sizer_actions.Add(self.button_save_figure, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_actions.Add(self.button_save_model, 1, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_side_bar.Add(sizer_actions, 0, wx.ALL | wx.EXPAND, 5)
 
@@ -280,34 +275,11 @@ class MachineLearningFrame(wx.Frame):
     def on_export(self, evt):
         save_data_to_file(self, 'Save machine learning data to csv', self.plot.get_csv())
 
-    def on_save_html(self, *evt):
+    def on_save_figure(self, *evt):
         title = 'Save %s Plot to .html' % self.title.title()
-        try:
-            if self.main_app_frame.export_figure is None:
-                save_data_to_file(self, title, self.plot.html_str,
-                                  initial_dir="",wildcard="HTML files (*.html)|*.html")
-            else:
-                self.save_fig_with_attr('html')
-        except Exception as e:
-            ErrorDialog(self, str(e), "Save Error")
-
-    def on_save_svg(self, *evt):
-        title = 'Save %s Plot to .svg' % self.title.title()
-        try:
-            if self.main_app_frame.export_figure is None:
-                save_data_to_file(self, title, self.plot.export_svg,
-                                  initial_dir="", data_type='function', wildcard="SVG files (*.svg)|*.svg")
-            else:
-                self.save_fig_with_attr('svg')
-        except Exception as e:
-            ErrorDialog(self, str(e), "Save Error")
-
-    def save_fig_with_attr(self, format_):
-        title = 'Save %s Plot to .%s' % (self.title.title(), format_)
-        fig_attr_dict = self.main_app_frame.export_figure.fig_attr_dict
-        func = partial(self.plot.save_figure, format_, fig_attr_dict)
-        save_data_to_file(self, title, func, initial_dir="", data_type='function',
-                          wildcard="%s files (*.%s)|*.%s" % (format_.upper(), format_, format_))
+        export_frame = self.main_app_frame.export_figure
+        attr_dicts = None if export_frame is None else export_frame.attr_dicts
+        self.plot.save_figure_dlg(self, title, attr_dicts=attr_dicts)
 
     def on_save_model(self, evt):
         data = {'y_variable': self.plot.y_variable,
@@ -923,10 +895,11 @@ class MachineLearningModelViewer:
                         self.mvr = MultiVariableRegression(self.X, self.y)
                     self.multi_var_pred = self.mvr.predictions
 
-                    data_keys = ['X', 'y', 'x_variables', 'y_variable', 'multi_var_pred', 'options', 'mrn', 'study_date', 'uid']
+                    data_keys = ['X', 'y', 'x_variables', 'y_variable', 'multi_var_pred', 'options', 'mrn',
+                                 'study_date', 'uid']
                     data = {key: getattr(self, key) for key in data_keys}
                     frame = ALGORITHMS[self.title]['frame']
-                    self.ml_frame = frame(data, include_test_data=False)
+                    self.ml_frame = frame(parent, data, include_test_data=False)
                     self.__load_model()
 
                     set_msw_background_color(self.ml_frame)

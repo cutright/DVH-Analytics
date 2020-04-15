@@ -17,10 +17,9 @@ from pubsub import pub
 from dvha.db import sql_columns
 from dvha.db.sql_to_python import QuerySQL
 from dvha.db.sql_connector import echo_sql_db, initialize_db
-from dvha.dialogs.main import query_dlg, UserSettings, About, PythonLibraries
+from dvha.dialogs.main import query_dlg, UserSettings, About, PythonLibraries, do_sqlite_backup
 from dvha.dialogs.database import SQLSettingsDialog
 from dvha.dialogs.export import ExportCSVDialog, ExportFigure
-from dvha.dialogs.protocols import ProtocolsEditor
 from dvha.models.import_dicom import ImportDicomFrame
 from dvha.models.database_editor import DatabaseEditorFrame
 from dvha.models.data_table import DataTable
@@ -171,7 +170,7 @@ class DVHAMainFrame(wx.Frame):
 
         export = wx.Menu()
         export_csv = export.Append(wx.ID_ANY, 'Data to csv\tCtrl+E')
-        export_figure = export.Append(wx.ID_ANY, 'Plot to file')
+        export_figure = export.Append(wx.ID_ANY, '&Plot to file\tCtrl+P')
         file_menu.AppendSeparator()
 
         qmi = file_menu.Append(wx.ID_ANY, '&Quit\tCtrl+Q')
@@ -182,6 +181,7 @@ class DVHAMainFrame(wx.Frame):
         menu_db_admin = self.data_menu.Append(wx.ID_ANY, 'Database Administrator')
         self.data_menu.AppendSubMenu(load_model, 'Load &Model')
         self.data_menu.AppendSubMenu(export, '&Export')
+        menu_db_backup = self.data_menu.Append(wx.ID_ANY, 'Backup SQLite DB')
         self.data_menu.AppendSeparator()
         self.data_menu_items = {'DVHs': self.data_menu.Append(wx.ID_ANY, 'Show DVHs\tCtrl+1'),
                                 'Plans': self.data_menu.Append(wx.ID_ANY, 'Show Plans\tCtrl+2'),
@@ -194,9 +194,6 @@ class DVHAMainFrame(wx.Frame):
         menu_pref = settings_menu.Append(wx.ID_PREFERENCES)
         menu_sql = settings_menu.Append(wx.ID_ANY, '&Database Connection\tCtrl+D')
         menu_roi_map = settings_menu.Append(wx.ID_ANY, '&ROI Map\tCtrl+R')
-
-        # plan_eval_menu = wx.Menu()
-        # menu_protocol_editor = plan_eval_menu.Append(wx.ID_ANY, 'Protocol Editor')
 
         help_menu = wx.Menu()
         menu_github = help_menu.Append(wx.ID_ANY, 'GitHub Page')
@@ -225,8 +222,11 @@ class DVHAMainFrame(wx.Frame):
         if is_mac():
             menu_user_settings = settings_menu.Append(wx.ID_ANY, '&Preferences\tCtrl+,')
             self.Bind(wx.EVT_MENU, self.on_pref, menu_user_settings)
+        menu_win_pos = settings_menu.Append(wx.ID_ANY, 'Reset Window Positions')
+        self.Bind(wx.EVT_MENU, self.options.clear_positions, menu_win_pos)
 
         self.Bind(wx.EVT_MENU, self.on_toolbar_database, menu_db_admin)
+        self.Bind(wx.EVT_MENU, self.on_sqlite_backup, menu_db_backup)
         self.Bind(wx.EVT_MENU, self.on_view_dvhs, self.data_menu_items['DVHs'])
         self.Bind(wx.EVT_MENU, self.on_view_plans, self.data_menu_items['Plans'])
         self.Bind(wx.EVT_MENU, self.on_view_rxs, self.data_menu_items['Rxs'])
@@ -234,12 +234,9 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_view_stats_data_1, self.data_menu_items['StatsData1'])
         self.Bind(wx.EVT_MENU, self.on_view_stats_data_2, self.data_menu_items['StatsData2'])
 
-        # self.Bind(wx.EVT_MENU, self.on_protocol_editor, menu_protocol_editor)
-
         self.frame_menubar.Append(file_menu, '&File')
         self.frame_menubar.Append(self.data_menu, '&Data')
         self.frame_menubar.Append(settings_menu, '&Settings')
-        # self.frame_menubar.Append(plan_eval_menu, '&Plan Evaluation')
         self.frame_menubar.Append(help_menu, '&Help')
         self.SetMenuBar(self.frame_menubar)
 
@@ -312,14 +309,12 @@ class DVHAMainFrame(wx.Frame):
 
     def __add_notebook_frames(self):
         self.plot = PlotStatDVH(self.notebook_tab['DVHs'], self.group_data, self.options)
-        self.time_series = TimeSeriesFrame(self.notebook_tab['Time Series'], self.group_data, self.options)
-        self.correlation = CorrelationFrame(self.notebook_tab['Correlation'], self.group_data, self.options)
-        self.regression = RegressionFrame(self.notebook_tab['Regression'], self.group_data, self.options, self)
-        self.control_chart = ControlChartFrame(self.notebook_tab['Control Chart'], self.group_data, self.options)
-        self.radbio = RadBioFrame(self.notebook_tab['Rad Bio'], self.group_data, self.time_series, self.regression,
-                                  self.control_chart)
-        self.endpoint = EndpointFrame(self.notebook_tab['Endpoints'], self.group_data, self.time_series, self.regression,
-                                      self.control_chart)
+        self.time_series = TimeSeriesFrame(self)
+        self.correlation = CorrelationFrame(self)
+        self.regression = RegressionFrame(self)
+        self.control_chart = ControlChartFrame(self)
+        self.radbio = RadBioFrame(self)
+        self.endpoint = EndpointFrame(self)
 
     def __do_layout(self):
         sizer_summary = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Summary"), wx.HORIZONTAL)
@@ -481,6 +476,7 @@ class DVHAMainFrame(wx.Frame):
 
     def __do_subscribe(self):
         pub.subscribe(self.raise_error_dialog, "import_status_raise_error")
+        pub.subscribe(self.call_sqlite_backup, "backup_sqlite_db")
 
     def raise_error_dialog(self, msg):
         MemoryErrorDialog(self, msg)
@@ -517,7 +513,7 @@ class DVHAMainFrame(wx.Frame):
             if dlg.ShowModal() == wx.ID_OK:
                 model_file_path = dlg.GetPath()
                 dlg.Destroy()
-                self.loaded_mvr_ml_frames.append(LoadMultiVarModelFrame(model_file_path, self.group_data,
+                self.loaded_mvr_ml_frames.append(LoadMultiVarModelFrame(self, model_file_path, self.group_data,
                                                                         self.selected_group, self.options))
 
     def on_load_ml_model(self, *evt):
@@ -601,6 +597,13 @@ class DVHAMainFrame(wx.Frame):
 
     def on_toolbar_roi_map(self, evt):
         self.check_db_then_call(ROIMapFrame, 'roi_map', self.roi_map)
+
+    def on_sqlite_backup(self, *evt):
+        wx.CallAfter(do_sqlite_backup, self, self.options)
+
+    def call_sqlite_backup(self):
+        if self.options.AUTO_SQL_DB_BACKUP:
+            self.on_sqlite_backup()
 
     def check_db_then_call(self, func, window_type, *parameters):
         if not echo_sql_db():
@@ -691,7 +694,8 @@ class DVHAMainFrame(wx.Frame):
                 return
 
         count = self.group_data[group]['dvh'].count
-        if count > 1:
+        min_dvh_count = 3
+        if count >= min_dvh_count:
             try:
                 self.endpoint.update_dvh(self.group_data)
                 self.set_summary_text(group)
@@ -716,7 +720,8 @@ class DVHAMainFrame(wx.Frame):
                 self.on_plotting_memory_error(str(e))
         else:
             wx.EndBusyCursor()
-            msg = "%s DVHs returned. Please modify query or import more data." % ['Less than 2', 'No'][count == 0]
+            msg = "%s DVHs returned. Please modify query or import more data." % \
+                  ['Less than %s' % min_dvh_count, 'No'][count == 0]
             wx.MessageBox(msg, 'Query Error', wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
             self.group_data[group]['dvh'] = None
 
@@ -806,6 +811,12 @@ class DVHAMainFrame(wx.Frame):
                 except RuntimeError:
                     pass
 
+        if self.user_settings is not None:
+            self.user_settings.Close()
+
+        if self.export_figure is not None:
+            self.export_figure.Close()
+
         for window in self.tool_bar_windows.values():
             if window and hasattr(window, 'Destroy'):
                 window.Destroy()
@@ -887,7 +898,11 @@ class DVHAMainFrame(wx.Frame):
     def on_export_figure(self, evt):
         if self.save_data:
             if self.export_figure is None:
-                self.export_figure = ExportFigure(self)
+                try:
+                    self.export_figure = ExportFigure(self)
+                except Exception:
+                    self.options.save_fig_param = DefaultOptions().save_fig_param
+                    self.export_figure = ExportFigure(self)
                 self.export_figure.Show()
             else:
                 self.export_figure.Raise()
@@ -954,9 +969,6 @@ class DVHAMainFrame(wx.Frame):
                 self.data_views[key] = None
         else:
             self.no_queried_data_dlg()
-
-    def on_protocol_editor(self, *evt):
-        ProtocolsEditor(self.roi_map)
 
     def no_queried_data_dlg(self):
         dlg = wx.MessageDialog(self, 'Please query/open some data first.', 'ERROR!', wx.ICON_ERROR | wx.OK_DEFAULT)
@@ -1063,6 +1075,7 @@ class MainApp(wx.App):
         return True
 
     def OnExit(self):
+        self.frame.options.save()
         for window in wx.GetTopLevelWindows():
             wx.CallAfter(window.Close)
         return super().OnExit()

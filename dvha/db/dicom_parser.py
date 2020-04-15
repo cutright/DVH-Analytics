@@ -626,7 +626,8 @@ class DICOM_Parser:
         seq = self.get_attribute('plan', 'PatientSetupSequence')
         if seq is not None:
             # return ','.join([setup.PatientPosition for setup in seq])
-            return str(seq[0].PatientPosition)[:3]
+            ans = str(seq[0].PatientPosition)
+            return ans if len(ans) < 4 else ans[:3]
 
     @property
     def plan_time_stamp(self):
@@ -766,7 +767,7 @@ class DICOM_Parser:
         """
         if key in list(self.roi_over_ride['type']):
             return self.roi_over_ride['type'][key]
-        return self.structure_name_and_type[key]['type'].upper()
+        return str(self.structure_name_and_type[key]['type']).upper()
 
     def reset_roi_type_over_ride(self, key):
         self.roi_over_ride['type'][key] = None

@@ -23,26 +23,15 @@ class EndpointFrame:
     """
     Object to be passed into notebook panel for the Endpoint tab
     """
-    def __init__(self, parent, group_data, time_series, regression, control_chart):
-        """
-        :param parent:  notebook panel in main view
-        :type parent: Panel
-        :param group_data: dvh, table_data, and stats_data
-        :type group_data: dict
-        :param time_series: Time Series object in notebook
-        :type time_series: TimeSeriesFrame
-        :param regression: Regression frame object in notebook
-        :type regression: RegressionFrame
-        :param control_chart: Control Chart frame object in notebook
-        :type control_chart: ControlChartFrame
-        """
+    def __init__(self, main_app_frame):
 
-        self.parent = parent
-        self.group_data = group_data
-        self.time_series = time_series
-        self.regression = regression
-        self.control_chart = control_chart
-        self.group_data = group_data
+        self.main_app_frame = main_app_frame
+        self.parent = main_app_frame.notebook_tab['Endpoints']
+        self.group_data = main_app_frame.group_data
+        self.time_series = main_app_frame.time_series
+        self.regression = main_app_frame.regression
+        self.control_chart = main_app_frame.control_chart
+        self.group_data = main_app_frame.group_data
         self.initial_columns = ['MRN', 'Tx Site', 'ROI Name', 'Volume (cc)']
         self.widths = [150, 150, 250, 100]
 
