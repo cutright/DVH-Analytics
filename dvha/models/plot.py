@@ -218,7 +218,7 @@ class Plot:
     def figure_has_data(fig):
         if fig.renderers:
             data = fig.renderers[0].data_source.data
-            if data and data[list(data)[0]]:
+            if data and len(list(data)) and len(data[list(data)[0]]):
                 return True
         return False
 
@@ -267,8 +267,9 @@ class Plot:
 
     def save_figure_dlg(self, parent, title, attr_dicts=None):
         try:
-            save_data_to_file(parent, title, partial(self.save_figure, attr_dicts),
-                              initial_dir="", data_type='function', wildcard=FIG_WILDCARDS)
+            file_name = save_data_to_file(parent, title, partial(self.save_figure, attr_dicts),
+                                          initial_dir="", data_type='function', wildcard=FIG_WILDCARDS)
+            ErrorDialog(parent, "Output saved to %s" % file_name, "Save Successful", flags=wx.OK | wx.OK_DEFAULT)
         except Exception as e:
             if "phantomjs is not present" in str(e).lower():
                 msg = "Please download a phantomjs executable from https://phantomjs.org/download.html " \

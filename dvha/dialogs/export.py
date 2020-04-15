@@ -56,6 +56,8 @@ def save_data_to_file(frame, title, data, wildcard="CSV files (*.csv)|*.csv", da
         elif data_type == 'function':
             data(pathname)
 
+        return pathname
+
 
 class ExportCSVDialog(wx.Dialog):
     """
