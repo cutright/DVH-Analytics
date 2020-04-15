@@ -1,13 +1,15 @@
 # Change log of DVH Analytics
 
-v0.7.6 (TBD)
+v0.7.6 (2020.04.15)
 --------------------
  - [Import] Using rapidfuzz for name prediction (for MIT licensing)
  - [Import] Fix for None-Type error with roi_type query during import
  - [Export] PNG support for figure export
  - [Export] Bundle PhantomJS in executables or load from ~/Apps/dvh_analytics
- - [Misc] Store last positions of certain windows (i.e., UserSettings, ExportFigure) 
  - [Plots] Grid line customization (color, thickness, alpha)
+ - [Misc] Store last positions of certain windows (i.e., UserSettings, ExportFigure) 
+ - [Misc] Optionally auto-backup SQLite DB after successful import (enable this in Database Administrator) 
+ or manually backup database in the menu Data -> Backup SQLite DB
 
 
 v0.7.5 (2020.04.09)

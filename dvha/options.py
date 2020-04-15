@@ -194,6 +194,8 @@ class DefaultOptions:
         self.positions = {'user_settings': None,
                           'export_figure': None}
 
+        self.AUTO_SQL_DB_BACKUP = False
+
 
 class Options(DefaultOptions):
     def __init__(self):

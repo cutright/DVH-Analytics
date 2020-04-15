@@ -84,6 +84,7 @@ Dependencies
 * [regressors](https://pypi.org/project/regressors/)
 * [RapidFuzz](https://github.com/rhasspy/rapidfuzz)
 * [selenium](https://github.com/SeleniumHQ/selenium/)
+* [PhantomJS](https://phantomjs.org/)
 
 
 Support

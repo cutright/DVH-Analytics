@@ -18,12 +18,13 @@ import numpy as np
 import time
 from os.path import isdir
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_window_size,\
-    get_installed_python_libraries, set_msw_background_color, set_frame_icon
+    get_installed_python_libraries, set_msw_background_color, set_frame_icon, backup_sqlite_db
 from dvha.db import sql_columns
 from dvha.db.sql_connector import DVH_SQL
 from dvha.models.data_table import DataTable
 from dvha.paths import LICENSE_PATH
 from dvha.options import DefaultOptions
+from dvha.tools.errors import ErrorDialog
 
 
 class DatePicker(wx.Dialog):
@@ -1117,3 +1118,24 @@ class PythonLibraries(wx.Dialog):
     def run(self):
         self.ShowModal()
         self.Destroy()
+
+
+def do_sqlite_backup(parent, options):
+    if options.DB_TYPE == 'sqlite':
+        try:
+            file_paths = backup_sqlite_db(options)
+            if file_paths is not None:
+                msg = "Current DB: %s\nCopied to: %s" % (tuple(file_paths))
+                caption = "SQLite DB Backup Successful"
+            else:
+                msg = "Your SQLite DB was not backed up for an unknown reason."
+                caption = "SQLite DB Backup Unsuccessful"
+        except Exception as e:
+            msg = str(e)
+            caption = "SQLite DB Backup Error"
+    else:
+        msg = "This feature only applies to SQLite users. PostgreSQL users should contact their DB " \
+              "administrator or look into the pg_dump command."
+        caption = "SQLite DB Backup Error"
+
+    ErrorDialog(parent, msg, caption)

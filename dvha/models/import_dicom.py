@@ -1401,6 +1401,8 @@ class ImportWorker(Thread):
             self.run_dose_sum()
 
         self.run_import()
+        if not self.terminate:
+            wx.CallAfter(pub.sendMessage, 'backup_sqlite_db')
         self.close()
 
     def close(self):

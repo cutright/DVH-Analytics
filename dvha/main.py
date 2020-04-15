@@ -17,7 +17,7 @@ from pubsub import pub
 from dvha.db import sql_columns
 from dvha.db.sql_to_python import QuerySQL
 from dvha.db.sql_connector import echo_sql_db, initialize_db
-from dvha.dialogs.main import query_dlg, UserSettings, About, PythonLibraries
+from dvha.dialogs.main import query_dlg, UserSettings, About, PythonLibraries, do_sqlite_backup
 from dvha.dialogs.database import SQLSettingsDialog
 from dvha.dialogs.export import ExportCSVDialog, ExportFigure
 from dvha.models.import_dicom import ImportDicomFrame
@@ -181,6 +181,7 @@ class DVHAMainFrame(wx.Frame):
         menu_db_admin = self.data_menu.Append(wx.ID_ANY, 'Database Administrator')
         self.data_menu.AppendSubMenu(load_model, 'Load &Model')
         self.data_menu.AppendSubMenu(export, '&Export')
+        menu_db_backup = self.data_menu.Append(wx.ID_ANY, 'Backup SQLite DB')
         self.data_menu.AppendSeparator()
         self.data_menu_items = {'DVHs': self.data_menu.Append(wx.ID_ANY, 'Show DVHs\tCtrl+1'),
                                 'Plans': self.data_menu.Append(wx.ID_ANY, 'Show Plans\tCtrl+2'),
@@ -225,6 +226,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.options.clear_positions, menu_win_pos)
 
         self.Bind(wx.EVT_MENU, self.on_toolbar_database, menu_db_admin)
+        self.Bind(wx.EVT_MENU, self.on_sqlite_backup, menu_db_backup)
         self.Bind(wx.EVT_MENU, self.on_view_dvhs, self.data_menu_items['DVHs'])
         self.Bind(wx.EVT_MENU, self.on_view_plans, self.data_menu_items['Plans'])
         self.Bind(wx.EVT_MENU, self.on_view_rxs, self.data_menu_items['Rxs'])
@@ -474,6 +476,7 @@ class DVHAMainFrame(wx.Frame):
 
     def __do_subscribe(self):
         pub.subscribe(self.raise_error_dialog, "import_status_raise_error")
+        pub.subscribe(self.call_sqlite_backup, "backup_sqlite_db")
 
     def raise_error_dialog(self, msg):
         MemoryErrorDialog(self, msg)
@@ -594,6 +597,13 @@ class DVHAMainFrame(wx.Frame):
 
     def on_toolbar_roi_map(self, evt):
         self.check_db_then_call(ROIMapFrame, 'roi_map', self.roi_map)
+
+    def on_sqlite_backup(self, *evt):
+        wx.CallAfter(do_sqlite_backup, self, self.options)
+
+    def call_sqlite_backup(self):
+        if self.options.AUTO_SQL_DB_BACKUP:
+            self.on_sqlite_backup()
 
     def check_db_then_call(self, func, window_type, *parameters):
         if not echo_sql_db():
@@ -1061,6 +1071,7 @@ class MainApp(wx.App):
         return True
 
     def OnExit(self):
+        self.frame.options.save()
         for window in wx.GetTopLevelWindows():
             wx.CallAfter(window.Close)
         return super().OnExit()
