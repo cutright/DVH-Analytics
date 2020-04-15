@@ -1121,12 +1121,14 @@ class PythonLibraries(wx.Dialog):
 
 
 def do_sqlite_backup(parent, options):
+    flags = wx.ICON_ERROR | wx.OK | wx.OK_DEFAULT
     if options.DB_TYPE == 'sqlite':
         try:
             file_paths = backup_sqlite_db(options)
             if file_paths is not None:
                 msg = "Current DB: %s\nCopied to: %s" % (tuple(file_paths))
                 caption = "SQLite DB Backup Successful"
+                flags = wx.OK | wx.OK_DEFAULT
             else:
                 msg = "Your SQLite DB was not backed up for an unknown reason."
                 caption = "SQLite DB Backup Unsuccessful"
@@ -1138,4 +1140,4 @@ def do_sqlite_backup(parent, options):
               "administrator or look into the pg_dump command."
         caption = "SQLite DB Backup Error"
 
-    ErrorDialog(parent, msg, caption)
+    ErrorDialog(parent, msg, caption, flags=flags)
