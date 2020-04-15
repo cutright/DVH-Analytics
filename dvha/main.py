@@ -898,7 +898,11 @@ class DVHAMainFrame(wx.Frame):
     def on_export_figure(self, evt):
         if self.save_data:
             if self.export_figure is None:
-                self.export_figure = ExportFigure(self)
+                try:
+                    self.export_figure = ExportFigure(self)
+                except Exception:
+                    self.options.save_fig_param = DefaultOptions().save_fig_param
+                    self.export_figure = ExportFigure(self)
                 self.export_figure.Show()
             else:
                 self.export_figure.Raise()
