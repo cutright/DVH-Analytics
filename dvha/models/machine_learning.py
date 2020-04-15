@@ -895,10 +895,11 @@ class MachineLearningModelViewer:
                         self.mvr = MultiVariableRegression(self.X, self.y)
                     self.multi_var_pred = self.mvr.predictions
 
-                    data_keys = ['X', 'y', 'x_variables', 'y_variable', 'multi_var_pred', 'options', 'mrn', 'study_date', 'uid']
+                    data_keys = ['X', 'y', 'x_variables', 'y_variable', 'multi_var_pred', 'options', 'mrn',
+                                 'study_date', 'uid']
                     data = {key: getattr(self, key) for key in data_keys}
                     frame = ALGORITHMS[self.title]['frame']
-                    self.ml_frame = frame(data, include_test_data=False)
+                    self.ml_frame = frame(parent, data, include_test_data=False)
                     self.__load_model()
 
                     set_msw_background_color(self.ml_frame)
