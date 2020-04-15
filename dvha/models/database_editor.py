@@ -66,7 +66,7 @@ class DatabaseEditorFrame(wx.Frame):
                        'export_csv': wx.Button(self.window_pane_query, wx.ID_ANY, "Export"),
                        'remap_roi_names': wx.Button(self, wx.ID_ANY, "Remap ROI Names")}
 
-        self.checkbox_auto_backup = wx.CheckBox(self, wx.ID_ANY, "Auto Back-up SQLite DB after Import")
+        self.checkbox_auto_backup = wx.CheckBox(self, wx.ID_ANY, "Auto Backup SQLite DB After Import")
 
         self.__set_properties()
         self.__do_layout()
