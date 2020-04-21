@@ -20,6 +20,7 @@ from bokeh.layouts import column, row
 from bokeh.palettes import Colorblind8 as palette
 import itertools
 import numpy as np
+from pubsub import pub
 from os.path import join, isdir, splitext
 from os import mkdir
 from scipy.stats import ttest_ind, ranksums, normaltest
@@ -886,8 +887,12 @@ class PlotCorrelation(Plot):
         else:
             extra_vars = {grp: None for grp in [1, 2]}
 
-        data = stats_data.get_corr_matrix_data(self.options,
-                                               included_vars=included_vars, extra_vars=extra_vars[1])
+        data, removed_mrns = stats_data.get_corr_matrix_data(self.options,
+                                                             included_vars=included_vars, extra_vars=extra_vars[1])
+
+        if removed_mrns:
+            pub.sendMessage("correlation_patients_removed", msg={'mrns': removed_mrns})
+
         if stats_data_2 is not None:
             data_2 = stats_data_2.get_corr_matrix_data(self.options,
                                                        included_vars=included_vars, extra_vars=extra_vars[2])

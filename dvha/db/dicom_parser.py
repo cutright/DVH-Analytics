@@ -261,7 +261,17 @@ class DICOM_Parser:
             for beam in beam_set:
                 if float(beam.beam_mu) > 0:  # Ignores set-up fields
                     beam_rows.append(self.get_beam_row(rx_index, beam))
+
+        if len(beam_rows) == 0:
+            return self.dummy_beam_row
+
         return beam_rows
+
+    @property
+    def dummy_beam_row(self):
+        return [{'mrn': [self.mrn, 'text'],
+                 'study_instance_uid': [self.study_instance_uid_to_be_imported, 'text'],
+                 'import_time_stamp': [None, 'timestamp']}]
 
     def get_beam_row(self, rx_index, beam):
         """

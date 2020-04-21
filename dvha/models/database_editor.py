@@ -64,7 +64,8 @@ class DatabaseEditorFrame(wx.Frame):
                        'query': wx.Button(self.window_pane_query, wx.ID_ANY, "Query"),
                        'clear': wx.Button(self.window_pane_query, wx.ID_ANY, "Clear"),
                        'export_csv': wx.Button(self.window_pane_query, wx.ID_ANY, "Export"),
-                       'remap_roi_names': wx.Button(self, wx.ID_ANY, "Remap ROI Names")}
+                       'remap_roi_names': wx.Button(self, wx.ID_ANY, "Remap ROI Names"),
+                       'auto_fit_columns': wx.Button(self.window_pane_query, wx.ID_ANY, "Auto-fit Columns")}
 
         self.checkbox_auto_backup = wx.CheckBox(self, wx.ID_ANY, "Auto Backup SQLite DB After Import")
 
@@ -108,6 +109,7 @@ class DatabaseEditorFrame(wx.Frame):
         sizer_download_button = wx.BoxSizer(wx.VERTICAL)
         sizer_clear_button = wx.BoxSizer(wx.VERTICAL)
         sizer_query_button = wx.BoxSizer(wx.VERTICAL)
+        sizer_auto_fit_columns_button = wx.BoxSizer(wx.VERTICAL)
         sizer_condition = wx.BoxSizer(wx.VERTICAL)
         sizer_combo_box = wx.BoxSizer(wx.VERTICAL)
         sizer_db_tree = wx.BoxSizer(wx.HORIZONTAL)
@@ -149,8 +151,13 @@ class DatabaseEditorFrame(wx.Frame):
 
         label_spacer_3 = wx.StaticText(self.window_pane_query, wx.ID_ANY, "")
         sizer_clear_button.Add(label_spacer_3, 0, wx.BOTTOM, 5)
-        sizer_clear_button.Add(self.button['clear'], 0, wx.ALL, 5)
+        sizer_clear_button.Add(self.button['clear'], 0, wx.TOP | wx.BOTTOM, 5)
         sizer_condition_buttons.Add(sizer_clear_button, 0, wx.ALL, 5)
+
+        label_spacer_4 = wx.StaticText(self.window_pane_query, wx.ID_ANY, "")
+        sizer_auto_fit_columns_button.Add(label_spacer_4, 0, wx.BOTTOM, 5)
+        sizer_auto_fit_columns_button.Add(self.button['auto_fit_columns'], 0, wx.ALL, 5)
+        sizer_condition_buttons.Add(sizer_auto_fit_columns_button, 0, wx.ALL, 5)
 
         sizer_query.Add(sizer_condition_buttons, 0, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
 
@@ -175,6 +182,9 @@ class DatabaseEditorFrame(wx.Frame):
         self.Bind(wx.EVT_CHECKBOX, self.on_auto_backup, id=self.checkbox_auto_backup.GetId())
 
         self.Bind(wx.EVT_LIST_COL_CLICK, self.sort_query_results, self.list_ctrl_query_results)
+
+    def on_auto_fit_columns(self, *evt):
+        self.data_query_results.set_column_widths(auto=True)
 
     def on_tree_add(self, evt):
         self.update_selected_tree_items()

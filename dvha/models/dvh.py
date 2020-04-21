@@ -159,11 +159,11 @@ class DVH:
     @property
     def x_data(self):
         """
-        Get x-values of the DVHs.  All DVHs stored in SQL database are 1cGy binned csv strings
         :return: x data for plotting
         :rtype: list
         """
-        return [np.multiply(np.array(range(self.bin_count)), self.dvh_bin_width).tolist()] * self.count
+        bins, width, num_dvhs = self.bin_count, self.dvh_bin_width, self.count
+        return [np.multiply(np.array(range(bins)) + width/2., width).tolist()] * num_dvhs
 
     @property
     def y_data(self):
@@ -345,7 +345,7 @@ class DVH:
             x2 = np.multiply(np.linspace(0, new_bin_count, new_bin_count),
                              self.rx_dose[i] * 100. / resampled_bin_count)
             y2[:, i] = np.interp(x2, x1, self.dvh[:, i])
-        x2 = np.divide(np.linspace(0, new_bin_count, new_bin_count), resampled_bin_count)
+        x2 = np.divide(np.linspace(0, new_bin_count-1, new_bin_count) + 0.5, resampled_bin_count)
         return x2, y2
 
     def get_summary(self):

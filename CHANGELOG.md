@@ -1,5 +1,13 @@
 # Change log of DVH Analytics
 
+v0.7.7 (2020.04.21)
+--------------------
+ - [DVH] Proper dvh bin-centers (errors were <= bin_width/2)
+ - [Import] If a plan does not have a BeamSequence or IonBeamSequence (e.g., brachy), a dummy beam is created to 
+ prevent crash if this plan is included in a query.
+ - [Correlation] None-type values are now removed before correlation calculation and any patient removed from this 
+ calculation is displayed in an error window.
+
 v0.7.6 (2020.04.15)
 --------------------
  - [Import] Using rapidfuzz for name prediction (for MIT licensing)

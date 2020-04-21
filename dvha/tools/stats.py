@@ -292,14 +292,18 @@ class StatsData:
                        'line': {'x': [0.5, var_count - 0.5], 'y': [var_count - 0.5, 0.5]}}
 
         min_size, max_size = 3, 20
+        removed_mrns = set()
         for x in range(var_count):
             for y in range(var_count):
                 if x > y and self.group == 1 or x < y and self.group == 2:
                     if categories[x] not in extra_vars and categories[y] not in extra_vars:
 
-                        bad_indices = [i for i, v in enumerate(self.data[categories[x]]['values']) if type(v) is str]
-                        bad_indices.extend([i for i, v in enumerate(self.data[categories[y]]['values']) if type(v) is str])
+                        bad_indices = [i for i, v in enumerate(self.data[categories[x]]['values'])
+                                       if type(v) in [str, type(None)]]
+                        bad_indices.extend([i for i, v in enumerate(self.data[categories[y]]['values'])
+                                            if type(v) in [str, type(None)]])
                         bad_indices = list(set(bad_indices))
+                        removed_mrns = removed_mrns.union(set(self.mrns[i] for i in bad_indices))
 
                         x_data = [v for i, v in enumerate(self.data[categories[x]]['values']) if i not in bad_indices]
                         y_data = [v for i, v in enumerate(self.data[categories[y]]['values']) if i not in bad_indices]
@@ -336,7 +340,7 @@ class StatsData:
                         source_data['corr']['x_normality'].append(x_p)
                         source_data['corr']['y_normality'].append(y_p)
 
-        return {'source_data': source_data, 'x_factors': x_factors, 'y_factors': y_factors}
+        return {'source_data': source_data, 'x_factors': x_factors, 'y_factors': y_factors}, removed_mrns
 
 
 def get_index_of_nan(numpy_array):
