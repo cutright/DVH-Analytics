@@ -754,10 +754,11 @@ def validate_transfer_syntax_uid(data_set):
 def get_installed_python_libraries():
     """Use pip command line function 'list' to extract the currently installed libraries"""
 
-    try:
+    if isfile(PIP_LIST_PATH):  # Load a frozen list of packages if stored
+        return load_object_from_file(PIP_LIST_PATH)
+    try:  # If running from PyInstaller, this may fail, pickle a file prior to freezing with save_pip_list
         output = str(check_output(['pip', 'list', '--local']), 'utf-8').split('\n')
     except Exception:
-        # If running from PyInstaller, this will fail, pickle a file prior to freezing with save_pip_list
         return load_object_from_file(PIP_LIST_PATH)
 
     python_version = '.'.join(str(i) for i in sys.version_info[:3])
