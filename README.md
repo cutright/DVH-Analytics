@@ -8,9 +8,9 @@ DVH Analytics (DVHA) is a software application for building a local database of 
 treatment planning data.
 
 <a href="https://pypi.org/project/dvha/">
-        <img src="https://img.shields.io/pypi/v/dvha.svg" /></a>
+        <img src="https://img.shields.io/pypi/v/dvha.svg" alt="PyPi Version" /></a>
 <a href="https://lgtm.com/projects/g/cutright/DVH-Analytics/context:python">
-        <img src="https://img.shields.io/lgtm/grade/python/g/cutright/DVH-Analytics.svg?logo=lgtm&label=code%20quality" /></a>
+        <img src="https://img.shields.io/lgtm/grade/python/g/cutright/DVH-Analytics.svg?logo=lgtm&label=code%20quality" alt="LGTM Code Quality" /></a>
 
 
 DVHA Executables
