@@ -37,7 +37,7 @@ from dvha.models.roi_map import ROIMapFrame
 from dvha.models.stats_data_editor import StatsDataEditor
 from dvha.options import Options, DefaultOptions
 from dvha.paths import LOGO_PATH, DATA_DIR, ICONS, MODELS_DIR
-from dvha.tools.errors import MemoryErrorDialog, PlottingMemoryError
+from dvha.tools.errors import MemoryErrorDialog, PlottingMemoryError, ErrorDialog
 from dvha.tools.roi_name_manager import DatabaseROIs
 from dvha.tools.stats import StatsData, sync_variables_in_stats_data_objects
 from dvha.tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux, is_mac, get_window_size, \
@@ -114,6 +114,8 @@ class DVHAMainFrame(wx.Frame):
         self.export_figure = None
 
         wx.CallAfter(self.__catch_failed_sql_connection_on_app_launch)
+
+        self.correlation_error_displayed = False
 
         self.__do_subscribe()
 
@@ -477,6 +479,7 @@ class DVHAMainFrame(wx.Frame):
     def __do_subscribe(self):
         pub.subscribe(self.raise_error_dialog, "import_status_raise_error")
         pub.subscribe(self.call_sqlite_backup, "backup_sqlite_db")
+        pub.subscribe(self.correlation_patients_removed, "correlation_patients_removed")
 
     def raise_error_dialog(self, msg):
         MemoryErrorDialog(self, msg)
@@ -666,6 +669,10 @@ class DVHAMainFrame(wx.Frame):
         self.exec_query()
 
     def exec_query(self, load_saved_dvh_data=False, group=None):
+
+        # Used to make sure Correlation calculation error of patient removal is only displayed once after a query
+        self.correlation_error_displayed = False
+
         wx.BeginBusyCursor()
         if group is not None:
             self.radio_button_query_group.SetSelection(group - 1)
@@ -1021,6 +1028,14 @@ class DVHAMainFrame(wx.Frame):
               "NOTE: Threshold of this error is dependent on your computer." % (plot_type, self.group_data[1]['dvh'].count)
         MemoryErrorDialog(self, msg)
         self.close()
+
+    def correlation_patients_removed(self, msg):
+        if not self.correlation_error_displayed:
+            msg = "These MRN(s) were removed from some or all of the Correlation calculations:\n%s" \
+                  % ', '.join(list(msg['mrns']))
+            caption = "Non-numerical data detected."
+            wx.CallAfter(ErrorDialog, self, msg, caption)
+            self.correlation_error_displayed = True
 
     def reset_query_filters(self):
         self.query_filters = {key: None for key in [1, 2]}
