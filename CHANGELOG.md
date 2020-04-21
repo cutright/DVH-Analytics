@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.7.7 (TBD)
+--------------------
+ - [DVH] Proper dvh bin-centers (errors were <= bin_width/2)
+
 v0.7.6 (2020.04.15)
 --------------------
  - [Import] Using rapidfuzz for name prediction (for MIT licensing)
