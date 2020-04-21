@@ -1,6 +1,6 @@
 # Change log of DVH Analytics
 
-v0.7.7 (TBD)
+v0.7.7 (2020.04.21)
 --------------------
  - [DVH] Proper dvh bin-centers (errors were <= bin_width/2)
  - [Import] If a plan does not have a BeamSequence or IonBeamSequence (e.g., brachy), a dummy beam is created to 

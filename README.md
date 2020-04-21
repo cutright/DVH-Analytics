@@ -5,7 +5,9 @@
 ---------  
 
 DVH Analytics (DVHA) is a software application for building a local database of radiation oncology 
-treatment planning data.
+treatment planning data. It imports data from DICOM-RT files (i.e., plan, dose, and structure), creates a SQL database, 
+provides customizable plots, and provides tools for generating linear, multi-variable, and machine learning 
+regressions.
 
 <a href="https://pypi.org/project/dvha/">
         <img src="https://img.shields.io/pypi/v/dvha.svg" alt="PyPi Version" /></a>
@@ -15,7 +17,6 @@ treatment planning data.
 
 DVHA Executables
 ---------
-
 Executable versions of DVHA can be found [here](https://github.com/cutright/DVH-Analytics/releases). 
 Please keep in mind this software is still in beta. If you have issues, compiling from source may be more informative. 
 
@@ -29,14 +30,15 @@ In addition to viewing DVH data, this software provides methods to:
 - download queried data
 - create time-series plots of various planning and dosimetric variables
 - calculate correlations
-- generate multi-variable linear and machine learning regressions.
+- generate multi-variable linear and machine learning regressions
+- share regression models with other DVHA users
 - additional screenshots available [here](https://github.com/cutright/DVH-Analytics/issues/9)
 
 
-The code is built upon these core libraries:
+The code is built with these core libraries:
 * [wxPython Phoenix](https://github.com/wxWidgets/Phoenix) - Build a native GUI on Windows, Mac, or Unix systems
 * [Pydicom](https://github.com/pydicom/pydicom) - Read, modify and write DICOM files with python code
-* [dicompyler-core](https://github.com/dicompyler/dicompyler-core) - Extensible radiation therapy research platform and viewer for DICOM and DICOM RT
+* [dicompyler-core](https://github.com/dicompyler/dicompyler-core) - A library of core radiation therapy modules for DICOM RT
 * [Bokeh](https://github.com/bokeh/bokeh) - Interactive Web Plotting for Python
 * [scikit-learn](https://github.com/scikit-learn/scikit-learn) - Machine Learning in Python
 
