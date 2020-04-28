@@ -513,7 +513,8 @@ class DicomDirectoryParserWorker(Thread):
             else:
                 modality = ds.Modality.lower()
                 timestamp = os.path.getmtime(file_path)
-                dose_sum_type = str(getattr(ds, 'DoseSummationType', None))
+                dose_sum_type = str(getattr(ds, 'DoseSummationType', None)).upper()
+                dose_sum_type = dose_sum_type if dose_sum_type in ['PLAN', 'BRACHY'] else 'IGNORED'
 
                 self.dicom_tag_values[file_path] = {'timestamp': timestamp,
                                                     'study_instance_uid': ds.StudyInstanceUID,
@@ -581,26 +582,6 @@ class DicomDirectoryParserWorker(Thread):
                     else:
                         self.dicom_file_paths[plan_uid]['rtdose'] = [dose_file]
 
-        # Check for multiple dose summation types (e.g., plan dose and each beam dose
-        dose_sum_types = ['PLAN', 'FRACTION', 'BRACHY', 'FRACTION_SESSION', 'BRACHY_SESSION']
-        type_count = len(dose_sum_types)
-        rank_dict = {key: type_count-i for i, key in enumerate(dose_sum_types)}
-        for plan_uid in list(self.dicom_file_paths):
-            dose_files = self.dicom_file_paths[plan_uid]['rtdose']
-            if len(dose_files) > 1:  # Only worry about situations with multiple dose files
-                dose_sum_types = [self.dicom_tag_values[f]['dose_sum_type'] for f in dose_files]
-                timestamps = [self.dicom_tag_values[f]['timestamp'] for f in dose_files]  # os.path.getmtime()
-
-                # collect the ranks, rank defaults to -1 if not in dose_sum_types
-                ranks = [getattr(rank_dict, str(dose_type).upper(), -1) for dose_type in dose_sum_types]
-                max_rank = max(ranks)
-
-                file_indices = [i for i, rank in ranks if rank == max_rank]  # most top-level files
-                timestamps = [timestamps[i] for i in file_indices]  # timestamps of file_indices
-                final_index = timestamps.index(max(timestamps))  # get the latest file index
-
-                self.dicom_file_paths[plan_uid]['rtdose'] = [dose_files[final_index]]
-
         # associate appropriate rtstruct files to plans
         for mrn_index, mrn in enumerate(list(self.plan_file_sets)):
             for study_uid in list(self.plan_file_sets[mrn]):
@@ -630,6 +611,31 @@ class DicomDirectoryParserWorker(Thread):
                                     self.dicom_file_paths[plan_uid][modality] = [dcm_file]
                                 else:
                                     self.dicom_file_paths[plan_uid][modality].append(dcm_file)
+
+        # Check for multiple dose and structure files
+        for plan_uid in list(self.dicom_file_paths):
+            for file_type in ['rtstruct', 'rtdose']:
+                files = self.dicom_file_paths[plan_uid][file_type]
+                if len(files) > 1:
+                    timestamps = [self.dicom_tag_values[f]['timestamp'] for f in files]  # os.path.getmtime()
+
+                    if file_type == 'rtdose':
+                        dose_sum_types = [self.dicom_tag_values[f]['dose_sum_type'] for f in files]
+                        non_ignored_types = [x for x in dose_sum_types if x != 'IGNORED']
+                        dose_type_count = len(set(non_ignored_types))
+                        if dose_type_count == 1:
+                            dose_sum_type = non_ignored_types[0]
+                            indices = [i for i, sum_type in enumerate(dose_sum_types) if sum_type == dose_sum_type]
+                            timestamps = [timestamps[i] for i in indices]  # timestamps of file_indices
+                        else:
+                            timestamps = []
+
+                    # for dose files, if no dose_sum_type is found and there are multiple files, ignore all of them
+                    if len(timestamps):
+                        final_index = timestamps.index(max(timestamps))  # get the latest file index
+                        self.dicom_file_paths[plan_uid][file_type] = [files[final_index]]
+                    else:
+                        self.dicom_file_paths[plan_uid][file_type] = []
 
     def is_data_set_valid(self, ds):
         for tag in self.req_tags:
