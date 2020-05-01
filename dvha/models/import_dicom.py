@@ -288,8 +288,7 @@ class ImportDicomFrame(wx.Frame):
         sizer_dicom_import_directory.Add(sizer_directory, 1, wx.EXPAND, 0)
         sizer_browse_and_tree.Add(sizer_dicom_import_directory, 0, wx.ALL | wx.EXPAND, 10)
         label_note = wx.StaticText(self, wx.ID_ANY,
-                                   "NOTE: Only the latest files will be used for a given study instance UID, "
-                                   "all others ignored.")
+                                   "NOTE: Only the latest files for a plan-set will be used/shown.")
         label_note.SetFont(wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
         sizer_studies.Add(label_note, 0, wx.ALL, 5)
         sizer_tree.Add(self.tree_ctrl_import, 1, wx.EXPAND, 0)
@@ -300,7 +299,7 @@ class ImportDicomFrame(wx.Frame):
         sizer_studies.Add(sizer_studies_checkboxes, 0, wx.LEFT | wx.EXPAND, 10)
         self.label_progress = wx.StaticText(self, wx.ID_ANY, "")
         self.label_progress.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
-        sizer_progress.Add(self.label_progress, 1, 0, 0)
+        sizer_progress.Add(self.label_progress, 1, wx.ALL, 10)
         sizer_studies.Add(sizer_progress, 0, wx.EXPAND | wx.RIGHT, 5)
         sizer_browse_and_tree.Add(sizer_studies, 1, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
         sizer_main.Add(sizer_browse_and_tree, 1, wx.EXPAND, 0)
