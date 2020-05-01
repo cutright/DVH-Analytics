@@ -1,5 +1,12 @@
 # Change log of DVH Analytics
 
+v0.7.8 (2020.05.01)
+--------------------
+ - [Import] Only allow `DoseSummationType` of `PLAN` or `BRACHY` if multiple dose files are found 
+ GH Issue [68](https://github.com/cutright/DVH-Analytics/issues/68).
+ - [Import] Bug fix: If multiple files are found for a plan-set, select only the latest file per 
+ `os.path.getmtime`. Previously, only the first file found was used.
+
 v0.7.7 (2020.04.21)
 --------------------
  - [DVH] Proper dvh bin-centers (errors were <= bin_width/2)
