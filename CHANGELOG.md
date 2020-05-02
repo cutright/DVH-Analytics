@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.7.9 (TBD)
+--------------------
+ - [Misc] Remove references to the deprecated import_settings.txt file
+
 v0.7.8 (2020.05.01)
 --------------------
  - [Import] Only allow `DoseSummationType` of `PLAN` or `BRACHY` if multiple dose files are found 
