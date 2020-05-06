@@ -321,29 +321,23 @@ class RoiManager(wx.Dialog):
 
     def update_physicians(self, old_physicians=None):
         choices = list(self.roi_map.physicians)
-        if choices:
-            new = choices[0]
-            if old_physicians:
-                new = list(set(choices) - set(old_physicians))
-
-            self.update_combo_box_choices(self.combo_box_physician, choices, new)
+        self.update_combo_box_choices(self.combo_box_physician, choices, old_physicians)
 
     def update_physician_rois(self, old_physician_rois=None):
         choices = self.roi_map.get_physician_rois(self.physician)
-        if choices:
-            new = choices[0]
-            if old_physician_rois:
-                new = list(set(choices) - set(old_physician_rois))
-
-            self.update_combo_box_choices(self.combo_box_physician_roi, choices, new)
+        self.update_combo_box_choices(self.combo_box_physician_roi, choices, old_physician_rois)
 
     @staticmethod
-    def update_combo_box_choices(combo_box, choices, value):
-        if not value:
-            value = combo_box.GetValue()
-        combo_box.Clear()
-        combo_box.AppendItems(choices)
-        combo_box.SetValue(value)
+    def update_combo_box_choices(combo_box, choices, old_choices):
+        if choices:
+            value = choices[0]
+            if old_choices:
+                value = list(set(choices) - set(old_choices))
+                value = value[0] if len(value) else combo_box.GetValue()
+
+            combo_box.Clear()
+            combo_box.AppendItems(choices)
+            combo_box.SetValue(value)
 
     def update_variations(self):
         self.data_table.set_data(self.variation_table_data, self.columns)
