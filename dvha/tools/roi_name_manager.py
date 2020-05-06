@@ -18,7 +18,7 @@ from dvha.db.sql_to_python import QuerySQL
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import PREF_DIR
 from dvha.tools.roi_map_generator import ROIMapGenerator
-from dvha.tools.utilities import flatten_list_of_lists, initialize_directories, delete_file
+from dvha.tools.utilities import flatten_list_of_lists, initialize_directories
 
 
 class PhysicianROI:
@@ -202,12 +202,12 @@ class DatabaseROIs:
         if not os.path.isdir(PREF_DIR):
             initialize_directories()
 
-        self.physicians_from_file = get_physicians_from_roi_files()
-
+        self.physicians_from_file = None
         self.branched_institutional_rois = {}
         self.import_from_file()
 
     def import_from_file(self):
+        self.physicians_from_file = get_physicians_from_roi_files()
         self.physicians = {}
         self.institutional_rois = []
 
@@ -290,10 +290,6 @@ class DatabaseROIs:
     def delete_physician(self, physician):
         if physician in list(self.physicians):
             self.physicians.pop(physician, None)
-
-            rel_path = 'physician_%s.roi' % physician
-            abs_file_path = os.path.join(PREF_DIR, rel_path)
-            delete_file(abs_file_path)
 
     def is_physician(self, physician):
         return physician in list(self.physicians)

@@ -15,13 +15,15 @@ import wx.html2
 from datetime import datetime
 from threading import Thread
 from pubsub import pub
+from os.path import join
 from dvha.db.sql_connector import DVH_SQL, echo_sql_db
 from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddVariation, MoveVariationDialog,\
     RenamePhysicianDialog, RenamePhysicianROIDialog, RenameInstitutionalROIDialog, LinkPhysicianROI
 from dvha.models.data_table import DataTable
 from dvha.models.plot import PlotROIMap
+from dvha.paths import PREF_DIR
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_elapsed_time, get_window_size,\
-    set_frame_icon, set_msw_background_color, is_windows
+    set_frame_icon, set_msw_background_color, is_windows, delete_file
 from dvha.tools.roi_map_generator import ROIMapGenerator
 from dvha.tools.roi_name_manager import clean_name
 
@@ -116,6 +118,8 @@ class ROIMapFrame(wx.Frame):
         self.__do_layout()
 
         self.plot.update_roi_map_source_data(self.physician)
+
+        self.physicians_to_delete = []
 
         self.run()
 
@@ -525,6 +529,7 @@ class ROIMapFrame(wx.Frame):
 
     def delete_physician(self):
         self.roi_map.delete_physician(self.physician)
+        self.physicians_to_delete.append(self.physician)
         self.update_all()
 
     def on_delete_physician_roi(self, evt):
@@ -673,15 +678,23 @@ class ROIMapFrame(wx.Frame):
         self.data_table_tg263.set_column_widths(auto=True)
 
     def save_and_update(self, evt):
+        for physician in self.physicians_to_delete:
+            rel_path = 'physician_%s.roi' % physician
+            abs_file_path = join(PREF_DIR, rel_path)
+            delete_file(abs_file_path)
+
         RemapROIFrame(self.roi_map)
 
     def on_cancel(self, *args):
         self.roi_map.import_from_file()
+        self.physicians_to_delete = []
         self.update_roi_map()
+        self.update_physicians()
 
     def on_close(self, *args):
         self.Destroy()
         self.roi_map.import_from_file()
+        self.physicians_to_delete = []
 
 
 class RemapROIWorker(Thread):
