@@ -3,6 +3,8 @@
 v0.7.9 (TBD)
 --------------------
  - [Misc] Remove references to the deprecated import_settings.txt file
+ - [ROI Map] Fix GH Issue [75](https://github.com/cutright/DVH-Analytics/issues/75)
+ - [ROI Map] Deleting a physician in the ROI Map module now actually deletes the .roi file stored locally
 
 v0.7.8 (2020.05.01)
 --------------------
