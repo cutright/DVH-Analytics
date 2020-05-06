@@ -692,6 +692,9 @@ class ROIMapFrame(wx.Frame):
         self.update_physicians()
 
     def on_close(self, *args):
+        MessageDialog(self, 'Close without saving ROI Map?', action_yes_func=self.do_close)
+
+    def do_close(self):
         self.Destroy()
         self.roi_map.import_from_file()
         self.physicians_to_delete = []
