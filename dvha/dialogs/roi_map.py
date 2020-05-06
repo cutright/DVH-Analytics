@@ -99,7 +99,8 @@ class AddPhysician(wx.Dialog):
             # self.roi_map.add_physician(self.text_ctrl_physician.GetValue(), add_institutional_rois=False)
             physician = self.text_ctrl_physician.GetValue()
             dlg = TG263Dialog(physician, self.roi_map)
-            self.roi_map.import_physician_roi_map(dlg.map_file_path)
+            if dlg.map_file_path is not None:
+                self.roi_map.import_physician_roi_map(dlg.map_file_path)
 
         else:
             self.roi_map.copy_physician(self.text_ctrl_physician.GetValue(),
