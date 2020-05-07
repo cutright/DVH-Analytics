@@ -99,7 +99,8 @@ class AddPhysician(wx.Dialog):
             # self.roi_map.add_physician(self.text_ctrl_physician.GetValue(), add_institutional_rois=False)
             physician = self.text_ctrl_physician.GetValue()
             dlg = TG263Dialog(physician, self.roi_map)
-            self.roi_map.import_physician_roi_map(dlg.map_file_path)
+            if dlg.map_file_path is not None:
+                self.roi_map.import_physician_roi_map(dlg.map_file_path)
 
         else:
             self.roi_map.copy_physician(self.text_ctrl_physician.GetValue(),
@@ -114,7 +115,7 @@ class AddPhysician(wx.Dialog):
 
     def update_enable(self, *evt):
         invalid_choices = list(self.roi_map.physicians) + ['']
-        new = self.text_ctrl_physician.GetValue()
+        new = clean_name(self.text_ctrl_physician.GetValue(), physician=True)
         self.button_ok.Enable(new not in invalid_choices)
         disable = self.text_ctrl_physician.GetValue() == '' or self.combo_box_copy_from.GetValue().lower() == 'none'
         self.checkbox_variations.Enable(not disable)
@@ -321,29 +322,23 @@ class RoiManager(wx.Dialog):
 
     def update_physicians(self, old_physicians=None):
         choices = list(self.roi_map.physicians)
-        if choices:
-            new = choices[0]
-            if old_physicians:
-                new = list(set(choices) - set(old_physicians))
-
-            self.update_combo_box_choices(self.combo_box_physician, choices, new)
+        self.update_combo_box_choices(self.combo_box_physician, choices, old_physicians)
 
     def update_physician_rois(self, old_physician_rois=None):
         choices = self.roi_map.get_physician_rois(self.physician)
-        if choices:
-            new = choices[0]
-            if old_physician_rois:
-                new = list(set(choices) - set(old_physician_rois))
-
-            self.update_combo_box_choices(self.combo_box_physician_roi, choices, new)
+        self.update_combo_box_choices(self.combo_box_physician_roi, choices, old_physician_rois)
 
     @staticmethod
-    def update_combo_box_choices(combo_box, choices, value):
-        if not value:
-            value = combo_box.GetValue()
-        combo_box.Clear()
-        combo_box.AppendItems(choices)
-        combo_box.SetValue(value)
+    def update_combo_box_choices(combo_box, choices, old_choices):
+        if choices:
+            value = choices[0]
+            if old_choices:
+                value = list(set(choices) - set(old_choices))
+                value = value[0] if len(value) else combo_box.GetValue()
+
+            combo_box.Clear()
+            combo_box.AppendItems(choices)
+            combo_box.SetValue(value)
 
     def update_variations(self):
         self.data_table.set_data(self.variation_table_data, self.columns)
@@ -905,7 +900,7 @@ class RenamerBaseClass(wx.Dialog):
     """
     Simple base class used for renaming (e.g., renaming a physician in the roi map)
     """
-    def __init__(self, title, text_input_label, invalid_options):
+    def __init__(self, title, text_input_label, invalid_options, is_physician=False):
         """
         :param title: title of the dialog window
         :type title: str
@@ -913,10 +908,13 @@ class RenamerBaseClass(wx.Dialog):
         :type text_input_label: str
         :param invalid_options: if text_ctrl is in invalid options, OK button will be disabled
         :type invalid_options: list
+        :param is_physician: if editing a physician, clean_name() needs to know
+        :type is_physician: bool
         """
         wx.Dialog.__init__(self, None, title=title)
 
-        self.invalid_options = [clean_name(option) for option in invalid_options]
+        self.invalid_options = [clean_name(option, physician=is_physician) for option in invalid_options]
+        self.is_physician = is_physician
 
         self.text_input_label = text_input_label
 
@@ -959,7 +957,8 @@ class RenamerBaseClass(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self.text_ticker, id=self.text_ctrl.GetId())
 
     def text_ticker(self, evt):
-        [self.button_ok.Disable, self.button_ok.Enable][clean_name(self.new_name) not in self.invalid_options]()
+        value = clean_name(self.new_name, physician=self.is_physician)
+        [self.button_ok.Disable, self.button_ok.Enable][value not in self.invalid_options]()
 
     @property
     def new_name(self):
@@ -989,7 +988,7 @@ class RenamePhysicianDialog(RenamerBaseClass):
         self.physician = physician
         self.roi_map = roi_map
         RenamerBaseClass.__init__(self, 'Rename %s' % physician,
-                                  'New Physician Name:', list(roi_map.physicians))
+                                  'New Physician Name:', list(roi_map.physicians), is_physician=True)
 
     def action(self):
         self.roi_map.rename_physician(self.new_name, self.physician)

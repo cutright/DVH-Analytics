@@ -79,7 +79,7 @@ class ROIMapGenerator:
         """
 
         for key in list(data_filter):
-            if data_filter[key].lower() == 'all':
+            if not isinstance(data_filter[key], list) and data_filter[key].lower() == 'all':
                 data_filter.pop(key)
 
         data = {key: [] for key in self.keys}

@@ -202,12 +202,12 @@ class DatabaseROIs:
         if not os.path.isdir(PREF_DIR):
             initialize_directories()
 
-        self.physicians_from_file = get_physicians_from_roi_files()
-
+        self.physicians_from_file = None
         self.branched_institutional_rois = {}
         self.import_from_file()
 
     def import_from_file(self):
+        self.physicians_from_file = get_physicians_from_roi_files()
         self.physicians = {}
         self.institutional_rois = []
 

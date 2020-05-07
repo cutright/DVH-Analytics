@@ -1,5 +1,14 @@
 # Change log of DVH Analytics
 
+v0.7.9 (TBD)
+--------------------
+ - [Misc] Remove references to the deprecated import_settings.txt file
+ - [ROI Map] Fix GH Issue [75](https://github.com/cutright/DVH-Analytics/issues/75)
+ - [ROI Map] Deleting a physician in the ROI Map module now actually deletes the .roi file stored locally
+ - [ROI Map] Alert user on ROI Map frame close that ROI Map won't be saved when using the OS's window close button
+ - [ROI Map] Prevent TypeError on editing physician name
+ - [ROI Map] Bug fix for validating new physician name
+
 v0.7.8 (2020.05.01)
 --------------------
  - [Import] Only allow `DoseSummationType` of `PLAN` or `BRACHY` if multiple dose files are found 

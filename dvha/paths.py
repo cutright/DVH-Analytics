@@ -36,7 +36,6 @@ DIRECTORIES = {key[:-4]: value for key, value in locals().items() if key.endswit
 
 OPTIONS_PATH = join(PREF_DIR, '.options')
 OPTIONS_CHECKSUM_PATH = join(PREF_DIR, '.options_checksum')
-IMPORT_SETTINGS_PATH = join(PREF_DIR, 'import_settings.txt')
 SQL_CNF_PATH = join(PREF_DIR, 'sql_connection.cnf')
 LICENSE_PATH = join(PARENT_DIR, 'LICENSE.txt')
 CREATE_PGSQL_TABLES = join(SCRIPT_DIR, 'db', 'create_tables.sql')
