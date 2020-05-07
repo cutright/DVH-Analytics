@@ -589,7 +589,7 @@ class ROIMapFrame(wx.Frame):
         self.update_roi_map()
 
     def on_edit_physician(self, evt):
-        current_physicians = list(self.roi_map.get_physicians)
+        current_physicians = list(self.roi_map.get_physicians())
         dlg = RenamePhysicianDialog(self.physician, self.roi_map)
         if dlg.res == wx.ID_OK:
             self.update_all(old_physicians=current_physicians)

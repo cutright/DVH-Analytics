@@ -115,7 +115,7 @@ class AddPhysician(wx.Dialog):
 
     def update_enable(self, *evt):
         invalid_choices = list(self.roi_map.physicians) + ['']
-        new = self.text_ctrl_physician.GetValue()
+        new = clean_name(self.text_ctrl_physician.GetValue(), physician=True)
         self.button_ok.Enable(new not in invalid_choices)
         disable = self.text_ctrl_physician.GetValue() == '' or self.combo_box_copy_from.GetValue().lower() == 'none'
         self.checkbox_variations.Enable(not disable)
@@ -900,7 +900,7 @@ class RenamerBaseClass(wx.Dialog):
     """
     Simple base class used for renaming (e.g., renaming a physician in the roi map)
     """
-    def __init__(self, title, text_input_label, invalid_options):
+    def __init__(self, title, text_input_label, invalid_options, is_physician=False):
         """
         :param title: title of the dialog window
         :type title: str
@@ -908,10 +908,13 @@ class RenamerBaseClass(wx.Dialog):
         :type text_input_label: str
         :param invalid_options: if text_ctrl is in invalid options, OK button will be disabled
         :type invalid_options: list
+        :param is_physician: if editing a physician, clean_name() needs to know
+        :type is_physician: bool
         """
         wx.Dialog.__init__(self, None, title=title)
 
-        self.invalid_options = [clean_name(option) for option in invalid_options]
+        self.invalid_options = [clean_name(option, physician=is_physician) for option in invalid_options]
+        self.is_physician = is_physician
 
         self.text_input_label = text_input_label
 
@@ -954,7 +957,8 @@ class RenamerBaseClass(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self.text_ticker, id=self.text_ctrl.GetId())
 
     def text_ticker(self, evt):
-        [self.button_ok.Disable, self.button_ok.Enable][clean_name(self.new_name) not in self.invalid_options]()
+        value = clean_name(self.new_name, physician=self.is_physician)
+        [self.button_ok.Disable, self.button_ok.Enable][value not in self.invalid_options]()
 
     @property
     def new_name(self):
@@ -984,7 +988,7 @@ class RenamePhysicianDialog(RenamerBaseClass):
         self.physician = physician
         self.roi_map = roi_map
         RenamerBaseClass.__init__(self, 'Rename %s' % physician,
-                                  'New Physician Name:', list(roi_map.physicians))
+                                  'New Physician Name:', list(roi_map.physicians), is_physician=True)
 
     def action(self):
         self.roi_map.rename_physician(self.new_name, self.physician)
