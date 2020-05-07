@@ -1,6 +1,6 @@
 # Change log of DVH Analytics
 
-v0.7.9 (2020.05.05)
+v0.7.9 (2020.06.05)
 --------------------
  - [Misc] Remove references to the deprecated import_settings.txt file
  - [ROI Map] Fix GH Issue [75](https://github.com/cutright/DVH-Analytics/issues/75)
