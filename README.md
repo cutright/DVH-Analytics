@@ -64,7 +64,7 @@ Shapely install issues on MS Windows and help setting up a PostgreSQL database i
 Dependencies
 ---------
 * [Python](https://www.python.org) >3.5
-* [wxPython Phoenix](https://github.com/wxWidgets/Phoenix) >= 4.0.4
+* [wxPython Phoenix](https://github.com/wxWidgets/Phoenix) >= 4.0.4, < 4.1.0
 * [Pydicom](https://github.com/darcymason/pydicom) >=1.4.0
 * [dicompyler-core](https://pypi.python.org/pypi/dicompyler-core) 0.5.3
 * [Bokeh](http://bokeh.pydata.org/en/latest/index.html) >= 1.2.0, < 2.0.0
