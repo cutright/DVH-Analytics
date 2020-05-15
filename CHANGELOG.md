@@ -1,6 +1,6 @@
 # Change log of DVH Analytics
 
-v0.8.0 (TBD)
+v0.8.0 (2020.05.15)
 --------------------
  - [Error Logging] Implemented error logging, stored in ~/Apps/dvh_analytics/logs. Code borrowed from dicompyler.
 
