@@ -10,6 +10,11 @@ The main file DVH Analytics
 #    See the file LICENSE included with this distribution, also
 #    available at https://github.com/cutright/DVH-Analytics
 
+import logging, logging.handlers
+import sys, threading, traceback, os
+logger = logging.getLogger('dvha')
+logger.setLevel(logging.DEBUG)
+
 import wx
 from datetime import datetime
 import webbrowser
@@ -36,18 +41,73 @@ from dvha.models.control_chart import ControlChartFrame
 from dvha.models.roi_map import ROIMapFrame
 from dvha.models.stats_data_editor import StatsDataEditor
 from dvha.options import Options, DefaultOptions
-from dvha.paths import LOGO_PATH, DATA_DIR, ICONS, MODELS_DIR
+from dvha.paths import LOGO_PATH, DATA_DIR, ICONS, MODELS_DIR, APP_DIR
 from dvha.tools.errors import MemoryErrorDialog, PlottingMemoryError, ErrorDialog
 from dvha.tools.roi_name_manager import DatabaseROIs
 from dvha.tools.stats import StatsData, sync_variables_in_stats_data_objects
 from dvha.tools.utilities import get_study_instance_uids, scale_bitmap, is_windows, is_linux, is_mac, get_window_size, \
     save_object_to_file, load_object_from_file, set_msw_background_color, initialize_directories, \
-    set_frame_icon
+    set_frame_icon, main_is_frozen
 from dvha.db.sql_columns import all_columns as sql_column_info
 
 
 class DVHAMainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
+
+        #############################################################################
+        # The following block of code for logging adapted from dicompyler
+        #############################################################################
+        # Initialize logging
+        logger = logging.getLogger('dvha')
+
+        # Configure the exception hook to process threads as well
+        self.InstallThreadExcepthook()
+
+        # Remap the exception hook so that we can log and display exceptions
+        def LogExcepthook(*exc_info):
+            # Log the exception
+            text = "".join(traceback.format_exception(*exc_info))
+            logger.error("Unhandled exception: %s", text)
+            pub.sendMessage('logging.exception', msg=text)
+
+        sys.excepthook = LogExcepthook
+
+        # Modify the logging system from pydicom to capture important messages
+        pydicom_logger = logging.getLogger('pydicom')
+        for l in pydicom_logger.handlers:
+            pydicom_logger.removeHandler(l)
+
+        # Add file logger
+        logpath = os.path.join(APP_DIR, 'logs')
+        if not os.path.exists(logpath):
+            os.makedirs(logpath)
+        self.fh = logging.handlers.RotatingFileHandler(
+            os.path.join(logpath, 'dvha.log'),
+            maxBytes=524288, backupCount=7)
+        self.fh.setFormatter(logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        self.fh.setLevel(logging.WARNING)
+        logger.addHandler(self.fh)
+        pydicom_logger.addHandler(self.fh)
+
+        # Add console logger if not frozen
+        if not main_is_frozen():
+            self.ch = logging.StreamHandler()
+            self.ch.setFormatter(logging.Formatter(
+                '%(levelname)s: %(message)s'))
+            self.ch.setLevel(logging.WARNING)
+            logger.addHandler(self.ch)
+            pydicom_logger.addHandler(self.ch)
+        # Otherwise if frozen, send stdout/stderror to /dev/null since
+        # logging the messages seems to cause instability due to recursion
+        else:
+            devnull = open(os.devnull, 'w')
+            sys.stdout = devnull
+            sys.stderr = devnull
+        #############################################################################
+        # End logging code block from dicompyler
+        #############################################################################
+
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
@@ -1071,6 +1131,25 @@ class DVHAMainFrame(wx.Frame):
         else:
             text = ''
         self.text_summary.SetLabelText(text)
+
+    def InstallThreadExcepthook(self):
+        """Workaround for sys.excepthook thread bug from Jonathan Ellis
+            (http://bugs.python.org/issue1230540).
+            Call once from __main__ before creating any threads.
+            If using psyco, call psyco.cannotcompile(threading.Thread.run)
+            since this replaces a new-style class method."""
+
+        run_old = threading.Thread.run
+
+        def Run(*args, **kwargs):
+            try:
+                run_old(*args, **kwargs)
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except Exception:
+                sys.excepthook(*sys.exc_info())
+
+        threading.Thread.run = Run
 
 
 class MainApp(wx.App):

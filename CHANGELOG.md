@@ -1,5 +1,10 @@
 # Change log of DVH Analytics
 
+v0.8.0 (TBD)
+--------------------
+ - [Error Logging] Implemented error logging, stored in ~/Apps/dvh_analytics/logs. Code borrowed from dicompyler.
+
+
 v0.7.9 (2020.05.06)
 --------------------
  - [Misc] Remove references to the deprecated import_settings.txt file

@@ -799,3 +799,8 @@ def backup_sqlite_db(options):
             move_files_to_new_path([db_file_path], BACKUP_DIR, copy_files=True, new_file_names=[new_file_name])
 
             return [db_file_path, join(BACKUP_DIR, new_file_name)]
+
+
+def main_is_frozen():
+    # https://pyinstaller.readthedocs.io/en/stable/runtime-information.html
+    return getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')
