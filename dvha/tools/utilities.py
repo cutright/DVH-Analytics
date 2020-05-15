@@ -27,7 +27,6 @@ import sys
 import tracemalloc
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import SQL_CNF_PATH, WIN_APP_ICON, PIP_LIST_PATH, DIRECTORIES, APP_DIR, BACKUP_DIR, DATA_DIR
-import importlib
 
 
 IGNORED_FILES = ['.ds_store']

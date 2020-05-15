@@ -1146,7 +1146,7 @@ class DVHAMainFrame(wx.Frame):
                 run_old(*args, **kwargs)
             except (KeyboardInterrupt, SystemExit):
                 raise
-            except:
+            except Exception:
                 sys.excepthook(*sys.exc_info())
 
         threading.Thread.run = Run
