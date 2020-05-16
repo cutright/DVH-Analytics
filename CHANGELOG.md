@@ -1,5 +1,10 @@
 # Change log of DVH Analytics
 
+v0.8.1 (TBD)
+--------------------
+ - [Query] Allow user to define different DB's for each Group
+
+
 v0.8.0 (2020.05.15)
 --------------------
  - [Error Logging] Implemented error logging, stored in ~/Apps/dvh_analytics/logs. Code borrowed from dicompyler.

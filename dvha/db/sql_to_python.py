@@ -22,7 +22,7 @@ class QuerySQL:
     you can access any column name 'some_column' with QuerySQL.some_column which will return a list of values
     for 'some_column'.  All properties contain lists with the order of their values synced, unless unique=True
     """
-    def __init__(self, table_name, condition_str, unique=False, columns=None):
+    def __init__(self, table_name, condition_str, unique=False, columns=None, group=1):
         """
         :param table_name: 'Beams', 'DVHs', 'Plans', or 'Rxs'
         :type table_name: str
@@ -30,6 +30,8 @@ class QuerySQL:
         :type condition_str: str
         :param unique: If set to True, only unique values stored
         :type unique: bool
+        :param group: either 1 or 2
+        :type group: int
         """
 
         table_name = table_name.lower()
@@ -37,7 +39,7 @@ class QuerySQL:
         if table_name in {'beams', 'dvhs', 'plans', 'rxs'}:
             self.table_name = table_name
             self.condition_str = condition_str
-            with DVH_SQL() as cnx:
+            with DVH_SQL(group=group) as cnx:
 
                 all_columns = cnx.get_column_names(table_name)
                 if columns is not None:

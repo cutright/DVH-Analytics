@@ -24,11 +24,13 @@ class DVH_SQL:
     """
     This class is used to communicate to the SQL database to limit the need for syntax in other files
     """
-    def __init__(self, *config, db_type='pgsql'):
+    def __init__(self, *config, db_type='pgsql', group=1):
         """
         :param config: optional SQL login credentials, stored values used if nothing provided
         :param db_type: either 'pgsql' or 'sqlite'
         :type db_type: str
+        :param group: use a group-specific connection, either 1 or 2
+        :type group: int
         """
 
         stored_options = Options()
@@ -38,8 +40,10 @@ class DVH_SQL:
             config = config[0]
         else:
             # Read SQL configuration file
-            self.db_type = stored_options.DB_TYPE
-            config = stored_options.SQL_LAST_CNX[self.db_type]
+            if group == 2 and stored_options.SYNC_SQL_CNX:
+                group = 1
+            self.db_type = stored_options.DB_TYPE[group]
+            config = stored_options.SQL_LAST_CNX[group][self.db_type]
 
         if self.db_type == 'sqlite':
             db_file_path = config['host']
@@ -619,13 +623,15 @@ def truncate_string(input_string, character_limit):
     return input_string
 
 
-def echo_sql_db(config=None, db_type='pgsql'):
+def echo_sql_db(config=None, db_type='pgsql', group=1):
     """
     Echo the database using stored or provided credentials
     :param config: database login credentials
     :type config: dict
     :param db_type: either 'pgsql' or 'sqlite'
     :type db_type: str
+    :param group: either group 1 or 2
+    :type group: int
     :return: True if connection could be established
     :rtype: bool
     """
@@ -633,9 +639,9 @@ def echo_sql_db(config=None, db_type='pgsql'):
         if config:
             if db_type == 'pgsql' and ('dbname' not in list(config) or 'port' not in list(config)):
                 return False
-            cnx = DVH_SQL(config, db_type=db_type)
+            cnx = DVH_SQL(config, db_type=db_type, group=group)
         else:
-            cnx = DVH_SQL()
+            cnx = DVH_SQL(group=group)
         cnx.close()
         return True
     except Exception as e:

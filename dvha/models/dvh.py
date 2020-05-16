@@ -24,7 +24,7 @@ MAX_DOSE_VOLUME = Options().MAX_DOSE_VOLUME
 # This class retrieves DVH data from the SQL database and calculates statistical DVHs (min, max, quartiles)
 # It also provides some inspection tools of the retrieved data
 class DVH:
-    def __init__(self, uid=None, dvh_condition=None, dvh_bin_width=5):
+    def __init__(self, uid=None, dvh_condition=None, dvh_bin_width=5, group=1):
         """
         This class will retrieve DVHs and other data in the DVH SQL table meeting the given constraints,
         it will also parse the DVH_string into python lists and retrieve the associated Rx dose
@@ -32,6 +32,8 @@ class DVH:
         :param dvh_condition: a string in SQL syntax applied to a DVH Table query
         :param dvh_bin_width: retrieve every nth value from dvh_string in SQL
         :type dvh_bin_width: int
+        :param group: either 1 or 2
+        :type group: int
         """
 
         self.dvh_bin_width = dvh_bin_width
@@ -44,7 +46,7 @@ class DVH:
             constraints_str = ''
 
         # Get DVH data from SQL and set as attributes
-        dvh_data = QuerySQL('DVHs', constraints_str)
+        dvh_data = QuerySQL('DVHs', constraints_str, group=group)
         if dvh_data.mrn:
             ignored_keys = {'cnx', 'cursor', 'table_name', 'constraints_str', 'condition_str'}
             self.keys = []

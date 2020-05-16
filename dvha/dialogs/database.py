@@ -581,10 +581,11 @@ class SQLSettingsDialog(wx.Dialog):
     """
     Edit and validate SQL connection settings
     """
-    def __init__(self, options):
-        wx.Dialog.__init__(self, None, title="Database Connection Settings")
+    def __init__(self, options, group=1):
+        wx.Dialog.__init__(self, None)
 
         self.options = options
+        self.group = group
 
         self.keys = ['host', 'port', 'dbname', 'user', 'password']
 
@@ -609,21 +610,32 @@ class SQLSettingsDialog(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self.button_reload, id=self.button['reload'].GetId())
         self.Bind(wx.EVT_RADIOBOX, self.on_db_radio, id=self.db_type_radiobox.GetId())
 
+        if self.group == 2:
+            self.sync_groups = wx.CheckBox(self, wx.ID_ANY, "Sync to Group 1")
+            self.Bind(wx.EVT_CHECKBOX, self.on_sync_groups, id=self.sync_groups.GetId())
+
         self.__set_properties()
         self.__do_layout()
         self.Center()
 
         self.load_sql_settings()
 
+        if self.group == 2:
+            self.on_sync_groups()
+
         self.run()
 
     def __set_properties(self):
-        self.SetTitle("SQL Connection Settings")
+        prepend = ['', 'Group 2: '][self.group != 1]
+        self.SetTitle("%sSQL Connection Settings" % prepend)
 
         # Set initial db_type_radiobox to loaded settings or pgsql if none found
-        self.set_selected_db_type(self.options.DB_TYPE)
+        self.set_selected_db_type(self.options.DB_TYPE[self.group])
 
         self.button['reload'].Enable(self.has_last_cnx)
+
+        if self.group == 2:
+            self.sync_groups.SetValue(self.options.SYNC_SQL_CNX)
 
     def set_host_items(self):
         if self.selected_db_type == 'sqlite':
@@ -647,6 +659,14 @@ class SQLSettingsDialog(wx.Dialog):
             grid_sizer.Add(self.label[key], 0, wx.ALL, 0)
             grid_sizer.Add(self.input[key], 0, wx.ALL | wx.EXPAND, 0)
 
+        if self.group == 2:
+            note = wx.StaticText(self, wx.ID_ANY, "Optionally define an SQL connection for Group 2 queries. "
+                                                  "This connection is read-only. "
+                                                  "Your main SQL connection (i.e., Group 1) always applies to "
+                                                  "Database Administrator and Importing.")
+            sizer_frame.Add(note, 0, wx.ALL, 10)
+            sizer_frame.Add(self.sync_groups, 0, wx.LEFT, 10)
+
         sizer_frame.Add(grid_sizer, 0, wx.ALL, 10)
         sizer_frame.Add(self.db_type_radiobox, 0, wx.EXPAND | wx.ALL, 5)
         sizer_buttons.Add(self.button['ok'], 1, wx.ALL | wx.EXPAND, 5)
@@ -659,13 +679,16 @@ class SQLSettingsDialog(wx.Dialog):
 
         self.SetSizer(sizer_frame)
         self.Fit()
+        if self.group == 2:
+            note.Wrap(300)
+            self.Fit()
         self.Layout()
 
     def load_sql_settings(self):
         self.set_host_items()
 
         if self.has_last_cnx:
-            config = self.options.SQL_LAST_CNX[self.selected_db_type]
+            config = self.options.SQL_LAST_CNX[self.group][self.selected_db_type]
         else:
             config = self.options.DEFAULT_CNF[self.selected_db_type]
 
@@ -689,15 +712,17 @@ class SQLSettingsDialog(wx.Dialog):
 
     def write_successful_cnf(self):
         new_config = {key: self.input[key].GetValue() for key in self.keys if self.input[key].GetValue()}
-        self.options.SQL_LAST_CNX[self.selected_db_type] = new_config
-
-        self.options.DB_TYPE = self.selected_db_type
+        self.options.SQL_LAST_CNX[self.group][self.selected_db_type] = new_config
+        self.options.DB_TYPE[self.group] = self.selected_db_type
 
         if self.selected_db_type == 'pgsql':
             new_host = self.input['host'].GetValue()
             if new_host in self.ip_history:
                 self.ip_history.pop(self.ip_history.index(new_host))
             self.ip_history.insert(0, new_host)
+
+        if self.group == 2:
+            self.options.SYNC_SQL_CNX = bool(self.sync_groups.GetValue())
 
         self.options.save()
 
@@ -715,7 +740,7 @@ class SQLSettingsDialog(wx.Dialog):
 
             if echo_sql_db(new_config, db_type=self.selected_db_type):
                 self.write_successful_cnf()
-                with DVH_SQL() as cnx:
+                with DVH_SQL(group=self.group) as cnx:
                     cnx.initialize_database()
             else:
                 dlg = wx.MessageDialog(self, 'Connection to database could not be established.', 'ERROR!',
@@ -737,7 +762,7 @@ class SQLSettingsDialog(wx.Dialog):
 
     @property
     def has_last_cnx(self):
-        return 'host' in list(self.options.SQL_LAST_CNX[self.selected_db_type])
+        return 'host' in list(self.options.SQL_LAST_CNX[self.group][self.selected_db_type])
 
     def set_selected_db_type(self, db_type):
         self.db_type_radiobox.SetSelection({'sqlite': 0, 'pgsql': 1}[db_type])
@@ -748,6 +773,19 @@ class SQLSettingsDialog(wx.Dialog):
             if input_type != 'host':
                 self.input[input_type].Enable(self.selected_db_type == 'pgsql')
                 self.label[input_type].Enable(self.selected_db_type == 'pgsql')
+
+    def set_all_enable(self, status):
+        for obj in self.input.values():
+            obj.Enable(status)
+        for obj in self.label.values():
+            obj.Enable(status)
+        self.button['echo'].Enable(status)
+        self.button['reload'].Enable(status)
+        self.db_type_radiobox.Enable(status)
+
+    def on_sync_groups(self, *evt):
+        self.set_all_enable(not bool(self.sync_groups.GetValue()))
+        self.load_sql_settings()
 
 
 # ------------------------------------------------------

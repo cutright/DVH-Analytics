@@ -255,6 +255,7 @@ class DVHAMainFrame(wx.Frame):
         settings_menu = wx.Menu()
         menu_pref = settings_menu.Append(wx.ID_PREFERENCES)
         menu_sql = settings_menu.Append(wx.ID_ANY, '&Database Connection\tCtrl+D')
+        menu_sql_2 = settings_menu.Append(wx.ID_ANY, '&Database Connection 2')
         menu_roi_map = settings_menu.Append(wx.ID_ANY, '&ROI Map\tCtrl+R')
 
         help_menu = wx.Menu()
@@ -280,6 +281,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, PythonLibraries, menu_python_libraries)
         self.Bind(wx.EVT_MENU, About, menu_about)
         self.Bind(wx.EVT_MENU, self.on_sql, menu_sql)
+        self.Bind(wx.EVT_MENU, self.on_sql_2, menu_sql_2)
         self.Bind(wx.EVT_MENU, self.on_toolbar_roi_map, menu_roi_map)
         if is_mac():
             menu_user_settings = settings_menu.Append(wx.ID_ANY, '&Preferences\tCtrl+,')
@@ -752,7 +754,7 @@ class DVHAMainFrame(wx.Frame):
             try:
                 uids, dvh_str = self.get_query()
                 self.group_data[group]['dvh'] = \
-                    DVH(dvh_condition=dvh_str, uid=uids, dvh_bin_width=self.options.dvh_bin_width)
+                    DVH(dvh_condition=dvh_str, uid=uids, dvh_bin_width=self.options.dvh_bin_width, group=group)
             except MemoryError:
                 msg = "Querying memory error. Try querying less data. At least %s DVHs returned.\n"\
                       "NOTE: Threshold of this error is dependent on your computer." % self.group_data[group]['dvh'].count
@@ -959,8 +961,14 @@ class DVHAMainFrame(wx.Frame):
             self.user_settings.Raise()
 
     def on_sql(self, *args):
-        SQLSettingsDialog(self.options)
-        [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db()]()
+        self.open_sql_setting(group=1)
+
+    def on_sql_2(self, *args):
+        self.open_sql_setting(group=2)
+
+    def open_sql_setting(self, group):
+        SQLSettingsDialog(self.options, group)
+        [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db(group=self.selected_group)]()
 
     def on_export_figure(self, evt):
         if self.save_data:
