@@ -16,9 +16,11 @@ import sqlite3
 from datetime import datetime
 from dateutil.parser import parse as date_parser
 from os.path import dirname, join, isfile
+from dvha.db.sql_columns import categorical, numerical
 from dvha.options import Options
 from dvha.paths import CREATE_PGSQL_TABLES, CREATE_SQLITE_TABLES, DATA_DIR
 from dvha.tools.errors import SQLError
+import json
 
 
 class DVH_SQL:
@@ -654,6 +656,23 @@ class DVH_SQL:
                     row_str = row_str.replace("'None'", "NULL")
                     cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (table, ','.join(columns), row_str)
                     cnx_2.execute_str(cmd)
+
+    def save_to_json(self, file_path, callback=None):
+        """
+        :param file_path: file_path to new JSON file
+        :type file_path: str
+        :param callback: optional function to be called on each table insertion
+        """
+        json_data = {'columns': {'categorical': categorical,
+                                 'numerical': numerical}}
+        for i, table in enumerate(self.tables):
+            if callback is not None:
+                CallAfter(callback, table, i, len(self.tables))
+            columns = self.get_column_names(table)
+            json_data[table] = self.query(table, ','.join(columns), bokeh_cds=True)
+
+        with open(file_path, 'w') as fp:
+            json.dump(json_data, fp)
 
 
 def truncate_string(input_string, character_limit):

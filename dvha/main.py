@@ -234,6 +234,7 @@ class DVHAMainFrame(wx.Frame):
         export_csv = export.Append(wx.ID_ANY, 'Data to csv\tCtrl+E')
         export_figure = export.Append(wx.ID_ANY, '&Plot to file\tCtrl+P')
         export_pgsql = export.Append(wx.ID_ANY, 'PGSQL to SQLite')
+        export_db_to_json = export.Append(wx.ID_ANY, 'Database to JSON')
         file_menu.AppendSeparator()
 
         qmi = file_menu.Append(wx.ID_ANY, '&Quit\tCtrl+Q')
@@ -275,6 +276,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_export, export_csv)
         self.Bind(wx.EVT_MENU, self.on_export_figure, export_figure)
         self.Bind(wx.EVT_MENU, self.on_export_pgsql, export_pgsql)
+        self.Bind(wx.EVT_MENU, self.on_export_db_to_json, export_db_to_json)
         self.Bind(wx.EVT_MENU, self.on_save, menu_save)
         self.Bind(wx.EVT_MENU, self.on_pref, menu_pref)
         self.Bind(wx.EVT_MENU, self.on_githubpage, menu_github)
@@ -696,6 +698,13 @@ class DVHAMainFrame(wx.Frame):
             wx.MessageBox('This is for PostgreSQL only. Your main (Group 1) connection is SQLite. '
                           'Use Data->Backup SQLite DB instead.', 'DB Export Error',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+
+    def on_export_db_to_json(self, evt):
+        dlg = wx.FileDialog(self, "Export your entire DB to JSON", "", wildcard='*.json',
+                            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+        dlg.SetDirectory(DATA_DIR)
+        if dlg.ShowModal() == wx.ID_OK:
+            ExportPGSQLProgressFrame(dlg.GetPath(), export_to_json=True)
 
     # --------------------------------------------------------------------------------------------------------------
     # Query event functions

@@ -442,13 +442,18 @@ class ExportFigure(wx.Frame):
 
 class ExportPGSQLProgressFrame(ProgressFrame):
     """Create a window to display value generation progress and begin SaveWorker"""
-    def __init__(self, file_path):
-        ProgressFrame.__init__(self, [file_path], self.func_call,
+    def __init__(self, file_path, export_to_json=False):
+        func_call = self.func_call_json if export_to_json else self.func_call
+        ProgressFrame.__init__(self, [file_path], func_call,
                                title='Exporting PGSQL DB to SQLite')
 
     def func_call(self, file_path):
         with DVH_SQL() as cnx:
             cnx.export_to_sqlite(file_path, callback=self.callback)
+
+    def func_call_json(self, file_path):
+        with DVH_SQL() as cnx:
+            cnx.save_to_json(file_path, callback=self.callback)
 
     @staticmethod
     def callback(table, iteration, total_count):
