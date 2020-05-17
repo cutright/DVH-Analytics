@@ -21,7 +21,7 @@ import webbrowser
 from pubsub import pub
 from dvha.db import sql_columns
 from dvha.db.sql_to_python import QuerySQL
-from dvha.db.sql_connector import echo_sql_db, initialize_db, DVH_SQL
+from dvha.db.sql_connector import echo_sql_db, initialize_db
 from dvha.dialogs.main import query_dlg, UserSettings, About, PythonLibraries, do_sqlite_backup
 from dvha.dialogs.database import SQLSettingsDialog
 from dvha.dialogs.export import ExportCSVDialog, ExportFigure, ExportPGSQLProgressFrame
