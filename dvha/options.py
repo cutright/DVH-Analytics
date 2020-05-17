@@ -323,3 +323,13 @@ class Options(DefaultOptions):
             if sorted(list(loaded_options[key])) != [1, 2]:
                 loaded_options[key] = {grp: loaded_options[key] for grp in [1, 2]}
 
+
+def db_group_downgrade():
+    """If user downgrades below v0.8.1dev, DVHA crashes with upgraded options"""
+    options = Options()
+    for key in ['DB_TYPE', 'SQL_LAST_CNX']:
+        option = getattr(options, key)
+        if sorted(list(option)) == [1, 2]:
+            setattr(options, key, option[1])
+    options.save()
+
