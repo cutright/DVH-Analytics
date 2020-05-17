@@ -2,9 +2,9 @@
 
 v0.8.1 (TBD)
 --------------------
- - [Query] Allow user to define different DB's for each Group
- - [Database] PostgreSQL users can export their database to SQLite: Data -> Export -> 
- PGSQL to SQLite
+ - [Query] Allow user to define different database connections for each Group
+ - [Database] PostgreSQL users can export their DB to SQLite
+ - [ROI Map] Only prompt user about ROI Map saving if it has been edited
 
 
 v0.8.0 (2020.05.15)
