@@ -608,23 +608,44 @@ class DVH_SQL:
         roi_names = self.get_unique_values('DVHs', 'roi_name', condition)
         return bool(roi_names)
 
-    def get_row_count(self, table):
-        ans = self.query(table, 'COUNT(mrn)')
+    def get_row_count(self, table, condition=None):
+        ans = self.query(table, 'COUNT(mrn)', condition)
         if ans:
             return ans[0][0]
         return 0
 
-    def export_to_sqlite(self, file_path, callback=None):
+    def export_to_sqlite(self, file_path, callback=None, force=False):
         config = {'host': file_path}
         new_cnx = DVH_SQL(config, db_type='sqlite')
         new_cnx.initialize_database()
-        for table in self.tables:
-            columns = self.get_column_names(table)
-            studies = self.get_unique_values(table, 'study_instance_uid')
-            total_row_count = self.get_row_count(table)
+        self.import_db(self, new_cnx, callback=callback, force=force)
+
+    @staticmethod
+    def import_db(cnx_1, cnx_2, callback=None, force=False):
+        """
+        :param cnx_1: a DVHA DB connection
+        :type cnx_1: DVH_SQL
+        :param cnx_2: an alternate DVHA DB connection
+        :type cnx_2: DVH_SQL
+        :param callback: optional function to be called on each row insertion
+        :param force: ignore duplicate StudyInstanceUIDs if False
+        :type force: bool
+        """
+        for table in cnx_1.tables:
+            columns = cnx_1.get_column_names(table)
+            study_uids_1 = cnx_1.get_unique_values(table, 'study_instance_uid')
+
+            condition = None
+            if not force:
+                study_uids_2 = cnx_2.get_unique_values(table, 'study_instance_uid')
+                study_uids_1 = list(set(study_uids_1) - set(study_uids_2))
+                condition = "study_instance_uid IN ('%s')" % "','".join(study_uids_1)
+
+            total_row_count = cnx_1.get_row_count(table, condition)
+
             counter = 0
-            for study in studies:
-                study_data = self.query(table, ','.join(columns), "study_instance_uid = '%s'" % study)
+            for uid in study_uids_1:
+                study_data = cnx_1.query(table, ','.join(columns), "study_instance_uid = '%s'" % uid)
                 for row in study_data:
                     if callback is not None:
                         CallAfter(callback, table, counter, total_row_count)
@@ -632,7 +653,7 @@ class DVH_SQL:
                     row_str = "'" + "','".join([str(v) for v in row]) + "'"
                     row_str = row_str.replace("'None'", "NULL")
                     cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (table, ','.join(columns), row_str)
-                    new_cnx.execute_str(cmd)
+                    cnx_2.execute_str(cmd)
 
 
 def truncate_string(input_string, character_limit):

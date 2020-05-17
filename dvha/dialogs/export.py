@@ -452,6 +452,6 @@ class ExportPGSQLProgressFrame(ProgressFrame):
 
     @staticmethod
     def callback(table, iteration, total_count):
-        msg = {'label': 'Exporting Table: %s (row %s of %s)' % (table, iteration+1, total_count),
+        msg = {'label': 'Exporting Table: %s (%s of %s)' % (table, iteration+1, total_count),
                'gauge': (float(iteration) / total_count)}
         wx.CallAfter(pub.sendMessage, "progress_update", msg=msg)

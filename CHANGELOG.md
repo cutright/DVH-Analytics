@@ -4,6 +4,7 @@ v0.8.1 (TBD)
 --------------------
  - [Query] Allow user to define different database connections for each Group
  - [Database] PostgreSQL users can export their DB to SQLite
+ - [Database] Allow a Group 2 database to be imported into main connection (pending GUI access)
  - [ROI Map] Only prompt user about ROI Map saving if it has been edited
 
 
