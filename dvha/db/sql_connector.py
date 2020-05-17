@@ -10,6 +10,7 @@ Tools used to communicate with the SQL database
 #    See the file LICENSE included with this distribution, also
 #    available at https://github.com/cutright/DVH-Analytics
 
+from wx import CallAfter
 import psycopg2
 import sqlite3
 from datetime import datetime
@@ -616,7 +617,7 @@ class DVH_SQL:
             table_data = self.query(table, ','.join(columns))
             for i, row in enumerate(table_data):
                 if callback is not None:
-                    callback(table, i, len(table_data))
+                    CallAfter(callback, table, i, len(table_data))
                 row_str = "'" + "','".join([str(v) for v in row]) + "'"
                 row_str = row_str.replace("'None'", "NULL")
                 cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (table, ','.join(columns), row_str)
