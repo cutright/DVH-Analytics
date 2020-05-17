@@ -24,11 +24,11 @@ class DVH_SQL:
     """
     This class is used to communicate to the SQL database to limit the need for syntax in other files
     """
-    def __init__(self, *config, db_type='pgsql', group=1):
+    def __init__(self, *config, db_type=None, group=1):
         """
         :param config: optional SQL login credentials, stored values used if nothing provided
         :param db_type: either 'pgsql' or 'sqlite'
-        :type db_type: str
+        :type db_type: str or None
         :param group: use a group-specific connection, either 1 or 2
         :type group: int
         """
@@ -36,13 +36,13 @@ class DVH_SQL:
         stored_options = Options()
 
         if config:
-            self.db_type = db_type
+            self.db_type = db_type if db_type is not None else 'pgsql'
             config = config[0]
         else:
             # Read SQL configuration file
             if group == 2 and stored_options.SYNC_SQL_CNX:
                 group = 1
-            self.db_type = stored_options.DB_TYPE[group]
+            self.db_type = stored_options.DB_TYPE[group] if db_type is None else db_type
             config = stored_options.SQL_LAST_CNX[group][self.db_type]
 
         if self.db_type == 'sqlite':
@@ -606,6 +606,21 @@ class DVH_SQL:
         condition = "roi_name = '%s' and study_instance_uid = '%s'" % (roi_name, study_instance_uid)
         roi_names = self.get_unique_values('DVHs', 'roi_name', condition)
         return bool(roi_names)
+
+    def export_to_sqlite(self, file_path, callback=None):
+        config = {'host': file_path}
+        new_cnx = DVH_SQL(config, db_type='sqlite')
+        new_cnx.initialize_database()
+        for table in self.tables:
+            columns = self.get_column_names(table)
+            table_data = self.query(table, ','.join(columns))
+            for i, row in enumerate(table_data):
+                if callback is not None:
+                    callback(table, i, len(table_data))
+                row_str = "'" + "','".join([str(v) for v in row]) + "'"
+                row_str = row_str.replace("'None'", "NULL")
+                cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (table, ','.join(columns), row_str)
+                new_cnx.execute_str(cmd)
 
 
 def truncate_string(input_string, character_limit):

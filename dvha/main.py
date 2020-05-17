@@ -21,10 +21,10 @@ import webbrowser
 from pubsub import pub
 from dvha.db import sql_columns
 from dvha.db.sql_to_python import QuerySQL
-from dvha.db.sql_connector import echo_sql_db, initialize_db
+from dvha.db.sql_connector import echo_sql_db, initialize_db, DVH_SQL
 from dvha.dialogs.main import query_dlg, UserSettings, About, PythonLibraries, do_sqlite_backup
 from dvha.dialogs.database import SQLSettingsDialog
-from dvha.dialogs.export import ExportCSVDialog, ExportFigure
+from dvha.dialogs.export import ExportCSVDialog, ExportFigure, ExportPGSQLProgressFrame
 from dvha.models.import_dicom import ImportDicomFrame
 from dvha.models.database_editor import DatabaseEditorFrame
 from dvha.models.data_table import DataTable
@@ -233,6 +233,7 @@ class DVHAMainFrame(wx.Frame):
         export = wx.Menu()
         export_csv = export.Append(wx.ID_ANY, 'Data to csv\tCtrl+E')
         export_figure = export.Append(wx.ID_ANY, '&Plot to file\tCtrl+P')
+        export_pgsql = export.Append(wx.ID_ANY, 'PGSQL to SQLite')
         file_menu.AppendSeparator()
 
         qmi = file_menu.Append(wx.ID_ANY, '&Quit\tCtrl+Q')
@@ -273,6 +274,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_close, menu_close)
         self.Bind(wx.EVT_MENU, self.on_export, export_csv)
         self.Bind(wx.EVT_MENU, self.on_export_figure, export_figure)
+        self.Bind(wx.EVT_MENU, self.on_export_pgsql, export_pgsql)
         self.Bind(wx.EVT_MENU, self.on_save, menu_save)
         self.Bind(wx.EVT_MENU, self.on_pref, menu_pref)
         self.Bind(wx.EVT_MENU, self.on_githubpage, menu_github)
@@ -681,6 +683,18 @@ class DVHAMainFrame(wx.Frame):
                 self.tool_bar_windows[window_type] = func(*parameters)
         else:
             wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
+                          wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+
+    def on_export_pgsql(self, evt):
+        if self.options.DB_TYPE[1] == 'pgsql':
+            dlg = wx.FileDialog(self, "Export your PGSQL DB to SQLite", "", wildcard='*.db',
+                                style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+            dlg.SetDirectory(DATA_DIR)
+            if dlg.ShowModal() == wx.ID_OK:
+                ExportPGSQLProgressFrame(dlg.GetPath())
+        else:
+            wx.MessageBox('This is for PostgreSQL only. Your main (Group 1) connection is SQLite. '
+                          'Use Data->Backup SQLite DB instead.', 'DB Export Error',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
 
     # --------------------------------------------------------------------------------------------------------------

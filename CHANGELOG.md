@@ -3,6 +3,8 @@
 v0.8.1 (TBD)
 --------------------
  - [Query] Allow user to define different DB's for each Group
+ - [Database] PostgreSQL users can export their database to SQLite: Data -> Export -> 
+ PGSQL to SQLite
 
 
 v0.8.0 (2020.05.15)

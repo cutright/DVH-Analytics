@@ -14,8 +14,11 @@ import wx
 import wx.adv
 from functools import partial
 import matplotlib.colors as plot_colors
+from pubsub import pub
+from dvha.db.sql_connector import DVH_SQL
 from dvha.models.data_table import DataTable
 from dvha.paths import DATA_DIR
+from dvha.tools.threading import ProgressFrame
 from dvha.tools.utilities import get_selected_listctrl_items, save_object_to_file,\
     set_msw_background_color, set_frame_icon
 
@@ -435,3 +438,20 @@ class ExportFigure(wx.Frame):
                 new_value = self.getter[type(stored_value)](key)
                 if new_value is None:
                     obj.SetValue(str(stored_value))
+
+
+class ExportPGSQLProgressFrame(ProgressFrame):
+    """Create a window to display value generation progress and begin SaveWorker"""
+    def __init__(self, file_path):
+        ProgressFrame.__init__(self, [file_path], self.func_call,
+                               title='Exporting PGSQL DB to SQLite')
+
+    def func_call(self, file_path):
+        with DVH_SQL() as cnx:
+            cnx.export_to_sqlite(file_path, callback=self.callback)
+
+    @staticmethod
+    def callback(table, iteration, total_count):
+        msg = {'label': 'Exporting Table: %s (row %s of %s)' % (table, iteration+1, total_count),
+               'gauge': (float(iteration) / total_count)}
+        wx.CallAfter(pub.sendMessage, "progress_update", msg=msg)
