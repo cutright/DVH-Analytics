@@ -608,20 +608,31 @@ class DVH_SQL:
         roi_names = self.get_unique_values('DVHs', 'roi_name', condition)
         return bool(roi_names)
 
+    def get_row_count(self, table):
+        ans = self.query(table, 'COUNT(mrn)')
+        if ans:
+            return ans[0][0]
+        return 0
+
     def export_to_sqlite(self, file_path, callback=None):
         config = {'host': file_path}
         new_cnx = DVH_SQL(config, db_type='sqlite')
         new_cnx.initialize_database()
         for table in self.tables:
             columns = self.get_column_names(table)
-            table_data = self.query(table, ','.join(columns))
-            for i, row in enumerate(table_data):
-                if callback is not None:
-                    CallAfter(callback, table, i, len(table_data))
-                row_str = "'" + "','".join([str(v) for v in row]) + "'"
-                row_str = row_str.replace("'None'", "NULL")
-                cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (table, ','.join(columns), row_str)
-                new_cnx.execute_str(cmd)
+            studies = self.get_unique_values(table, 'study_instance_uid')
+            total_row_count = self.get_row_count(table)
+            counter = 0
+            for study in studies:
+                study_data = self.query(table, ','.join(columns), "study_instance_uid = '%s'" % study)
+                for row in study_data:
+                    if callback is not None:
+                        CallAfter(callback, table, counter, total_row_count)
+                        counter += 1
+                    row_str = "'" + "','".join([str(v) for v in row]) + "'"
+                    row_str = row_str.replace("'None'", "NULL")
+                    cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (table, ','.join(columns), row_str)
+                    new_cnx.execute_str(cmd)
 
 
 def truncate_string(input_string, character_limit):
