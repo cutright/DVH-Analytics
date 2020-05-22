@@ -535,7 +535,7 @@ class DVHAMainFrame(wx.Frame):
             self.button_query_execute.Disable()
 
     def __catch_failed_sql_connection_on_app_launch(self):
-        if self.options.DB_TYPE == 'pgsql':
+        if self.options.DB_TYPE_GRPS[1] == 'pgsql':
             if not echo_sql_db():
                 wx.MessageBox('Invalid credentials!', 'Echo SQL Database', wx.OK | wx.ICON_WARNING)
                 self.on_sql()
@@ -688,7 +688,7 @@ class DVHAMainFrame(wx.Frame):
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
 
     def on_export_pgsql(self, evt):
-        if self.options.DB_TYPE[1] == 'pgsql':
+        if self.options.DB_TYPE_GRPS[1] == 'pgsql':
             dlg = wx.FileDialog(self, "Export your PGSQL DB to SQLite", "", wildcard='*.db',
                                 style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
             dlg.SetDirectory(DATA_DIR)
@@ -848,7 +848,7 @@ class DVHAMainFrame(wx.Frame):
                 if 'date' in col:
                     value_low = "'%s'" % value_low
                     value_high = "'%s'" % value_high
-                    if self.options.DB_TYPE == 'pgsql':
+                    if self.options.DB_TYPE_GRPS[1] == 'pgsql':
                         value_low = value_low + '::date'
                         value_high = value_high + '::date'
                 if col not in queries_by_sql_column[table]:

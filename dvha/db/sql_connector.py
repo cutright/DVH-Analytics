@@ -45,8 +45,8 @@ class DVH_SQL:
             # Read SQL configuration file
             if group == 2 and stored_options.SYNC_SQL_CNX:
                 group = 1
-            self.db_type = stored_options.DB_TYPE[group] if db_type is None else db_type
-            config = stored_options.SQL_LAST_CNX[group][self.db_type]
+            self.db_type = stored_options.DB_TYPE_GRPS[group] if db_type is None else db_type
+            config = stored_options.SQL_LAST_CNX_GRPS[group][self.db_type]
 
         if self.db_type == 'sqlite':
             db_file_path = config['host']
