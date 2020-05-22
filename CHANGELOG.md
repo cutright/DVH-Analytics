@@ -1,5 +1,14 @@
 # Change log of DVH Analytics
 
+v0.8.1 (TBD)
+--------------------
+ - [Query] Allow user to define different database connections for each Group
+ - [Database] PostgreSQL users can export their DB to SQLite
+ - [Database] Allow a Group 2 database to be imported into main connection (pending GUI access)
+ - [Database] Export database to JSON
+ - [ROI Map] Only prompt user about ROI Map saving if it has been edited
+
+
 v0.8.0 (2020.05.15)
 --------------------
  - [Error Logging] Implemented error logging, stored in ~/Apps/dvh_analytics/logs. Code borrowed from dicompyler.

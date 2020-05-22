@@ -10,36 +10,43 @@ Tools used to communicate with the SQL database
 #    See the file LICENSE included with this distribution, also
 #    available at https://github.com/cutright/DVH-Analytics
 
+from wx import CallAfter
 import psycopg2
 import sqlite3
 from datetime import datetime
 from dateutil.parser import parse as date_parser
 from os.path import dirname, join, isfile
+from dvha.db.sql_columns import categorical, numerical
 from dvha.options import Options
 from dvha.paths import CREATE_PGSQL_TABLES, CREATE_SQLITE_TABLES, DATA_DIR
 from dvha.tools.errors import SQLError
+import json
 
 
 class DVH_SQL:
     """
     This class is used to communicate to the SQL database to limit the need for syntax in other files
     """
-    def __init__(self, *config, db_type='pgsql'):
+    def __init__(self, *config, db_type=None, group=1):
         """
         :param config: optional SQL login credentials, stored values used if nothing provided
         :param db_type: either 'pgsql' or 'sqlite'
-        :type db_type: str
+        :type db_type: str or None
+        :param group: use a group-specific connection, either 1 or 2
+        :type group: int
         """
 
         stored_options = Options()
 
         if config:
-            self.db_type = db_type
+            self.db_type = db_type if db_type is not None else 'pgsql'
             config = config[0]
         else:
             # Read SQL configuration file
-            self.db_type = stored_options.DB_TYPE
-            config = stored_options.SQL_LAST_CNX[self.db_type]
+            if group == 2 and stored_options.SYNC_SQL_CNX:
+                group = 1
+            self.db_type = stored_options.DB_TYPE_GRPS[group] if db_type is None else db_type
+            config = stored_options.SQL_LAST_CNX_GRPS[group][self.db_type]
 
         if self.db_type == 'sqlite':
             db_file_path = config['host']
@@ -603,6 +610,70 @@ class DVH_SQL:
         roi_names = self.get_unique_values('DVHs', 'roi_name', condition)
         return bool(roi_names)
 
+    def get_row_count(self, table, condition=None):
+        ans = self.query(table, 'COUNT(mrn)', condition)
+        if ans:
+            return ans[0][0]
+        return 0
+
+    def export_to_sqlite(self, file_path, callback=None, force=False):
+        config = {'host': file_path}
+        new_cnx = DVH_SQL(config, db_type='sqlite')
+        new_cnx.initialize_database()
+        self.import_db(self, new_cnx, callback=callback, force=force)
+
+    @staticmethod
+    def import_db(cnx_1, cnx_2, callback=None, force=False):
+        """
+        :param cnx_1: a DVHA DB connection
+        :type cnx_1: DVH_SQL
+        :param cnx_2: an alternate DVHA DB connection
+        :type cnx_2: DVH_SQL
+        :param callback: optional function to be called on each row insertion
+        :param force: ignore duplicate StudyInstanceUIDs if False
+        :type force: bool
+        """
+        for table in cnx_1.tables:
+            columns = cnx_1.get_column_names(table)
+            study_uids_1 = cnx_1.get_unique_values(table, 'study_instance_uid')
+
+            condition = None
+            if not force:
+                study_uids_2 = cnx_2.get_unique_values(table, 'study_instance_uid')
+                study_uids_1 = list(set(study_uids_1) - set(study_uids_2))
+                condition = "study_instance_uid IN ('%s')" % "','".join(study_uids_1)
+
+            total_row_count = cnx_1.get_row_count(table, condition)
+
+            counter = 0
+            for uid in study_uids_1:
+                study_data = cnx_1.query(table, ','.join(columns), "study_instance_uid = '%s'" % uid)
+                for row in study_data:
+                    if callback is not None:
+                        CallAfter(callback, table, counter, total_row_count)
+                        counter += 1
+                    row_str = "'" + "','".join([str(v) for v in row]) + "'"
+                    row_str = row_str.replace("'None'", "NULL")
+                    cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (table, ','.join(columns), row_str)
+                    cnx_2.execute_str(cmd)
+
+    def save_to_json(self, file_path, callback=None):
+        """
+        :param file_path: file_path to new JSON file
+        :type file_path: str
+        :param callback: optional function to be called on each table insertion
+        """
+        json_data = {'columns': {'categorical': categorical,
+                                 'numerical': numerical}}
+        for i, table in enumerate(self.tables):
+            if callback is not None:
+                CallAfter(callback, table, i, len(self.tables))
+            columns = self.get_column_names(table)
+            json_data[table] = self.query(table, ','.join(columns), bokeh_cds=True)
+
+        with open(file_path, 'w') as fp:
+            json.dump(json_data, fp)
+
 
 def truncate_string(input_string, character_limit):
     """
@@ -619,13 +690,15 @@ def truncate_string(input_string, character_limit):
     return input_string
 
 
-def echo_sql_db(config=None, db_type='pgsql'):
+def echo_sql_db(config=None, db_type='pgsql', group=1):
     """
     Echo the database using stored or provided credentials
     :param config: database login credentials
     :type config: dict
     :param db_type: either 'pgsql' or 'sqlite'
     :type db_type: str
+    :param group: either group 1 or 2
+    :type group: int
     :return: True if connection could be established
     :rtype: bool
     """
@@ -633,9 +706,9 @@ def echo_sql_db(config=None, db_type='pgsql'):
         if config:
             if db_type == 'pgsql' and ('dbname' not in list(config) or 'port' not in list(config)):
                 return False
-            cnx = DVH_SQL(config, db_type=db_type)
+            cnx = DVH_SQL(config, db_type=db_type, group=group)
         else:
-            cnx = DVH_SQL()
+            cnx = DVH_SQL(group=group)
         cnx.close()
         return True
     except Exception as e:

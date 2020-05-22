@@ -40,6 +40,8 @@ class ROIMapFrame(wx.Frame):
         wx.Frame.__init__(self, None, title='ROI Map')
         set_frame_icon(self)
 
+        self.is_edited = False
+
         self.roi_map = roi_map
 
         self.window_size = get_window_size(0.893, 0.762)
@@ -483,12 +485,14 @@ class ROIMapFrame(wx.Frame):
         dlg = AddPhysicianROI(self, self.physician, self.roi_map, institutional_mode=self.physician == 'DEFAULT')
         if dlg.res == wx.ID_OK:
             self.update_all(old_physician_rois=old_physician_rois, skip_physicians=True)
+            self.is_edited = True
 
     def add_physician(self, evt):
         old_physicians = list(self.roi_map.physicians)
         dlg = AddPhysician(self.roi_map)
         if dlg.res == wx.ID_OK:
             self.update_all(old_physicians=old_physicians)
+            self.is_edited = True
 
     @property
     def variation_count(self):
@@ -509,16 +513,19 @@ class ROIMapFrame(wx.Frame):
             self.list_ctrl_variations.Select(i, on=on)
 
     def delete_variations(self, evt):
+        self.is_edited = True
         self.roi_map.delete_variations(self.physician, self.physician_roi, self.selected_values)
         self.update_variations()
         self.update_roi_map()
 
     def add_variation(self, evt):
+        self.is_edited = True
         AddVariation(self, self.physician, self.roi_map, self.physician_roi)
         self.update_variations()
         self.update_roi_map()
 
     def move_variations(self, evt):
+        self.is_edited = True
         choices = [roi for roi in self.roi_map.get_physician_rois(self.physician) if roi != self.physician_roi]
         MoveVariationDialog(self, self.selected_values, self.physician, self.physician_roi, choices, self.roi_map)
         self.update_variations()
@@ -528,6 +535,7 @@ class ROIMapFrame(wx.Frame):
         MessageDialog(self, 'Delete Physician %s?' % self.physician, action_yes_func=self.delete_physician)
 
     def delete_physician(self):
+        self.is_edited = True
         self.roi_map.delete_physician(self.physician)
         self.physicians_to_delete.append(self.physician)
         self.update_all()
@@ -541,10 +549,12 @@ class ROIMapFrame(wx.Frame):
                           action_yes_func=self.delete_physician_roi)
 
     def delete_physician_roi(self):
+        self.is_edited = True
         self.roi_map.delete_physician_roi(self.physician, self.physician_roi)
         self.update_all(skip_physicians=True)
 
     def delete_institutional_roi(self):
+        self.is_edited = True
         self.roi_map.delete_institutional_roi(self.physician_roi)
         self.update_all(skip_physicians=True)
 
@@ -592,6 +602,7 @@ class ROIMapFrame(wx.Frame):
         current_physicians = list(self.roi_map.get_physicians())
         dlg = RenamePhysicianDialog(self.physician, self.roi_map)
         if dlg.res == wx.ID_OK:
+            self.is_edited = True
             self.update_all(old_physicians=current_physicians)
 
     def on_edit_physician_roi(self, evt):
@@ -601,6 +612,7 @@ class ROIMapFrame(wx.Frame):
         else:
             dlg = RenamePhysicianROIDialog(self.physician, self.physician_roi, self.roi_map)
         if dlg.res == wx.ID_OK:
+            self.is_edited = True
             self.update_all(old_physician_rois=current_physician_rois, skip_physicians=True)
 
     def update_physician_enable(self):
@@ -641,6 +653,7 @@ class ROIMapFrame(wx.Frame):
         return self.combo_box_physician_roi_merge['b'].GetValue()
 
     def on_merge(self, evt):
+        self.is_edited = True
         self.roi_map.merge_physician_rois(self.physician, [self.merge_a, self.merge_b], self.merge_b)
         self.update_all(skip_physicians=True)
 
@@ -652,6 +665,7 @@ class ROIMapFrame(wx.Frame):
     def on_link_physician_roi(self, evt):
         dlg = LinkPhysicianROI(self, self.physician, self.physician_roi, self.roi_map)
         if dlg.res == wx.ID_OK:
+            self.is_edited = True
             self.update_roi_map()
 
     def update_tg263_table(self, *evt):
@@ -678,6 +692,7 @@ class ROIMapFrame(wx.Frame):
         self.data_table_tg263.set_column_widths(auto=True)
 
     def save_and_update(self, evt):
+        self.is_edited = False
         for physician in self.physicians_to_delete:
             rel_path = 'physician_%s.roi' % physician
             abs_file_path = join(PREF_DIR, rel_path)
@@ -692,7 +707,10 @@ class ROIMapFrame(wx.Frame):
         self.update_physicians()
 
     def on_close(self, *args):
-        MessageDialog(self, 'Close without saving ROI Map?', action_yes_func=self.do_close)
+        if self.is_edited:
+            MessageDialog(self, 'Close without saving ROI Map?', action_yes_func=self.do_close)
+        else:
+            self.do_close()
 
     def do_close(self):
         self.Destroy()

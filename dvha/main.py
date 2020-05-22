@@ -24,7 +24,7 @@ from dvha.db.sql_to_python import QuerySQL
 from dvha.db.sql_connector import echo_sql_db, initialize_db
 from dvha.dialogs.main import query_dlg, UserSettings, About, PythonLibraries, do_sqlite_backup
 from dvha.dialogs.database import SQLSettingsDialog
-from dvha.dialogs.export import ExportCSVDialog, ExportFigure
+from dvha.dialogs.export import ExportCSVDialog, ExportFigure, ExportPGSQLProgressFrame
 from dvha.models.import_dicom import ImportDicomFrame
 from dvha.models.database_editor import DatabaseEditorFrame
 from dvha.models.data_table import DataTable
@@ -233,6 +233,8 @@ class DVHAMainFrame(wx.Frame):
         export = wx.Menu()
         export_csv = export.Append(wx.ID_ANY, 'Data to csv\tCtrl+E')
         export_figure = export.Append(wx.ID_ANY, '&Plot to file\tCtrl+P')
+        export_pgsql = export.Append(wx.ID_ANY, 'PGSQL to SQLite')
+        export_db_to_json = export.Append(wx.ID_ANY, 'Database to JSON')
         file_menu.AppendSeparator()
 
         qmi = file_menu.Append(wx.ID_ANY, '&Quit\tCtrl+Q')
@@ -255,6 +257,7 @@ class DVHAMainFrame(wx.Frame):
         settings_menu = wx.Menu()
         menu_pref = settings_menu.Append(wx.ID_PREFERENCES)
         menu_sql = settings_menu.Append(wx.ID_ANY, '&Database Connection\tCtrl+D')
+        menu_sql_2 = settings_menu.Append(wx.ID_ANY, '&Database Connection 2')
         menu_roi_map = settings_menu.Append(wx.ID_ANY, '&ROI Map\tCtrl+R')
 
         help_menu = wx.Menu()
@@ -272,6 +275,8 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_close, menu_close)
         self.Bind(wx.EVT_MENU, self.on_export, export_csv)
         self.Bind(wx.EVT_MENU, self.on_export_figure, export_figure)
+        self.Bind(wx.EVT_MENU, self.on_export_pgsql, export_pgsql)
+        self.Bind(wx.EVT_MENU, self.on_export_db_to_json, export_db_to_json)
         self.Bind(wx.EVT_MENU, self.on_save, menu_save)
         self.Bind(wx.EVT_MENU, self.on_pref, menu_pref)
         self.Bind(wx.EVT_MENU, self.on_githubpage, menu_github)
@@ -280,6 +285,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, PythonLibraries, menu_python_libraries)
         self.Bind(wx.EVT_MENU, About, menu_about)
         self.Bind(wx.EVT_MENU, self.on_sql, menu_sql)
+        self.Bind(wx.EVT_MENU, self.on_sql_2, menu_sql_2)
         self.Bind(wx.EVT_MENU, self.on_toolbar_roi_map, menu_roi_map)
         if is_mac():
             menu_user_settings = settings_menu.Append(wx.ID_ANY, '&Preferences\tCtrl+,')
@@ -529,7 +535,7 @@ class DVHAMainFrame(wx.Frame):
             self.button_query_execute.Disable()
 
     def __catch_failed_sql_connection_on_app_launch(self):
-        if self.options.DB_TYPE == 'pgsql':
+        if self.options.DB_TYPE_GRPS[1] == 'pgsql':
             if not echo_sql_db():
                 wx.MessageBox('Invalid credentials!', 'Echo SQL Database', wx.OK | wx.ICON_WARNING)
                 self.on_sql()
@@ -681,6 +687,25 @@ class DVHAMainFrame(wx.Frame):
             wx.MessageBox('Connection to SQL database could not be established.', 'Connection Error',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
 
+    def on_export_pgsql(self, evt):
+        if self.options.DB_TYPE_GRPS[1] == 'pgsql':
+            dlg = wx.FileDialog(self, "Export your PGSQL DB to SQLite", "", wildcard='*.db',
+                                style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+            dlg.SetDirectory(DATA_DIR)
+            if dlg.ShowModal() == wx.ID_OK:
+                ExportPGSQLProgressFrame(dlg.GetPath())
+        else:
+            wx.MessageBox('This is for PostgreSQL only. Your main (Group 1) connection is SQLite. '
+                          'Use Data->Backup SQLite DB instead.', 'DB Export Error',
+                          wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
+
+    def on_export_db_to_json(self, evt):
+        dlg = wx.FileDialog(self, "Export your entire DB to JSON", "", wildcard='*.json',
+                            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+        dlg.SetDirectory(DATA_DIR)
+        if dlg.ShowModal() == wx.ID_OK:
+            ExportPGSQLProgressFrame(dlg.GetPath(), export_to_json=True)
+
     # --------------------------------------------------------------------------------------------------------------
     # Query event functions
     # --------------------------------------------------------------------------------------------------------------
@@ -752,7 +777,7 @@ class DVHAMainFrame(wx.Frame):
             try:
                 uids, dvh_str = self.get_query()
                 self.group_data[group]['dvh'] = \
-                    DVH(dvh_condition=dvh_str, uid=uids, dvh_bin_width=self.options.dvh_bin_width)
+                    DVH(dvh_condition=dvh_str, uid=uids, dvh_bin_width=self.options.dvh_bin_width, group=group)
             except MemoryError:
                 msg = "Querying memory error. Try querying less data. At least %s DVHs returned.\n"\
                       "NOTE: Threshold of this error is dependent on your computer." % self.group_data[group]['dvh'].count
@@ -823,7 +848,7 @@ class DVHAMainFrame(wx.Frame):
                 if 'date' in col:
                     value_low = "'%s'" % value_low
                     value_high = "'%s'" % value_high
-                    if self.options.DB_TYPE == 'pgsql':
+                    if self.options.DB_TYPE_GRPS[1] == 'pgsql':
                         value_low = value_low + '::date'
                         value_high = value_high + '::date'
                 if col not in queries_by_sql_column[table]:
@@ -959,8 +984,14 @@ class DVHAMainFrame(wx.Frame):
             self.user_settings.Raise()
 
     def on_sql(self, *args):
-        SQLSettingsDialog(self.options)
-        [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db()]()
+        self.open_sql_setting(group=1)
+
+    def on_sql_2(self, *args):
+        self.open_sql_setting(group=2)
+
+    def open_sql_setting(self, group):
+        SQLSettingsDialog(self.options, group)
+        [self.__disable_add_filter_buttons, self.__enable_add_filter_buttons][echo_sql_db(group=self.selected_group)]()
 
     def on_export_figure(self, evt):
         if self.save_data:
