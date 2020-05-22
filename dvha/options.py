@@ -37,7 +37,8 @@ class DefaultOptions:
         self.SQL_LAST_CNX_GRPS = {1: deepcopy(self.DEFAULT_CNF),
                                   2: deepcopy(self.DEFAULT_CNF)}
         self.SYNC_SQL_CNX = True
-        self._sql_vars = ['DB_TYPE', 'SQL_PGSQL_IP_HIST', 'DEFAULT_CNF', 'SQL_LAST_CNX']
+        self._sql_vars = ['DB_TYPE', 'SQL_PGSQL_IP_HIST', 'DEFAULT_CNF', 'SQL_LAST_CNX',
+                          'DB_TYPE_GRPS', 'SQL_LAST_CNX_GRPS']
 
         self.MIN_BORDER = 50
 
@@ -330,14 +331,3 @@ class Options(DefaultOptions):
                     loaded_options[new_key] = {grp: deepcopy(new_value[grp]) for grp in [1, 2]}
                 else:
                     loaded_options[new_key] = {grp: deepcopy(new_value) for grp in [1, 2]}
-
-
-def db_group_downgrade():
-    """If user downgrades below v0.8.1dev, DVHA crashes with upgraded options"""
-    options = Options()
-    for key in ['DB_TYPE', 'SQL_LAST_CNX']:
-        option = getattr(options, key)
-        if sorted(list(option)) == [1, 2]:
-            setattr(options, key, option[1])
-    options.save()
-

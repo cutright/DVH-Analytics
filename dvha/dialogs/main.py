@@ -1122,7 +1122,7 @@ class PythonLibraries(wx.Dialog):
 
 def do_sqlite_backup(parent, options):
     flags = wx.ICON_ERROR | wx.OK | wx.OK_DEFAULT
-    if options.DB_TYPE == 'sqlite':
+    if options.DB_TYPE_GRPS[1] == 'sqlite':
         try:
             file_paths = backup_sqlite_db(options)
             if file_paths is not None:

@@ -630,7 +630,7 @@ class SQLSettingsDialog(wx.Dialog):
         self.SetTitle("%sSQL Connection Settings" % prepend)
 
         # Set initial db_type_radiobox to loaded settings or pgsql if none found
-        self.set_selected_db_type(self.options.DB_TYPE[self.group])
+        self.set_selected_db_type(self.options.DB_TYPE_GRPS[self.group])
 
         self.button['reload'].Enable(self.has_last_cnx)
 
@@ -688,7 +688,7 @@ class SQLSettingsDialog(wx.Dialog):
         self.set_host_items()
 
         if self.has_last_cnx:
-            config = self.options.SQL_LAST_CNX[self.group][self.selected_db_type]
+            config = self.options.SQL_LAST_CNX_GRPS[self.group][self.selected_db_type]
         else:
             config = self.options.DEFAULT_CNF[self.selected_db_type]
 
@@ -712,8 +712,8 @@ class SQLSettingsDialog(wx.Dialog):
 
     def write_successful_cnf(self):
         new_config = {key: self.input[key].GetValue() for key in self.keys if self.input[key].GetValue()}
-        self.options.SQL_LAST_CNX[self.group][self.selected_db_type] = new_config
-        self.options.DB_TYPE[self.group] = self.selected_db_type
+        self.options.SQL_LAST_CNX_GRPS[self.group][self.selected_db_type] = new_config
+        self.options.DB_TYPE_GRPS[self.group] = self.selected_db_type
 
         if self.selected_db_type == 'pgsql':
             new_host = self.input['host'].GetValue()
@@ -762,7 +762,7 @@ class SQLSettingsDialog(wx.Dialog):
 
     @property
     def has_last_cnx(self):
-        return 'host' in list(self.options.SQL_LAST_CNX[self.group][self.selected_db_type])
+        return 'host' in list(self.options.SQL_LAST_CNX_GRPS[self.group][self.selected_db_type])
 
     def set_selected_db_type(self, db_type):
         self.db_type_radiobox.SetSelection({'sqlite': 0, 'pgsql': 1}[db_type])
