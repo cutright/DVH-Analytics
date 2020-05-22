@@ -13,3 +13,4 @@ scikit-learn>=0.21.0
 regressors
 rapidfuzz
 selenium
+pandas <= 0.25.3
