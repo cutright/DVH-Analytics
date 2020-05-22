@@ -324,7 +324,11 @@ class Options(DefaultOptions):
         for key in ['DB_TYPE', 'SQL_LAST_CNX']:
             new_key = key + '_GRPS'
             if new_key not in loaded_options.keys():
-                loaded_options[new_key] = {grp: deepcopy(loaded_options[key]) for grp in [1, 2]}
+                new_value = loaded_options[key]
+                if sorted(list(new_value)) == [1, 2]:  # users who may have used the dev branch
+                    loaded_options[new_key] = {grp: deepcopy(new_value[grp]) for grp in [1, 2]}
+                else:
+                    loaded_options[new_key] = {grp: deepcopy(new_value) for grp in [1, 2]}
 
 
 def db_group_downgrade():
