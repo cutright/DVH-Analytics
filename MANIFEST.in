@@ -3,6 +3,7 @@ recursive-include dvha/*.py
 include CHANGELOG.md
 include README.md
 include LICENSE.txt
+include dvha/resources/LICENSE.txt
 include dvha/resources/logo.png
 include dvha/resources/icons/*
 include dvha/db/*.sql
