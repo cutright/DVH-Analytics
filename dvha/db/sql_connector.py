@@ -623,31 +623,31 @@ class DVH_SQL:
         self.import_db(self, new_cnx, callback=callback, force=force)
 
     @staticmethod
-    def import_db(cnx_1, cnx_2, callback=None, force=False):
+    def import_db(cnx_src, cnx_dst, callback=None, force=False):
         """
-        :param cnx_1: a DVHA DB connection
-        :type cnx_1: DVH_SQL
-        :param cnx_2: an alternate DVHA DB connection
-        :type cnx_2: DVH_SQL
+        :param cnx_src: the source DVHA DB connection
+        :type cnx_src: DVH_SQL
+        :param cnx_dst: the destination DVHA DB connection
+        :type cnx_dst: DVH_SQL
         :param callback: optional function to be called on each row insertion
         :param force: ignore duplicate StudyInstanceUIDs if False
         :type force: bool
         """
-        for table in cnx_1.tables:
-            columns = cnx_1.get_column_names(table)
-            study_uids_1 = cnx_1.get_unique_values(table, 'study_instance_uid')
+        for table in cnx_src.tables:
+            columns = cnx_src.get_column_names(table)
+            study_uids_1 = cnx_src.get_unique_values(table, 'study_instance_uid')
 
             condition = None
             if not force:
-                study_uids_2 = cnx_2.get_unique_values(table, 'study_instance_uid')
+                study_uids_2 = cnx_dst.get_unique_values(table, 'study_instance_uid')
                 study_uids_1 = list(set(study_uids_1) - set(study_uids_2))
                 condition = "study_instance_uid IN ('%s')" % "','".join(study_uids_1)
 
-            total_row_count = cnx_1.get_row_count(table, condition)
+            total_row_count = cnx_src.get_row_count(table, condition)
 
             counter = 0
             for uid in study_uids_1:
-                study_data = cnx_1.query(table, ','.join(columns), "study_instance_uid = '%s'" % uid)
+                study_data = cnx_src.query(table, ','.join(columns), "study_instance_uid = '%s'" % uid)
                 for row in study_data:
                     if callback is not None:
                         CallAfter(callback, table, counter, total_row_count)
@@ -655,7 +655,7 @@ class DVH_SQL:
                     row_str = "'" + "','".join([str(v) for v in row]) + "'"
                     row_str = row_str.replace("'None'", "NULL")
                     cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (table, ','.join(columns), row_str)
-                    cnx_2.execute_str(cmd)
+                    cnx_dst.execute_str(cmd)
 
     def save_to_json(self, file_path, callback=None):
         """
