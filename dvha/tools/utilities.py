@@ -196,10 +196,19 @@ def flatten_list_of_lists(some_list, remove_duplicates=False, sort=False):
     :return: a new object containing all values in teh provided
     """
     data = [item for sublist in some_list for item in sublist]
-    if sort:
-        data.sort()
+
     if remove_duplicates:
-        return list(set(data))
+        if sort:
+            return list(set(data))
+        else:
+            ans = []
+            for value in data:
+                if value not in ans:
+                    ans.append(value)
+            return ans
+    elif sort:
+        return sorted(data)
+
     return data
 
 
