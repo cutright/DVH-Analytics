@@ -14,10 +14,14 @@ import wx
 from functools import partial
 from dvha.models.data_table import DataTable
 from dvha.tools.errors import ROIVariationErrorDialog, ROIVariationError
-from dvha.tools.name_prediction import ROINamePredictor
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog
 from dvha.tools.roi_map_generator import ROIMapGenerator
 from dvha.tools.roi_name_manager import clean_name
+
+try:
+    from dvha.tools.name_prediction import ROINamePredictor
+except ImportError:
+    ROINamePredictor = None
 
 
 class AddPhysician(wx.Dialog):
@@ -461,12 +465,13 @@ class AddVariationDlg(wx.Dialog):
         self.run()
 
     def predict_physician_roi(self):
-        predictor = ROINamePredictor(self.roi_map)
-        prediction = predictor.get_best_roi_match(self.input_roi_name, self.physician, return_score=True)
-        if prediction:
-            self.user_input.SetValue(prediction[0])
-            self.prediction_label.SetLabelText("Variation: %s\nPrediction: %s\nScore: %0.0f%%" %
-                                               (self.input_roi_name, prediction[0], prediction[1]))
+        if ROINamePredictor is not None:
+            predictor = ROINamePredictor(self.roi_map)
+            prediction = predictor.get_best_roi_match(self.input_roi_name, self.physician, return_score=True)
+            if prediction:
+                self.user_input.SetValue(prediction[0])
+                self.prediction_label.SetLabelText("Variation: %s\nPrediction: %s\nScore: %0.0f%%" %
+                                                   (self.input_roi_name, prediction[0], prediction[1]))
 
     def __do_bind(self):
         self.Bind([wx.EVT_COMBOBOX, wx.EVT_TEXT][self.mode == 'add'],
