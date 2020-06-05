@@ -1,5 +1,10 @@
 # Change log of DVH Analytics
 
+v0.8.2 (2020.06.05)
+--------------------
+ - [SQL] Added a DB write test, execute before importing [Issue 82](https://github.com/cutright/DVH-Analytics/issues/82)
+ - [Options] Catch import of older incompatible options [Issue 84](https://github.com/cutright/DVH-Analytics/issues/84)
+
 v0.8.1 (2020.05.22)
 --------------------
  - [Query] Allow user to define different database connections for each Group
