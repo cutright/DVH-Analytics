@@ -224,8 +224,9 @@ class Options(DefaultOptions):
                 with open(OPTIONS_PATH, 'rb') as infile:
                     loaded_options = pickle.load(infile)
                 self.upgrade_options(loaded_options)
-            except EOFError:
+            except Exception as e:
                 print('ERROR: Options file corrupted. Loading default options.')
+                print("%s" % e)
                 loaded_options = {}
 
             for key, value in loaded_options.items():
@@ -327,7 +328,8 @@ class Options(DefaultOptions):
             if new_key not in loaded_options.keys():
 
                 # DVHA <0.6.7 did not have DB_TYPE or SQL_LAST_CNX
-                new_value = loaded_options[key] if key in loaded_options.keys() else getattr(self, key)
+                backup_value = 'pgsql' if key == 'DB_TYPE' else getattr(self, key)  # sqlite not supported <0.6.7
+                new_value = loaded_options[key] if key in loaded_options.keys() else backup_value
 
                 if sorted(list(new_value)) == [1, 2]:  # users who may have used the dev branch
                     loaded_options[new_key] = {grp: deepcopy(new_value[grp]) for grp in [1, 2]}
