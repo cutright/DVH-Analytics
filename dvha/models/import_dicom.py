@@ -23,7 +23,7 @@ from threading import Thread
 from queue import Queue
 from functools import partial
 from dvha.db import update as db_update
-from dvha.db.sql_connector import DVH_SQL
+from dvha.db.sql_connector import DVH_SQL, write_test as sql_write_test
 from dvha.models.dicom_tree_builder import DicomTreeBuilder, PreImportFileSetParserWorker
 from dvha.db.dicom_parser import DICOM_Parser, PreImportData
 from dvha.dialogs.main import DatePicker
@@ -793,31 +793,38 @@ class ImportDicomFrame(wx.Frame):
 
     def on_import(self, evt):
         if self.parsed_dicom_data and self.dicom_importer.checked_plans:
-            self.patient_orientation_warning()
+            if sql_write_test()['write']:
+                self.patient_orientation_warning()
 
-            self.roi_map.write_to_file()
-            self.options.set_option('KEEP_IN_INBOX', self.checkbox_keep_in_inbox.GetValue())
-            self.options.set_option('AUTO_SUM_DOSE', self.checkbox_auto_sum_dose.GetValue())
-            self.options.save()
-            study_uid_dict = get_study_uid_dict(list(self.dicom_importer.checked_plans), self.parsed_dicom_data,
-                                                multi_plan_only=True)
+                self.roi_map.write_to_file()
+                self.options.set_option('KEEP_IN_INBOX', self.checkbox_keep_in_inbox.GetValue())
+                self.options.set_option('AUTO_SUM_DOSE', self.checkbox_auto_sum_dose.GetValue())
+                self.options.save()
+                study_uid_dict = get_study_uid_dict(list(self.dicom_importer.checked_plans), self.parsed_dicom_data,
+                                                    multi_plan_only=True)
 
-            finish_import = True
-            if study_uid_dict and not self.checkbox_auto_sum_dose.GetValue():
-                dlg = AssignPTV(self, self.parsed_dicom_data, study_uid_dict)
+                finish_import = True
+                if study_uid_dict and not self.checkbox_auto_sum_dose.GetValue():
+                    dlg = AssignPTV(self, self.parsed_dicom_data, study_uid_dict)
+                    dlg.ShowModal()
+                    finish_import = dlg.continue_status
+
+                if finish_import:
+                    ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
+                                 self.checkbox_include_uncategorized.GetValue(),
+                                 self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue(),
+                                 self.roi_map, self.options.USE_DICOM_DVH, self.checkbox_auto_sum_dose.GetValue())
+                    dlg = ImportStatusDialog()
+                    # calling self.Close() below caused issues in Windows if Show() used instead of ShowModal()
+                    [dlg.Show, dlg.ShowModal][is_windows()]()
+                    self.Close()
+                    self.do_unsubscribe()
+            else:
+                dlg = wx.MessageDialog(self, "Unable to write to SQL DB!", caption='SQL Connection Failure',
+                                       style=wx.OK | wx.OK_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)
                 dlg.ShowModal()
-                finish_import = dlg.continue_status
+                dlg.Destroy()
 
-            if finish_import:
-                ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
-                             self.checkbox_include_uncategorized.GetValue(),
-                             self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue(),
-                             self.roi_map, self.options.USE_DICOM_DVH, self.checkbox_auto_sum_dose.GetValue())
-                dlg = ImportStatusDialog()
-                # calling self.Close() below caused issues in Windows if Show() used instead of ShowModal()
-                [dlg.Show, dlg.ShowModal][is_windows()]()
-                self.Close()
-                self.do_unsubscribe()
         else:
             dlg = wx.MessageDialog(self, "No plans have been selected.", caption='Import Failure',
                                    style=wx.OK | wx.OK_DEFAULT | wx.CENTER | wx.ICON_EXCLAMATION)

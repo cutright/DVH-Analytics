@@ -717,6 +717,55 @@ def echo_sql_db(config=None, db_type='pgsql', group=1):
         return False
 
 
+def write_test(config=None, db_type='pgsql', group=1, table=None, column=None, value=None):
+
+    try:
+        if config:
+            if db_type == 'pgsql' and ('dbname' not in list(config) or 'port' not in list(config)):
+                return None
+            cnx = DVH_SQL(config, db_type=db_type, group=group)
+        else:
+            cnx = DVH_SQL(group=group)
+    except Exception as e:
+        print("%s" % e)
+        return {'write': False, 'delete': False}
+
+    if table is None:
+        table = cnx.tables[-1]
+
+    if column is None:
+        column = 'mrn'
+
+    if value is None:
+        # Find a test value that does not exist in the database
+        value_init = 'SqlTest_'
+        i = 0
+        value = value_init + str(i)
+        current_values = cnx.get_unique_values(table, column)
+        while value in current_values:
+            value = value_init + str(i)
+            i += 1
+
+    condition_str = "%s = '%s'" % (column, value)
+    insert_cmd = "INSERT INTO %s (%s) VALUES ('%s');" % (table, column, value)
+    delete_cmd = "DELETE FROM %s WHERE %s;" % (table, condition_str)
+
+    cnx.execute_str(insert_cmd)
+    test_return = cnx.query(table, column, condition_str)
+    write_test_success = len(test_return) > 0
+
+    if not write_test_success:
+        delete_test_success = None
+    else:
+        cnx.execute_str(delete_cmd)
+        test_return = cnx.query(table, column, condition_str)
+        delete_test_success = len(test_return) == 0
+
+    cnx.close()
+
+    return {'write': write_test_success, 'delete': delete_test_success}
+
+
 def initialize_db():
     with DVH_SQL() as cnx:
         cnx.initialize_database()

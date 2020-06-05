@@ -16,7 +16,7 @@ import wx
 from datetime import datetime
 from os import mkdir, rename
 from os.path import join, basename
-from dvha.db.sql_connector import DVH_SQL, echo_sql_db, is_file_sqlite_db
+from dvha.db.sql_connector import DVH_SQL, echo_sql_db, is_file_sqlite_db, write_test
 from dvha.models.import_dicom import ImportDicomFrame
 from dvha.paths import DATA_DIR
 from dvha.tools.errors import SQLError, SQLErrorDialog
@@ -598,6 +598,7 @@ class SQLSettingsDialog(wx.Dialog):
         self.db_type_radiobox = wx.RadioBox(self, wx.ID_ANY, 'Database Type', choices=['SQLite', 'Postgres'])
 
         self.button = {'echo': wx.Button(self, wx.ID_ANY, "Echo"),
+                       'write_test': wx.Button(self, wx.ID_ANY, "Write Test"),
                        'reload': wx.Button(self, wx.ID_ANY, "Reload Last Connection"),
                        'ok': wx.Button(self, wx.ID_OK, "OK"),
                        'cancel': wx.Button(self, wx.ID_CANCEL, "Cancel")}
@@ -607,6 +608,7 @@ class SQLSettingsDialog(wx.Dialog):
         self.ip_history = self.options.SQL_PGSQL_IP_HIST
 
         self.Bind(wx.EVT_BUTTON, self.button_echo, id=self.button['echo'].GetId())
+        self.Bind(wx.EVT_BUTTON, self.button_write_test, id=self.button['write_test'].GetId())
         self.Bind(wx.EVT_BUTTON, self.button_reload, id=self.button['reload'].GetId())
         self.Bind(wx.EVT_RADIOBOX, self.on_db_radio, id=self.db_type_radiobox.GetId())
 
@@ -648,6 +650,7 @@ class SQLSettingsDialog(wx.Dialog):
     def __do_layout(self):
         sizer_frame = wx.BoxSizer(wx.VERTICAL)
         sizer_echo = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_write_test = wx.BoxSizer(wx.HORIZONTAL)
         sizer_reload = wx.BoxSizer(wx.HORIZONTAL)
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
         grid_sizer = wx.GridSizer(5, 2, 5, 10)
@@ -672,7 +675,9 @@ class SQLSettingsDialog(wx.Dialog):
         sizer_buttons.Add(self.button['ok'], 1, wx.ALL | wx.EXPAND, 5)
         sizer_buttons.Add(self.button['cancel'], 1, wx.ALL | wx.EXPAND, 5)
         sizer_echo.Add(self.button['echo'], 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
+        sizer_write_test.Add(self.button['write_test'], 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
         sizer_frame.Add(sizer_echo, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
+        sizer_frame.Add(sizer_write_test, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
         sizer_reload.Add(self.button['reload'], 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
         sizer_frame.Add(sizer_reload, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
         sizer_frame.Add(sizer_buttons, 0, wx.ALL | wx.EXPAND, 5)
@@ -707,6 +712,13 @@ class SQLSettingsDialog(wx.Dialog):
         else:
             wx.MessageBox('Invalid credentials!', 'Echo SQL Database', wx.OK | wx.ICON_WARNING)
 
+    def button_write_test(self, evt):
+        results = self.write_test_results
+        answers = {True: 'Passed', False: 'Failed', None: 'N/A'}
+        msg = "Write: %s\nDelete: %s" % (answers[results['write']],
+                                         answers[results['delete']])
+        wx.MessageBox(msg, 'SQL DB Write Test', wx.OK | wx.ICON_WARNING)
+
     def button_reload(self, evt):
         self.load_sql_settings()
 
@@ -727,11 +739,19 @@ class SQLSettingsDialog(wx.Dialog):
         self.options.save()
 
     @property
-    def valid_sql_settings(self):
+    def config(self):
         config = {key: self.input[key].GetValue() for key in self.keys if self.input[key].GetValue()}
         if self.selected_db_type == 'pgsql':
             config['dbname'] = self.input['dbname'].GetValue()
-        return echo_sql_db(config, db_type=self.selected_db_type)
+        return config
+
+    @property
+    def valid_sql_settings(self):
+        return echo_sql_db(self.config, db_type=self.selected_db_type)
+
+    @property
+    def write_test_results(self):
+        return write_test(self.config, db_type=self.selected_db_type, group=self.group)
 
     def run(self):
         res = self.ShowModal()
@@ -779,8 +799,10 @@ class SQLSettingsDialog(wx.Dialog):
             obj.Enable(status)
         for obj in self.label.values():
             obj.Enable(status)
-        self.button['echo'].Enable(status)
-        self.button['reload'].Enable(status)
+
+        for key in ['echo', 'write_test', 'reload']:
+            self.button[key].Enable(status)
+
         self.db_type_radiobox.Enable(status)
 
     def on_sync_groups(self, *evt):
