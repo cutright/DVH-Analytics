@@ -714,8 +714,9 @@ class SQLSettingsDialog(wx.Dialog):
 
     def button_write_test(self, evt):
         results = self.write_test_results
-        msg = "Write: %s\nDelete: %s" % (['Failed', 'Passed'][results['write']],
-                                         ['Failed', 'Passed'][results['delete']])
+        answers = {True: 'Passed', False: 'Failed', None: 'N/A'}
+        msg = "Write: %s\nDelete: %s" % (answers[results['write']],
+                                         answers[results['delete']])
         wx.MessageBox(msg, 'SQL DB Write Test', wx.OK | wx.ICON_WARNING)
 
     def button_reload(self, evt):

@@ -754,9 +754,12 @@ def write_test(config=None, db_type='pgsql', group=1, table=None, column=None, v
     test_return = cnx.query(table, column, condition_str)
     write_test_success = len(test_return) > 0
 
-    cnx.execute_str(delete_cmd)
-    test_return = cnx.query(table, column, condition_str)
-    delete_test_success = len(test_return) == 0
+    if not write_test_success:
+        delete_test_success = None
+    else:
+        cnx.execute_str(delete_cmd)
+        test_return = cnx.query(table, column, condition_str)
+        delete_test_success = len(test_return) == 0
 
     cnx.close()
 
