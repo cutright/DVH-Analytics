@@ -1045,7 +1045,8 @@ class UserSettings(wx.Frame):
                 self.dvh_bin_max_dose.SetValue(str(self.options.dvh_bin_max_dose[units]))
 
     def update_dvh_bin_max_dose_var(self, *args):
-        self.dvh_bin_max_dose.SetValue(str(self.options.dvh_bin_max_dose))
+        units = self.dvh_bin_max_dose_units.GetValue()
+        self.dvh_bin_max_dose.SetValue(str(self.options.dvh_bin_max_dose[units]))
 
     def update_dvh_bin_max_dose_units_val(self, *args):
         new = self.dvh_bin_max_dose_units.GetValue()
