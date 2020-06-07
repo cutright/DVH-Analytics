@@ -60,6 +60,8 @@ class ROIMapFrame(wx.Frame):
                                                style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_physician_roi = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=[],
                                                    style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.combo_box_roi_type = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=[],
+                                              style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.list_ctrl_variations = wx.ListCtrl(self.window_editor, wx.ID_ANY,
                                                 style=wx.LC_NO_HEADER | wx.LC_REPORT | wx.BORDER_SUNKEN)
         self.button_variation_select_all = wx.Button(self.window_editor, wx.ID_ANY, "Select All")
@@ -149,7 +151,7 @@ class ROIMapFrame(wx.Frame):
         self.update_merge_physician_rois()
 
         if is_windows():  # combo_boxes here display a doubled bottom border on MSW
-            combo_boxes = [self.combo_box_physician, self.combo_box_physician_roi,
+            combo_boxes = [self.combo_box_physician, self.combo_box_physician_roi, self.combo_box_roi_type,
                            self.combo_box_uncategorized_ignored, self.combo_box_uncategorized_ignored_roi,
                            self.combo_box_physician_roi_merge['a'], self.combo_box_physician_roi_merge['b']]
             for combo_box in combo_boxes:
@@ -231,7 +233,7 @@ class ROIMapFrame(wx.Frame):
         sizer_variation_table = wx.BoxSizer(wx.VERTICAL)
         sizer_map_editor = wx.StaticBoxSizer(wx.StaticBox(self.window_editor, wx.ID_ANY, "ROI Map Editor"), wx.VERTICAL)
         sizer_variations = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_physician_roi = wx.BoxSizer(wx.VERTICAL)
+        sizer_physician_roi = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician = wx.BoxSizer(wx.VERTICAL)
         sizer_physician_row = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician_roi_row = wx.BoxSizer(wx.HORIZONTAL)
@@ -251,13 +253,27 @@ class ROIMapFrame(wx.Frame):
         sizer_physician.Add(sizer_physician_row, 1, wx.EXPAND, 0)
 
         self.label_physician_roi = wx.StaticText(self.window_editor, wx.ID_ANY, "Institutional ROI:")
-        sizer_physician_roi.Add(self.label_physician_roi, 0, 0, 0)
-        sizer_physician_roi_row.Add(self.combo_box_physician_roi, 1, wx.EXPAND | wx.RIGHT, 5)
+        self.label_roi_type = wx.StaticText(self.window_editor, wx.ID_ANY, "ROI Type:")
+
+        sizer_physician_roi_select = wx.BoxSizer(wx.VERTICAL)
+        sizer_physician_roi_select.Add(self.label_physician_roi, 0, 0, 0)
+        sizer_physician_roi_select.Add(self.combo_box_physician_roi, 1, wx.EXPAND | wx.RIGHT, 5)
+
+        sizer_roi_type_select = wx.BoxSizer(wx.VERTICAL)
+        sizer_roi_type_select.Add(self.label_roi_type, 0, 0, 0)
+        sizer_roi_type_select.Add(self.combo_box_roi_type, 1, wx.EXPAND | wx.RIGHT, 5)
+
+        sizer_physician_roi_spacer = wx.BoxSizer(wx.VERTICAL)
+        sizer_physician_roi_spacer.Add((20, 20), 0, 0, 0)
         sizer_physician_roi_row.Add(self.button_link_physician_roi, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_physician_roi_row.Add(self.button_physician_roi['add'], 0, wx.LEFT | wx.RIGHT, 5)
         sizer_physician_roi_row.Add(self.button_physician_roi['del'], 0, wx.RIGHT, 5)
         sizer_physician_roi_row.Add(self.button_physician_roi['edit'], 0, wx.RIGHT, 10)
-        sizer_physician_roi.Add(sizer_physician_roi_row, 0, wx.EXPAND, 0)
+        sizer_physician_roi_spacer.Add(sizer_physician_roi_row)
+
+        sizer_physician_roi.Add(sizer_physician_roi_select, 1, wx.EXPAND | wx.RIGHT, 5)
+        sizer_physician_roi.Add(sizer_roi_type_select, 0, wx.EXPAND | wx.RIGHT, 5)
+        sizer_physician_roi.Add(sizer_physician_roi_spacer, 0, wx.EXPAND, 0)
 
         sizer_map_editor.Add(sizer_physician, 0, wx.ALL | wx.EXPAND, 5)
         sizer_map_editor.Add(sizer_physician_roi, 0, wx.ALL | wx.EXPAND, 5)

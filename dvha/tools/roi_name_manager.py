@@ -22,10 +22,11 @@ from dvha.tools.utilities import flatten_list_of_lists, initialize_directories
 
 
 class PhysicianROI:
-    def __init__(self, physician_roi, institutional_roi=None):
+    def __init__(self, physician_roi, institutional_roi=None, roi_type=None):
         self.institutional_roi = institutional_roi if institutional_roi is not None else 'uncategorized'
         self.physician_roi = physician_roi
         self.variations = [physician_roi]
+        self.roi_type = roi_type
 
         self.add_variations(self.institutional_roi)
 
@@ -95,8 +96,8 @@ class Physician:
     def __contains__(self, variation):
         return clean_name(variation) in self.all_clean_variations
 
-    def add_physician_roi(self, institutional_roi, physician_roi, variations=None):
-        self.rois[physician_roi] = PhysicianROI(physician_roi, institutional_roi)
+    def add_physician_roi(self, institutional_roi, physician_roi, variations=None, roi_type=None):
+        self.rois[physician_roi] = PhysicianROI(physician_roi, institutional_roi, roi_type)
         if variations is not None:
             self.add_variations(physician_roi, variations)
 
