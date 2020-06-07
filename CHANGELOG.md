@@ -1,5 +1,10 @@
 # Change log of DVH Analytics
 
+v0.8.3 (TBD)
+--------------------
+ - [Import] Cap DVH max dose to prevent excessive memory use [Issue 83](https://github.com/cutright/DVH-Analytics/issues/83)
+
+
 v0.8.2 (2020.06.05)
 --------------------
  - [SQL] Added a DB write test, execute before importing [Issue 82](https://github.com/cutright/DVH-Analytics/issues/82)

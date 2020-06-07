@@ -56,7 +56,11 @@ class DICOM_Parser:
         """
 
         self.database_rois = DatabaseROIs() if roi_map is None else roi_map
-        self.import_path = Options().IMPORTED_DIR
+
+        options = Options()
+        self.import_path = options.IMPORTED_DIR
+        self.dvh_bin_max_dose = options.dvh_bin_max_dose
+        self.dvh_bin_max_dose_units = options.dvh_bin_max_dose_units
 
         self.plan_file = plan_file
         self.structure_file = structure_file
@@ -413,22 +417,31 @@ class DICOM_Parser:
         :rtype: dict
         """
 
+        # dicompyler-core expects integer limit in cGy
+        # self.rx_dose in Gy, bin max is either in Gy or % Rx dose
+        # This is needed to prevent np.histogram from blowing up memory usage
+        # if no rx_dose is found, default to the absolute dose
+        if self.rx_dose:
+            limit = int(self.rx_dose * self.dvh_bin_max_dose[self.dvh_bin_max_dose_units])
+        else:
+            limit = int(self.dvh_bin_max_dose['Gy'] * 100.)
+
         dvh = None
         if self.use_dicom_dvh:
             try:
                 dvh = dicompyler_dvh.DVH.from_dicom_dvh(self.rt_data['dose'], dvh_index)
-            except AttributeError:  # dicompyler-core raises this is structure is not found in DICOM DVH
+            except AttributeError:  # dicompyler-core raises this if structure is not found in DICOM DVH
                 pass
 
         if dvh is None:
             try:
                 dvh = dvhcalc.get_dvh(self.rt_data['structure'], self.rt_data['dose'], dvh_index,
-                                      callback=self.send_dvh_progress)
+                                      callback=self.send_dvh_progress, limit=limit)
             except AttributeError:
                 dose = validate_transfer_syntax_uid(self.rt_data['dose'])
                 structure = validate_transfer_syntax_uid(self.rt_data['structure'])
                 dvh = dvhcalc.get_dvh(structure, dose, dvh_index,
-                                      callback=self.send_dvh_progress)
+                                      callback=self.send_dvh_progress, limit=limit)
 
         if dvh and dvh.volume > 0:  # ignore points and empty ROIs
             geometries = self.get_dvh_geometries(dvh_index)

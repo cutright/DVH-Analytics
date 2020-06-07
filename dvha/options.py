@@ -73,6 +73,12 @@ class DefaultOptions:
         # down-sampled using this bin_width
         self.dvh_bin_width = 5
 
+        # Passed into dicompyler-core to put a cap on the maximium dose to prevent numpy.histogram from
+        # blowing up memory allocation
+        self.dvh_bin_max_dose = {'Gy': 500., '% Rx': 300.}
+        self.dvh_bin_max_dose_units = 'Gy'
+        self.dvh_bin_max_dose_options = ['Gy', '% Rx']
+
         # Options for the group statistical DVHs in the DVHs tab
         self.STATS_MEDIAN_LINE_WIDTH = 1
         self.STATS_MEDIAN_LINE_DASH = 'solid'
