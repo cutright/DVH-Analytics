@@ -722,8 +722,8 @@ class UserSettings(wx.Frame):
         # Windows needs this done explicitly or the value will be an empty string
         self.combo_box_alpha_category.SetValue('IQR Alpha')
         self.combo_box_colors_category.SetValue('Plot Color')
-        self.combo_box_line_styles_category.SetValue('DVH Line Dash')
-        self.combo_box_line_widths_category.SetValue('DVH Line Width')
+        self.combo_box_line_styles_category.SetValue('DVH Line Dash Selection')
+        self.combo_box_line_widths_category.SetValue('DVH Line Width Selection')
         self.combo_box_sizes_category.SetValue('Plot Axis Label Font Size')
 
     def __do_layout(self):
@@ -984,7 +984,7 @@ class UserSettings(wx.Frame):
         var = self.clean_option_variable(self.combo_box_line_widths_category.GetValue(), inverse=True)
         val = str(getattr(self.options, var))
         try:
-            val = int(val)
+            val = int(float(val))
         except ValueError:
             pass
         self.spin_ctrl_line_widths_input.SetValue(val)
@@ -992,9 +992,9 @@ class UserSettings(wx.Frame):
     def update_line_width_val(self, *args):
         new = self.spin_ctrl_line_widths_input.GetValue()
         try:
-            val = float(new)
+            val = int(float(new))
         except ValueError:
-            val = 1.
+            val = 1
         var = self.clean_option_variable(self.combo_box_line_widths_category.GetValue(), inverse=True)
         self.options.set_option(var, val)
 
@@ -1074,6 +1074,7 @@ class UserSettings(wx.Frame):
         MessageDialog(self, "Restore default preferences?", action_yes_func=self.options.restore_defaults)
         self.update_size_val()
         self.refresh_options()
+        self.on_apply()
 
     def on_use_dicom_dvh(self, *evt):
         self.options.set_option('USE_DICOM_DVH', self.checkbox_dicom_dvh.GetValue())

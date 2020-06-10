@@ -287,8 +287,7 @@ class PlotStatDVH(Plot):
     def __init__(self, parent, group_data, options):
         """
         :param parent: the wx UI object where the plot will be displayed
-        :param dvh: dvh data object
-        :type dvh: DVH
+        :param group_data: group data object from main
         :param options: user preferences
         :type options: Options
         """
@@ -342,9 +341,7 @@ class PlotStatDVH(Plot):
 
     def __add_plot_data(self):
         self.dvhs_renderer = self.figure.multi_line('x', 'y', source=self.source['dvh'], selection_color='color',
-                                                    line_width=self.options.DVH_LINE_WIDTH, alpha=0,
-                                                    line_dash=self.options.DVH_LINE_DASH,
-                                                    nonselection_alpha=0, selection_alpha=1)
+                                                    alpha=0, nonselection_alpha=0, selection_alpha=1)
 
         # Add statistical plots to figure
         self.stats_max = self.figure.line('x', 'max', source=self.source['stats'])
@@ -510,8 +507,21 @@ class PlotStatDVH(Plot):
     def apply_options(self):
         super().apply_options()
 
-        self.dvhs_renderer.glyph.line_width = self.options.DVH_LINE_WIDTH
-        self.dvhs_renderer.glyph.line_dash = self.options.DVH_LINE_DASH
+        # Treat default glyph state as nonselection
+        self.dvhs_renderer.glyph.line_width = self.options.DVH_LINE_WIDTH_NONSELECTION
+        self.dvhs_renderer.glyph.line_dash = self.options.DVH_LINE_DASH_NONSELECTION
+        self.dvhs_renderer.glyph.line_alpha = self.options.DVH_LINE_ALPHA_NONSELECTION
+        self.dvhs_renderer.glyph.line_color = self.options.DVH_LINE_COLOR_NONSELECTION
+
+        self.dvhs_renderer.selection_glyph.line_width = self.options.DVH_LINE_WIDTH_SELECTION
+        self.dvhs_renderer.selection_glyph.line_dash = self.options.DVH_LINE_DASH_SELECTION
+        self.dvhs_renderer.selection_glyph.line_alpha = self.options.DVH_LINE_ALPHA_SELECTION
+        # Selection color from Bokeh CDS
+
+        self.dvhs_renderer.nonselection_glyph.line_width = self.options.DVH_LINE_WIDTH_NONSELECTION
+        self.dvhs_renderer.nonselection_glyph.line_dash = self.options.DVH_LINE_DASH_NONSELECTION
+        self.dvhs_renderer.nonselection_glyph.line_alpha = self.options.DVH_LINE_ALPHA_NONSELECTION
+        self.dvhs_renderer.nonselection_glyph.line_color = self.options.DVH_LINE_COLOR_NONSELECTION
 
         for group in ['', '_2']:
             for stat in ['max', 'median', 'mean', 'min']:

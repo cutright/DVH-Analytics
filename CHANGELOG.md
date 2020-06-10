@@ -3,6 +3,8 @@
 v0.8.3 (TBD)
 --------------------
  - [Import] Cap DVH max dose to prevent excessive memory use [Issue 83](https://github.com/cutright/DVH-Analytics/issues/83)
+ - [Plot Visuals] DVH Line selection and nonselection options available in User Settings
+ - [Plot Visuals] Fix for [Issue 86](https://github.com/cutright/DVH-Analytics/issues/86)
 
 
 v0.8.2 (2020.06.05)
