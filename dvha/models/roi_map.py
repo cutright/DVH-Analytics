@@ -21,6 +21,7 @@ from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddVariation, Mo
     RenamePhysicianDialog, RenamePhysicianROIDialog, RenameInstitutionalROIDialog, LinkPhysicianROI
 from dvha.models.data_table import DataTable
 from dvha.models.plot import PlotROIMap
+from dvha.options import Options
 from dvha.paths import PREF_DIR
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_elapsed_time, get_window_size,\
     set_frame_icon, set_msw_background_color, is_windows, delete_file
@@ -60,7 +61,8 @@ class ROIMapFrame(wx.Frame):
                                                style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_physician_roi = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=[],
                                                    style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.combo_box_roi_type = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=[],
+        roi_type_choices = ['NONE'] + Options().ROI_TYPES
+        self.combo_box_roi_type = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=roi_type_choices,
                                               style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.list_ctrl_variations = wx.ListCtrl(self.window_editor, wx.ID_ANY,
                                                 style=wx.LC_NO_HEADER | wx.LC_REPORT | wx.BORDER_SUNKEN)
@@ -123,6 +125,8 @@ class ROIMapFrame(wx.Frame):
 
         self.plot.update_roi_map_source_data(self.physician)
 
+        self.combo_box_roi_type.ChangeValue(self.roi_map.get_roi_type(self.physician, self.physician_roi))
+
         self.physicians_to_delete = []
 
         self.run()
@@ -176,6 +180,7 @@ class ROIMapFrame(wx.Frame):
 
         self.window_editor.Bind(wx.EVT_COMBOBOX, self.physician_ticker, id=self.combo_box_physician.GetId())
         self.window_editor.Bind(wx.EVT_COMBOBOX, self.physician_roi_ticker, id=self.combo_box_physician_roi.GetId())
+        self.window_editor.Bind(wx.EVT_COMBOBOX, self.update_roi_type_in_map, id=self.combo_box_roi_type.GetId())
         self.window_editor.Bind(wx.EVT_COMBOBOX, self.uncategorized_ticker, id=self.combo_box_uncategorized_ignored.GetId())
 
         self.window_editor.Bind(wx.EVT_BUTTON, self.add_physician, id=self.button_physician['add'].GetId())
@@ -390,6 +395,10 @@ class ROIMapFrame(wx.Frame):
         return self.combo_box_physician_roi.GetValue()
 
     @property
+    def physician_roi_type(self):
+        return self.combo_box_roi_type.GetValue()
+
+    @property
     def plot_data_type(self):
         return self.combo_box_tree_plot_data.GetValue()
 
@@ -462,6 +471,7 @@ class ROIMapFrame(wx.Frame):
     def physician_roi_ticker(self, evt):
         self.update_variations()
         self.update_roi_map()
+        self.update_roi_type_combo_box()
 
     def update_physicians(self, old_physicians=None):
 
@@ -484,6 +494,14 @@ class ROIMapFrame(wx.Frame):
             if new:
                 new = new[0]
         self.update_combo_box_choices(self.combo_box_physician_roi, choices, new)
+
+    def update_roi_type_combo_box(self):
+        roi_type = self.roi_map.get_roi_type(self.physician, self.physician_roi)
+        self.combo_box_roi_type.ChangeValue(roi_type)
+
+    def update_roi_type_in_map(self, evt):
+        self.roi_map.set_roi_type(self.physician, self.physician_roi, self.physician_roi_type)
+        self.is_edited = True
 
     @property
     def variations(self):
@@ -756,7 +774,7 @@ class RemapROIWorker(Thread):
     def run(self):
 
         if self.remap_all:
-            physician_to_map = list(set(self.roi_map.get_physicians()) - {'DEFAULT'})
+            physician_to_map = self.roi_map.get_physicians()
             variations_to_update = {}
         else:
             physician_to_map = self.roi_map.physicians_to_remap

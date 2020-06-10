@@ -790,6 +790,11 @@ class DICOM_Parser:
         """
         if key in list(self.roi_over_ride['type']):
             return self.roi_over_ride['type'][key]
+
+        roi_type_from_roi_map = self.database_rois.get_roi_type(self.physician, self.get_physician_roi(key))
+        if roi_type_from_roi_map != 'NONE':
+            return roi_type_from_roi_map
+
         return str(self.structure_name_and_type[key]['type']).upper()
 
     def reset_roi_type_over_ride(self, key):
@@ -1544,8 +1549,13 @@ class PreImportData:
         :return: the roi type
         :rtype: str
         """
+
+        roi_type_from_roi_map = self.database_rois.get_roi_type(self.physician, self.get_physician_roi(key))
+
         if key in list(self.roi_over_ride['type']):
             ans = self.roi_over_ride['type'][key]
+        elif roi_type_from_roi_map != 'NONE':
+            ans = roi_type_from_roi_map
         else:
             ans = self.dicompyler_rt_structures[key]['type'].upper()
         return ans if ans else 'NONE'

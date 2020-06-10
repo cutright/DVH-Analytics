@@ -120,6 +120,8 @@ class ImportDicomFrame(wx.Frame):
         self.input_roi['type'].SetValue('')
         self.button_roi_manager = wx.Button(self, wx.ID_ANY, "ROI Manager")
 
+        self.button_save_roi_type_in_map = wx.Button(self, wx.ID_ANY, "Store in ROI Map")
+
         self.enable_inputs(False)
         self.disable_roi_inputs()
 
@@ -190,6 +192,8 @@ class ImportDicomFrame(wx.Frame):
         self.Bind(wx.EVT_COMBOBOX, self.on_physician_roi_change, id=self.input_roi['physician'].GetId())
 
         self.Bind(wx.EVT_CLOSE, self.on_cancel)
+
+        self.Bind(wx.EVT_BUTTON, self.on_save_roi_type_in_map, id=self.button_save_roi_type_in_map.GetId())
 
     def __set_properties(self):
 
@@ -374,9 +378,13 @@ class ImportDicomFrame(wx.Frame):
         sizer_physician_roi_with_add.Add(sizer_physician_roi, 1, wx.EXPAND, 0)
 
         sizer_roi_type_with_add = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_roi_type_store_in_map = wx.BoxSizer(wx.VERTICAL)
         sizer_roi_type.Add(self.label['roi_type'], 0, 0, 0)
         sizer_roi_type.Add(self.input_roi['type'], 0, wx.EXPAND, 0)
+        sizer_roi_type_store_in_map.Add((20, 18), 0, 0, 0)
+        sizer_roi_type_store_in_map.Add(self.button_save_roi_type_in_map, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_roi_type_with_add.Add(sizer_roi_type, 1, wx.EXPAND, 0)
+        sizer_roi_type_with_add.Add(sizer_roi_type_store_in_map, 0, wx.EXPAND, 0)
 
         sizer_selected_roi.Add(sizer_physician_roi_with_add, 1, wx.ALL | wx.EXPAND, 5)
         sizer_selected_roi.Add(sizer_roi_type_with_add, 1, wx.ALL | wx.EXPAND, 5)
@@ -554,13 +562,16 @@ class ImportDicomFrame(wx.Frame):
         if self.selected_roi:
             if self.input_roi['physician'].GetValue() == 'uncategorized':
                 self.input_roi['physician'].Enable()
+                self.button_save_roi_type_in_map.Disable()
             else:
                 self.input_roi['physician'].Disable()
+                self.button_save_roi_type_in_map.Enable()
 
             self.input_roi['type'].Enable()
         else:
             self.input_roi['physician'].Disable()
             self.input_roi['type'].Disable()
+            self.button_save_roi_type_in_map.Disable()
 
     def update_roi_inputs(self):
         self.allow_input_roi_apply = False
@@ -684,6 +695,7 @@ class ImportDicomFrame(wx.Frame):
     def disable_roi_inputs(self):
         for input_obj in self.input_roi.values():
             input_obj.Disable()
+        self.button_save_roi_type_in_map.Disable()
 
     def enable_roi_inputs(self):
         for key, input_obj in self.input_roi.items():
@@ -980,6 +992,12 @@ class ImportDicomFrame(wx.Frame):
             msg = "WARNGING: Due to a bug in dicompyler-core <=0.5.5, DVHs may be incorrect for non-HFS orientations." \
                   " Please verify the following patients (MRNs):\n%s" % ', '.join(sorted(list(non_hfs)))
             ErrorDialog(self, msg, caption)
+
+    def on_save_roi_type_in_map(self, *evt):
+        physician = self.input['physician'].GetValue()
+        physician_roi = self.input_roi['physician'].GetValue()
+        roi_type = self.input_roi['type'].GetValue()
+        self.roi_map.set_roi_type(physician, physician_roi, roi_type)
 
 
 class ImportStatusDialog(wx.Dialog):

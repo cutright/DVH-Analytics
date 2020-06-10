@@ -22,7 +22,7 @@ from dvha.tools.utilities import flatten_list_of_lists, initialize_directories
 
 
 class PhysicianROI:
-    def __init__(self, physician_roi, institutional_roi=None, roi_type=None):
+    def __init__(self, physician_roi, institutional_roi=None, roi_type='NONE'):
         self.institutional_roi = institutional_roi if institutional_roi is not None else 'uncategorized'
         self.physician_roi = physician_roi
         self.variations = [physician_roi]
@@ -96,7 +96,7 @@ class Physician:
     def __contains__(self, variation):
         return clean_name(variation) in self.all_clean_variations
 
-    def add_physician_roi(self, institutional_roi, physician_roi, variations=None, roi_type=None):
+    def add_physician_roi(self, institutional_roi, physician_roi, variations=None, roi_type='NONE'):
         self.rois[physician_roi] = PhysicianROI(physician_roi, institutional_roi, roi_type)
         if variations is not None:
             self.add_variations(physician_roi, variations)
@@ -192,6 +192,17 @@ class Physician:
             if ans is not None:
                 return ans
 
+    def get_roi_type(self, roi_name):
+        physician_roi = self.get_physician_roi(roi_name)
+        if physician_roi == 'uncategorized':
+            return 'NONE'
+        return self.rois[physician_roi].roi_type
+
+    def set_roi_type(self, roi_name, roi_type):
+        physician_roi = self.get_physician_roi(roi_name)
+        if physician_roi != 'uncategorized':
+            self.rois[physician_roi].roi_type = roi_type
+
 
 class DatabaseROIs:
     """The main class, creating an instance of this class will open a stored map, or create the default map"""
@@ -235,10 +246,12 @@ class DatabaseROIs:
     def import_physician_roi_maps(self):
 
         for physician in get_physicians_from_roi_files():
+            # print(physician)
             rel_path = 'physician_%s.roi' % physician
             abs_file_path = os.path.join(PREF_DIR, rel_path)
             if os.path.isfile(abs_file_path):
                 self.import_physician_roi_map(abs_file_path, physician)
+            self.load_roi_types_from_file(physician)
 
     def import_physician_roi_map(self, abs_file_path, physician=None):
 
@@ -313,7 +326,7 @@ class DatabaseROIs:
                 return self.physicians[physician].get_institutional_roi(physician_roi)
 
     def add_institutional_roi(self, roi):
-        if roi not in self.institutional_rois:
+        if clean_name(roi) not in self.clean_institutional_rois:
             self.institutional_rois.append(roi)
             self.add_physician_roi('DEFAULT', roi, roi)
 
@@ -413,6 +426,15 @@ class DatabaseROIs:
             if physician_roi != final_physician_roi:
                 self.delete_physician_roi(physician, physician_roi)
 
+    def set_roi_type(self, physician, roi, roi_type):
+        if self.is_physician(physician):
+            self.physicians[physician].set_roi_type(roi, roi_type)
+
+    def get_roi_type(self, physician, roi):
+        if self.is_physician(physician):
+            return self.physicians[physician].get_roi_type(roi)
+        return 'NONE'
+
     ###################################################
     # Variation-of-Physician-ROI functions
     ###################################################
@@ -473,6 +495,7 @@ class DatabaseROIs:
     def write_to_file(self):
         for physician, data in self.physician_roi_file_data.items():
             self.write_physician_file(physician, data)
+            self.write_roi_types_to_file(physician)
         self.remove_unused_roi_files()
 
     @property
@@ -506,14 +529,15 @@ class DatabaseROIs:
 
     def remove_unused_roi_files(self):
         """
-        Delete any physician .roi files that are no longer in the ROI map
+        Delete any physician .roi or .rtype files that are no longer in the ROI map
         :return: the physicians that have been removed
         :rtype: list
         """
         for physician in self.deleted_physicians:
-            file_name = 'physician_' + physician + '.roi'
-            abs_file_path = os.path.join(PREF_DIR, file_name)
-            os.remove(abs_file_path)
+            for file_type in ['.roi', '.rtype']:
+                file_name = 'physician_%s%s' % (physician, file_type)
+                abs_file_path = os.path.join(PREF_DIR, file_name)
+                os.remove(abs_file_path)
 
     @property
     def deleted_physicians(self):
@@ -746,9 +770,37 @@ class DatabaseROIs:
         return {'Linked to Institutional ROI': linked_phys_roi_tree,
                 'Unlinked to Institutional ROI': unlinked_phys_roi_tree}
 
+    ########################
+    # Save and Load ROI Type
+    ########################
+    def write_roi_types_to_file(self, physician):
+        if self.is_physician(physician):
+            rois = self.physicians[physician].rois
+            roi_types = ["%s:%s" % (name, obj.roi_type) for name, obj in rois.items() if obj.roi_type != 'NONE']
+            file_path = os.path.join(PREF_DIR, 'physician_%s.rtype' % physician)
+            with open(file_path, 'w') as doc:
+                doc.write('\n'.join(roi_types))
+
+    def load_roi_types_from_file(self, physician):
+        if self.is_physician(physician):
+            file_path = os.path.join(PREF_DIR, 'physician_%s.rtype' % physician)
+            if os.path.isfile(file_path):
+                with open(file_path, 'r') as doc:
+                    for line in doc:
+                        if not line:
+                            continue
+                        if line.count(':') == 1:
+                            try:
+                                physician_roi, roi_type = tuple(line.split(':'))
+                                self.physicians[physician].rois[physician_roi.strip()].roi_type = roi_type.strip()
+                            except Exception as e:
+                                print('ERROR: Could not import % roi_type for physician %s' %
+                                      (physician_roi, physician))
+                                print(e)
+
 
 def clean_name(name, physician=False):
-    ans = str(name).replace('\'', '`').replace('_', ' ').strip()
+    ans = str(name).replace('\'', '`').replace('_', ' ').replace(':', ';').strip()
     while '  ' in ans:
         ans = ans.replace('  ', ' ')
 
