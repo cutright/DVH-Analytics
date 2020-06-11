@@ -890,6 +890,7 @@ class RemapROIFrame(wx.Frame):
         """
         wx.Frame.__init__(self, None, title='Updating Database with ROI Map Changes')
         set_msw_background_color(self)
+        set_frame_icon(self)
 
         self.roi_map = roi_map
 
