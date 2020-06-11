@@ -126,8 +126,6 @@ class ROIMapFrame(wx.Frame):
 
         self.plot.update_roi_map_source_data(self.physician)
 
-        self.combo_box_roi_type.ChangeValue(self.roi_map.get_roi_type(self.physician, self.physician_roi))
-
         self.physicians_to_delete = []
 
         self.run()
@@ -135,6 +133,8 @@ class ROIMapFrame(wx.Frame):
     def __set_properties(self):
         self.combo_box_uncategorized_ignored.SetSelection(0)
         self.button_uncategorized_ignored_ignore.SetMinSize((110, 20))
+
+        self.combo_box_roi_type.SetValue(self.roi_map.get_roi_type(self.physician, self.physician_roi))
 
         self.combo_box_physician.SetValue('DEFAULT')
         self.update_physician_rois()
@@ -172,6 +172,8 @@ class ROIMapFrame(wx.Frame):
         # These combo_boxes get a height of 30 since adding TG263 combo_boxes?
         for combo_box in self.combo_box_physician_roi_merge.values():
             combo_box.SetMaxSize((1000, 26))
+        self.combo_box_physician_roi.SetMaxSize((1000, 26))
+        self.combo_box_roi_type.SetMaxSize((1000, 26))
 
     def __do_bind(self):
         self.window_tree.Bind(wx.EVT_COMBOBOX, self.on_plot_data_type_change, id=self.combo_box_tree_plot_data.GetId())
@@ -270,7 +272,7 @@ class ROIMapFrame(wx.Frame):
         sizer_roi_type_select.Add(self.combo_box_roi_type, 1, wx.EXPAND | wx.RIGHT, 5)
 
         sizer_physician_roi_spacer = wx.BoxSizer(wx.VERTICAL)
-        sizer_physician_roi_spacer.Add((20, 20), 0, 0, 0)
+        sizer_physician_roi_spacer.Add((20, 15), 0, 0, 0)
         sizer_physician_roi_row.Add(self.button_link_physician_roi, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_physician_roi_row.Add(self.button_physician_roi['add'], 0, wx.LEFT | wx.RIGHT, 5)
         sizer_physician_roi_row.Add(self.button_physician_roi['del'], 0, wx.RIGHT, 5)
@@ -498,7 +500,7 @@ class ROIMapFrame(wx.Frame):
 
     def update_roi_type_combo_box(self):
         roi_type = self.roi_map.get_roi_type(self.physician, self.physician_roi)
-        self.combo_box_roi_type.ChangeValue(roi_type)
+        self.combo_box_roi_type.SetValue(roi_type)
 
     def update_roi_type_in_map(self, evt):
         self.roi_map.set_roi_type(self.physician, self.physician_roi, self.physician_roi_type)
