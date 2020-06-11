@@ -791,9 +791,10 @@ class DatabaseROIs:
         if self.is_physician(physician):
             rois = self.physicians[physician].rois
             roi_types = ["%s:%s" % (name, obj.roi_type) for name, obj in rois.items() if obj.roi_type != 'NONE']
-            file_path = os.path.join(PREF_DIR, 'physician_%s.rtype' % physician)
-            with open(file_path, 'w') as doc:
-                doc.write('\n'.join(roi_types))
+            if roi_types:
+                file_path = os.path.join(PREF_DIR, 'physician_%s.rtype' % physician)
+                with open(file_path, 'w') as doc:
+                    doc.write('\n'.join(roi_types))
 
     def load_roi_types_from_file(self, physician):
         if self.is_physician(physician):
