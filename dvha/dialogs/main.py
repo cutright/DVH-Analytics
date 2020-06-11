@@ -652,6 +652,9 @@ class UserSettings(wx.Frame):
 
         self.checkbox_dicom_dvh = wx.CheckBox(self, wx.ID_ANY, "Import DICOM DVH if available")
         self.dvh_bin_width_input = wx.TextCtrl(self, wx.ID_ANY, str(self.options.dvh_bin_width))
+        self.dvh_bin_max_dose = wx.TextCtrl(self, wx.ID_ANY, "")
+        self.dvh_bin_max_dose_units = wx.ComboBox(self, wx.ID_ANY, choices=self.options.dvh_bin_max_dose_options,
+                                                  style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_colors_category = wx.ComboBox(self, wx.ID_ANY, choices=color_variables,
                                                      style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_colors_selection = wx.ComboBox(self, wx.ID_ANY, choices=colors,
@@ -698,6 +701,11 @@ class UserSettings(wx.Frame):
                                            "recalculating during import.")
         self.dvh_bin_width_input.SetToolTip("Value must be an integer.")
         self.dvh_bin_width_input.SetMinSize((50, 21))
+        self.dvh_bin_max_dose.SetToolTip("Prevent memory issues if dose grid contains very large, unrealistic doses")
+        self.dvh_bin_max_dose.SetValue(str(self.options.dvh_bin_max_dose[self.options.dvh_bin_max_dose_units]))
+        self.dvh_bin_max_dose_units.SetValue(self.options.dvh_bin_max_dose_units)
+        # self.dvh_bin_width_input.SetMinSize((50, 22))
+        # self.dvh_bin_max_dose_units.SetMinSize((50, 22))
         self.combo_box_colors_category.SetMinSize((250, self.combo_box_colors_category.GetSize()[1]))
         self.combo_box_colors_selection.SetMinSize((145, self.combo_box_colors_selection.GetSize()[1]))
         self.combo_box_sizes_category.SetMinSize((250, self.combo_box_sizes_category.GetSize()[1]))
@@ -714,8 +722,8 @@ class UserSettings(wx.Frame):
         # Windows needs this done explicitly or the value will be an empty string
         self.combo_box_alpha_category.SetValue('IQR Alpha')
         self.combo_box_colors_category.SetValue('Plot Color')
-        self.combo_box_line_styles_category.SetValue('DVH Line Dash')
-        self.combo_box_line_widths_category.SetValue('DVH Line Width')
+        self.combo_box_line_styles_category.SetValue('DVH Line Dash Selection')
+        self.combo_box_line_widths_category.SetValue('DVH Line Width Selection')
         self.combo_box_sizes_category.SetValue('Plot Axis Label Font Size')
 
     def __do_layout(self):
@@ -724,6 +732,7 @@ class UserSettings(wx.Frame):
         sizer_plot_options = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Plot Options"), wx.VERTICAL)
         sizer_dvh_options = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "DVH Options"), wx.VERTICAL)
         sizer_dvh_bin_width = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_dvh_bin_max = wx.BoxSizer(wx.HORIZONTAL)
         sizer_alpha = wx.BoxSizer(wx.VERTICAL)
         sizer_alpha_input = wx.BoxSizer(wx.HORIZONTAL)
         sizer_line_styles = wx.BoxSizer(wx.VERTICAL)
@@ -762,13 +771,22 @@ class UserSettings(wx.Frame):
         sizer_wrapper.Add(sizer_dicom_directories, 0, wx.ALL | wx.EXPAND, 10)
 
         sizer_dvh_options.Add(self.checkbox_dicom_dvh, 0, wx.ALL, 5)
-        sizer_wrapper.Add(sizer_dvh_options, 0, wx.ALL | wx.EXPAND, 10)
-
+        sizer_dvh_options.Add((20, 10), 0, 0, 0)
         label_dvh_bin_width = wx.StaticText(self, wx.ID_ANY, "DVH Bin Width (cGy):")
         label_dvh_bin_width.SetToolTip("Value must be an integer")
-        sizer_dvh_bin_width.Add(label_dvh_bin_width, 0, wx.EXPAND | wx.RIGHT | wx.TOP, 7)
+        sizer_dvh_bin_width.Add(label_dvh_bin_width, 0, wx.EXPAND | wx.TOP | wx.LEFT, 5)
         sizer_dvh_bin_width.Add(self.dvh_bin_width_input, 1, wx.ALL, 5)
-        sizer_plot_options.Add(sizer_dvh_bin_width, 0, wx.BOTTOM, 10)
+        label_max_dose_bin = wx.StaticText(self, wx.ID_ANY, "Max Dose Bin Limit:")
+        label_max_dose_bin.SetToolTip("Prevent memory issues if dose grid contains very large, unrealistic doses")
+        sizer_dvh_bin_max.Add(label_max_dose_bin, 0, wx.EXPAND | wx.TOP | wx.LEFT, 5)
+        sizer_dvh_bin_max.Add((20, 20), 0, 0, 0)
+        sizer_dvh_bin_max.Add(self.dvh_bin_max_dose, 0, wx.EXPAND, 0)
+        sizer_dvh_bin_max.Add((20, 20), 0, 0, 0)
+        sizer_dvh_bin_max.Add(self.dvh_bin_max_dose_units, 0, wx.EXPAND, 0)
+        sizer_dvh_options.Add(sizer_dvh_bin_width, 0, wx.BOTTOM, 10)
+        sizer_dvh_options.Add(sizer_dvh_bin_max, 0, 0, 0)
+
+        sizer_wrapper.Add(sizer_dvh_options, 0, wx.ALL | wx.EXPAND, 10)
 
         label_colors = wx.StaticText(self, wx.ID_ANY, "Colors:")
         sizer_colors.Add(label_colors, 0, 0, 0)
@@ -830,6 +848,8 @@ class UserSettings(wx.Frame):
         self.Bind(wx.EVT_CHECKBOX, self.on_use_dicom_dvh, id=self.checkbox_dicom_dvh.GetId())
 
         self.Bind(wx.EVT_TEXT, self.update_dvh_bin_width_val, id=self.dvh_bin_width_input.GetId())
+        self.Bind(wx.EVT_TEXT, self.update_dvh_bin_max_dose_val, id=self.dvh_bin_max_dose.GetId())
+        self.Bind(wx.EVT_COMBOBOX, self.update_dvh_bin_max_dose_units_val, id=self.dvh_bin_max_dose_units.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.update_input_colors_var, id=self.combo_box_colors_category.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.update_size_var, id=self.combo_box_sizes_category.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.update_line_width_var, id=self.combo_box_line_widths_category.GetId())
@@ -964,7 +984,7 @@ class UserSettings(wx.Frame):
         var = self.clean_option_variable(self.combo_box_line_widths_category.GetValue(), inverse=True)
         val = str(getattr(self.options, var))
         try:
-            val = int(val)
+            val = int(float(val))
         except ValueError:
             pass
         self.spin_ctrl_line_widths_input.SetValue(val)
@@ -972,9 +992,9 @@ class UserSettings(wx.Frame):
     def update_line_width_val(self, *args):
         new = self.spin_ctrl_line_widths_input.GetValue()
         try:
-            val = float(new)
+            val = int(float(new))
         except ValueError:
-            val = 1.
+            val = 1
         var = self.clean_option_variable(self.combo_box_line_widths_category.GetValue(), inverse=True)
         self.options.set_option(var, val)
 
@@ -1012,8 +1032,34 @@ class UserSettings(wx.Frame):
     def update_dvh_bin_width_var(self, *args):
         self.dvh_bin_width_input.SetValue(str(self.options.dvh_bin_width))
 
+    def update_dvh_bin_max_dose_val(self, *args):
+        new_val = self.dvh_bin_max_dose.GetValue()
+        units = self.dvh_bin_max_dose_units.GetValue()
+        try:
+            val = abs(float(new_val))
+            new = {key: value for key, value in self.options.dvh_bin_max_dose.items()}
+            new[units] = val
+            self.options.set_option('dvh_bin_max_dose', new)
+        except ValueError:
+            if new_val != '':
+                self.dvh_bin_max_dose.SetValue(str(self.options.dvh_bin_max_dose[units]))
+
+    def update_dvh_bin_max_dose_var(self, *args):
+        units = self.dvh_bin_max_dose_units.GetValue()
+        self.dvh_bin_max_dose.SetValue(str(self.options.dvh_bin_max_dose[units]))
+
+    def update_dvh_bin_max_dose_units_val(self, *args):
+        new = self.dvh_bin_max_dose_units.GetValue()
+        self.options.set_option('dvh_bin_max_dose_units', new)
+        self.dvh_bin_max_dose.SetValue(str(self.options.dvh_bin_max_dose[new]))
+
+    def update_dvh_bin_max_dose_units_var(self, *args):
+        self.dvh_bin_max_dose_units.SetValue(self.options.dvh_bin_max_dose_units)
+
     def refresh_options(self):
         self.update_dvh_bin_width_var()
+        self.update_dvh_bin_max_dose_var()
+        self.update_dvh_bin_max_dose_units_var()
         self.update_alpha_var()
         self.update_input_colors_var()
         self.update_line_style_var()
@@ -1028,6 +1074,7 @@ class UserSettings(wx.Frame):
         MessageDialog(self, "Restore default preferences?", action_yes_func=self.options.restore_defaults)
         self.update_size_val()
         self.refresh_options()
+        self.on_apply()
 
     def on_use_dicom_dvh(self, *evt):
         self.options.set_option('USE_DICOM_DVH', self.checkbox_dicom_dvh.GetValue())

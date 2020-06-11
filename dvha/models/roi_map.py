@@ -21,11 +21,13 @@ from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, AddVariation, Mo
     RenamePhysicianDialog, RenamePhysicianROIDialog, RenameInstitutionalROIDialog, LinkPhysicianROI
 from dvha.models.data_table import DataTable
 from dvha.models.plot import PlotROIMap
+from dvha.options import Options
 from dvha.paths import PREF_DIR
 from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get_elapsed_time, get_window_size,\
     set_frame_icon, set_msw_background_color, is_windows, delete_file
 from dvha.tools.roi_map_generator import ROIMapGenerator
 from dvha.tools.roi_name_manager import clean_name
+from time import sleep
 
 
 class ROIMapFrame(wx.Frame):
@@ -60,6 +62,9 @@ class ROIMapFrame(wx.Frame):
                                                style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_physician_roi = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=[],
                                                    style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        roi_type_choices = Options().ROI_TYPES
+        self.combo_box_roi_type = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=roi_type_choices,
+                                              style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.list_ctrl_variations = wx.ListCtrl(self.window_editor, wx.ID_ANY,
                                                 style=wx.LC_NO_HEADER | wx.LC_REPORT | wx.BORDER_SUNKEN)
         self.button_variation_select_all = wx.Button(self.window_editor, wx.ID_ANY, "Select All")
@@ -149,7 +154,7 @@ class ROIMapFrame(wx.Frame):
         self.update_merge_physician_rois()
 
         if is_windows():  # combo_boxes here display a doubled bottom border on MSW
-            combo_boxes = [self.combo_box_physician, self.combo_box_physician_roi,
+            combo_boxes = [self.combo_box_physician, self.combo_box_physician_roi, self.combo_box_roi_type,
                            self.combo_box_uncategorized_ignored, self.combo_box_uncategorized_ignored_roi,
                            self.combo_box_physician_roi_merge['a'], self.combo_box_physician_roi_merge['b']]
             for combo_box in combo_boxes:
@@ -165,6 +170,10 @@ class ROIMapFrame(wx.Frame):
         # These combo_boxes get a height of 30 since adding TG263 combo_boxes?
         for combo_box in self.combo_box_physician_roi_merge.values():
             combo_box.SetMaxSize((1000, 26))
+        self.combo_box_physician_roi.SetMaxSize((1000, 26))
+        self.combo_box_roi_type.SetMaxSize((1000, 26))
+
+        self.combo_box_roi_type.SetValue(self.roi_map.get_roi_type(self.physician, self.physician_roi))
 
     def __do_bind(self):
         self.window_tree.Bind(wx.EVT_COMBOBOX, self.on_plot_data_type_change, id=self.combo_box_tree_plot_data.GetId())
@@ -174,6 +183,7 @@ class ROIMapFrame(wx.Frame):
 
         self.window_editor.Bind(wx.EVT_COMBOBOX, self.physician_ticker, id=self.combo_box_physician.GetId())
         self.window_editor.Bind(wx.EVT_COMBOBOX, self.physician_roi_ticker, id=self.combo_box_physician_roi.GetId())
+        self.window_editor.Bind(wx.EVT_COMBOBOX, self.update_roi_type_in_map, id=self.combo_box_roi_type.GetId())
         self.window_editor.Bind(wx.EVT_COMBOBOX, self.uncategorized_ticker, id=self.combo_box_uncategorized_ignored.GetId())
 
         self.window_editor.Bind(wx.EVT_BUTTON, self.add_physician, id=self.button_physician['add'].GetId())
@@ -231,7 +241,7 @@ class ROIMapFrame(wx.Frame):
         sizer_variation_table = wx.BoxSizer(wx.VERTICAL)
         sizer_map_editor = wx.StaticBoxSizer(wx.StaticBox(self.window_editor, wx.ID_ANY, "ROI Map Editor"), wx.VERTICAL)
         sizer_variations = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_physician_roi = wx.BoxSizer(wx.VERTICAL)
+        sizer_physician_roi = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician = wx.BoxSizer(wx.VERTICAL)
         sizer_physician_row = wx.BoxSizer(wx.HORIZONTAL)
         sizer_physician_roi_row = wx.BoxSizer(wx.HORIZONTAL)
@@ -251,13 +261,27 @@ class ROIMapFrame(wx.Frame):
         sizer_physician.Add(sizer_physician_row, 1, wx.EXPAND, 0)
 
         self.label_physician_roi = wx.StaticText(self.window_editor, wx.ID_ANY, "Institutional ROI:")
-        sizer_physician_roi.Add(self.label_physician_roi, 0, 0, 0)
-        sizer_physician_roi_row.Add(self.combo_box_physician_roi, 1, wx.EXPAND | wx.RIGHT, 5)
+        self.label_roi_type = wx.StaticText(self.window_editor, wx.ID_ANY, "ROI Type:")
+
+        sizer_physician_roi_select = wx.BoxSizer(wx.VERTICAL)
+        sizer_physician_roi_select.Add(self.label_physician_roi, 0, 0, 0)
+        sizer_physician_roi_select.Add(self.combo_box_physician_roi, 1, wx.EXPAND | wx.RIGHT, 5)
+
+        sizer_roi_type_select = wx.BoxSizer(wx.VERTICAL)
+        sizer_roi_type_select.Add(self.label_roi_type, 0, 0, 0)
+        sizer_roi_type_select.Add(self.combo_box_roi_type, 1, wx.EXPAND | wx.RIGHT, 5)
+
+        sizer_physician_roi_spacer = wx.BoxSizer(wx.VERTICAL)
+        sizer_physician_roi_spacer.Add((20, 15), 0, 0, 0)
         sizer_physician_roi_row.Add(self.button_link_physician_roi, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_physician_roi_row.Add(self.button_physician_roi['add'], 0, wx.LEFT | wx.RIGHT, 5)
         sizer_physician_roi_row.Add(self.button_physician_roi['del'], 0, wx.RIGHT, 5)
         sizer_physician_roi_row.Add(self.button_physician_roi['edit'], 0, wx.RIGHT, 10)
-        sizer_physician_roi.Add(sizer_physician_roi_row, 0, wx.EXPAND, 0)
+        sizer_physician_roi_spacer.Add(sizer_physician_roi_row)
+
+        sizer_physician_roi.Add(sizer_physician_roi_select, 1, wx.EXPAND | wx.RIGHT, 5)
+        sizer_physician_roi.Add(sizer_roi_type_select, 0, wx.EXPAND | wx.RIGHT, 5)
+        sizer_physician_roi.Add(sizer_physician_roi_spacer, 0, wx.EXPAND, 0)
 
         sizer_map_editor.Add(sizer_physician, 0, wx.ALL | wx.EXPAND, 5)
         sizer_map_editor.Add(sizer_physician_roi, 0, wx.ALL | wx.EXPAND, 5)
@@ -374,6 +398,10 @@ class ROIMapFrame(wx.Frame):
         return self.combo_box_physician_roi.GetValue()
 
     @property
+    def physician_roi_type(self):
+        return self.combo_box_roi_type.GetValue()
+
+    @property
     def plot_data_type(self):
         return self.combo_box_tree_plot_data.GetValue()
 
@@ -446,6 +474,7 @@ class ROIMapFrame(wx.Frame):
     def physician_roi_ticker(self, evt):
         self.update_variations()
         self.update_roi_map()
+        self.update_roi_type_combo_box()
 
     def update_physicians(self, old_physicians=None):
 
@@ -468,6 +497,14 @@ class ROIMapFrame(wx.Frame):
             if new:
                 new = new[0]
         self.update_combo_box_choices(self.combo_box_physician_roi, choices, new)
+
+    def update_roi_type_combo_box(self):
+        roi_type = self.roi_map.get_roi_type(self.physician, self.physician_roi)
+        self.combo_box_roi_type.SetValue(roi_type)
+
+    def update_roi_type_in_map(self, evt):
+        self.roi_map.set_roi_type(self.physician, self.physician_roi, self.physician_roi_type)
+        self.is_edited = True
 
     @property
     def variations(self):
@@ -740,13 +777,16 @@ class RemapROIWorker(Thread):
     def run(self):
 
         if self.remap_all:
-            physician_to_map = list(set(self.roi_map.get_physicians()) - {'DEFAULT'})
+            physician_to_map = self.roi_map.get_physicians()
             variations_to_update = {}
         else:
             physician_to_map = self.roi_map.physicians_to_remap
             variations_to_update = self.roi_map.variations_to_update
 
         with DVH_SQL() as cnx:
+
+            physicians_in_db = cnx.get_unique_values('plans', 'physician')
+            physician_to_map = [p for p in physician_to_map if p in physicians_in_db]
 
             physician_counter = 0
             physician_count = len(list(variations_to_update) + physician_to_map)
@@ -756,11 +796,14 @@ class RemapROIWorker(Thread):
                 msg = ["Physician (%s of %s): %s" % (physician_counter+1, physician_count, physician),
                        int(100 * physician_counter / physician_count)]
                 wx.CallAfter(pub.sendMessage, "roi_map_update_gauge_1_info", msg=msg)
-                physician_counter += 1
                 variation_count = len(variations)
                 variation_counter = 0
 
                 for variation in variations:
+                    variation_frac = variation_counter / variation_count
+                    msg = ["Physician (%s of %s): %s" % (physician_counter + 1, physician_count, physician),
+                           int(100 * (physician_counter / physician_count + variation_frac / physician_count))]
+                    wx.CallAfter(pub.sendMessage, "roi_map_update_gauge_1_info", msg=msg)
                     msg = ["ROI Name (%s of %s): %s" % (variation_counter+1, variation_count, variation),
                            int(100 * variation_counter / variation_count)]
                     wx.CallAfter(pub.sendMessage, "roi_map_update_gauge_2_info", msg=msg)
@@ -769,6 +812,8 @@ class RemapROIWorker(Thread):
                     variation_counter += 1
 
                     self.update_variation(variation, physician, cnx)
+
+                physician_counter += 1
 
             # Full Physician remaps
             for physician in physician_to_map:
@@ -799,6 +844,12 @@ class RemapROIWorker(Thread):
 
                     physician_counter += 1
 
+            msg = ["Physician (%s of %s): %s" % (physician_counter, physician_count, physician), 100]
+            wx.CallAfter(pub.sendMessage, "roi_map_update_gauge_1_info", msg=msg)
+            msg = ["ROI (%s of %s): %s" % (variation_counter, variation_count, variation), 100]
+            wx.CallAfter(pub.sendMessage, "roi_map_update_gauge_2_info", msg=msg)
+            sleep(0.2)
+
         wx.CallAfter(pub.sendMessage, "roi_map_close")
 
     def update_variation(self, variation, physician, cnx):
@@ -821,6 +872,9 @@ class RemapROIWorker(Thread):
                     condition = "roi_name = '%s' and study_instance_uid = '%s'" % (variation, uid)
                     cnx.update('dvhs', 'physician_roi', new_physician_roi, condition)
                     cnx.update('dvhs', 'institutional_roi', new_institutional_roi, condition)
+                    roi_type = self.roi_map.get_roi_type(physician, new_physician_roi)
+                    if new_physician_roi != 'uncategorized':
+                        cnx.update('dvhs', 'roi_type', roi_type, condition)
 
 
 class RemapROIFrame(wx.Frame):
@@ -836,6 +890,7 @@ class RemapROIFrame(wx.Frame):
         """
         wx.Frame.__init__(self, None, title='Updating Database with ROI Map Changes')
         set_msw_background_color(self)
+        set_frame_icon(self)
 
         self.roi_map = roi_map
 

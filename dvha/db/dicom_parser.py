@@ -56,7 +56,11 @@ class DICOM_Parser:
         """
 
         self.database_rois = DatabaseROIs() if roi_map is None else roi_map
-        self.import_path = Options().IMPORTED_DIR
+
+        options = Options()
+        self.import_path = options.IMPORTED_DIR
+        self.dvh_bin_max_dose = options.dvh_bin_max_dose
+        self.dvh_bin_max_dose_units = options.dvh_bin_max_dose_units
 
         self.plan_file = plan_file
         self.structure_file = structure_file
@@ -413,22 +417,31 @@ class DICOM_Parser:
         :rtype: dict
         """
 
+        # dicompyler-core expects integer limit in cGy
+        # self.rx_dose in Gy, bin max is either in Gy or % Rx dose
+        # This is needed to prevent np.histogram from blowing up memory usage
+        # if no rx_dose is found, default to the absolute dose
+        if self.rx_dose:
+            limit = int(self.rx_dose * self.dvh_bin_max_dose[self.dvh_bin_max_dose_units])
+        else:
+            limit = int(self.dvh_bin_max_dose['Gy'] * 100.)
+
         dvh = None
         if self.use_dicom_dvh:
             try:
                 dvh = dicompyler_dvh.DVH.from_dicom_dvh(self.rt_data['dose'], dvh_index)
-            except AttributeError:  # dicompyler-core raises this is structure is not found in DICOM DVH
+            except AttributeError:  # dicompyler-core raises this if structure is not found in DICOM DVH
                 pass
 
         if dvh is None:
             try:
                 dvh = dvhcalc.get_dvh(self.rt_data['structure'], self.rt_data['dose'], dvh_index,
-                                      callback=self.send_dvh_progress)
+                                      callback=self.send_dvh_progress, limit=limit)
             except AttributeError:
                 dose = validate_transfer_syntax_uid(self.rt_data['dose'])
                 structure = validate_transfer_syntax_uid(self.rt_data['structure'])
                 dvh = dvhcalc.get_dvh(structure, dose, dvh_index,
-                                      callback=self.send_dvh_progress)
+                                      callback=self.send_dvh_progress, limit=limit)
 
         if dvh and dvh.volume > 0:  # ignore points and empty ROIs
             geometries = self.get_dvh_geometries(dvh_index)
@@ -777,6 +790,11 @@ class DICOM_Parser:
         """
         if key in list(self.roi_over_ride['type']):
             return self.roi_over_ride['type'][key]
+
+        roi_type_from_roi_map = self.database_rois.get_roi_type(self.physician, self.get_physician_roi(key))
+        if roi_type_from_roi_map != 'NONE':
+            return roi_type_from_roi_map
+
         return str(self.structure_name_and_type[key]['type']).upper()
 
     def reset_roi_type_over_ride(self, key):
@@ -1531,8 +1549,13 @@ class PreImportData:
         :return: the roi type
         :rtype: str
         """
+
+        roi_type_from_roi_map = self.database_rois.get_roi_type(self.physician, self.get_physician_roi(key))
+
         if key in list(self.roi_over_ride['type']):
             ans = self.roi_over_ride['type'][key]
+        elif roi_type_from_roi_map != 'NONE':
+            ans = roi_type_from_roi_map
         else:
             ans = self.dicompyler_rt_structures[key]['type'].upper()
         return ans if ans else 'NONE'
@@ -1685,13 +1708,14 @@ class PreImportData:
         else:
             roi_names = {key: self.dicompyler_rt_structures[key]['name'].lower()}
 
+        targets = {'gtv', 'ctv', 'itv', 'ptv'}
         for key, roi_name in roi_names.items():
             roi_name_len = len(roi_name)
-            targets = {'gtv', 'ctv', 'itv', 'ptv'}
-            if self.get_physician_roi(key).lower() in targets:
-                self.roi_over_ride['type'][key] = self.get_physician_roi(key).upper()
-            elif (roi_name_len > 2 and roi_name[0:3] in targets) and \
-                    ((roi_name_len == 3) or
-                     (roi_name_len == 4 and roi_name[3].isdigit()) or
-                     (roi_name_len == 5 and not roi_name[3].isdigit() and roi_name[4].isdigit())):
-                self.roi_over_ride['type'][key] = roi_name[0:3].upper()
+            if self.database_rois.get_roi_type(self.physician, roi_name) == 'NONE':
+                if self.get_physician_roi(key).lower() in targets:
+                    self.roi_over_ride['type'][key] = self.get_physician_roi(key).upper()
+                elif (roi_name_len > 2 and roi_name[0:3] in targets) and \
+                        ((roi_name_len == 3) or
+                         (roi_name_len == 4 and roi_name[3].isdigit()) or
+                         (roi_name_len == 5 and not roi_name[3].isdigit() and roi_name[4].isdigit())):
+                    self.roi_over_ride['type'][key] = roi_name[0:3].upper()

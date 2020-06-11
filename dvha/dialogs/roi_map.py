@@ -712,6 +712,9 @@ class AddPhysicianROI(wx.Dialog):
             self.roi_map.add_physician_roi(self.physician,
                                            self.combo_box_institutional_roi.GetValue(),
                                            self.text_ctrl_physician_roi.GetValue())
+
+            # in case user changed the name in this dlg
+            self.roi_map.add_variations(self.physician, self.text_ctrl_physician_roi.GetValue(), self.physician_roi)
         else:
             self.roi_map.add_institutional_roi(self.text_ctrl_physician_roi.GetValue())
 
