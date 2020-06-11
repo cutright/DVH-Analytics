@@ -1708,13 +1708,14 @@ class PreImportData:
         else:
             roi_names = {key: self.dicompyler_rt_structures[key]['name'].lower()}
 
+        targets = {'gtv', 'ctv', 'itv', 'ptv'}
         for key, roi_name in roi_names.items():
             roi_name_len = len(roi_name)
-            targets = {'gtv', 'ctv', 'itv', 'ptv'}
-            if self.get_physician_roi(key).lower() in targets:
-                self.roi_over_ride['type'][key] = self.get_physician_roi(key).upper()
-            elif (roi_name_len > 2 and roi_name[0:3] in targets) and \
-                    ((roi_name_len == 3) or
-                     (roi_name_len == 4 and roi_name[3].isdigit()) or
-                     (roi_name_len == 5 and not roi_name[3].isdigit() and roi_name[4].isdigit())):
-                self.roi_over_ride['type'][key] = roi_name[0:3].upper()
+            if self.database_rois.get_roi_type(self.physician, roi_name) == 'NONE':
+                if self.get_physician_roi(key).lower() in targets:
+                    self.roi_over_ride['type'][key] = self.get_physician_roi(key).upper()
+                elif (roi_name_len > 2 and roi_name[0:3] in targets) and \
+                        ((roi_name_len == 3) or
+                         (roi_name_len == 4 and roi_name[3].isdigit()) or
+                         (roi_name_len == 5 and not roi_name[3].isdigit() and roi_name[4].isdigit())):
+                    self.roi_over_ride['type'][key] = roi_name[0:3].upper()
