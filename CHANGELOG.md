@@ -5,6 +5,8 @@ v0.8.3 (TBD)
  - [Import] Cap DVH max dose to prevent excessive memory use [Issue 83](https://github.com/cutright/DVH-Analytics/issues/83)
  - [Plot Visuals] DVH Line selection and nonselection options available in User Settings
  - [Plot Visuals] Fix for [Issue 86](https://github.com/cutright/DVH-Analytics/issues/86)
+ - [ROI Map] ROI Types now stored in ROI Map [Issue 81](https://github.com/cutright/DVH-Analytics/issues/81)
+ - [Import] Save ROI Map in Import Module pushes ROI Map changes to previous imports as well
 
 
 v0.8.2 (2020.06.05)

@@ -30,6 +30,7 @@ from dvha.dialogs.main import DatePicker
 from dvha.dialogs.roi_map import AddPhysician, AddPhysicianROI, DelPhysicianROI, AssignVariation, DelVariation,\
     AddROIType, RoiManager, ChangePlanROIName
 from dvha.models.data_table import DataTable
+from dvha.models.roi_map import RemapROIFrame
 from dvha.paths import ICONS, TEMP_DIR
 from dvha.tools.dicom_dose_sum import DoseGrid
 from dvha.tools.errors import ErrorDialog
@@ -438,7 +439,7 @@ class ImportDicomFrame(wx.Frame):
         pub.unsubAll(topicName="pre_import_complete")
 
     def on_save_roi_map(self, evt):
-        self.roi_map.write_to_file()
+        RemapROIFrame(self.roi_map)
 
     def on_browse(self, evt):
         """

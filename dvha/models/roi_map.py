@@ -27,6 +27,7 @@ from dvha.tools.utilities import get_selected_listctrl_items, MessageDialog, get
     set_frame_icon, set_msw_background_color, is_windows, delete_file
 from dvha.tools.roi_map_generator import ROIMapGenerator
 from dvha.tools.roi_name_manager import clean_name
+from time import sleep
 
 
 class ROIMapFrame(wx.Frame):
@@ -61,7 +62,7 @@ class ROIMapFrame(wx.Frame):
                                                style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_physician_roi = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=[],
                                                    style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        roi_type_choices = ['NONE'] + Options().ROI_TYPES
+        roi_type_choices = Options().ROI_TYPES
         self.combo_box_roi_type = wx.ComboBox(self.window_editor, wx.ID_ANY, choices=roi_type_choices,
                                               style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.list_ctrl_variations = wx.ListCtrl(self.window_editor, wx.ID_ANY,
@@ -782,6 +783,9 @@ class RemapROIWorker(Thread):
 
         with DVH_SQL() as cnx:
 
+            physicians_in_db = cnx.get_unique_values('plans', 'physician')
+            physician_to_map = [p for p in physician_to_map if p in physicians_in_db]
+
             physician_counter = 0
             physician_count = len(list(variations_to_update) + physician_to_map)
 
@@ -790,11 +794,14 @@ class RemapROIWorker(Thread):
                 msg = ["Physician (%s of %s): %s" % (physician_counter+1, physician_count, physician),
                        int(100 * physician_counter / physician_count)]
                 wx.CallAfter(pub.sendMessage, "roi_map_update_gauge_1_info", msg=msg)
-                physician_counter += 1
                 variation_count = len(variations)
                 variation_counter = 0
 
                 for variation in variations:
+                    variation_frac = variation_counter / variation_count
+                    msg = ["Physician (%s of %s): %s" % (physician_counter + 1, physician_count, physician),
+                           int(100 * (physician_counter / physician_count + variation_frac / physician_count))]
+                    wx.CallAfter(pub.sendMessage, "roi_map_update_gauge_1_info", msg=msg)
                     msg = ["ROI Name (%s of %s): %s" % (variation_counter+1, variation_count, variation),
                            int(100 * variation_counter / variation_count)]
                     wx.CallAfter(pub.sendMessage, "roi_map_update_gauge_2_info", msg=msg)
@@ -803,6 +810,8 @@ class RemapROIWorker(Thread):
                     variation_counter += 1
 
                     self.update_variation(variation, physician, cnx)
+
+                physician_counter += 1
 
             # Full Physician remaps
             for physician in physician_to_map:
@@ -833,6 +842,12 @@ class RemapROIWorker(Thread):
 
                     physician_counter += 1
 
+            msg = ["Physician (%s of %s): %s" % (physician_counter, physician_count, physician), 100]
+            wx.CallAfter(pub.sendMessage, "roi_map_update_gauge_1_info", msg=msg)
+            msg = ["ROI (%s of %s): %s" % (variation_counter, variation_count, variation), 100]
+            wx.CallAfter(pub.sendMessage, "roi_map_update_gauge_2_info", msg=msg)
+            sleep(0.2)
+
         wx.CallAfter(pub.sendMessage, "roi_map_close")
 
     def update_variation(self, variation, physician, cnx):
@@ -855,6 +870,9 @@ class RemapROIWorker(Thread):
                     condition = "roi_name = '%s' and study_instance_uid = '%s'" % (variation, uid)
                     cnx.update('dvhs', 'physician_roi', new_physician_roi, condition)
                     cnx.update('dvhs', 'institutional_roi', new_institutional_roi, condition)
+                    roi_type = self.roi_map.get_roi_type(physician, new_physician_roi)
+                    if new_physician_roi != 'uncategorized':
+                        cnx.update('dvhs', 'roi_type', roi_type, condition)
 
 
 class RemapROIFrame(wx.Frame):

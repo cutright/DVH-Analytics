@@ -27,6 +27,7 @@ class PhysicianROI:
         self.physician_roi = physician_roi
         self.variations = [physician_roi]
         self.roi_type = roi_type
+        self.roi_type_is_edited = False
 
         self.add_variations(self.institutional_roi)
 
@@ -202,6 +203,11 @@ class Physician:
         physician_roi = self.get_physician_roi(roi_name)
         if physician_roi != 'uncategorized':
             self.rois[physician_roi].roi_type = roi_type
+            self.rois[physician_roi].roi_type_is_edited = True
+
+    @property
+    def physician_rois_with_edited_roi_type(self):
+        return [p_roi for p_roi, obj in self.rois.items() if obj.roi_type_is_edited]
 
 
 class DatabaseROIs:
@@ -575,6 +581,14 @@ class DatabaseROIs:
                                                                'variations': variations.split(', ')}
                     else:
                         include = line[0] == '@'  # + and - signs before the @@ line to be ignored
+
+                # Check for Edited ROI Types, only needed if not included in previous for-loop
+                for p_roi in self.physicians[physician].physician_rois_with_edited_roi_type:
+                    if p_roi not in list(diff[physician]):
+                        diff[physician][p_roi] = {'-': {'institutional': '', 'variations': []},
+                                                  '+': {'institutional': '', 'variations': []}}
+                        diff[physician][p_roi]['+'] = {'institutional': self.get_institutional_roi(physician, p_roi),
+                                                       'variations': self.get_variations(physician, p_roi)}
 
                 for p_roi, data in diff[physician].items():
                     new_pos = list(set(data['+']['variations']) - set(data['-']['variations']))
