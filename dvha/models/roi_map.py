@@ -134,8 +134,6 @@ class ROIMapFrame(wx.Frame):
         self.combo_box_uncategorized_ignored.SetSelection(0)
         self.button_uncategorized_ignored_ignore.SetMinSize((110, 20))
 
-        self.combo_box_roi_type.SetValue(self.roi_map.get_roi_type(self.physician, self.physician_roi))
-
         self.combo_box_physician.SetValue('DEFAULT')
         self.update_physician_rois()
         self.update_variations()
@@ -174,6 +172,8 @@ class ROIMapFrame(wx.Frame):
             combo_box.SetMaxSize((1000, 26))
         self.combo_box_physician_roi.SetMaxSize((1000, 26))
         self.combo_box_roi_type.SetMaxSize((1000, 26))
+
+        self.combo_box_roi_type.SetValue(self.roi_map.get_roi_type(self.physician, self.physician_roi))
 
     def __do_bind(self):
         self.window_tree.Bind(wx.EVT_COMBOBOX, self.on_plot_data_type_change, id=self.combo_box_tree_plot_data.GetId())
