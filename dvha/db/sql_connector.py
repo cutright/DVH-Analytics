@@ -726,6 +726,7 @@ def write_test(config=None, db_type='pgsql', group=1, table=None, column=None, v
             cnx = DVH_SQL(config, db_type=db_type, group=group)
         else:
             cnx = DVH_SQL(group=group)
+        cnx.initialize_database()
     except Exception as e:
         print("%s" % e)
         return {'write': False, 'delete': False}
