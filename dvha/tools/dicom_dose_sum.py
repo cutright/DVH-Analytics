@@ -14,6 +14,7 @@ from os.path import isfile
 import pydicom
 from scipy.ndimage import map_coordinates
 from copy import deepcopy
+from dvha.tools.errors import push_to_log
 
 
 class DoseGrid:
@@ -62,17 +63,21 @@ class DoseGrid:
         if type(rt_dose) is pydicom.FileDataset:
             if rt_dose.Modality.lower() == 'rtdose':
                 return rt_dose
-            print("The provided pydicom.FileDataset is not RTDOSE")
+            msg = "DoseGrid.__validate_input: The provided pydicom.FileDataset is not RTDOSE"
+            push_to_log(msg=msg)
             return
         elif isfile(rt_dose):
             try:
                 rt_dose_ds = pydicom.read_file(rt_dose)
                 if rt_dose_ds.Modality.lower() == 'rtdose':
                     return rt_dose_ds
-                print('The provided file_path points to a DICOM file, but it is not an RT Dose file.')
+                msg = 'DoseGrid.__validate_input: ' \
+                      'The provided file_path points to a DICOM file, but it is not an RT Dose file.'
+                push_to_log(msg=msg)
             except Exception as e:
-                print(e)
-                print('The provided input is neither a pydicom.FileDataset nor could it be read by pydicom.')
+                msg = 'DoseGrid.__validate_input: ' \
+                      'The provided input is neither a pydicom.FileDataset nor could it be read by pydicom.'
+                push_to_log(e, msg=msg)
         return
 
     ####################################################

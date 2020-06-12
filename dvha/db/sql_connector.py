@@ -19,9 +19,8 @@ from os.path import dirname, join, isfile
 from dvha.db.sql_columns import categorical, numerical
 from dvha.options import Options
 from dvha.paths import CREATE_PGSQL_TABLES, CREATE_SQLITE_TABLES, DATA_DIR
-from dvha.tools.errors import SQLError
+from dvha.tools.errors import SQLError, push_to_log
 import json
-from pubsub import pub
 
 
 class DVH_SQL:
@@ -430,7 +429,7 @@ class DVH_SQL:
 
     def is_sql_table_empty(self, table):
         """
-        Check if specifed SQL table is empty
+        Check if specified SQL table is empty
         :param table: SQL table
         :type table: str
         :return: True if specified table has no data
@@ -714,7 +713,7 @@ def echo_sql_db(config=None, db_type='pgsql', group=1):
         return True
     except Exception as e:
         if type(e) not in [psycopg2.OperationalError, sqlite3.OperationalError]:
-            print(str(e))
+            push_to_log(e, msg='Unknown Error during SQL Echo')
         return False
 
 
@@ -727,10 +726,14 @@ def write_test(config=None, db_type='pgsql', group=1, table=None, column=None, v
             cnx = DVH_SQL(config, db_type=db_type, group=group)
         else:
             cnx = DVH_SQL(group=group)
+    except Exception as e:
+        push_to_log(e, msg="Write Test: Connection to SQL could not be established")
+        return {'write': False, 'delete': False}
+
+    try:
         cnx.initialize_database()
     except Exception as e:
-        pub.sendMessage('logging.exception', msg=str(e))
-        return {'write': False, 'delete': False}
+        push_to_log(e, msg="Write Test: DVH_SQL.initialize_database failed")
 
     if table is None:
         table = cnx.tables[-1]
@@ -754,11 +757,15 @@ def write_test(config=None, db_type='pgsql', group=1, table=None, column=None, v
 
     try:
         cnx.execute_str(insert_cmd)
+    except Exception as e:
+        push_to_log(e, msg="Write Test: SQL test insert command failed")
+
+    try:
         test_return = cnx.query(table, column, condition_str)
         write_test_success = len(test_return) > 0
     except Exception as e:
         write_test_success = False
-        pub.sendMessage('logging.exception', msg=str(e))
+        push_to_log(e, msg="Write Test: SQL query of test insert failed")
 
     if not write_test_success:
         delete_test_success = None
@@ -769,12 +776,12 @@ def write_test(config=None, db_type='pgsql', group=1, table=None, column=None, v
             delete_test_success = len(test_return) == 0
         except Exception as e:
             delete_test_success = False
-            pub.sendMessage('logging.exception', msg=str(e))
+            push_to_log(e, msg="Write Test: SQL delete command of test insert failed")
 
     try:
         cnx.close()
     except Exception as e:
-        pub.sendMessage('logging.exception', msg=str(e))
+        push_to_log(e, msg='Write Test: Failed to close SQL connection')
 
     return {'write': write_test_success, 'delete': delete_test_success}
 

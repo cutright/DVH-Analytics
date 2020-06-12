@@ -17,6 +17,7 @@ import hashlib
 from copy import deepcopy
 from dvha._version import __version__
 from dvha.paths import OPTIONS_PATH, OPTIONS_CHECKSUM_PATH, INBOX_DIR, IMPORTED_DIR, REVIEW_DIR
+from dvha.tools.errors import push_to_log
 
 
 class DefaultOptions:
@@ -237,8 +238,8 @@ class Options(DefaultOptions):
                     loaded_options = pickle.load(infile)
                 self.upgrade_options(loaded_options)
             except Exception as e:
-                print('ERROR: Options file corrupted. Loading default options.')
-                print("%s" % e)
+                msg = 'Options.load: Options file corrupted. Loading default options.'
+                push_to_log(e, msg=msg)
                 loaded_options = {}
 
             for key, value in loaded_options.items():
@@ -263,7 +264,8 @@ class Options(DefaultOptions):
         :param value: value of option
         """
         if not hasattr(self, attr):
-            print('WARNING: This option did not previously exist!')
+            msg = 'Options.set_option: %s did not previously exist' % attr
+            push_to_log(msg=msg)
         setattr(self, attr, value)
         self.is_edited = True
 
@@ -296,8 +298,9 @@ class Options(DefaultOptions):
             stored_checksum = self.load_stored_checksum()
             if current_checksum == stored_checksum:
                 return True
-        except Exception:
-            print('Corrupted options file detected. Loading default options.')
+        except Exception as e:
+            msg = 'Options.is_options_file_valid: Corrupted options file detected. Loading default options.'
+            push_to_log(e, msg=msg)
             return False
 
     def restore_defaults(self):

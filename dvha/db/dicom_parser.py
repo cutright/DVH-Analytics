@@ -18,6 +18,7 @@ from os.path import basename, join
 from pubsub import pub
 import pydicom
 from dvha.options import Options
+from dvha.tools.errors import push_to_log
 from dvha.tools.roi_name_manager import clean_name, DatabaseROIs
 from dvha.tools.utilities import change_angle_origin, calc_stats, is_date, validate_transfer_syntax_uid
 from dvha.tools.roi_formatter import dicompyler_roi_coord_to_db_string, get_planes_from_string
@@ -149,8 +150,8 @@ class DICOM_Parser:
         for i, ref_beam_seq in enumerate(fx_grp_seq.ReferencedBeamSequence):
             if ref_beam_seq.ReferencedBeamNumber == beam_number:
                 return i
-        print('ERROR: Failed to find a matching reference beam in '
-              'ReferencedBeamSequence for beam number %s' % beam_number)
+        push_to_log(msg='DICOM_Parser: Failed to find a matching reference beam in '
+                        'ReferencedBeamSequence for beam number %s' % beam_number)
 
     def get_rx_data_from_dummy_rois(self):
         """
@@ -890,8 +891,9 @@ class DICOM_Parser:
         coord = self.dicompyler_data['structure'].GetStructureCoordinates(key)
         try:
             return roi_calc.surface_area(coord)
-        except Exception:
-            print("Surface area calculation failed for key, name: %s, %s" % (key, self.get_roi_name(key)))
+        except Exception as e:
+            msg = "DICOM_Parser: Surface area calculation failed for key, name: %s, %s" % (key, self.get_roi_name(key))
+            push_to_log(e, msg=msg)
 
     def get_dvh_geometries(self, key):
         """
@@ -905,8 +907,9 @@ class DICOM_Parser:
 
         try:
             surface_area = roi_calc.surface_area(structure_coord)
-        except Exception:
-            print("Surface area calculation failed for key, name: %s, %s" % (key, self.get_roi_name(key)))
+        except Exception as e:
+            msg = "DICOM_Parser: Surface area calculation failed for key, name: %s, %s" % (key, self.get_roi_name(key))
+            push_to_log(e, msg=msg)
             surface_area = None
 
         roi_coord_str = dicompyler_roi_coord_to_db_string(structure_coord)
@@ -970,7 +973,7 @@ class DICOM_Parser:
             else:
                 return datetime.strptime(datetime_str, '%Y%m%d')
         except Exception as e:
-            print(e)
+            push_to_log(e, msg="DICOM_Parser: get_time_stamp failed")
 
     def is_beam_with_rad_type_in_plan(self, rad_type):
         """
@@ -1290,7 +1293,7 @@ class BeamParser:
             mlca_stat_data = {key: calc_stats(mlc_summary_data[key]) for key in mlc_keys}
             mlca_stat_data['complexity'] = np.sum(mlc_summary_data['cmp_score'])
         except Exception as e:
-            print('WARNING: Skipping mlc_stat_data calculation because ', str(e))
+            push_to_log(e, msg='BeamParser: skipping mlc_stat_data calculation')
             mlca_stat_data = {key: [None] * 6 for key in mlc_keys}
             mlca_stat_data['complexity'] = None
         return mlca_stat_data
@@ -1394,8 +1397,8 @@ class RxParser:
             return self.pinnacle_rx_data['fx_dose']
         try:
             return round(self.rx_dose / float(self.fx_count), 2)
-        except Exception:
-            print('WARNING: Unable to calculate fx_dose')
+        except Exception as e:
+            push_to_log(e, msg="RxParser: Unable to calculate fx_dose")
 
     @property
     def normalization_method(self):

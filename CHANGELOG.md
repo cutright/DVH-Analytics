@@ -3,7 +3,7 @@
 v0.8.4 (TBD)
 --------------------
  - [Database] Better exception catch for SQL Write Test
- - [Logging] Send printed Exceptions to logger instead of terminal (in progress)
+ - [Logging] Redirect print statements to logger
 
 v0.8.3 (2020.06.11)
 --------------------

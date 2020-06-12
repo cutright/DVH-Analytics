@@ -18,6 +18,7 @@ from dvha.db.sql_to_python import QuerySQL
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import PREF_DIR
 from dvha.tools.roi_map_generator import ROIMapGenerator
+from dvha.tools.errors import push_to_log
 from dvha.tools.utilities import flatten_list_of_lists, initialize_directories
 
 
@@ -252,7 +253,6 @@ class DatabaseROIs:
     def import_physician_roi_maps(self):
 
         for physician in get_physicians_from_roi_files():
-            # print(physician)
             rel_path = 'physician_%s.roi' % physician
             abs_file_path = os.path.join(PREF_DIR, rel_path)
             if os.path.isfile(abs_file_path):
@@ -809,9 +809,9 @@ class DatabaseROIs:
                                 physician_roi, roi_type = tuple(line.split(':'))
                                 self.physicians[physician].rois[physician_roi.strip()].roi_type = roi_type.strip()
                             except Exception as e:
-                                print('ERROR: Could not import % roi_type for physician %s' %
-                                      (physician_roi, physician))
-                                print(e)
+                                msg = 'DatabaseROIs.load_roi_types_from_file: ' \
+                                      'Could not import % roi_type for physician %s' % (physician_roi, physician)
+                                push_to_log(e, msg=msg)
 
 
 def clean_name(name, physician=False):
@@ -841,7 +841,8 @@ def get_physician_from_uid(uid):
         results = cnx.query('Plans', 'physician', "study_instance_uid = '" + uid + "'")
 
     if len(results) > 1:
-        print('Warning: multiple plans with this study_instance_uid exist')
+        msg = 'roi_name_manager.get_physician_from_uid: multiple plans with this study_instance_uid exist: %s' % uid
+        push_to_log(msg=msg)
 
     return str(results[0][0])
 
@@ -853,7 +854,7 @@ def update_uncategorized_rois_in_database():
     with DVH_SQL() as cnx:
         for i in range(len(dvh_data.roi_name)):
             uid = dvh_data.study_instance_uid[i]
-            mrn = dvh_data.mrn[i]
+            # mrn = dvh_data.mrn[i]
             physician = get_physician_from_uid(uid)
             roi_name = dvh_data.roi_name[i]
 
@@ -861,7 +862,7 @@ def update_uncategorized_rois_in_database():
             new_institutional_roi = roi_map.get_institutional_roi(physician, roi_name)
 
             if new_physician_roi != 'uncategorized':
-                print(mrn, physician, new_institutional_roi, new_physician_roi, roi_name, sep=' ')
+                # print(mrn, physician, new_institutional_roi, new_physician_roi, roi_name, sep=' ')
                 condition = "study_instance_uid = '" + uid + "'" + "and roi_name = '" + roi_name + "'"
                 cnx.update('DVHs', 'physician_roi', new_physician_roi, condition)
                 cnx.update('DVHs', 'institutional_roi', new_institutional_roi, condition)

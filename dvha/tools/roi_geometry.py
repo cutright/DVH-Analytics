@@ -78,8 +78,8 @@ def union(rois):
                             points.append([x_coord[i], y_coord[i], round(float(z), 2)])
                         new_roi[z].append(points)
         else:
-            print('WARNING: no contour found for slice %s' % z)
-
+            # print('WARNING: no contour found for slice %s' % z)
+            pass
     return new_roi
 
 

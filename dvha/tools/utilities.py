@@ -27,6 +27,7 @@ import sys
 import tracemalloc
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import SQL_CNF_PATH, WIN_APP_ICON, PIP_LIST_PATH, DIRECTORIES, APP_DIR, BACKUP_DIR, DATA_DIR
+from dvha.tools.errors import push_to_log
 
 
 IGNORED_FILES = ['.ds_store']
@@ -363,9 +364,10 @@ def calc_stats(data):
                     np.mean(data_np),
                     np.percentile(data_np, 25),
                     np.min(data_np)]
-    except Exception:
+    except Exception as e:
         rtn_data = [0, 0, 0, 0, 0, 0]
-        print("calc_stats() received non-numerical data")
+        msg = "tools.utilities.calc_stats: received non-numerical data"
+        push_to_log(e, msg=msg)
     return rtn_data
 
 
@@ -406,7 +408,7 @@ def delete_file(file_path):
         elif isdir(file_path):
             shutil.rmtree(file_path)
     except Exception as e:
-        print(e)
+        push_to_log(e, msg='tools.utilities.delete_file: %s' % file_path)
 
 
 def delete_imported_dicom_files(dicom_files):

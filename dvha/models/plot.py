@@ -25,7 +25,7 @@ from os.path import join, isdir, splitext
 from os import mkdir
 from scipy.stats import ttest_ind, ranksums, normaltest
 from dvha.dialogs.export import save_data_to_file
-from dvha.tools.errors import PlottingMemoryError, ErrorDialog
+from dvha.tools.errors import PlottingMemoryError, ErrorDialog, push_to_log
 from dvha.tools.utilities import collapse_into_single_dates, moving_avg, is_windows, FIG_WILDCARDS
 from dvha.tools.stats import MultiVariableRegression, get_control_limits
 from dvha.paths import TEMP_DIR
@@ -130,9 +130,9 @@ class Plot:
     def update_bokeh_layout_in_wx_python(self):
         try:
             self.html_str = get_layout_html(self.bokeh_layout)
-        except MemoryError:
-            print('ERROR: dvha.models.plot in Plot.update_bokeh_layout_in_wx_python with '
-                  'bokeh.io.export.get_layout_html() raised MemoryError')
+        except MemoryError as e:
+            msg = 'Plot.update_bokeh_layout_in_wx_python: bokeh.io.export.get_layout_html failed'
+            push_to_log(e, msg=msg)
             raise PlottingMemoryError(self.type)
         if is_windows():  # Windows requires LoadURL()
             if not isdir(TEMP_DIR):
@@ -724,7 +724,8 @@ class PlotTimeSeries(Plot):
                     s[grp], p[grp] = normaltest(data)
                     p[grp] = "%0.3f" % p[grp]
                 except Exception as e:
-                    print('Normal test failed: ', str(e))
+                    msg = 'PlotTimeSeries.update_divs: Normal test failed'
+                    push_to_log(e, msg=msg)
                     p[grp] = 'ERROR'
 
         # t-Test and Rank Sums
@@ -734,13 +735,15 @@ class PlotTimeSeries(Plot):
                 st, pt = ttest_ind(grp_data[1], grp_data[2])
                 pt = "%0.3f" % pt
             except Exception as e:
-                print('t-Test failed: ', str(e))
+                msg = 'PlotTimeSeries.update_divs: t-test failed'
+                push_to_log(e, msg=msg)
                 pt = 'ERROR'
             try:
                 sr, pr = ranksums(grp_data[1], grp_data[2])
                 pr = "%0.3f" % pr
             except Exception as e:
-                print('Wilcoxon ranksums failed: ', str(e))
+                msg = 'PlotTimeSeries.update_divs: Wilcoxon ranksums failed'
+                push_to_log(e, msg=msg)
                 pr = 'ERROR'
 
         self.normal_test_div[1].text = "<b>Group 1 Normal Test p-value</b>: %s" % p[1]

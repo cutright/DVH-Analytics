@@ -12,6 +12,7 @@ A class to sync a data object and list_ctrl
 
 from copy import deepcopy
 import wx
+from dvha.tools.errors import push_to_log
 from dvha.tools.utilities import get_selected_listctrl_items, get_sorted_indices
 
 
@@ -166,7 +167,8 @@ class DataTable:
                 try:
                     self.layout.DeleteColumn(index)
                 except Exception as e:
-                    print(e)
+                    msg = 'DataTable.delete_column: Could not delete column in layout'
+                    push_to_log(e, msg=msg)
             self.data.pop(column)
             self.columns.pop(index)
 
