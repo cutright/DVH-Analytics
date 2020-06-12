@@ -21,6 +21,7 @@ from dvha.options import Options
 from dvha.paths import CREATE_PGSQL_TABLES, CREATE_SQLITE_TABLES, DATA_DIR
 from dvha.tools.errors import SQLError
 import json
+from pubsub import pub
 
 
 class DVH_SQL:
@@ -728,7 +729,7 @@ def write_test(config=None, db_type='pgsql', group=1, table=None, column=None, v
             cnx = DVH_SQL(group=group)
         cnx.initialize_database()
     except Exception as e:
-        print("%s" % e)
+        pub.sendMessage('logging.exception', msg=str(e))
         return {'write': False, 'delete': False}
 
     if table is None:
@@ -751,18 +752,29 @@ def write_test(config=None, db_type='pgsql', group=1, table=None, column=None, v
     insert_cmd = "INSERT INTO %s (%s) VALUES ('%s');" % (table, column, value)
     delete_cmd = "DELETE FROM %s WHERE %s;" % (table, condition_str)
 
-    cnx.execute_str(insert_cmd)
-    test_return = cnx.query(table, column, condition_str)
-    write_test_success = len(test_return) > 0
+    try:
+        cnx.execute_str(insert_cmd)
+        test_return = cnx.query(table, column, condition_str)
+        write_test_success = len(test_return) > 0
+    except Exception as e:
+        write_test_success = False
+        pub.sendMessage('logging.exception', msg=str(e))
 
     if not write_test_success:
         delete_test_success = None
     else:
-        cnx.execute_str(delete_cmd)
-        test_return = cnx.query(table, column, condition_str)
-        delete_test_success = len(test_return) == 0
+        try:
+            cnx.execute_str(delete_cmd)
+            test_return = cnx.query(table, column, condition_str)
+            delete_test_success = len(test_return) == 0
+        except Exception as e:
+            delete_test_success = False
+            pub.sendMessage('logging.exception', msg=str(e))
 
-    cnx.close()
+    try:
+        cnx.close()
+    except Exception as e:
+        pub.sendMessage('logging.exception', msg=str(e))
 
     return {'write': write_test_success, 'delete': delete_test_success}
 

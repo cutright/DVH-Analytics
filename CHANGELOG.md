@@ -1,5 +1,10 @@
 # Change log of DVH Analytics
 
+v0.8.4 (TBD)
+--------------------
+ - [Database] Better exception catch for SQL Write Test
+ - [Logging] Send printed Exceptions to logger instead of terminal (in progress)
+
 v0.8.3 (2020.06.11)
 --------------------
  - [Database] Initialize SQL tables if needed on Write Test (avoids crash)
