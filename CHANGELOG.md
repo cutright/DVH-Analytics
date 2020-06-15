@@ -4,6 +4,7 @@ v0.8.4 (TBD)
 --------------------
  - [Database] Better exception catch for SQL Write Test
  - [Logging] Redirect print statements to logger
+ - [Import] Plan complexities are now fx-weighted sums over Rx complexities (will add method to update DB)
 
 v0.8.3 (2020.06.11)
 --------------------

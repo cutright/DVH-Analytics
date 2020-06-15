@@ -815,3 +815,25 @@ def backup_sqlite_db(options):
 def main_is_frozen():
     # https://pyinstaller.readthedocs.io/en/stable/runtime-information.html
     return getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')
+
+
+def get_xy_path_lengths(shapely_object):
+    """
+    Get the x and y path lengths of a a Shapely object
+    :param shapely_object: either 'GeometryCollection', 'MultiPolygon', or 'Polygon'
+    :return: path lengths in the x and y directions
+    :rtype: list
+    """
+    path = np.array([0., 0.])
+    if shapely_object.type == 'GeometryCollection':
+        for geometry in shapely_object.geoms:
+            if geometry.type in {'MultiPolygon', 'Polygon'}:
+                path = np.add(path, get_xy_path_lengths(geometry))
+    elif shapely_object.type == 'MultiPolygon':
+        for shape in shapely_object:
+            path = np.add(path, get_xy_path_lengths(shape))
+    elif shapely_object.type == 'Polygon':
+        x, y = np.array(shapely_object.exterior.xy[0]), np.array(shapely_object.exterior.xy[1])
+        path = np.array([np.sum(np.abs(np.diff(x))), np.sum(np.abs(np.diff(y)))])
+
+    return path.tolist()

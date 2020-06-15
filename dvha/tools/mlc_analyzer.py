@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# tools.mlc_analyzer.py
+# tools.utilities.mlc_analyzer.py
 """
 Tools for analyzing beam and control point information from DICOM files
 Hierarchy of classes:
@@ -16,9 +16,7 @@ import pydicom
 import numpy as np
 from shapely.geometry import Polygon
 from shapely import speedups
-import argparse
-from datetime import datetime
-import os
+from dvha.tools.utilities import flatten_list_of_lists as flatten, get_xy_path_lengths
 
 
 DEFAULT_OPTIONS = {'max_field_size_x': 400.,
@@ -279,11 +277,13 @@ class ControlPoint:
 
         if hasattr(cp_seq, 'BeamLimitingDevicePositionSequence'):
             for device_position_seq in cp_seq.BeamLimitingDevicePositionSequence:
-                leaf_jaw_type = str(device_position_seq.RTBeamLimitingDeviceType).lower()
-                positions = np.array(list(map(float, device_position_seq.LeafJawPositions)))
-                mid_index = int(len(positions) / 2)
-                setattr(self, leaf_jaw_type, [positions[:mid_index],
-                                              positions[mid_index:]])
+                if hasattr(device_position_seq, 'RTBeamLimitingDeviceType') and \
+                        hasattr(device_position_seq, 'LeafJawPositions'):
+                    leaf_jaw_type = str(device_position_seq.RTBeamLimitingDeviceType).lower()
+                    positions = np.array(list(map(float, device_position_seq.LeafJawPositions)))
+                    mid_index = int(len(positions) / 2)
+                    setattr(self, leaf_jaw_type, [positions[:mid_index],
+                                                  positions[mid_index:]])
 
         self.mlc = None
         self.leaf_type = False
@@ -375,128 +375,3 @@ class ControlPoint:
             jaws['%s_max' % dim] = max(values)
 
         return jaws
-
-
-def get_xy_path_lengths(shapely_object):
-    """
-    Get the x and y path lengths of a a Shapely object
-    :param shapely_object: either 'GeometryCollection', 'MultiPolygon', or 'Polygon'
-    :return: path lengths in the x and y directions
-    :rtype: list
-    """
-    path = np.array([0., 0.])
-    if shapely_object.type == 'GeometryCollection':
-        for geometry in shapely_object.geoms:
-            if geometry.type in {'MultiPolygon', 'Polygon'}:
-                path = np.add(path, get_xy_path_lengths(geometry))
-    elif shapely_object.type == 'MultiPolygon':
-        for shape in shapely_object:
-            path = np.add(path, get_xy_path_lengths(shape))
-    elif shapely_object.type == 'Polygon':
-        x, y = np.array(shapely_object.exterior.xy[0]), np.array(shapely_object.exterior.xy[1])
-        path = np.array([np.sum(np.abs(np.diff(x))), np.sum(np.abs(np.diff(y)))])
-
-    return path.tolist()
-
-
-def flatten(some_list, remove_duplicates=False, sort=False):
-    """
-    Convert a list of lists into a list of all values
-    :param some_list: a list such that each value is a list
-    :type some_list: list
-    :param remove_duplicates: if True, return a unique list, otherwise keep duplicated values
-    :type remove_duplicates: bool
-    :param sort: if True, sort the list
-    :type sort: bool
-    :return: a new object containing all values in the provided
-    """
-    data = [item for sublist in some_list for item in sublist]
-
-    if remove_duplicates:
-        if sort:
-            return list(set(data))
-        else:
-            ans = []
-            for value in data:
-                if value not in ans:
-                    ans.append(value)
-            return ans
-    elif sort:
-        return sorted(data)
-
-    return data
-
-
-class PlanSet:
-    def __init__(self, file_paths, **kwargs):
-
-        self.plans = []
-        plan_count = len(file_paths)
-        for i, file_path in enumerate(file_paths):
-            print('Analyzing (%s of %s): %s' % (i+1, plan_count, file_path))
-            self.plans.append(Plan(file_path, **kwargs))
-
-        self.summary_table = [','.join(COLUMNS)]
-        for plan in self.plans:
-            for fx_grp_row in plan.summary:
-                row = [fx_grp_row[key] for key in COLUMNS]
-                self.summary_table.append(','.join(row))
-
-    @property
-    def csv(self):
-        return '\n'.join(self.summary_table)
-
-
-def get_file_paths(init_dir):
-    print('Finding DICOM-RT Plans in %s ...' % init_dir)
-    file_paths = []
-    for dirName, subdirList, fileList in os.walk(init_dir):  # iterate through files and all sub-directories
-        for file_name in fileList:
-            file_path = os.path.join(dirName, file_name)
-            try:
-                is_valid = pydicom.read_file(file_path, stop_before_pixels=True, force=True).Modality == 'RTPLAN'
-                if is_valid:
-                    file_paths.append(file_path)
-            except Exception:
-                print('Non-DICOM-RT File Found, skipping analysis: %s' % file_path)
-    print('DICOM-RT Plan search complete')
-    return file_paths
-
-
-if __name__ == '__main__':
-
-    cmd_parser = argparse.ArgumentParser(description="Command line DVHA MLC Analyzer")
-    cmd_parser.add_argument('init_dir',
-                            help='File path to a DICOM-RT Plan file')
-    cmd_parser.add_argument('-of', '--output-file',
-                            dest='output_file',
-                            help='Output will be saved as dvha_mlca_results_<time-stamp>.csv by default. ',
-                            default=None)
-    cmd_parser.add_argument('-xw', '--x-weight',
-                            dest='complexity_weight_x',
-                            help='Complexity coefficient for x-dimension',
-                            default=DEFAULT_OPTIONS['complexity_weight_x'])
-    cmd_parser.add_argument('-yw', '--y-weight',
-                            dest='complexity_weight_y',
-                            help='Complexity coefficient for y-dimension',
-                            default=DEFAULT_OPTIONS['complexity_weight_y'])
-    cmd_parser.add_argument('-xs', '--x-max-field-size',
-                            dest='max_field_size_x',
-                            help='Maximum field size in the x-dimension',
-                            default=DEFAULT_OPTIONS['max_field_size_x'])
-    cmd_parser.add_argument('-ys', '--y-max-field-size',
-                            dest='max_field_size_y',
-                            help='Maximum field size in the y-dimension',
-                            default=DEFAULT_OPTIONS['max_field_size_y'])
-    args = cmd_parser.parse_args()
-
-    cmd_options = {key: getattr(args, key) for key in list(DEFAULT_OPTIONS)}
-    cmd_options['file_paths'] = get_file_paths(args.init_dir)
-
-    time_stamp = str(datetime.now()).replace(':', '-').replace('.', '-')
-    output_file = args.output_file if args.output_file is not None else "dvha_mlca_results_%s.csv" % time_stamp
-
-    plan_analyzer = PlanSet(**cmd_options)
-
-    with open(output_file, 'w') as doc:
-        doc.write(plan_analyzer.csv)
