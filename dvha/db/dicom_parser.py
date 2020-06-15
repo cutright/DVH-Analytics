@@ -62,6 +62,7 @@ class DICOM_Parser:
         self.import_path = options.IMPORTED_DIR
         self.dvh_bin_max_dose = options.dvh_bin_max_dose
         self.dvh_bin_max_dose_units = options.dvh_bin_max_dose_units
+        self.mlca_options = options.MLC_ANALYZER_OPTIONS
 
         self.plan_file = plan_file
         self.structure_file = structure_file
@@ -133,7 +134,7 @@ class DICOM_Parser:
                 cp_seq = self.get_cp_sequence(self.beam_sequence[beam_num])
                 ref_beam_seq_index = self.get_referenced_beam_sequence_index(fx_grp_seq, beam_number)
                 ref_beam_seq = fx_grp_seq.ReferencedBeamSequence[ref_beam_seq_index]
-                self.beam_data[fx_grp_index].append(BeamParser(beam_seq, ref_beam_seq, cp_seq))
+                self.beam_data[fx_grp_index].append(BeamParser(beam_seq, ref_beam_seq, cp_seq, self.mlca_options))
 
                 beam_num += 1
 
@@ -1041,7 +1042,7 @@ class BeamParser:
     """
     This class is used to parse beam data needed for importing a plan into the database
     """
-    def __init__(self, beam_data, ref_beam_data, cp_seq):
+    def __init__(self, beam_data, ref_beam_data, cp_seq, mlc_analyzer_options):
         """
         :param beam_data:
         :param ref_beam_data:
@@ -1050,6 +1051,7 @@ class BeamParser:
         self.beam_data = beam_data
         self.ref_beam_data = ref_beam_data
         self.cp_seq = cp_seq
+        self.options = mlc_analyzer_options
 
     ################################################################################
     # General beam parser tools
@@ -1289,7 +1291,7 @@ class BeamParser:
     def mlc_stat_data(self):
         mlc_keys = ['area', 'x_perim', 'y_perim', 'perim', 'cmp_score', 'cp_mu']
         try:
-            mlc_summary_data = mlca(self.beam_data, self.beam_mu, ignore_zero_mu_cp=True).summary
+            mlc_summary_data = mlca(self.beam_data, self.beam_mu, ignore_zero_mu_cp=True, **self.options).summary
             mlca_stat_data = {key: calc_stats(mlc_summary_data[key]) for key in mlc_keys}
             mlca_stat_data['complexity'] = np.sum(mlc_summary_data['cmp_score'])
         except Exception as e:
