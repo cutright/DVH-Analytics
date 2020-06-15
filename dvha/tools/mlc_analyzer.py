@@ -17,12 +17,17 @@ import numpy as np
 from shapely.geometry import Polygon
 from shapely import speedups
 import argparse
+from datetime import datetime
+import os
 
 
 DEFAULT_OPTIONS = {'max_field_size_x': 400.,
                    'max_field_size_y': 400.,
                    'complexity_weight_x': 1.,
                    'complexity_weight_y': 1.}
+
+COLUMNS = ['Patient Name', 'Patient MRN', 'Study Instance UID', 'TPS', 'Plan name', '# of Fx Group(s)', 'Fx Group #',
+           'Fractions', 'Plan MUs', 'Beam Count(s)', 'Control Point(s)', 'Complexity Score(s)', 'File Name']
 
 
 def get_options(over_rides):
@@ -47,6 +52,7 @@ class Plan:
         """
         :param rt_plan_file: absolute file path of a DICOM RT Plan file
         """
+        self.rt_plan_file = rt_plan_file
         rt_plan = pydicom.read_file(rt_plan_file)
 
         self.options = get_options(kwargs)
@@ -55,13 +61,28 @@ class Plan:
         fx_grp_seq = rt_plan.FractionGroupSequence
         self.fx_group = [FxGroup(fx_grp, beam_seq) for fx_grp in fx_grp_seq]
 
-        self.plan_name = rt_plan.RTPlanLabel
-        self.patient_name = rt_plan.PatientName
-        self.patient_id = rt_plan.PatientID
-        self.study_instance_uid = rt_plan.StudyInstanceUID
-        self.tps = '%s %s' % (rt_plan.Manufacturer, rt_plan.ManufacturerModelName)
+        self.plan_name = '"%s"' % rt_plan.RTPlanLabel
+        self.patient_name = '"%s"' % rt_plan.PatientName
+        self.patient_id = '"%s"' % rt_plan.PatientID
+        self.study_instance_uid = '"%s"' % rt_plan.StudyInstanceUID
+        self.tps = '"%s %s"' % (rt_plan.Manufacturer, rt_plan.ManufacturerModelName)
 
-        self.complexity_scores = [fx_grp.complexity_score for fx_grp in self.fx_group]
+        self.complexity_scores = [float(fx_grp.complexity_score) for fx_grp in self.fx_group]
+
+        self.summary = [{'Patient Name': self.patient_name,
+                         'Patient MRN': self.patient_id,
+                         'Study Instance UID': self.study_instance_uid,
+                         'TPS': self.tps,
+                         'Plan name': self.plan_name,
+                         '# of Fx Group(s)': str(len(self.fx_group)),
+                         'Fx Group #': str(f+1),
+                         'Fractions': str(fx_grp.fxs),
+                         'Plan MUs': "%0.1f" % fx_grp.fx_mu,
+                         'Beam Count(s)': str(fx_grp.beam_count),
+                         'Control Point(s)': str(sum(fx_grp.cp_counts)),
+                         'Complexity Score(s)': "%0.3f" % self.complexity_scores[f],
+                         'File Name': '"%s"' % self.rt_plan_file}
+                        for f, fx_grp in enumerate(self.fx_group)]
 
     def __str__(self):
         summary = ['Patient Name:        %s' % self.patient_name,
@@ -98,7 +119,7 @@ class FxGroup:
         :param plan_beam_sequences: beam sequence object
         :type plan_beam_sequences: Sequence
         """
-        self.fxs = fx_grp_seq.NumberOfFractionsPlanned
+        self.fxs = getattr(fx_grp_seq, 'NumberOfFractionsPlanned', 'UNKNOWN')
 
         self.options = get_options(kwargs)
 
@@ -160,25 +181,17 @@ class Beam:
 
         self.options = get_options(kwargs)
 
-        cp_seq = beam_dataset.ControlPointSequence
+        self.cp_seq = beam_dataset.ControlPointSequence
 
         for bld_seq in beam_dataset.BeamLimitingDeviceSequence:
             if hasattr(bld_seq, 'LeafPositionBoundaries'):
                 self.leaf_boundaries = bld_seq.LeafPositionBoundaries
 
-        self.control_point = [ControlPoint(cp, self.leaf_boundaries) for cp in cp_seq]
+        self.control_point = [ControlPoint(cp, self.leaf_boundaries) for cp in self.cp_seq]
         self.control_point_count = len(self.control_point)
 
         self.jaws = [cp.jaws for cp in self.control_point]
         self.aperture = [cp.aperture for cp in self.control_point]
-        self.mlc_borders = [cp.mlc_borders for cp in self.control_point]
-
-        self.gantry_angle = [float(cp.GantryAngle)
-                             for cp in cp_seq if hasattr(cp, 'GantryAngle')]
-        self.collimator_angle = [float(cp.BeamLimitingDeviceAngle)
-                                 for cp in cp_seq if hasattr(cp, 'BeamLimitingDeviceAngle')]
-        self.couch_angle = [float(cp.PatientSupportAngle)
-                            for cp in cp_seq if hasattr(cp, 'PatientSupportAngle')]
 
         self.meter_set = meter_set
         self.control_point_meter_set = np.append([0], np.diff(np.array([cp.cum_mu for cp in self.control_point])))
@@ -232,6 +245,22 @@ class Beam:
                 return False
         return True
 
+    @property
+    def mlc_borders(self):
+        return [cp.mlc_borders for cp in self.control_point]
+
+    @property
+    def gantry_angle(self):
+        return [float(cp.GantryAngle) for cp in self.cp_seq if hasattr(cp, 'GantryAngle')]
+
+    @property
+    def collimator_angle(self):
+        return [float(cp.BeamLimitingDeviceAngle) for cp in self.cp_seq if hasattr(cp, 'BeamLimitingDeviceAngle')]
+
+    @property
+    def couch_angle(self):
+        return [float(cp.PatientSupportAngle) for cp in self.cp_seq if hasattr(cp, 'PatientSupportAngle')]
+
 
 class ControlPoint:
     """
@@ -248,25 +277,18 @@ class ControlPoint:
 
         self.cum_mu = float(cp_seq.CumulativeMetersetWeight)
 
-        # RT Beam Limiting Device Type Attributes
-        self.x = None
-        self.y = None
-        self.asymx = None
-        self.asymy = None
-        self.mlcx = None
-        self.mlcy = None
-
-        for device_position_seq in cp_seq.BeamLimitingDevicePositionSequence:
-            leaf_jaw_type = str(device_position_seq.RTBeamLimitingDeviceType).lower()
-            positions = np.array(list(map(float, device_position_seq.LeafJawPositions)))
-            mid_index = int(len(positions) / 2)
-            setattr(self, leaf_jaw_type, [positions[:mid_index],
-                                          positions[mid_index:]])
+        if hasattr(cp_seq, 'BeamLimitingDevicePositionSequence'):
+            for device_position_seq in cp_seq.BeamLimitingDevicePositionSequence:
+                leaf_jaw_type = str(device_position_seq.RTBeamLimitingDeviceType).lower()
+                positions = np.array(list(map(float, device_position_seq.LeafJawPositions)))
+                mid_index = int(len(positions) / 2)
+                setattr(self, leaf_jaw_type, [positions[:mid_index],
+                                              positions[mid_index:]])
 
         self.mlc = None
         self.leaf_type = False
         for leaf_type in ['mlcx', 'mlcy']:
-            if getattr(self, leaf_type) is not None:
+            if getattr(self, leaf_type, None) is not None:
                 self.mlc = getattr(self, leaf_type)
                 self.leaf_type = leaf_type
 
@@ -287,19 +309,20 @@ class ControlPoint:
         :return: the boundaries of each leaf within the control point
         :rtype: dict
         """
-        top = self.leaf_boundaries[0:-1] + self.leaf_boundaries[0:-1]
-        top = [float(i) for i in top]
-        bottom = self.leaf_boundaries[1::] + self.leaf_boundaries[1::]
-        bottom = [float(i) for i in bottom]
-        left = [- self.options['max_field_size_x'] / 2] * len(self.mlc[0])
-        left.extend(self.mlc[1])
-        right = self.mlc[0].tolist()
-        right.extend([self.options['max_field_size_x'] / 2] * len(self.mlc[1]))
+        if self.mlc is not None:
+            top = self.leaf_boundaries[0:-1] + self.leaf_boundaries[0:-1]
+            top = [float(i) for i in top]
+            bottom = self.leaf_boundaries[1::] + self.leaf_boundaries[1::]
+            bottom = [float(i) for i in bottom]
+            left = [- self.options['max_field_size_x'] / 2] * len(self.mlc[0])
+            left.extend(self.mlc[1])
+            right = self.mlc[0].tolist()
+            right.extend([self.options['max_field_size_x'] / 2] * len(self.mlc[1]))
 
-        return {'top': top,
-                'bottom': bottom,
-                'left': left,
-                'right': right}
+            return {'top': top,
+                    'bottom': bottom,
+                    'left': left,
+                    'right': right}
 
     @property
     def aperture(self):
@@ -404,11 +427,51 @@ def flatten(some_list, remove_duplicates=False, sort=False):
     return data
 
 
+class PlanSet:
+    def __init__(self, file_paths, **kwargs):
+
+        self.plans = []
+        plan_count = len(file_paths)
+        for i, file_path in enumerate(file_paths):
+            print('Analyzing (%s of %s): %s' % (i+1, plan_count, file_path))
+            self.plans.append(Plan(file_path, **kwargs))
+
+        self.summary_table = [','.join(COLUMNS)]
+        for plan in self.plans:
+            for fx_grp_row in plan.summary:
+                row = [fx_grp_row[key] for key in COLUMNS]
+                self.summary_table.append(','.join(row))
+
+    @property
+    def csv(self):
+        return '\n'.join(self.summary_table)
+
+
+def get_file_paths(init_dir):
+    print('Finding DICOM-RT Plans in %s ...' % init_dir)
+    file_paths = []
+    for dirName, subdirList, fileList in os.walk(init_dir):  # iterate through files and all sub-directories
+        for file_name in fileList:
+            file_path = os.path.join(dirName, file_name)
+            try:
+                is_valid = pydicom.read_file(file_path, stop_before_pixels=True, force=True).Modality == 'RTPLAN'
+                if is_valid:
+                    file_paths.append(file_path)
+            except Exception:
+                print('Non-DICOM-RT File Found, skipping analysis: %s' % file_path)
+    print('DICOM-RT Plan search complete')
+    return file_paths
+
+
 if __name__ == '__main__':
 
     cmd_parser = argparse.ArgumentParser(description="Command line DVHA MLC Analyzer")
-    cmd_parser.add_argument('file_path',
+    cmd_parser.add_argument('init_dir',
                             help='File path to a DICOM-RT Plan file')
+    cmd_parser.add_argument('-of', '--output-file',
+                            dest='output_file',
+                            help='Output will be saved as dvha_mlca_results_<time-stamp>.csv by default. ',
+                            default=None)
     cmd_parser.add_argument('-xw', '--x-weight',
                             dest='complexity_weight_x',
                             help='Complexity coefficient for x-dimension',
@@ -428,7 +491,12 @@ if __name__ == '__main__':
     args = cmd_parser.parse_args()
 
     cmd_options = {key: getattr(args, key) for key in list(DEFAULT_OPTIONS)}
-    cmd_options['rt_plan_file'] = args.file_path
+    cmd_options['file_paths'] = get_file_paths(args.init_dir)
 
-    plan = Plan(**cmd_options)
-    print(plan)
+    time_stamp = str(datetime.now()).replace(':', '-').replace('.', '-')
+    output_file = args.output_file if args.output_file is not None else "dvha_mlca_results_%s.csv" % time_stamp
+
+    plan_analyzer = PlanSet(**cmd_options)
+
+    with open(output_file, 'w') as doc:
+        doc.write(plan_analyzer.csv)
