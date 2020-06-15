@@ -173,8 +173,8 @@ class DefaultOptions:
 
         self.MLC_ANALYZER_OPTIONS = {'max_field_size_x': 400.,
                                      'max_field_size_y': 400.,
-                                     'comp_score_weight_x': 1.,
-                                     'comp_score_weight_y': 1.}
+                                     'complexity_weight_x': 1.,
+                                     'complexity_weight_y': 1.}
 
         # Per TG-263 (plus NONE, ITV, and IGNORED)
         self.ROI_TYPES = ['NONE', 'ORGAN', 'PTV', 'ITV', 'CTV', 'GTV',
