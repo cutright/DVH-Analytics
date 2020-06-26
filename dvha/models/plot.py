@@ -1594,7 +1594,7 @@ class PlotControlChart(Plot):
         self.adj_figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
         self.adj_figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
 
-    def update_plot(self, x, y, mrn, uid, dates, y_axis_label='Y Axis', update_layout=True):
+    def update_plot(self, x, y, mrn, uid, dates, y_axis_label='Y Axis', update_layout=True, cl_overrides=None):
         self.set_figure_dimensions()
         self.clear_sources()
         self.y_axis_label = y_axis_label
@@ -1603,14 +1603,19 @@ class PlotControlChart(Plot):
         x, y, mrn, uid, dates = self.clean_data(x, y, mrn=mrn, uid=uid, dates=dates)
 
         center_line, ucl, lcl = get_control_limits(y)
+        if cl_overrides is not None:
+            if 'UCL' in cl_overrides and cl_overrides['UCL'] is not None:
+                ucl = cl_overrides['UCL']
+            if 'LCL' in cl_overrides and cl_overrides['LCL'] is not None:
+                lcl = cl_overrides['LCL']
 
         plot_color = [self.options.PLOT_COLOR_2, self.options.PLOT_COLOR][self.group == 1]
         ooc_color = [self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR_2,
                      self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR][self.group == 1]
         colors = [ooc_color, plot_color]
         alphas = [self.options.CONTROL_CHART_OUT_OF_CONTROL_ALPHA, self.options.CONTROL_CHART_CIRCLE_ALPHA]
-        color = [colors[ucl > value > lcl] for value in y]
-        alpha = [alphas[ucl > value > lcl] for value in y]
+        color = [colors[ucl >= value >= lcl] for value in y]
+        alpha = [alphas[ucl >= value >= lcl] for value in y]
 
         self.source['plot'].data = {'x': x, 'y': y, 'mrn': mrn, 'uid': uid,
                                     'color': color, 'alpha': alpha, 'dates': dates}

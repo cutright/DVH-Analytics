@@ -7,7 +7,7 @@
 import wx
 from dvha.models.spreadsheet import Spreadsheet
 from dvha.tools.stats import sync_variables_in_stats_data_objects
-from dvha.tools.utilities import get_window_size
+from dvha.tools.utilities import get_window_size, set_msw_background_color, set_frame_icon
 
 
 class StatsDataEditor(wx.Frame):
@@ -46,6 +46,8 @@ class StatsDataEditor(wx.Frame):
 
     def __set_properties(self):
         self.SetTitle("Stats Data Editor: Group %s" % self.group)
+        set_msw_background_color(self)
+        set_frame_icon(self)
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)

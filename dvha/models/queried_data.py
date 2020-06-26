@@ -13,7 +13,7 @@ Class for viewing SQL table data of the current query
 import wx
 from dvha.models.data_table import DataTable
 from dvha.dialogs.export import save_data_to_file
-from dvha.tools.utilities import get_window_size
+from dvha.tools.utilities import get_window_size, set_msw_background_color, set_frame_icon
 
 
 class QueriedDataFrame(wx.Frame):
@@ -60,6 +60,8 @@ class QueriedDataFrame(wx.Frame):
 
     def __set_properties(self):
         self.SetSize(get_window_size(0.714, 0.762))
+        set_msw_background_color(self)
+        set_frame_icon(self)
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())

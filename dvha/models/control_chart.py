@@ -36,6 +36,9 @@ class ControlChartFrame:
 
         self.combo_box_y_axis = wx.ComboBox(self.parent, wx.ID_ANY, style=wx.CB_DROPDOWN | wx.CB_READONLY)
 
+        self.limit_override = {key: wx.TextCtrl(self.parent, wx.ID_ANY, "") for key in ['UCL', 'LCL']}
+
+        self.button_update = wx.Button(self.parent, wx.ID_ANY, "Update Plot")
         self.button_export = wx.Button(self.parent, wx.ID_ANY, "Export CSV")
         self.button_save_figure = wx.Button(self.parent, wx.ID_ANY, "Save Figure")
         self.plot = PlotControlChart(self.parent, main_app_frame.options)
@@ -49,6 +52,7 @@ class ControlChartFrame:
         self.parent.Bind(wx.EVT_COMBOBOX, self.on_combo_box_y, id=self.combo_box_y_axis.GetId())
         self.parent.Bind(wx.EVT_BUTTON, self.save_figure, id=self.button_save_figure.GetId())
         self.parent.Bind(wx.EVT_BUTTON, self.export_csv, id=self.button_export.GetId())
+        self.parent.Bind(wx.EVT_BUTTON, self.update_plot, id=self.button_update.GetId())
 
     def __set_properties(self):
         self.combo_box_y_axis.SetMinSize((300, self.combo_box_y_axis.GetSize()[1]))
@@ -61,12 +65,25 @@ class ControlChartFrame:
         sizer_plot = wx.BoxSizer(wx.HORIZONTAL)
         sizer_widgets = wx.StaticBoxSizer(wx.StaticBox(self.parent, wx.ID_ANY, ""), wx.HORIZONTAL)
         sizer_y_axis = wx.BoxSizer(wx.VERTICAL)
+        sizer_lcl = wx.BoxSizer(wx.VERTICAL)
+        sizer_ucl = wx.BoxSizer(wx.VERTICAL)
 
         label_y_axis = wx.StaticText(self.parent, wx.ID_ANY, "Charting Variable:")
         sizer_y_axis.Add(label_y_axis, 0, wx.LEFT, 5)
         sizer_y_axis.Add(self.combo_box_y_axis, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(sizer_y_axis, 0, wx.EXPAND, 0)
 
+        label_lcl = wx.StaticText(self.parent, wx.ID_ANY, "LCL Override:")
+        sizer_lcl.Add(label_lcl, 0, wx.LEFT, 5)
+        sizer_lcl.Add(self.limit_override['LCL'], 0, wx.ALL | wx.EXPAND, 5)
+        sizer_widgets.Add(sizer_lcl, 0, wx.EXPAND, 0)
+
+        label_ucl = wx.StaticText(self.parent, wx.ID_ANY, "UCL Override:")
+        sizer_ucl.Add(label_ucl, 0, wx.LEFT, 5)
+        sizer_ucl.Add(self.limit_override['UCL'], 0, wx.ALL | wx.EXPAND, 5)
+        sizer_widgets.Add(sizer_ucl, 0, wx.EXPAND, 0)
+
+        sizer_widgets.Add(self.button_update, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(self.button_export, 0, wx.ALL | wx.EXPAND, 5)
         sizer_widgets.Add(self.button_save_figure, 0, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_widgets, 0, wx.EXPAND | wx.BOTTOM, 5)
@@ -93,7 +110,7 @@ class ControlChartFrame:
     def update_plot_ticker(self, evt):
         self.update_plot()
 
-    def update_plot(self):
+    def update_plot(self, *evt):
         stats_data = self.group_data[self.group]['stats_data']
         dates = stats_data.sim_study_dates
         sort_index = sorted(range(len(dates)), key=lambda k: dates[k])
@@ -114,7 +131,8 @@ class ControlChartFrame:
         x = list(range(1, len(dates_sorted)+1))
 
         self.plot.group = self.group
-        self.plot.update_plot(x, y_values_sorted, mrn_sorted, uid_sorted, dates_sorted, y_axis_label=self.y_axis)
+        self.plot.update_plot(x, y_values_sorted, mrn_sorted, uid_sorted, dates_sorted,
+                              y_axis_label=self.y_axis, cl_overrides=self.cl_overrides)
 
         if self.models[self.group] and self.y_axis in self.models[self.group].keys():
             model_data = self.models[self.group][self.y_axis]
@@ -175,3 +193,16 @@ class ControlChartFrame:
 
     def load_save_data(self, saved_data):
         self.models = deepcopy(saved_data['models'])
+
+    def get_limit_override(self, key):
+        cl_override = self.limit_override[key].GetValue()
+        if cl_override != '':
+            try:
+                cl = float(cl_override)
+                return cl
+            except Exception:
+                self.limit_override[key].SetValue('')
+
+    @property
+    def cl_overrides(self):
+        return {key: self.get_limit_override(key) for key in self.limit_override.keys()}
