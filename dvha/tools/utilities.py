@@ -837,3 +837,31 @@ def get_xy_path_lengths(shapely_object):
         path = np.array([np.sum(np.abs(np.diff(x))), np.sum(np.abs(np.diff(y)))])
 
     return path.tolist()
+
+
+def recalculate_plan_complexities_from_beams():
+    with DVH_SQL() as cnx:
+        uids = cnx.get_unique_values('Plans', 'study_instance_uid')
+
+        for uid in uids:
+            try:
+                condition = "study_instance_uid = '%s'" % uid
+                beam_complexities = cnx.query('Beams', 'fx_count, complexity, fx_grp_number', condition)
+                complexity = {}
+                fx_counts = {}
+                for row in beam_complexities:
+                    fx_count, beam_complexity, fx_group_number = tuple(row)
+                    if fx_group_number not in complexity:
+                        complexity[fx_group_number] = 0.0
+                        fx_counts[fx_group_number] = fx_count
+                    complexity[fx_group_number] += beam_complexity
+
+                total_fx = float(sum([fx for fx in fx_counts.values()]))
+                plan_complexity = sum([c * fx_counts[fx_grp] for fx_grp, c in complexity.items()]) / total_fx
+            except Exception as e:
+                msg = "tools.utilities.recalculate_plan_complexities_from_beams: failed on uid = %s" % uid
+                push_to_log(e, msg=msg)
+                plan_complexity = None
+
+            if plan_complexity is not None:
+                cnx.update('Plans', 'complexity', plan_complexity, condition)

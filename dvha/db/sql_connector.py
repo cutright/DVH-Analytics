@@ -193,7 +193,7 @@ class DVH_SQL:
         :param column: SQL column to be updated
         :type column: str
         :param value: value to be set
-        :type value: str
+        :type value: str or float or int
         :param condition_str: a condition in SQL syntax
         :type condition_str: str
         """
