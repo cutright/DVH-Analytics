@@ -1,26 +1,40 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# tools.mlc_analyzer.py
+# tools.utilities.mlc_analyzer.py
 """
 Tools for analyzing beam and control point information from DICOM files
 Hierarchy of classes:
     Plan -> FxGroup -> Beam -> ControlPoint
 """
-# Copyright (c) 2016-2019 Dan Cutright
+# Copyright (c) 2016-2020 Dan Cutright
 # This file is part of DVH Analytics, released under a BSD license.
 #    See the file LICENSE included with this distribution, also
 #    available at https://github.com/cutright/DVH-Analytics
 
-from dicompylercore import dicomparser
+import pydicom
 import numpy as np
 from shapely.geometry import Polygon
 from shapely import speedups
-from dvha.tools.utilities import flatten_list_of_lists as flatten
-from dvha.options import Options
+from dvha.tools.utilities import flatten_list_of_lists as flatten, get_xy_path_lengths
 
 
-options = Options()
+DEFAULT_OPTIONS = {'max_field_size_x': 400.,
+                   'max_field_size_y': 400.,
+                   'complexity_weight_x': 1.,
+                   'complexity_weight_y': 1.}
+
+COLUMNS = ['Patient Name', 'Patient MRN', 'Study Instance UID', 'TPS', 'Plan name', '# of Fx Group(s)', 'Fx Group #',
+           'Fractions', 'Plan MUs', 'Beam Count(s)', 'Control Point(s)', 'Complexity Score(s)', 'File Name']
+
+
+def get_options(over_rides):
+    options = {k: v for k, v in DEFAULT_OPTIONS.items()}
+    for key, value in over_rides.items():
+        if key in list(options):
+            options[key] = value
+    return options
+
 
 # Enable shapely calculations using C, as opposed to the C++ default
 if speedups.available:
@@ -32,31 +46,53 @@ class Plan:
     Collect plan information from an RT Plan DICOM file.
     Automatically parses fraction data with FxGroup class
     """
-    def __init__(self, rt_plan_file):
+    def __init__(self, rt_plan_file, **kwargs):
         """
         :param rt_plan_file: absolute file path of a DICOM RT Plan file
         """
-        rt_plan = dicomparser.read_file(rt_plan_file)
+        self.rt_plan_file = rt_plan_file
+        rt_plan = pydicom.read_file(rt_plan_file)
+
+        self.options = get_options(kwargs)
 
         beam_seq = rt_plan.BeamSequence
         fx_grp_seq = rt_plan.FractionGroupSequence
         self.fx_group = [FxGroup(fx_grp, beam_seq) for fx_grp in fx_grp_seq]
 
-        self.plan_name = rt_plan.RTPlanLabel
-        self.patient_name = rt_plan.PatientName
-        self.patient_id = rt_plan.PatientID
-        self.study_instance_uid = rt_plan.StudyInstanceUID
-        self.tps = '%s %s' % (rt_plan.Manufacturer, rt_plan.ManufacturerModelName)
+        self.plan_name = '"%s"' % rt_plan.RTPlanLabel
+        self.patient_name = '"%s"' % rt_plan.PatientName
+        self.patient_id = '"%s"' % rt_plan.PatientID
+        self.study_instance_uid = '"%s"' % rt_plan.StudyInstanceUID
+        self.tps = '"%s %s"' % (rt_plan.Manufacturer, rt_plan.ManufacturerModelName)
 
-        self.complexity_scores = [fx_grp.complexity_score for fx_grp in self.fx_group]
+        self.complexity_scores = [float(fx_grp.complexity_score) for fx_grp in self.fx_group]
+
+        self.summary = [{'Patient Name': self.patient_name,
+                         'Patient MRN': self.patient_id,
+                         'Study Instance UID': self.study_instance_uid,
+                         'TPS': self.tps,
+                         'Plan name': self.plan_name,
+                         '# of Fx Group(s)': str(len(self.fx_group)),
+                         'Fx Group #': str(f+1),
+                         'Fractions': str(fx_grp.fxs),
+                         'Plan MUs': "%0.1f" % fx_grp.fx_mu,
+                         'Beam Count(s)': str(fx_grp.beam_count),
+                         'Control Point(s)': str(sum(fx_grp.cp_counts)),
+                         'Complexity Score(s)': "%0.3f" % self.complexity_scores[f],
+                         'File Name': '"%s"' % self.rt_plan_file}
+                        for f, fx_grp in enumerate(self.fx_group)]
 
     def __str__(self):
-        summary = ['Patient Name:       %s' % self.patient_name,
-                   'Patient MRN:        %s' % self.patient_id,
-                   'Study Instance UID: %s' % self.study_instance_uid,
-                   'TPS:                %s' % self.tps,
-                   'Plan name:          %s' % self.plan_name,
-                   '# of Fx Groups:     %s' % len(self.fx_group)]
+        summary = ['Patient Name:        %s' % self.patient_name,
+                   'Patient MRN:         %s' % self.patient_id,
+                   'Study Instance UID:  %s' % self.study_instance_uid,
+                   'TPS:                 %s' % self.tps,
+                   'Plan name:           %s' % self.plan_name,
+                   '# of Fx Group(s):    %s' % len(self.fx_group),
+                   'Plan MUs:            %s' % ', '.join(["%0.1f" % fx_grp.fx_mu for fx_grp in self.fx_group]),
+                   'Beam Count(s):       %s' % ', '.join([str(fx_grp.beam_count) for fx_grp in self.fx_group]),
+                   'Control Point(s):    %s' % ', '.join([str(sum(fx_grp.cp_counts)) for fx_grp in self.fx_group]),
+                   'Complexity Score(s): %s' % ', '.join(["%0.3f" % cs for cs in self.complexity_scores])]
         return '\n'.join(summary)
 
     def __repr__(self):
@@ -74,14 +110,16 @@ class FxGroup:
     Collect fraction group information from fraction group and beam sequences of a pydicom RT Plan dataset
     Automatically parses beam data with Beam class
     """
-    def __init__(self, fx_grp_seq, plan_beam_sequences):
+    def __init__(self, fx_grp_seq, plan_beam_sequences, **kwargs):
         """
         :param fx_grp_seq: fraction group sequence object
         :type fx_grp_seq: Sequence
         :param plan_beam_sequences: beam sequence object
         :type plan_beam_sequences: Sequence
         """
-        self.fxs = fx_grp_seq.NumberOfFractionsPlanned
+        self.fxs = getattr(fx_grp_seq, 'NumberOfFractionsPlanned', 'UNKNOWN')
+
+        self.options = get_options(kwargs)
 
         meter_set = {}
         for ref_beam in fx_grp_seq.ReferencedBeamSequence:
@@ -95,8 +133,11 @@ class FxGroup:
                 self.beam.append(Beam(beam_seq, meter_set[beam_num]))
         self.beam_count = len(self.beam)
         self.beam_names = [b.name for b in self.beam]
+        self.beam_mu = [b.meter_set for b in self.beam]
+        self.fx_mu = np.sum(self.beam_mu)
+        self.cp_counts = [b.control_point_count for b in self.beam]
 
-        self.beam = update_missing_jaws(self.beam)
+        self.update_missing_jaws()
 
         self.complexity_score = np.sum(np.array([np.sum(beam.complexity_scores) for beam in self.beam]))
 
@@ -110,13 +151,23 @@ class FxGroup:
                 print(status_str % 'passed')
         return True
 
+    def update_missing_jaws(self):
+        """In plans with static jaws throughout the beam, jaw positions may not be found in each control point"""
+        for i, beam in enumerate(self.beam):
+            for j, cp in enumerate(beam.jaws):
+                if cp['x_min'] == -self.options['max_field_size_x'] / 2 and \
+                        cp['x_max'] == self.options['max_field_size_x'] / 2 and \
+                        cp['y_min'] == -self.options['max_field_size_y'] / 2 and \
+                        cp['y_max'] == self.options['max_field_size_y'] / 2:
+                    beam.jaws[j] = beam.jaws[0]
+
 
 class Beam:
     """
     Collect beam information from a beam in a beam sequence of a pydicom RT Plan dataset
     Automatically parses control point data with ControlPoint class
     """
-    def __init__(self, beam_dataset, meter_set, ignore_zero_mu_cp=False):
+    def __init__(self, beam_dataset, meter_set, ignore_zero_mu_cp=False, **kwargs):
         """
         :param beam_dataset: a pydicom beam sequence object
         :type beam_dataset: Dataset
@@ -126,21 +177,19 @@ class Beam:
         :type ignore_zero_mu_cp: bool
         """
 
-        cp_seq = beam_dataset.ControlPointSequence
-        self.control_point = [ControlPoint(cp) for cp in cp_seq]
-        self.control_point_count = len(self.control_point)
+        self.options = get_options(kwargs)
+
+        self.cp_seq = beam_dataset.ControlPointSequence
 
         for bld_seq in beam_dataset.BeamLimitingDeviceSequence:
             if hasattr(bld_seq, 'LeafPositionBoundaries'):
                 self.leaf_boundaries = bld_seq.LeafPositionBoundaries
 
-        self.jaws = [get_jaws(cp) for cp in self.control_point]
-        self.aperture = [get_shapely_from_cp(cp, self.leaf_boundaries) for cp in self.control_point]
-        self.mlc_borders = [get_mlc_borders(cp, self.leaf_boundaries) for cp in self.control_point]
+        self.control_point = [ControlPoint(cp, self.leaf_boundaries) for cp in self.cp_seq]
+        self.control_point_count = len(self.control_point)
 
-        self.gantry_angle = [float(cp.GantryAngle) for cp in cp_seq if hasattr(cp, 'GantryAngle')]
-        self.collimator_angle = [float(cp.BeamLimitingDeviceAngle) for cp in cp_seq if hasattr(cp, 'BeamLimitingDeviceAngle')]
-        self.couch_angle = [float(cp.PatientSupportAngle) for cp in cp_seq if hasattr(cp, 'PatientSupportAngle')]
+        self.jaws = [cp.jaws for cp in self.control_point]
+        self.aperture = [cp.aperture for cp in self.control_point]
 
         self.meter_set = meter_set
         self.control_point_meter_set = np.append([0], np.diff(np.array([cp.cum_mu for cp in self.control_point])))
@@ -155,7 +204,7 @@ class Beam:
         x_paths = np.array([get_xy_path_lengths(cp)[0] for cp in self.aperture])
         y_paths = np.array([get_xy_path_lengths(cp)[1] for cp in self.aperture])
         area = [cp.area for cp in self.aperture]
-        c1, c2 = options.COMPLEXITY_SCORE_X_WEIGHT, options.COMPLEXITY_SCORE_Y_WEIGHT
+        c1, c2 = self.options['complexity_weight_x'], self.options['complexity_weight_y']
         self.complexity_scores = np.divide(np.multiply(np.add(c1*x_paths, c2*y_paths), cp_mu), area) / self.meter_set
         # Complexity score based on:
         # Younge KC, Matuszak MM, Moran JM, McShan DL, Fraass BA, Roberts DA. Penalization of aperture
@@ -194,33 +243,54 @@ class Beam:
                 return False
         return True
 
+    @property
+    def mlc_borders(self):
+        return [cp.mlc_borders for cp in self.control_point]
+
+    @property
+    def gantry_angle(self):
+        return [float(cp.GantryAngle) for cp in self.cp_seq if hasattr(cp, 'GantryAngle')]
+
+    @property
+    def collimator_angle(self):
+        return [float(cp.BeamLimitingDeviceAngle) for cp in self.cp_seq if hasattr(cp, 'BeamLimitingDeviceAngle')]
+
+    @property
+    def couch_angle(self):
+        return [float(cp.PatientSupportAngle) for cp in self.cp_seq if hasattr(cp, 'PatientSupportAngle')]
+
 
 class ControlPoint:
     """
     Collect control point information from a ControlPointSequence in a beam dataset of a pydicom RT Plan dataset
     """
-    def __init__(self, cp_seq):
+    def __init__(self, cp_seq, leaf_boundaries, **kwargs):
         """
         :param cp_seq: control point sequence object
         :type cp_seq: Sequence
         """
-        cp = {'cum_mu': float(cp_seq.CumulativeMetersetWeight)}
-        for device_position_seq in cp_seq.BeamLimitingDevicePositionSequence:
-            leaf_jaw_type = str(device_position_seq.RTBeamLimitingDeviceType).lower()
-            if leaf_jaw_type.startswith('mlc'):
-                cp['leaf_type'] = leaf_jaw_type
-                leaf_jaw_type = 'mlc'
 
-            positions = np.array(list(map(float, device_position_seq.LeafJawPositions)))
-            mid_index = int(len(positions) / 2)
-            cp[leaf_jaw_type] = [positions[:mid_index],
-                                 positions[mid_index:]]
+        self.leaf_boundaries = leaf_boundaries
+        self.options = get_options(kwargs)
 
-        if 'leaf_type' not in list(cp):
-            cp['leaf_type'] = False
+        self.cum_mu = float(cp_seq.CumulativeMetersetWeight)
 
-        for key in cp:
-            setattr(self, key, cp[key])
+        if hasattr(cp_seq, 'BeamLimitingDevicePositionSequence'):
+            for device_position_seq in cp_seq.BeamLimitingDevicePositionSequence:
+                if hasattr(device_position_seq, 'RTBeamLimitingDeviceType') and \
+                        hasattr(device_position_seq, 'LeafJawPositions'):
+                    leaf_jaw_type = str(device_position_seq.RTBeamLimitingDeviceType).lower()
+                    positions = np.array(list(map(float, device_position_seq.LeafJawPositions)))
+                    mid_index = int(len(positions) / 2)
+                    setattr(self, leaf_jaw_type, [positions[:mid_index],
+                                                  positions[mid_index:]])
+
+        self.mlc = None
+        self.leaf_type = False
+        for leaf_type in ['mlcx', 'mlcy']:
+            if getattr(self, leaf_type, None) is not None:
+                self.mlc = getattr(self, leaf_type)
+                self.leaf_type = leaf_type
 
     def __eq__(self, other):
         if abs(self.cum_mu - other.cum_mu) > 0.00001:
@@ -231,140 +301,77 @@ class ControlPoint:
                     print(abs(pos - other.mlc[side][i]))
         return True
 
+    @property
+    def mlc_borders(self):
+        """
+        This function returns the boundaries of each MLC leaf for purposes of displaying a beam's eye view using
+        bokeh's quad() glyph
+        :return: the boundaries of each leaf within the control point
+        :rtype: dict
+        """
+        if self.mlc is not None:
+            top = self.leaf_boundaries[0:-1] + self.leaf_boundaries[0:-1]
+            top = [float(i) for i in top]
+            bottom = self.leaf_boundaries[1::] + self.leaf_boundaries[1::]
+            bottom = [float(i) for i in bottom]
+            left = [- self.options['max_field_size_x'] / 2] * len(self.mlc[0])
+            left.extend(self.mlc[1])
+            right = self.mlc[0].tolist()
+            right.extend([self.options['max_field_size_x'] / 2] * len(self.mlc[1]))
 
-def get_mlc_borders(control_point, leaf_boundaries):
-    """
-    This function returns the boundaries of each MLC leaf for purposes of displaying a beam's eye view using
-    bokeh's quad() glyph
-    :param control_point: a ControlPoint from a pydicom ControlPoint Sequence
-    :type control_point: Dataset
-    :param leaf_boundaries: a LeafPositionBoundaries object from the BeamLimitingDeviceSequence
-    :type leaf_boundaries: MultiValue
-    :return: the boundaries of each leaf within the control point
-    :rtype: dict
-    """
-    top = leaf_boundaries[0:-1] + leaf_boundaries[0:-1]
-    top = [float(i) for i in top]
-    bottom = leaf_boundaries[1::] + leaf_boundaries[1::]
-    bottom = [float(i) for i in bottom]
-    left = [- options.MAX_FIELD_SIZE_X / 2] * len(control_point.mlc[0])
-    left.extend(control_point.mlc[1])
-    right = control_point.mlc[0].tolist()
-    right.extend([options.MAX_FIELD_SIZE_X / 2] * len(control_point.mlc[1]))
+            return {'top': top,
+                    'bottom': bottom,
+                    'left': left,
+                    'right': right}
 
-    return {'top': top,
-            'bottom': bottom,
-            'left': left,
-            'right': right}
+    @property
+    def aperture(self):
+        """
+        This function will return the outline of MLCs within jaws
+        :return: a shapely object of the complete MLC aperture as one shape (including MLC overlap)
+        :rtype: Polygon
+        """
+        lb = self.leaf_boundaries
+        mlc = self.mlc
 
+        jaws = self.jaws
+        jaw_points = [(jaws['x_min'], jaws['y_min']),
+                      (jaws['x_min'], jaws['y_max']),
+                      (jaws['x_max'], jaws['y_max']),
+                      (jaws['x_max'], jaws['y_min'])]
+        jaw_shapely = Polygon(jaw_points)
 
-def get_shapely_from_cp(control_point, leaf_boundaries):
-    """
-    This function will return the outline of MLCs within jaws
-    :param control_point: a ControlPoint from a pydicom ControlPoint Sequence
-    :type control_point: Dataset
-    :param leaf_boundaries: a LeafPositionBoundaries object from the BeamLimitingDeviceSequence
-    :type leaf_boundaries: MultiValue
-    :return: a shapely object of the complete MLC aperture as one shape (including MLC overlap)
-    :rtype: Polygon
-    """
-    lb = leaf_boundaries
-    mlc = control_point.mlc
-    jaws = get_jaws(control_point)
-    x_min, x_max = jaws['x_min'], jaws['x_max']
-    y_min, y_max = jaws['y_min'], jaws['y_max']
+        if self.leaf_type == 'mlcx':
+            a = flatten([[(m, lb[i]), (m, lb[i + 1])] for i, m in enumerate(mlc[0])])
+            b = flatten([[(m, lb[i]), (m, lb[i + 1])] for i, m in enumerate(mlc[1])])
+        elif self.leaf_type == 'mlcy':
+            a = flatten([[(lb[i], m), (lb[i + 1], m)] for i, m in enumerate(mlc[0])])
+            b = flatten([[(lb[i], m), (lb[i + 1], m)] for i, m in enumerate(mlc[1])])
+        else:
+            return jaw_shapely
 
-    jaw_points = [(x_min, y_min), (x_min, y_max), (x_max, y_max), (x_max, y_min)]
-    jaw_shapely = Polygon(jaw_points)
+        mlc_points = a + b[::-1]  # concatenate a and reverse(b)
+        mlc_aperture = Polygon(mlc_points).buffer(0)
 
-    if control_point.leaf_type == 'mlcx':
-        a = flatten([[(m, lb[i]), (m, lb[i+1])] for i, m in enumerate(mlc[0])])
-        b = flatten([[(m, lb[i]), (m, lb[i+1])] for i, m in enumerate(mlc[1])])
-    elif control_point.leaf_type == 'mlcy':
-        a = flatten([[(lb[i], m), (lb[i + 1], m)] for i, m in enumerate(mlc[0])])
-        b = flatten([[(lb[i], m), (lb[i + 1], m)] for i, m in enumerate(mlc[1])])
-    else:
-        return jaw_shapely
+        # This function is very slow, since jaws are rectangular, perhaps there's a more efficient method?
+        aperture = mlc_aperture.intersection(jaw_shapely)
 
-    mlc_points = a + b[::-1]  # concatenate a and reverse(b)
-    mlc_aperture = Polygon(mlc_points).buffer(0)
+        return aperture
 
-    # This function is very slow, since jaws are rectangular, perhaps there's a more efficient method?
-    aperture = mlc_aperture.intersection(jaw_shapely)
+    @property
+    def jaws(self):
+        """
+        Get the jaw positions of a control point
+        :return: jaw positions (or max field size in lieu of a jaw)
+        :rtype: dict
+        """
 
-    return aperture
+        jaws = {}
 
+        for dim in ['x', 'y']:
+            half = self.options['max_field_size_%s' % dim] / 2.
+            values = getattr(self, 'asym%s' % dim, [-half, half])
+            jaws['%s_min' % dim] = min(values)
+            jaws['%s_max' % dim] = max(values)
 
-def get_jaws(control_point):
-    """
-    Get the jaw positions of a control point
-    :param control_point: a ControlPoint from a pydicom ControlPoint Sequence
-    :type control_point: Dataset
-    :return: jaw positions (or max field size in lieu of a jaw)
-    :rtype: dict
-    """
-
-    cp = control_point
-
-    # Determine jaw opening
-    if hasattr(cp, 'asymy'):
-        y_min = min(cp.asymy)
-        y_max = max(cp.asymy)
-    else:
-        y_min = -options.MAX_FIELD_SIZE_Y / 2.
-        y_max = options.MAX_FIELD_SIZE_Y / 2.
-    if hasattr(cp, 'asymx'):
-        x_min = min(cp.asymx)
-        x_max = max(cp.asymx)
-    else:
-        x_min = -options.MAX_FIELD_SIZE_X / 2.
-        x_max = options.MAX_FIELD_SIZE_X / 2.
-
-    jaws = {'x_min': float(x_min),
-            'x_max': float(x_max),
-            'y_min': float(y_min),
-            'y_max': float(y_max)}
-
-    return jaws
-
-
-def get_xy_path_lengths(shapely_object):
-    """
-    Get the x and y path lengths of a a Shapely object
-    :param shapely_object: either 'GeometryCollection', 'MultiPolygon', or 'Polygon'
-    :return: path lengths in the x and y directions
-    :rtype: list
-    """
-    path = np.array([0., 0.])
-    if shapely_object.type == 'GeometryCollection':
-        for geometry in shapely_object.geoms:
-            if geometry.type in {'MultiPolygon', 'Polygon'}:
-                path = np.add(path, get_xy_path_lengths(geometry))
-    elif shapely_object.type == 'MultiPolygon':
-        for shape in shapely_object:
-            path = np.add(path, get_xy_path_lengths(shape))
-    elif shapely_object.type == 'Polygon':
-        x, y = np.array(shapely_object.exterior.xy[0]), np.array(shapely_object.exterior.xy[1])
-        path = np.array([np.sum(np.abs(np.diff(x))), np.sum(np.abs(np.diff(y)))])
-
-    return path.tolist()
-
-
-def update_missing_jaws(beam_list):
-    """
-    In plans with static jaws throughout the beam, jaw positions may not be found in each control point
-    :param beam_list: a list of Beam Class objects
-    :return: a list of Beam Class objects, but any control point where jaws are set to max will be replaced by the
-    first control point jaw settings
-    :rtype: list
-    """
-
-    for i, beam in enumerate(beam_list):
-        for j, cp in enumerate(beam.jaws):
-            if cp['x_min'] == -options.MAX_FIELD_SIZE_X / 2 and \
-                            cp['x_max'] == options.MAX_FIELD_SIZE_X / 2 and \
-                            cp['y_min'] == -options.MAX_FIELD_SIZE_Y / 2 and \
-                            cp['y_max'] == options.MAX_FIELD_SIZE_Y / 2:
-                beam_list[i].jaws[j] = beam.jaws[0]
-
-    return beam_list
+        return jaws

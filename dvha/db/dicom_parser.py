@@ -18,6 +18,7 @@ from os.path import basename, join
 from pubsub import pub
 import pydicom
 from dvha.options import Options
+from dvha.tools.errors import push_to_log
 from dvha.tools.roi_name_manager import clean_name, DatabaseROIs
 from dvha.tools.utilities import change_angle_origin, calc_stats, is_date, validate_transfer_syntax_uid
 from dvha.tools.roi_formatter import dicompyler_roi_coord_to_db_string, get_planes_from_string
@@ -61,6 +62,7 @@ class DICOM_Parser:
         self.import_path = options.IMPORTED_DIR
         self.dvh_bin_max_dose = options.dvh_bin_max_dose
         self.dvh_bin_max_dose_units = options.dvh_bin_max_dose_units
+        self.mlca_options = options.MLC_ANALYZER_OPTIONS
 
         self.plan_file = plan_file
         self.structure_file = structure_file
@@ -132,7 +134,7 @@ class DICOM_Parser:
                 cp_seq = self.get_cp_sequence(self.beam_sequence[beam_num])
                 ref_beam_seq_index = self.get_referenced_beam_sequence_index(fx_grp_seq, beam_number)
                 ref_beam_seq = fx_grp_seq.ReferencedBeamSequence[ref_beam_seq_index]
-                self.beam_data[fx_grp_index].append(BeamParser(beam_seq, ref_beam_seq, cp_seq))
+                self.beam_data[fx_grp_index].append(BeamParser(beam_seq, ref_beam_seq, cp_seq, self.mlca_options))
 
                 beam_num += 1
 
@@ -149,8 +151,8 @@ class DICOM_Parser:
         for i, ref_beam_seq in enumerate(fx_grp_seq.ReferencedBeamSequence):
             if ref_beam_seq.ReferencedBeamNumber == beam_number:
                 return i
-        print('ERROR: Failed to find a matching reference beam in '
-              'ReferencedBeamSequence for beam number %s' % beam_number)
+        push_to_log(msg='DICOM_Parser: Failed to find a matching reference beam in '
+                        'ReferencedBeamSequence for beam number %s' % beam_number)
 
     def get_rx_data_from_dummy_rois(self):
         """
@@ -769,13 +771,15 @@ class DICOM_Parser:
     @property
     def plan_complexity(self):
         plan_complexity = 0
-        for fx in self.beam_data.values():
+        fx_counts = self.fxs
+        for fx_index, fx in self.beam_data.items():
+            fxs = fx_counts[fx_index]
             for beam in fx:
                 complexity = beam.mlc_stat_data['complexity']
                 if complexity:
-                    plan_complexity += complexity
+                    plan_complexity += complexity * fxs
         if plan_complexity:
-            return plan_complexity
+            return plan_complexity / sum(fx_counts)
 
     # ------------------------------------------------------------------------------
     # DVH table data
@@ -890,8 +894,9 @@ class DICOM_Parser:
         coord = self.dicompyler_data['structure'].GetStructureCoordinates(key)
         try:
             return roi_calc.surface_area(coord)
-        except Exception:
-            print("Surface area calculation failed for key, name: %s, %s" % (key, self.get_roi_name(key)))
+        except Exception as e:
+            msg = "DICOM_Parser: Surface area calculation failed for key, name: %s, %s" % (key, self.get_roi_name(key))
+            push_to_log(e, msg=msg)
 
     def get_dvh_geometries(self, key):
         """
@@ -905,8 +910,9 @@ class DICOM_Parser:
 
         try:
             surface_area = roi_calc.surface_area(structure_coord)
-        except Exception:
-            print("Surface area calculation failed for key, name: %s, %s" % (key, self.get_roi_name(key)))
+        except Exception as e:
+            msg = "DICOM_Parser: Surface area calculation failed for key, name: %s, %s" % (key, self.get_roi_name(key))
+            push_to_log(e, msg=msg)
             surface_area = None
 
         roi_coord_str = dicompyler_roi_coord_to_db_string(structure_coord)
@@ -970,7 +976,7 @@ class DICOM_Parser:
             else:
                 return datetime.strptime(datetime_str, '%Y%m%d')
         except Exception as e:
-            print(e)
+            push_to_log(e, msg="DICOM_Parser: get_time_stamp failed")
 
     def is_beam_with_rad_type_in_plan(self, rad_type):
         """
@@ -1038,7 +1044,7 @@ class BeamParser:
     """
     This class is used to parse beam data needed for importing a plan into the database
     """
-    def __init__(self, beam_data, ref_beam_data, cp_seq):
+    def __init__(self, beam_data, ref_beam_data, cp_seq, mlc_analyzer_options):
         """
         :param beam_data:
         :param ref_beam_data:
@@ -1047,6 +1053,7 @@ class BeamParser:
         self.beam_data = beam_data
         self.ref_beam_data = ref_beam_data
         self.cp_seq = cp_seq
+        self.options = mlc_analyzer_options
 
     ################################################################################
     # General beam parser tools
@@ -1286,11 +1293,11 @@ class BeamParser:
     def mlc_stat_data(self):
         mlc_keys = ['area', 'x_perim', 'y_perim', 'perim', 'cmp_score', 'cp_mu']
         try:
-            mlc_summary_data = mlca(self.beam_data, self.beam_mu, ignore_zero_mu_cp=True).summary
+            mlc_summary_data = mlca(self.beam_data, self.beam_mu, ignore_zero_mu_cp=True, **self.options).summary
             mlca_stat_data = {key: calc_stats(mlc_summary_data[key]) for key in mlc_keys}
             mlca_stat_data['complexity'] = np.sum(mlc_summary_data['cmp_score'])
         except Exception as e:
-            print('WARNING: Skipping mlc_stat_data calculation because ', str(e))
+            push_to_log(e, msg='BeamParser: skipping mlc_stat_data calculation')
             mlca_stat_data = {key: [None] * 6 for key in mlc_keys}
             mlca_stat_data['complexity'] = None
         return mlca_stat_data
@@ -1394,8 +1401,8 @@ class RxParser:
             return self.pinnacle_rx_data['fx_dose']
         try:
             return round(self.rx_dose / float(self.fx_count), 2)
-        except Exception:
-            print('WARNING: Unable to calculate fx_dose')
+        except Exception as e:
+            push_to_log(e, msg="RxParser: Unable to calculate fx_dose")
 
     @property
     def normalization_method(self):

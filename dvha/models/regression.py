@@ -20,6 +20,7 @@ from dvha.dialogs.export import save_data_to_file
 from dvha.dialogs.main import SelectRegressionVariablesDialog
 from dvha.options import DefaultOptions
 from dvha.paths import ICONS, MODELS_DIR
+from dvha.tools.errors import push_to_log
 from dvha.tools.stats import MultiVariableRegression
 from dvha.tools.utilities import set_msw_background_color, get_tree_ctrl_image, get_window_size, load_object_from_file,\
     set_frame_icon
@@ -220,7 +221,8 @@ class RegressionFrame:
             index = self.choices.index(self.y_axis)
             self.spin_button_y_axis.SetValue(len(self.choices)-1 - index)
         else:
-            print('ERROR: x-axis choice is empty.')
+            msg = 'RegressionFrame.sync_spin_buttons: x-axis choice is empty.'
+            push_to_log(msg=msg)
 
     def on_checkbox(self, *evt):
         y_value = self.combo_box_y_axis.GetValue()

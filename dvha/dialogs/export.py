@@ -18,7 +18,7 @@ from pubsub import pub
 from dvha.db.sql_connector import DVH_SQL
 from dvha.models.data_table import DataTable
 from dvha.paths import DATA_DIR
-from dvha.tools.threading import ProgressFrame
+from dvha.tools.threading_progress import ProgressFrame
 from dvha.tools.utilities import get_selected_listctrl_items, save_object_to_file,\
     set_msw_background_color, set_frame_icon
 

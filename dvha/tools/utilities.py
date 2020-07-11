@@ -27,6 +27,7 @@ import sys
 import tracemalloc
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import SQL_CNF_PATH, WIN_APP_ICON, PIP_LIST_PATH, DIRECTORIES, APP_DIR, BACKUP_DIR, DATA_DIR
+from dvha.tools.errors import push_to_log
 
 
 IGNORED_FILES = ['.ds_store']
@@ -363,9 +364,10 @@ def calc_stats(data):
                     np.mean(data_np),
                     np.percentile(data_np, 25),
                     np.min(data_np)]
-    except Exception:
+    except Exception as e:
         rtn_data = [0, 0, 0, 0, 0, 0]
-        print("calc_stats() received non-numerical data")
+        msg = "tools.utilities.calc_stats: received non-numerical data"
+        push_to_log(e, msg=msg)
     return rtn_data
 
 
@@ -406,7 +408,7 @@ def delete_file(file_path):
         elif isdir(file_path):
             shutil.rmtree(file_path)
     except Exception as e:
-        print(e)
+        push_to_log(e, msg='tools.utilities.delete_file: %s' % file_path)
 
 
 def delete_imported_dicom_files(dicom_files):
@@ -813,3 +815,53 @@ def backup_sqlite_db(options):
 def main_is_frozen():
     # https://pyinstaller.readthedocs.io/en/stable/runtime-information.html
     return getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')
+
+
+def get_xy_path_lengths(shapely_object):
+    """
+    Get the x and y path lengths of a a Shapely object
+    :param shapely_object: either 'GeometryCollection', 'MultiPolygon', or 'Polygon'
+    :return: path lengths in the x and y directions
+    :rtype: list
+    """
+    path = np.array([0., 0.])
+    if shapely_object.type == 'GeometryCollection':
+        for geometry in shapely_object.geoms:
+            if geometry.type in {'MultiPolygon', 'Polygon'}:
+                path = np.add(path, get_xy_path_lengths(geometry))
+    elif shapely_object.type == 'MultiPolygon':
+        for shape in shapely_object:
+            path = np.add(path, get_xy_path_lengths(shape))
+    elif shapely_object.type == 'Polygon':
+        x, y = np.array(shapely_object.exterior.xy[0]), np.array(shapely_object.exterior.xy[1])
+        path = np.array([np.sum(np.abs(np.diff(x))), np.sum(np.abs(np.diff(y)))])
+
+    return path.tolist()
+
+
+def recalculate_plan_complexities_from_beams():
+    with DVH_SQL() as cnx:
+        uids = cnx.get_unique_values('Plans', 'study_instance_uid')
+
+        for uid in uids:
+            try:
+                condition = "study_instance_uid = '%s'" % uid
+                beam_complexities = cnx.query('Beams', 'fx_count, complexity, fx_grp_number', condition)
+                complexity = {}
+                fx_counts = {}
+                for row in beam_complexities:
+                    fx_count, beam_complexity, fx_group_number = tuple(row)
+                    if fx_group_number not in complexity:
+                        complexity[fx_group_number] = 0.0
+                        fx_counts[fx_group_number] = fx_count
+                    complexity[fx_group_number] += beam_complexity
+
+                total_fx = float(sum([fx for fx in fx_counts.values()]))
+                plan_complexity = sum([c * fx_counts[fx_grp] for fx_grp, c in complexity.items()]) / total_fx
+            except Exception as e:
+                msg = "tools.utilities.recalculate_plan_complexities_from_beams: failed on uid = %s" % uid
+                push_to_log(e, msg=msg)
+                plan_complexity = None
+
+            if plan_complexity is not None:
+                cnx.update('Plans', 'complexity', plan_complexity, condition)

@@ -33,7 +33,7 @@ from dvha.models.data_table import DataTable
 from dvha.models.roi_map import RemapROIFrame
 from dvha.paths import ICONS, TEMP_DIR
 from dvha.tools.dicom_dose_sum import DoseGrid
-from dvha.tools.errors import ErrorDialog
+from dvha.tools.errors import ErrorDialog, push_to_log
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
     set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size,\
@@ -1222,8 +1222,9 @@ class StudyImporter:
                 try:
                     dvh_row = parsed_data.get_dvh_row(roi_key)
                 except MemoryError as e:
-                    print('Skipping roi: %s, for mrn: %s' % (roi_name_map[roi_key], mrn))
-                    print('Memory Error:\n%s' % e)
+                    msg = 'StudyImporter.run: Memory Error - ' \
+                          'Skipping roi: %s, for mrn: %s' % (roi_name_map[roi_key], mrn)
+                    push_to_log(e, msg=msg)
                     dvh_row = None
 
                 if dvh_row:
@@ -1291,8 +1292,8 @@ class StudyImporter:
                 self.update_ptv_data_in_db(tv, study_uid)
 
             else:
-                print("WARNING: No PTV found for mrn: %s" % mrn)
-                print("\tSkipping PTV related calculations.")
+                msg = "StudyImporter.run: Skipping PTV related calculations. No PTV found for mrn: %s" % mrn
+                push_to_log(msg=msg)
 
         if self.terminate:
             self.delete_partially_updated_plan()
@@ -1491,10 +1492,10 @@ class ImportWorker(Thread):
                     args = (init_param, msg, self.import_uncategorized, final_plan)
                     queue.put(args)
                 else:
-                    print('ERROR: This plan could not be parsed. Skipping import.'
-                          'Did you supply RT Structure, Dose, and Plan?')
-                    print('\tPlan UID: %s' % plan_uid)
-                    print('\tMRN: %s' % self.data[plan_uid].mrn)
+                    msg = 'ImportWorker.import_queue: This plan could not be parsed. Skipping import. ' \
+                          'Did you supply RT Structure, Dose, and Plan?\n\tPlan UID: %s\n\tMRN: %s' % \
+                          (plan_uid, self.data[plan_uid].mrn)
+                    push_to_log(msg=msg)
 
                 plan_counter += 1
         return queue

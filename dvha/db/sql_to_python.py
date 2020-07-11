@@ -12,6 +12,7 @@ A generic class to query a DVHA SQL table and parse the return into a python obj
 
 from dvha.db.sql_connector import DVH_SQL
 from dateutil.parser import parse as date_parser
+from dvha.tools.errors import push_to_log
 
 
 class QuerySQL:
@@ -58,7 +59,7 @@ class QuerySQL:
                             rtn_list = get_unique_list(rtn_list)
                         setattr(self, column, rtn_list)  # create property of QuerySQL based on SQL column name
         else:
-            print('Table name in valid. Please select from Beams, DVHs, Plans, or Rxs.')
+            push_to_log(msg='QuerySQL: Table name in valid. Please select from Beams, DVHs, Plans, or Rxs.')
 
     def cursor_to_list(self, force_date=False):
         """

@@ -18,6 +18,7 @@ from threading import Thread
 from queue import Queue
 from dvha.db.dicom_parser import DICOM_Parser
 from dvha.paths import ICONS
+from dvha.tools.errors import push_to_log
 from dvha.tools.utilities import get_file_paths
 from time import sleep
 
@@ -509,7 +510,8 @@ class DicomDirectoryParserWorker(Thread):
         if ds is not None:
 
             if not self.is_data_set_valid(ds):
-                print('Cannot parse %s\nOne of these tags is missing: %s' % (file_path, ', '.join(self.req_tags)))
+                msg = 'Cannot parse %s\nOne of these tags is missing: %s' % (file_path, ', '.join(self.req_tags))
+                push_to_log(msg=msg)
             else:
                 modality = ds.Modality.lower()
                 timestamp = os.path.getmtime(file_path)

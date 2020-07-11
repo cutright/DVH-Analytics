@@ -1,5 +1,12 @@
 # Change log of DVH Analytics
 
+v0.8.4 (2020.07.11)
+--------------------
+ - [Database] Better exception catch for SQL Write Test
+ - [Logging] Redirect print statements to logger
+ - [Import] Plan complexities are now fx-weighted sums over Rx complexities
+ - [Plotting] Allow for LCL/UCL overrides (e.g., capping pass-rates capped 100%)
+
 v0.8.3 (2020.06.11)
 --------------------
  - [Database] Initialize SQL tables if needed on Write Test (avoids crash)

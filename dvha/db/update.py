@@ -17,6 +17,7 @@ import pydicom as dicom
 from dvha.db.sql_connector import DVH_SQL
 from dvha.tools import roi_geometry as roi_geom
 from dvha.tools import roi_formatter as roi_form
+from dvha.tools.errors import push_to_log
 from dvha.tools.mlc_analyzer import Beam as BeamAnalyzer
 from dvha.tools.utilities import calc_stats, sample_roi
 
@@ -120,15 +121,10 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
             treatment_volume_coord = sample_roi(treatment_volume_coord, max_point_count=3000)
             oar_coordinates = sample_roi(oar_coordinates,  max_point_count=3000)
             data = roi_geom.min_distances_to_target(oar_coordinates, treatment_volume_coord)
-        except MemoryError as e:
-            print("Memory Error: ", e)
-            print('Error reported for %s with study_instance_uid %s' % (roi_name, study_instance_uid))
-            print('Skipping PTV distance and DTH calculations for this ROI.')
-            data = None
         except Exception as e:
-            print('Error: ', e)
-            print('Error reported for %s with study_instance_uid %s' % (roi_name, study_instance_uid))
-            print('Skipping PTV distance and DTH calculations for this ROI.')
+            msg = 'db.update.min_distances: Error reported for %s with study_instance_uid %s\n' \
+                  'Skipping PTV distance and DTH calculations for this ROI.' % (roi_name, study_instance_uid)
+            push_to_log(e, msg=msg)
             data = None
 
     if data is not None:
@@ -142,9 +138,9 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
                         'dist_to_ptv_max': round(float(np.max(data)), 2),
                         'dth_string': dth_string}
         except MemoryError as e:
-            print("Memory Error: ", e)
-            print('Error reported for %s with study_instance_uid %s' % (roi_name, study_instance_uid))
-            print('Skipping PTV distance and DTH calculations for this ROI.')
+            msg = 'Error reported for %s with study_instance_uid %s\n' \
+                  'Skipping PTV distance and DTH calculations for this ROI.' % (roi_name, study_instance_uid)
+            push_to_log(e, msg=msg)
             data_map = None
 
         if data_map:
@@ -248,7 +244,8 @@ def plan_complexity(cnx, study_instance_uid):
         complexity = np.sum(np.multiply(scores, beam_mu)) / plan_mu
         cnx.update('Plans', 'complexity', complexity, "study_instance_uid = '%s'" % study_instance_uid)
     else:
-        print('Zero plan MU detected for uid %s' % study_instance_uid)
+        msg = 'db.update.plan_complexity: Zero plan MU detected for uid %s' % study_instance_uid
+        push_to_log(msg=msg)
 
 
 def beam_complexity(cnx, study_instance_uid):
@@ -283,8 +280,10 @@ def beam_complexity(cnx, study_instance_uid):
                     column = "%s_%s" % (c, s)
                     cnx.update('Beams', column, value, condition)
             cnx.update('Beams', 'complexity', np.sum(mlca_data.summary['cmp_score']), condition)
-        except Exception:
-            print('MLC Analyzer fail for beam number %s and uid %s' % ((beam_num+1), study_instance_uid))
+        except Exception as e:
+            msg = 'db.update.beam_complexity: MLC Analyzer fail for beam number %s and uid %s' % \
+                  ((beam_num+1), study_instance_uid)
+            push_to_log(e, msg=msg)
 
 
 def update_all_generic(table, func, condition):

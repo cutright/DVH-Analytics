@@ -12,6 +12,9 @@ Classes for DVHA specific error handling
 
 import wx
 from dvha.paths import APP_DIR
+import logging
+
+logger = logging.getLogger('dvha')
 
 
 class SQLError(Exception):
@@ -103,3 +106,12 @@ class MemoryErrorDialog(ErrorDialog):
         :param parent: the wx parent object
         """
         ErrorDialog.__init__(self, parent, message, "Memory Error")
+
+
+def push_to_log(exception=None, msg=None, msg_type='warning'):
+    if exception is None:
+        text = str(msg)
+    else:
+        text = "%s\n%s" % (msg, exception) if msg is not None else str(exception)
+    func = getattr(logger, msg_type)
+    func(text)

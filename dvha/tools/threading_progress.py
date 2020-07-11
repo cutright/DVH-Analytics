@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# threading.py
+# threading_progress.py
 """
 Generic classes to perform threading with a progress frame
 """
