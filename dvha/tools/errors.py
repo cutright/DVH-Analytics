@@ -12,7 +12,6 @@ Classes for DVHA specific error handling
 
 import wx
 from dvha.paths import APP_DIR
-from pubsub import pub
 import logging
 
 logger = logging.getLogger('dvha')
