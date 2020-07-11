@@ -270,7 +270,8 @@ class Plot:
         try:
             file_name = save_data_to_file(parent, title, partial(self.save_figure, attr_dicts),
                                           initial_dir="", data_type='function', wildcard=FIG_WILDCARDS)
-            ErrorDialog(parent, "Output saved to %s" % file_name, "Save Successful", flags=wx.OK | wx.OK_DEFAULT)
+            if file_name is not None:
+                ErrorDialog(parent, "Output saved to %s" % file_name, "Save Successful", flags=wx.OK | wx.OK_DEFAULT)
         except Exception as e:
             if "phantomjs is not present" in str(e).lower():
                 msg = "Please download a phantomjs executable from https://phantomjs.org/download.html " \
