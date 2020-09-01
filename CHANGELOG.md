@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.8.4post1 (2020.08.31)
+--------------------
+ - [PyPI] Correction to MANIFEST.in to include TG263 CSV worksheet
+
 v0.8.4 (2020.07.11)
 --------------------
  - [Database] Better exception catch for SQL Write Test
