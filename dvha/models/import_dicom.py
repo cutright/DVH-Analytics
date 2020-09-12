@@ -1536,6 +1536,7 @@ class ImportWorker(Thread):
         counter = 1
         while len(file_save_names) < len(list(dose_file_sets)):
             file_save_name = "temp_dose_sum_%s" % counter
+            counter += 1
             if file_save_name not in current_temp_files:
                 file_save_names.append(file_save_name)
 
