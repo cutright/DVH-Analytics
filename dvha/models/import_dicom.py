@@ -1529,10 +1529,10 @@ class ImportWorker(Thread):
 
     @staticmethod
     def update_copy_status(i, file_count, file_name):
-        status = "Copying file %s of %s: %s" % (i+1, file_count, file_name)
+        status = "Copying file %s of %s" % (i+1, file_count)
         progress = (float(i) / file_count) * 100
         msg = {'calculation': status,
-               'roi_num': i, 'roi_total': file_count, 'roi_name': '', 'progress': progress}
+               'roi_num': i, 'roi_total': file_count, 'roi_name': file_name, 'progress': progress}
         wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
 
     def track_move_files_msg(self, msg):
