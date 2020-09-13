@@ -184,6 +184,7 @@ class DefaultOptions:
         self.KEEP_IN_INBOX = 0
         self.SEARCH_SUBFOLDERS = 1
         self.IMPORT_UNCATEGORIZED = 0
+        self.COPY_MISC_FILES = 0
 
         self.INBOX_DIR = INBOX_DIR
         self.IMPORTED_DIR = IMPORTED_DIR

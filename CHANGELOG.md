@@ -3,6 +3,7 @@
 v0.8.5 (2020.09.12)
 --------------------
  - [Import] DICOM RT-Dose summation bug fix when multiple patient summations occur [Issue 94](https://github.com/cutright/DVH-Analytics/issues/94)
+ - [Import] Option to skip copying of images/misc DICOM files to imported directory [Issue 93](https://github.com/cutright/DVH-Analytics/issues/93)
 
 v0.8.4post1 (2020.08.31)
 --------------------

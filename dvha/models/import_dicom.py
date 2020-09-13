@@ -110,6 +110,8 @@ class ImportDicomFrame(wx.Frame):
         self.button_browse = wx.Button(self, wx.ID_ANY, u"Browse…")
         self.checkbox_subfolders = wx.CheckBox(self, wx.ID_ANY, "Search within sub-folders")
         self.checkbox_keep_in_inbox = wx.CheckBox(self, wx.ID_ANY, "Leave files in inbox")
+        self.checkbox_copy_misc_files = wx.CheckBox(self, wx.ID_ANY,
+                                                  "Copy images/misc DICOM")
         self.panel_study_tree = wx.Panel(self, wx.ID_ANY, style=wx.BORDER_SUNKEN)
         self.button_import = wx.Button(self, wx.ID_ANY, "Import")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
@@ -208,8 +210,19 @@ class ImportDicomFrame(wx.Frame):
         self.checkbox_keep_in_inbox.SetToolTip("Successfully imported DICOM files will either be copied or moved into "
                                                "your Imported Directory. Check this box to copy. Uncheck this box to "
                                                "remove these files from the inbox.")
-        value = self.options.KEEP_IN_INBOX if hasattr(self.options, 'KEEP_IN_INBOX') else 0
+        value = self.options.KEEP_IN_INBOX if hasattr(self.options,
+                                                      'KEEP_IN_INBOX') else 0
         self.checkbox_keep_in_inbox.SetValue(value)
+
+        self.checkbox_copy_misc_files.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
+                                                    wx.FONTSTYLE_NORMAL,
+                                                    wx.FONTWEIGHT_NORMAL, 0,
+                                                    ""))
+        self.checkbox_copy_misc_files.SetToolTip("Uncheck to only copy DICOM-RT Dose, Structure and Plan files to DVH imported directory.")
+
+        value = self.options.COPY_MISC_FILES if hasattr(self.options,
+                                                      'COPY_MISC_FILES') else 0
+        self.checkbox_copy_misc_files.SetValue(value)
 
         self.checkbox_include_uncategorized.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT,
                                                             wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
@@ -290,6 +303,7 @@ class ImportDicomFrame(wx.Frame):
         sizer_import_checkboxes.Add(self.checkbox_subfolders, 0, wx.LEFT, 10)
         sizer_import_checkboxes.Add(self.checkbox_keep_in_inbox, 0, wx.LEFT, 10)
         sizer_directory.Add(sizer_import_checkboxes, 1, wx.EXPAND, 0)
+        sizer_directory.Add(self.checkbox_copy_misc_files, 0, wx.LEFT, 10)
         sizer_dicom_import_directory.Add(sizer_directory, 1, wx.EXPAND, 0)
         sizer_browse_and_tree.Add(sizer_dicom_import_directory, 0, wx.ALL | wx.EXPAND, 10)
         label_note = wx.StaticText(self, wx.ID_ANY,
@@ -812,6 +826,7 @@ class ImportDicomFrame(wx.Frame):
                 self.roi_map.write_to_file()
                 self.options.set_option('KEEP_IN_INBOX', self.checkbox_keep_in_inbox.GetValue())
                 self.options.set_option('AUTO_SUM_DOSE', self.checkbox_auto_sum_dose.GetValue())
+                self.options.set_option('COPY_MISC_FILES', self.checkbox_copy_misc_files.GetValue())
                 self.options.save()
                 study_uid_dict = get_study_uid_dict(list(self.dicom_importer.checked_plans), self.parsed_dicom_data,
                                                     multi_plan_only=True)
@@ -826,7 +841,7 @@ class ImportDicomFrame(wx.Frame):
                     ImportWorker(self.parsed_dicom_data, list(self.dicom_importer.checked_plans),
                                  self.checkbox_include_uncategorized.GetValue(),
                                  self.dicom_importer.other_dicom_files, self.start_path, self.checkbox_keep_in_inbox.GetValue(),
-                                 self.roi_map, self.options.USE_DICOM_DVH, self.checkbox_auto_sum_dose.GetValue())
+                                 self.roi_map, self.options.USE_DICOM_DVH, self.checkbox_auto_sum_dose.GetValue(), self.checkbox_copy_misc_files.GetValue())
                     dlg = ImportStatusDialog()
                     # calling self.Close() below caused issues in Windows if Show() used instead of ShowModal()
                     [dlg.Show, dlg.ShowModal][is_windows()]()
@@ -1373,7 +1388,7 @@ class ImportWorker(Thread):
     Create a thread separate from the GUI to perform the import calculations
     """
     def __init__(self, data, checked_uids, import_uncategorized, other_dicom_files, start_path,
-                 keep_in_inbox, roi_map, use_dicom_dvh, auto_sum_dose):
+                 keep_in_inbox, roi_map, use_dicom_dvh, auto_sum_dose, copy_misc_files):
         """
         :param data: parsed dicom data
         :type data: dict
@@ -1390,7 +1405,8 @@ class ImportWorker(Thread):
         :type use_dicom_dvh: bool
         :param auto_sum_dose:
         :type auto_sum_dose: bool
-
+        :param copy_misc_files:
+        :type copy_misc_files: bool
         """
         Thread.__init__(self)
 
@@ -1405,6 +1421,7 @@ class ImportWorker(Thread):
         self.roi_map = roi_map
         self.use_dicom_dvh = use_dicom_dvh
         self.auto_sum_dose = auto_sum_dose
+        self.copy_misc_files = copy_misc_files
 
         self.dose_sum_save_file_names = self.get_dose_sum_save_file_names()
         self.move_msg_queue = []
@@ -1503,7 +1520,7 @@ class ImportWorker(Thread):
     def move_files(self):
         for msg in self.move_msg_queue:
             files = msg['files']
-            if msg['uid'] in self.other_dicom_files.keys():
+            if self.copy_misc_files and msg['uid'] in self.other_dicom_files.keys():
                 files.extend(self.other_dicom_files[msg['uid']])
 
             new_dir = join(msg['import_path'], msg['mrn'])
