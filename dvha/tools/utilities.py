@@ -387,7 +387,7 @@ def move_files_to_new_path(files, new_dir, copy_files=False, new_file_names=None
     """
     for i, file_path in enumerate(files):
         if callback is not None:
-            callback(i, len(files), file_path)
+            callback(i, len(files))
         if isfile(file_path):
             file_name = basename(file_path)
             old_dir = dirname(file_path)
