@@ -371,7 +371,7 @@ def calc_stats(data):
     return rtn_data
 
 
-def move_files_to_new_path(files, new_dir, copy_files=False, new_file_names=None):
+def move_files_to_new_path(files, new_dir, copy_files=False, new_file_names=None, callback=None):
     """
     Move all files provided to the new directory
     :param files: absolute file paths
@@ -382,8 +382,12 @@ def move_files_to_new_path(files, new_dir, copy_files=False, new_file_names=None
     :type copy_files: bool
     :param new_file_names: optionally provide a list of new names
     :type new_file_names: None or list of str
+    :param callback: optional function to call at the start of each iteration
+    :type callback: callable
     """
     for i, file_path in enumerate(files):
+        if callback is not None:
+            callback(i, len(files), file_path)
         if isfile(file_path):
             file_name = basename(file_path)
             old_dir = dirname(file_path)
