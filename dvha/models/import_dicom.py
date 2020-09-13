@@ -1525,6 +1525,7 @@ class ImportWorker(Thread):
 
             new_dir = join(msg['import_path'], msg['mrn'])
             move_files_to_new_path(files, new_dir, copy_files=self.keep_in_inbox, callback=self.update_copy_status)
+        self.move_msg_queue = []  # clear queue
 
     @staticmethod
     def update_copy_status(i, file_count, file_name):
