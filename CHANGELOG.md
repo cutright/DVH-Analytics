@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.8.5 (2020.09.12)
+--------------------
+ - [Import] DICOM RT-Dose summation bug fix when multiple patient summations occur [Issue 94](https://github.com/cutright/DVH-Analytics/issues/94)
+
 v0.8.4post1 (2020.08.31)
 --------------------
  - [PyPI] Correction to MANIFEST.in to include TG263 CSV worksheet
