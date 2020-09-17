@@ -3,6 +3,9 @@
 // March 30, 2017
 // Notes for POI-generation scripts
 
+IMPORTANT: These scripts are intended for a single COMPOSITE export per Planning CT/Image.
+DVHA will not know how to associate each Rx POI to each Plan other.
+
 Both of the following scripts are required for expected functionality:
 DVH-Analytics_Create-POIs.Script.p3rtp
 DVH-Analytics_Create-Rx-POI.Script.p3rtp
