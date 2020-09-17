@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.8.6 (2020.09.17)
+--------------------
+ - [Import] Don't allow DICOM DVH import from a summed dose grid [Issue 95](https://github.com/cutright/DVH-Analytics/issues/95)
+ 
 v0.8.5 (2020.09.12)
 --------------------
  - [Import] DICOM RT-Dose summation bug fix when multiple patient summations occur [Issue 94](https://github.com/cutright/DVH-Analytics/issues/94)

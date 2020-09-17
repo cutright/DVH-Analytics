@@ -429,7 +429,7 @@ class DICOM_Parser:
             limit = int(self.dvh_bin_max_dose['Gy'] * 100.)
 
         dvh = None
-        if self.use_dicom_dvh:
+        if self.use_dicom_dvh and self.dose_sum_file is None:
             try:
                 dvh = dicompyler_dvh.DVH.from_dicom_dvh(self.rt_data['dose'], dvh_index)
             except AttributeError:  # dicompyler-core raises this if structure is not found in DICOM DVH
