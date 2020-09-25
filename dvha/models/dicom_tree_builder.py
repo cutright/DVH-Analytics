@@ -149,7 +149,7 @@ class DicomTreeBuilder:
         self.tree_ctrl_files.Expand(self.root_files)
         self.tree_ctrl_files.ExpandAllChildren(self.root_files)
 
-        PreImportFileSetParserWorker(self.dicom_file_paths)
+        PreImportFileSetParserWorker(self.dicom_file_paths, self.other_dicom_files)
 
     def rebuild_tree_ctrl_rois(self, plan_uid):
         """
@@ -647,12 +647,13 @@ class DicomDirectoryParserWorker(Thread):
 
 
 class PreImportFileSetParserWorker(Thread):
-    def __init__(self, file_paths):
+    def __init__(self, file_paths, other_dicom_files):
         Thread.__init__(self)
 
         pub.sendMessage("pre_import_progress_set_title", msg='Parsing File Sets')
 
         self.file_paths = file_paths
+        self.other_dicom_files = other_dicom_files
         self.total_plan_count = len(self.file_paths)
 
         self.start()
@@ -672,7 +673,8 @@ class PreImportFileSetParserWorker(Thread):
             if self.file_paths[uid]['rtplan'] and self.file_paths[uid]['rtstruct'] and self.file_paths[uid]['rtdose']:
                 init_params = {'plan_file': self.file_paths[uid]['rtplan'][0],
                                'structure_file': self.file_paths[uid]['rtstruct'][0],
-                               'dose_file': self.file_paths[uid]['rtdose'][0]}
+                               'dose_file': self.file_paths[uid]['rtdose'][0],
+                               'other_dicom_files': self.other_dicom_files}
                 msg = {'label': 'Parsing File Set %s of %s' % (plan_counter+1, self.total_plan_count),
                        'gauge': plan_counter / self.total_plan_count}
                 queue.put((uid, init_params, msg))

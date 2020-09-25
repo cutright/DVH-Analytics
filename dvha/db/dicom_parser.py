@@ -32,7 +32,7 @@ class DICOM_Parser:
     Parse a set of DICOM files for database
     """
     def __init__(self, plan_file=None, structure_file=None, dose_file=None, dose_sum_file=None, plan_over_rides=None,
-                 global_plan_over_rides=None, roi_over_ride=None, roi_map=None, use_dicom_dvh=False, plan_ptvs=None):
+                 global_plan_over_rides=None, roi_over_ride=None, roi_map=None, use_dicom_dvh=False, plan_ptvs=None, other_dicom_files=None):
         """
         :param plan_file: absolute path of DICOM RT Plan file
         :type plan_file: str
@@ -113,6 +113,7 @@ class DICOM_Parser:
                 self.structure_name_and_type[key][over_ride_type] = value
 
         self.plan_ptvs = plan_ptvs
+        self.other_dicom_files = other_dicom_files
 
     def update_stored_values(self):
         keys = ['study_instance_uid_to_be_imported', 'patient_name', 'mrn', 'sim_study_date', 'birth_date',
@@ -590,6 +591,10 @@ class DICOM_Parser:
             ans = self.plan_over_rides['sim_study_date']
         else:
             ans = self.get_attribute('plan', 'StudyDate')
+            if not ans:
+                ans = self.find_first_value_from_other_dicom_files('StudyDate')
+                ans = ans if ans else ''
+        ans = self.process_global_over_ride('sim_study_date', ans)
         return self.process_global_over_ride('sim_study_date', ans)
 
     @property
@@ -1038,6 +1043,14 @@ class DICOM_Parser:
         """
         progress = float(current_plane) / float(plane_count)
         pub.sendMessage('update_dvh_progress', msg=progress)
+
+    def find_first_value_from_other_dicom_files(self, attr):
+        if self.other_dicom_files and self.study_instance_uid in self.other_dicom_files:
+            for f in self.other_dicom_files[self.study_instance_uid]:
+                ds = pydicom.read_file(f)
+                modality = getattr(ds, 'Modality')
+                if modality.lower() in ['ct', 'mr'] and hasattr(ds, attr):
+                    return getattr(ds, attr)
 
 
 class BeamParser:
