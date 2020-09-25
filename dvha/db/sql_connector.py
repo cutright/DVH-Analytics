@@ -674,6 +674,11 @@ class DVH_SQL:
         with open(file_path, 'w') as fp:
             json.dump(json_data, fp)
 
+    def get_ptv_counts(self):
+        results = self.query("DVHs", "study_instance_uid", "roi_type like 'PTV%'")
+        uids = [uid[0] for uid in results]
+        return {uid: uids.count(uid) for uid in list(set(uids))}
+
 
 def truncate_string(input_string, character_limit):
     """
