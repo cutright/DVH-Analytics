@@ -289,7 +289,7 @@ def spread(roi):
                   'z': np.array(all_points['z'])}
 
     if len(all_points['x'] > 1):
-        data = [abs(float(np.max(all_points[dim]) - np.min(all_points[dim]))) for dim in ['x', 'y', 'z']]
+        data = [abs(float(np.max(all_points[dim]) - np.min(all_points[dim])))/10. for dim in ['x', 'y', 'z']]
     else:
         data = [0, 0, 0]
 

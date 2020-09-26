@@ -4,6 +4,7 @@ v0.8.7 (TBD)
 --------------------
  - [Import] If DICOM-RT Plan doesn't have a StudyDate, other dicom files with 
  matching StudyInstanceUID will be searched. The StudyDate from the first CT or MR file will be used.
+ - [Import] ROI/PTV spread values are now in cm to match displayed units.
 
 
 v0.8.6 (2020.09.17)
