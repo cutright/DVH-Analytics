@@ -860,7 +860,7 @@ class ImportDicomFrame(wx.Frame):
             dlg.Destroy()
 
     def parse_dicom_data(self):
-        PreImportFileSetParserWorker(self.dicom_importer.dicom_file_paths)
+        PreImportFileSetParserWorker(self.dicom_importer.dicom_file_paths, self.dicom_importer.other_dicom_files)
 
     def pre_import_complete(self):
         self.label_progress.SetLabelText("Plan count: %s" % len(list(self.dicom_importer.plan_nodes)))
