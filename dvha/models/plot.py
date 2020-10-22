@@ -908,8 +908,12 @@ class PlotCorrelation(Plot):
             pub.sendMessage("correlation_patients_removed", msg={'mrns': removed_mrns})
 
         if stats_data_2 is not None:
-            data_2 = stats_data_2.get_corr_matrix_data(self.options,
+            data_2, removed_mrns_2 = stats_data_2.get_corr_matrix_data(self.options,
                                                        included_vars=included_vars, extra_vars=extra_vars[2])
+
+            if removed_mrns_2:
+                pub.sendMessage("correlation_patients_removed", msg={'mrns': removed_mrns_2})
+
             for key in list(data_2['source_data']['corr']):
                 data['source_data']['corr'][key].extend(data_2['source_data']['corr'][key])
 
