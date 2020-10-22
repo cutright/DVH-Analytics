@@ -1,12 +1,11 @@
 # Change log of DVH Analytics
 
-v0.8.7 (TBD)
+v0.8.7 (2020.10.21)
 --------------------
  - [Import] If DICOM-RT Plan doesn't have a StudyDate, other dicom files with 
  matching StudyInstanceUID will be searched. The StudyDate from the first CT or MR file will be used.
  - [Import] ROI/PTV spread values are now in cm to match displayed units.
  - [Correlation] Bug fix for Group 2 Correlation Matrix [Issue 97](https://github.com/cutright/DVH-Analytics/issues/97)
-
 
 v0.8.6 (2020.09.17)
 --------------------
