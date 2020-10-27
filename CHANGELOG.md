@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.8.8 (TBD)
+--------------------
+ - [Import] Check FileDataSet object for ReferencedRTPlanSequence before use [Issue 100](https://github.com/cutright/DVH-Analytics/issues/100)
+
 v0.8.7 (2020.10.21)
 --------------------
  - [Import] If DICOM-RT Plan doesn't have a StudyDate, other dicom files with 
