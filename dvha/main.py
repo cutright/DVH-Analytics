@@ -412,8 +412,8 @@ class DVHAMainFrame(wx.Frame):
         panel_left.Add(sizer_query_categorical, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.SHAPED | wx.TOP, 5)
         panel_left.Add(sizer_query_numerical, 0, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT | wx.SHAPED, 5)
         sizer_query_exec_buttons.Add(self.radio_button_query_group, 0, 0, 0)
-        sizer_query_exec_buttons.Add(self.button_query_execute, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER, 10)
-        panel_left.Add(sizer_query_exec_buttons, 0, wx.EXPAND | wx.ALIGN_CENTER | wx.RIGHT | wx.LEFT, 5)
+        sizer_query_exec_buttons.Add(self.button_query_execute, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+        panel_left.Add(sizer_query_exec_buttons, 0, wx.EXPAND | wx.RIGHT | wx.LEFT, 5)
         panel_left.Add(sizer_summary, 1, wx.ALL | wx.EXPAND, 5)
 
         bitmap_logo = wx.StaticBitmap(self.notebook_tab['Welcome'], wx.ID_ANY,
