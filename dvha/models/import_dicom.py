@@ -821,7 +821,7 @@ class ImportDicomFrame(wx.Frame):
     def on_import(self, evt):
         if self.parsed_dicom_data and self.dicom_importer.checked_plans:
             if sql_write_test()['write']:
-                self.patient_orientation_warning()
+                # self.patient_orientation_warning()
 
                 self.roi_map.write_to_file()
                 self.options.set_option('KEEP_IN_INBOX', self.checkbox_keep_in_inbox.GetValue())

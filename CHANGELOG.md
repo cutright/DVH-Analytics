@@ -3,7 +3,7 @@
 v0.8.8 (TBD)
 --------------------
  - [Import] Check FileDataSet object for ReferencedRTPlanSequence before use [Issue 100](https://github.com/cutright/DVH-Analytics/issues/100)
- - [Misc] Support for wxPython 4.1.0
+ - [Import] dicompyler-core upgraded for non-HFS DVH support, missing tag catches for RTPLan date/time [Issue 62](https://github.com/cutright/DVH-Analytics/issues/62) and [Issue 99](https://github.com/cutright/DVH-Analytics/issues/99)
 
 v0.8.7 (2020.10.21)
 --------------------
