@@ -111,6 +111,8 @@ class DVHAMainFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
+        self.SetMinSize((1350, 900))
+
         self.layout_set = False
 
         self.sizer_dvhs = wx.BoxSizer(wx.VERTICAL)
