@@ -180,6 +180,14 @@ class DVHAMainFrame(wx.Frame):
 
         self.__do_subscribe()
 
+        # Temporary dicompyler-core check until released on PyPI
+        from dicompylercore import __version__ as dicompylercore_version
+        if dicompylercore_version != "0.5.6":
+            msg = "dicompyler-core >= 0.5.6 is required for non-HFS imports. Please upgrade dicompyler-core with\n\n" \
+                  "pip install --upgrade git+https://github.com/dicompyler/dicompyler-core.git\n\nand relaunch DVHA"
+            caption = "dicompyler-core Version Warning"
+            ErrorDialog(self, msg, caption)
+
     def __add_tool_bar(self):
         self.frame_toolbar = wx.ToolBar(self, -1, style=wx.TB_HORIZONTAL | wx.TB_TEXT)
         self.SetToolBar(self.frame_toolbar)
