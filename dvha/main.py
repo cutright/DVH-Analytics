@@ -118,6 +118,7 @@ class DVHAMainFrame(wx.Frame):
         set_msw_background_color(self)  # If windows, change the background color
 
         self.options = Options()
+        self.SetMinSize(self.options.MIN_RESOLUTION_MAIN)
 
         # Initial DVH object and data
         self.save_data = {}
@@ -178,6 +179,14 @@ class DVHAMainFrame(wx.Frame):
         self.correlation_error_displayed = False
 
         self.__do_subscribe()
+
+        # Temporary dicompyler-core check until released on PyPI
+        from dicompylercore import __version__ as dicompylercore_version
+        if dicompylercore_version != "0.5.6":
+            msg = "dicompyler-core >= 0.5.6 is required for non-HFS imports. Please upgrade dicompyler-core with\n\n" \
+                  "pip install --upgrade git+https://github.com/dicompyler/dicompyler-core.git\n\nand relaunch DVHA"
+            caption = "dicompyler-core Version Warning"
+            ErrorDialog(self, msg, caption)
 
     def __add_tool_bar(self):
         self.frame_toolbar = wx.ToolBar(self, -1, style=wx.TB_HORIZONTAL | wx.TB_TEXT)
@@ -412,8 +421,8 @@ class DVHAMainFrame(wx.Frame):
         panel_left.Add(sizer_query_categorical, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.SHAPED | wx.TOP, 5)
         panel_left.Add(sizer_query_numerical, 0, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT | wx.SHAPED, 5)
         sizer_query_exec_buttons.Add(self.radio_button_query_group, 0, 0, 0)
-        sizer_query_exec_buttons.Add(self.button_query_execute, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER, 10)
-        panel_left.Add(sizer_query_exec_buttons, 0, wx.EXPAND | wx.ALIGN_CENTER | wx.RIGHT | wx.LEFT, 5)
+        sizer_query_exec_buttons.Add(self.button_query_execute, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+        panel_left.Add(sizer_query_exec_buttons, 0, wx.EXPAND | wx.RIGHT | wx.LEFT, 5)
         panel_left.Add(sizer_summary, 1, wx.ALL | wx.EXPAND, 5)
 
         bitmap_logo = wx.StaticBitmap(self.notebook_tab['Welcome'], wx.ID_ANY,
@@ -480,7 +489,10 @@ class DVHAMainFrame(wx.Frame):
         self.SetSizer(sizer_main)
         self.Layout()
 
-        self.SetSize(get_window_size(0.833, 0.875))
+        size = get_window_size(0.833, 0.875)
+        size_final = (max(size[0], self.options.MIN_RESOLUTION_MAIN[0]),
+                      max(size[1], self.options.MIN_RESOLUTION_MAIN[1]))
+        self.SetSize(size_final)
 
         self.Center()
 

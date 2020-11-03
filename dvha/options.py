@@ -215,6 +215,8 @@ class DefaultOptions:
 
         self.AUTO_SQL_DB_BACKUP = False
 
+        self.MIN_RESOLUTION_MAIN = (1350, 900)
+
 
 class Options(DefaultOptions):
     def __init__(self):

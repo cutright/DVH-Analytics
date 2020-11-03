@@ -559,7 +559,10 @@ class DicomDirectoryParserWorker(Thread):
                         self.dicom_file_paths[plan_uid]['rtplan'] = [file_path]
 
                     elif modality == 'rtdose':
-                        uid = ds.ReferencedRTPlanSequence[0].ReferencedSOPInstanceUID
+                        if hasattr(ds, 'ReferencedRTPlanSequence'):
+                            uid = ds.ReferencedRTPlanSequence[0].ReferencedSOPInstanceUID
+                        else:
+                            uid = None
                         self.dicom_tag_values[file_path]['ref_sop_instance'] = {'type': 'plan',
                                                                                 'uid': uid}
                     else:

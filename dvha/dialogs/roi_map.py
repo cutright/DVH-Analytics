@@ -203,7 +203,6 @@ class TG263Dialog(wx.Dialog):
         return [key for key, checkbox in self.checkbox.items() if checkbox.GetValue()]
 
 
-# TODO: Disable ability to use Variation Manager on 'DEFAULT' physician
 class RoiManager(wx.Dialog):
     """
     Dialog accessible from the DICOM import GUI to allow user to easily update the ROI map with new plans
@@ -248,6 +247,8 @@ class RoiManager(wx.Dialog):
         self.__set_properties()
         self.__do_layout()
         self.__do_bind()
+
+        self.physician_ticker()
 
         self.run()
 
@@ -348,9 +349,14 @@ class RoiManager(wx.Dialog):
         self.data_table.set_data(self.variation_table_data, self.columns)
         self.update_button_enable()
 
-    def physician_ticker(self, evt):
+    def physician_ticker(self, *evt):
         self.update_physician_rois()
         self.update_variations()
+        if self.physician == "DEFAULT":
+            self.set_all_button_enable(False)
+        else:
+            self.set_all_button_enable(True)
+            self.update_button_enable()
 
     def physician_roi_ticker(self, evt):
         self.update_variations()
@@ -419,6 +425,15 @@ class RoiManager(wx.Dialog):
             self.button_move.Disable()
             self.button_delete.Disable()
             self.button_deselect_all.Disable()
+
+    def set_all_button_enable(self, status):
+        self.button_select_all.Enable(status)
+        self.button_deselect_all.Enable(status)
+        self.button_add.Enable(status)
+        self.button_delete.Enable(status)
+        self.button_move.Enable(status)
+        # self.button_add_physician.Enable(status)
+        self.button_add_physician_roi.Enable(status)
 
     def add_physician_roi(self, evt):
         old_physician_rois = self.roi_map.get_physician_rois(self.physician)
@@ -714,7 +729,8 @@ class AddPhysicianROI(wx.Dialog):
                                            self.text_ctrl_physician_roi.GetValue())
 
             # in case user changed the name in this dlg
-            self.roi_map.add_variations(self.physician, self.text_ctrl_physician_roi.GetValue(), self.physician_roi)
+            if self.physician_roi:
+                self.roi_map.add_variations(self.physician, self.text_ctrl_physician_roi.GetValue(), self.physician_roi)
         else:
             self.roi_map.add_institutional_roi(self.text_ctrl_physician_roi.GetValue())
 
