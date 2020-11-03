@@ -111,8 +111,6 @@ class DVHAMainFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.SetMinSize((1350, 900))
-
         self.layout_set = False
 
         self.sizer_dvhs = wx.BoxSizer(wx.VERTICAL)
@@ -120,6 +118,7 @@ class DVHAMainFrame(wx.Frame):
         set_msw_background_color(self)  # If windows, change the background color
 
         self.options = Options()
+        self.SetMinSize(self.options.MIN_RESOLUTION_MAIN)
 
         # Initial DVH object and data
         self.save_data = {}
@@ -482,7 +481,10 @@ class DVHAMainFrame(wx.Frame):
         self.SetSizer(sizer_main)
         self.Layout()
 
-        self.SetSize(get_window_size(0.833, 0.875))
+        size = get_window_size(0.833, 0.875)
+        size_final = (max(size[0], self.options.MIN_RESOLUTION_MAIN[0]),
+                      max(size[1], self.options.MIN_RESOLUTION_MAIN[1]))
+        self.SetSize(size_final)
 
         self.Center()
 
