@@ -61,11 +61,11 @@ class PhysicianROI:
     def del_variation(self, variations):
         if type(variations) is not list:
             variations = list(variations)
-        clean_variations = self.clean_variations
-        for variation in variations:
-            clean_variation = clean_name(variation)
-            if clean_variation in clean_variations and clean_variation not in self.clean_top_level:
-                index = clean_variations.index(clean_variation)
+
+        for v in variations:
+            cv = clean_name(v)
+            if cv in self.clean_variations and cv not in self.clean_top_level:
+                index = self.clean_variations.index(cv)
                 self.variations.pop(index)
 
     def del_all_variations(self):
@@ -810,7 +810,7 @@ class DatabaseROIs:
                                 self.physicians[physician].rois[physician_roi.strip()].roi_type = roi_type.strip()
                             except Exception as e:
                                 msg = 'DatabaseROIs.load_roi_types_from_file: ' \
-                                      'Could not import % roi_type for physician %s' % (physician_roi, physician)
+                                      'Could not import %s roi_type for physician %s' % (physician_roi, physician)
                                 push_to_log(e, msg=msg)
 
 
