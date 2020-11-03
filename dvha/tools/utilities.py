@@ -397,8 +397,9 @@ def move_files_to_new_path(files, new_dir, copy_files=False, new_file_names=None
                 mkdir(new_dir)
             if old_dir != new_dir:
                 if copy_files and isfile(new):
-                    delete_file(new)
-                [shutil.move, shutil.copy][copy_files](file_path, new)
+                    pass
+                else:
+                    [shutil.move, shutil.copy][copy_files](file_path, new)
 
 
 def delete_directory_contents(dir_to_delete):
