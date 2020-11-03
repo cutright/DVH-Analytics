@@ -556,7 +556,8 @@ class ImportDicomFrame(wx.Frame):
 
             popup = PopupMenu(self)
             for i, label in enumerate(labels):
-                popup.add_menu_item(label, partial(pre_func, dlg_objects[i]))
+                if self.input['physician'].GetValue() != "DEFAULT":
+                    popup.add_menu_item(label, partial(pre_func, dlg_objects[i]))
             # if is_mapped:
             #     popup.add_menu_item("Do Not Import", partial(pre_func, dlg_objects[0]))
 
