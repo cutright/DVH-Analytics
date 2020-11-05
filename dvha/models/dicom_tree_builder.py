@@ -576,16 +576,27 @@ class DicomDirectoryParserWorker(Thread):
             ref_plan_uid = dose_tag_values['ref_sop_instance']['uid']
             study_uid = dose_tag_values['study_instance_uid']
             mrn = dose_tag_values['mrn']
-            for plan_file_set in self.plan_file_sets[mrn][study_uid].values():
-                plan_uid = plan_file_set['rtplan']['sop_instance_uid']
-                if plan_uid == ref_plan_uid:
-                    self.dicom_tag_values[dose_file]['matched'] = True
-                    plan_file_set['rtdose'] = {'file_path': dose_file,
-                                               'sop_instance_uid': dose_tag_values['sop_instance_uid']}
-                    if 'rtdose' in self.dicom_file_paths[plan_uid].keys():
-                        self.dicom_file_paths[plan_uid]['rtdose'].append(dose_file)
-                    else:
-                        self.dicom_file_paths[plan_uid]['rtdose'] = [dose_file]
+            if mrn in self.plan_file_sets.keys():
+                if study_uid in self.plan_file_sets[mrn].keys():
+                    for plan_file_set in self.plan_file_sets[mrn][study_uid].values():
+                        plan_uid = plan_file_set['rtplan']['sop_instance_uid']
+                        if plan_uid == ref_plan_uid:
+                            self.dicom_tag_values[dose_file]['matched'] = True
+                            plan_file_set['rtdose'] = {'file_path': dose_file,
+                                                       'sop_instance_uid': dose_tag_values['sop_instance_uid']}
+                            if 'rtdose' in self.dicom_file_paths[plan_uid].keys():
+                                self.dicom_file_paths[plan_uid]['rtdose'].append(dose_file)
+                            else:
+                                self.dicom_file_paths[plan_uid]['rtdose'] = [dose_file]
+                else:
+                    msg = "%s: StudyInstanceUID from DICOM-RT Dose file " \
+                          "could not be matched to any DICOM-RT Plan" % dose_file
+                    push_to_log(msg=msg)
+
+            else:
+                msg = "%s: PatientID from DICOM-RT Dose file could not be " \
+                      "matched to any DICOM-RT Plan" % dose_file
+                push_to_log(msg=msg)
 
         # associate appropriate rtstruct files to plans
         for mrn_index, mrn in enumerate(list(self.plan_file_sets)):

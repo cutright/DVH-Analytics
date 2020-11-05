@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.8.9 (2020.11.03)
+--------------------
+ - [Import] Importing DICOM-RT Dose file no longer causes crash if no matching Plan is found [Issue 105](https://github.com/cutright/DVH-Analytics/issues/105)
+
 v0.8.8 (2020.11.03)
 --------------------
  - [Import] Check FileDataSet object for ReferencedRTPlanSequence before use [Issue 100](https://github.com/cutright/DVH-Analytics/issues/100)
