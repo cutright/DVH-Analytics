@@ -29,6 +29,7 @@ import tracemalloc
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import SQL_CNF_PATH, WIN_APP_ICON, PIP_LIST_PATH, DIRECTORIES, APP_DIR, BACKUP_DIR, DATA_DIR
 from dvha.tools.errors import push_to_log
+from pubsub import pub
 
 
 IGNORED_FILES = ['.ds_store']
@@ -899,12 +900,12 @@ def get_new_uid(used_uids=None):
     return uid
 
 
-def uid_prep_by_directory(start_path, call_back=None):
+def uid_prep_by_directory(start_path, callback=None):
     """
     Generate new StudyInstanceUIDs, assuming all DICOM files in a directory are matched
     :param start_path: initial directory
     :type start_path str
-    :param call_back: optional call-back function called after each file completes
+    :param callback: optional call-back function called after each file completes
     :return: New StudyInstanceUIDs by directory, and edit history
     :rtype: dict, dict
     """
@@ -912,16 +913,21 @@ def uid_prep_by_directory(start_path, call_back=None):
     file_total = sum([len(files) for files in file_paths.values()])
     edit_history = {}
     study_uids = {}
+    file_counter = 0
     for i, (directory, files) in enumerate(file_paths.items()):
         study_uids[directory] = get_new_uid(used_uids=list(study_uids.values()))
-        print("\nDirectory %s of %s: %s" % (i+1, len(file_paths), directory))
         for f, file in enumerate(files):
-            print("File %s of %s: %s" % (f+1, len(files), file))
+            if callback is not None:
+                msg = {"label": "Processing (%s of %s): %s" % (file_counter, file_total, file),
+                       "gauge": float(file_counter / file_total)}
+                wx.CallAfter(callback, msg)
             abs_file_path = join(directory, file)
             try:
                 ds = pydicom.read_file(abs_file_path, stop_before_pixels=True, force=True)
             except InvalidDicomError:
                 ds = None
+            except Exception as e:
+                push_to_log(e, file)
             if ds is not None:
                 try:
                     edit_history[abs_file_path] = {'old': ds.StudyInstanceUID, 'new': study_uids[directory]}
@@ -929,7 +935,6 @@ def uid_prep_by_directory(start_path, call_back=None):
                     ds.save_as(abs_file_path)
                 except Exception:
                     pass
-            if call_back is not None:
-                call_back(100. * f+1 / file_total)
-    return study_uids, edit_history
+            file_counter += 1
 
+    return study_uids, edit_history
