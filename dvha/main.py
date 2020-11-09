@@ -22,7 +22,7 @@ from pubsub import pub
 from dvha.db import sql_columns
 from dvha.db.sql_to_python import QuerySQL
 from dvha.db.sql_connector import echo_sql_db, initialize_db
-from dvha.dialogs.main import query_dlg, UserSettings, About, PythonLibraries, do_sqlite_backup
+from dvha.dialogs.main import query_dlg, UserSettings, About, PythonLibraries, do_sqlite_backup, SelectMLVarDialog
 from dvha.dialogs.database import SQLSettingsDialog
 from dvha.dialogs.export import ExportCSVDialog, ExportFigure, ExportPGSQLProgressFrame
 from dvha.models.import_dicom import ImportDicomFrame
@@ -35,7 +35,7 @@ from dvha.models.queried_data import QueriedDataFrame
 from dvha.models.rad_bio import RadBioFrame
 from dvha.models.time_series import TimeSeriesFrame
 from dvha.models.correlation import CorrelationFrame
-from dvha.models.machine_learning import MachineLearningModelViewer
+from dvha.models.machine_learning import MachineLearningModelViewer, ALGORITHMS, RandomForestFrame
 from dvha.models.regression import RegressionFrame, LoadMultiVarModelFrame
 from dvha.models.control_chart import ControlChartFrame
 from dvha.models.roi_map import ROIMapFrame
@@ -129,7 +129,7 @@ class DVHAMainFrame(wx.Frame):
                                'data': {key: None for key in ['Plans', 'Beams', 'Rxs']},
                                'stats_data': None}}
 
-        self.toolbar_keys = ['Open', 'Close', 'Save', 'Export', 'Image', 'Import', 'Database', 'ROI Map', 'Settings']
+        self.toolbar_keys = ['Open', 'Close', 'Save', 'Export', 'Image', 'Import', 'Database', 'ROI Map', 'ML', 'Settings']
         self.toolbar_ids = {key: i + 1000 for i, key in enumerate(self.toolbar_keys)}
 
         # sql_columns.py contains dictionaries of all queryable variables along with their
@@ -201,7 +201,8 @@ class DVHAMainFrame(wx.Frame):
                        'Import': "DICOM import wizard",
                        'Settings': "User Settings",
                        'Database': "Database Administrator Tools",
-                       'ROI Map': "Define ROI name aliases"}
+                       'ROI Map': "Define ROI name aliases",
+                       'ML': "Machine Learning"}
 
         for key in self.toolbar_keys:
             bitmap = wx.Bitmap(ICONS[key], wx.BITMAP_TYPE_ANY)
@@ -210,7 +211,7 @@ class DVHAMainFrame(wx.Frame):
             self.frame_toolbar.AddTool(self.toolbar_ids[key], key, bitmap,
                                        wx.NullBitmap, wx.ITEM_NORMAL, description[key], "")
 
-            if key in {'Close', 'Image', 'ROI Map'}:
+            if key in {'Close', 'Image', 'ROI Map', 'ML'}:
                 separator_count = 4 if is_windows() else 1  # MSW separator is very thin compared to mac
                 for _ in range(separator_count):
                     self.frame_toolbar.AddSeparator()
@@ -222,6 +223,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.on_toolbar_database, id=self.toolbar_ids['Database'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_settings, id=self.toolbar_ids['Settings'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_roi_map, id=self.toolbar_ids['ROI Map'])
+        self.Bind(wx.EVT_TOOL, self.on_toolbar_ml, id=self.toolbar_ids['ML'])
         self.Bind(wx.EVT_TOOL, self.on_close, id=self.toolbar_ids['Close'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_import, id=self.toolbar_ids['Import'])
 
@@ -678,6 +680,60 @@ class DVHAMainFrame(wx.Frame):
 
     def on_toolbar_roi_map(self, evt):
         self.check_db_then_call(ROIMapFrame, 'roi_map', self.roi_map)
+
+    def on_toolbar_ml(self, evt):
+        if self.group_data[self.selected_group]['dvh'] is not None:
+            choices = self.group_data[self.selected_group][
+                'stats_data'].variables
+            dlg_y = SelectMLVarDialog(choices)
+            res_y = dlg_y.ShowModal()
+
+            dlg_X = None
+            y_var = None
+            X_vars = None
+            ml_type = None
+            ml_alg = None
+            if res_y == wx.ID_OK:
+                if dlg_y.selected_values:
+                    y_var = dlg_y.selected_values[0]
+                    choices = sorted(
+                        list(set(choices) - set(dlg_y.selected_values)))
+                    dlg_X = SelectMLVarDialog(choices, single_mode=False)
+
+            dlg_y.Destroy()
+            if dlg_X:
+                res_X = dlg_X.ShowModal()
+                if res_X == wx.ID_OK:
+                    X_vars = dlg_X.selected_values
+
+            if X_vars and y_var:
+                choices = ["Regression", "Classification"]
+                dlg_type = SelectMLVarDialog(choices)
+                res_type = dlg_type.ShowModal()
+                if res_type == wx.ID_OK:
+                    if dlg_type.selected_values:
+                        ml_type = dlg_type.selected_values[0]
+                        dlg_alg = SelectMLVarDialog(ALGORITHMS, algorithm=True)
+                        res_alg = dlg_alg.ShowModal()
+                        if res_alg == wx.ID_OK:
+                            if dlg_alg.selected_values:
+                                ml_alg = dlg_alg.selected_values[0]
+
+            X, y, mrn, uid, dates = self.group_data[self.selected_group][
+                'stats_data'].get_X_and_y(y_var, X_vars,
+                                          include_patient_info=True)
+            stats_data = {'X': X,
+                          'y': y,
+                          'x_variables': X_vars,
+                          'y_variable': y_var,
+                          'options': self.options,
+                          'mrn': mrn,
+                          'study_date': dates,
+                          'uid': uid}
+            # RandomForestFrame(self, stats_data)
+        else:
+            wx.MessageBox('There is no data to use! Please query some data first.', 'Data Error',
+                          wx.OK | wx.ICON_WARNING)
 
     def on_sqlite_backup(self, *evt):
         wx.CallAfter(do_sqlite_backup, self, self.options)

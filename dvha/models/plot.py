@@ -1770,7 +1770,7 @@ class PlotMachineLearning(Plot):
     """
     Generate plot for Machine Learning frames created in the MultiVariable Regression frame
     """
-    def __init__(self, parent, options, multi_var_pred, x_variables, y_variable, mrn, study_date, uid,
+    def __init__(self, parent, options, x_variables, y_variable, mrn, study_date, uid, multi_var_pred=None,
                  ml_type=None, ml_type_short=None, include_test_data=True, **kwargs):
         """
         :param parent: the wx UI object where the plot will be displayed
