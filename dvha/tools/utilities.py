@@ -922,10 +922,11 @@ def uid_prep_by_directory(start_path, callback=None):
                        "gauge": float(file_counter / file_total)}
                 wx.CallAfter(callback, msg)
             abs_file_path = join(directory, file)
+            ds = None
             try:
                 ds = pydicom.read_file(abs_file_path, stop_before_pixels=True, force=True)
             except InvalidDicomError:
-                ds = None
+                pass
             except Exception as e:
                 push_to_log(e, file)
             if ds is not None:
