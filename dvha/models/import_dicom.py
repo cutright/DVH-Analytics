@@ -117,7 +117,7 @@ class ImportDicomFrame(wx.Frame):
         self.button_import = wx.Button(self, wx.ID_ANY, "Import")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
         self.button_save_roi_map = wx.Button(self, wx.ID_ANY, "Save ROI Map")
-        self.button_preprocess = wx.Button(self, wx.ID_ANY, "Pre-Preprocess DICOM")
+        self.button_preprocess = wx.Button(self, wx.ID_ANY, "Pre-Process DICOM")
 
         self.panel_roi_tree = wx.Panel(self, wx.ID_ANY, style=wx.BORDER_SUNKEN)
         self.input_roi = {'physician': wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY),
