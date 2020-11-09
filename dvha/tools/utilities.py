@@ -21,6 +21,7 @@ from os.path import join, isfile, isdir, splitext, basename, dirname, realpath, 
 import pickle
 import pydicom
 from pydicom.uid import ImplicitVRLittleEndian
+from pydicom.errors import InvalidDicomError
 import shutil
 from subprocess import check_output
 import sys
@@ -105,7 +106,7 @@ def get_tree_ctrl_image(file_path, file_type=wx.BITMAP_TYPE_PNG, width=16, heigh
     return wx.Image(file_path, file_type).Scale(width, height).ConvertToBitmap()
 
 
-def get_file_paths(start_path, search_subfolders=False, extension=None):
+def get_file_paths(start_path, search_subfolders=False, extension=None, return_dict=False):
     """
     Get a list of absolute file paths for a given directory
     :param start_path: initial directory
@@ -115,19 +116,25 @@ def get_file_paths(start_path, search_subfolders=False, extension=None):
     :param extension: optionally include only files with specified extension
     :type extension: str
     :return: absolute file paths
-    :rtype: list
+    :rtype: list or dict
     """
     if isdir(start_path):
+        file_paths = []
+        file_paths_dict = {}
         if search_subfolders:
-            file_paths = []
             for root, dirs, files in walk(start_path, topdown=False):
                 for name in files:
                     if extension is None or splitext(name)[1].lower() == extension.lower():
                         if name.lower() not in IGNORED_FILES:
                             file_paths.append(join(root, name))
+                            if return_dict:
+                                if root not in file_paths_dict.keys():
+                                    file_paths_dict[root] = []
+                                file_paths_dict[root].append(name)
+            if return_dict:
+                return file_paths_dict
             return file_paths
 
-        file_paths = []
         for f in listdir(start_path):
             if isfile(join(start_path, f)):
                 if extension is None or splitext(f)[1].lower() == extension.lower():
@@ -873,3 +880,56 @@ def recalculate_plan_complexities_from_beams():
 
             if plan_complexity is not None:
                 cnx.update('Plans', 'complexity', plan_complexity, condition)
+
+
+def get_new_uid(used_uids=None):
+    """
+    Get a new UID using pydicom
+    :param used_uids: Do not return a UID that is in this list
+    :type used_uids: list
+    :return: A new UID not found in the current DVHA database or in the used_uids
+    :rtype: str
+    """
+    uid_found = False
+    used_uids = [] if used_uids is None else used_uids
+    with DVH_SQL() as cnx:
+        while not uid_found:
+            uid = pydicom.uid.generate_uid()
+            uid_found = not cnx.is_uid_imported(uid) and uid not in used_uids
+    return uid
+
+
+def uid_prep_by_directory(start_path, call_back=None):
+    """
+    Generate new StudyInstanceUIDs, assuming all DICOM files in a directory are matched
+    :param start_path: initial directory
+    :type start_path str
+    :param call_back: optional call-back function called after each file completes
+    :return: New StudyInstanceUIDs by directory, and edit history
+    :rtype: dict, dict
+    """
+    file_paths = get_file_paths(start_path, search_subfolders=True, return_dict=True)
+    file_total = sum([len(files) for files in file_paths.values()])
+    edit_history = {}
+    study_uids = {}
+    for i, (directory, files) in enumerate(file_paths.items()):
+        study_uids[directory] = get_new_uid(used_uids=list(study_uids.values()))
+        print("\nDirectory %s of %s: %s" % (i+1, len(file_paths), directory))
+        for f, file in enumerate(files):
+            print("File %s of %s: %s" % (f+1, len(files), file))
+            abs_file_path = join(directory, file)
+            try:
+                ds = pydicom.read_file(abs_file_path, stop_before_pixels=True, force=True)
+            except InvalidDicomError:
+                ds = None
+            if ds is not None:
+                try:
+                    edit_history[abs_file_path] = {'old': ds.StudyInstanceUID, 'new': study_uids[directory]}
+                    ds.StudyInstanceUID = study_uids[directory]
+                    ds.save_as(abs_file_path)
+                except Exception:
+                    pass
+            if call_back is not None:
+                call_back(100. * f+1 / file_total)
+    return study_uids, edit_history
+
