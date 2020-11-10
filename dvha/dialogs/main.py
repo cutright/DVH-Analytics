@@ -363,16 +363,16 @@ class SelectRegressionVariablesDialog(SelectFromListDialog):
 
 
 class SelectMLVarDialog(SelectFromListDialog):
-    def __init__(self, variable_choices, selections=None, single_mode=True, algorithm=False):
+    def __init__(self, variable_choices, selections=None, single_mode=True, algorithm=False, fit=False):
         if algorithm:
             column = "Algorithm"
             self.variable_choices = sorted(list(variable_choices))
         else:
             column = "Select %sependent Variable%s" % (["D", "Ind"][single_mode], ["s", ""][single_mode])
             self.variable_choices = variable_choices
-        size = get_window_size(1, 0.5)
+        size = (350, get_window_size(1, 0.5)[1]) if not fit else None
         SelectFromListDialog.__init__(self, "Machine Learning", column, variable_choices,
-                                      size=(350, size[1]), column_width=300, selections=selections, single_mode=single_mode)
+                                      size=size, column_width=300, selections=selections, single_mode=single_mode)
 
 
 def query_dlg(parent, query_type, set_values=False):

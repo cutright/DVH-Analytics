@@ -708,12 +708,13 @@ class DVHAMainFrame(wx.Frame):
 
             if X_vars and y_var:
                 choices = ["Regression", "Classification"]
-                dlg_type = SelectMLVarDialog(choices)
+                dlg_type = SelectMLVarDialog(choices, fit=True)
                 res_type = dlg_type.ShowModal()
                 if res_type == wx.ID_OK:
                     if dlg_type.selected_values:
                         ml_type = dlg_type.selected_values[0]
-                        dlg_alg = SelectMLVarDialog(ALGORITHMS, algorithm=True)
+                        ml_type = ['classifier', 'regressor'][ml_type == 'Regression']
+                        dlg_alg = SelectMLVarDialog(ALGORITHMS, algorithm=True, fit=True)
                         res_alg = dlg_alg.ShowModal()
                         if res_alg == wx.ID_OK:
                             if dlg_alg.selected_values:
@@ -730,7 +731,8 @@ class DVHAMainFrame(wx.Frame):
                           'mrn': mrn,
                           'study_date': dates,
                           'uid': uid}
-            # RandomForestFrame(self, stats_data)
+            frame = ALGORITHMS[ml_alg]['frame']
+            frame(self, stats_data, alg_type=ml_type)
         else:
             wx.MessageBox('There is no data to use! Please query some data first.', 'Data Error',
                           wx.OK | wx.ICON_WARNING)

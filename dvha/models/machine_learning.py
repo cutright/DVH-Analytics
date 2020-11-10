@@ -12,10 +12,10 @@ Classes to view and calculate Machine Learning predictions
 
 import wx
 import numpy as np
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, RandomForestClassifier, GradientBoostingClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.svm import SVR
-from sklearn.tree import DecisionTreeRegressor
+from sklearn.svm import SVR, SVC
+from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from dvha.dialogs.export import save_data_to_file
 from dvha.options import DefaultOptions
 from dvha.paths import MODELS_DIR
@@ -25,13 +25,14 @@ from dvha.tools.utilities import set_msw_background_color, get_window_size, load
 
 
 class MachineLearningFrame(wx.Frame):
-    def __init__(self, main_app_frame, data, title, regressor=None, tool_tips=None, include_test_data=True):
+    def __init__(self, main_app_frame, data, title, model=None, alg_type='regressor',
+                 tool_tips=None, include_test_data=True):
         wx.Frame.__init__(self, None)
 
         self.main_app_frame = main_app_frame
         self.data = data
         self.title = title
-        self.regressor = [regressor, ALGORITHMS[title]['regressor']][regressor is None]
+        self.model = [model, ALGORITHMS[title][alg_type]][model is None]
         self.tool_tips = [tool_tips, ALGORITHMS[title]['tool_tips']][tool_tips is None]
         self.include_test_data = include_test_data
 
@@ -246,14 +247,14 @@ class MachineLearningFrame(wx.Frame):
     @property
     def plot_data(self):
         try:
-            self.reg = self.regressor(**self.input_parameters)
+            self.reg = self.model(**self.input_parameters)
             return MachineLearningPlotData(self.data['X'], self.data['y'], self.reg, **self.data_split_parameters)
         except Exception as e:
             wx.MessageBox(str(e), 'Error!',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
 
     def do_regression(self):
-        self.reg = self.regressor(**self.input_parameters)
+        self.reg = self.model(**self.input_parameters)
         return MachineLearningPlotData(self.data['X'], self.data['y'], self.reg, **self.data_split_parameters)
 
     def on_calculate(self, evt):
@@ -284,7 +285,7 @@ class MachineLearningFrame(wx.Frame):
     def on_save_model(self, evt):
         data = {'y_variable': self.plot.y_variable,
                 'regression': self.reg,
-                'regressor': self.regressor,
+                'model': self.model,
                 'tool_tips': self.tool_tips,
                 'x_variables': self.plot.x_variables,
                 'title': self.title,
@@ -317,11 +318,14 @@ class MachineLearningFrame(wx.Frame):
 
 
 class RandomForestFrame(MachineLearningFrame):
-    def __init__(self, main_app_frame, data, include_test_data=True):
-        MachineLearningFrame.__init__(self, main_app_frame, data, 'Random Forest', include_test_data=include_test_data)
+    def __init__(self, main_app_frame, data, include_test_data=True, alg_type='regressor'):
+        tool_tips = [RF_TOOL_TIPS_CLASSIFIER, RF_TOOL_TIPS][alg_type == 'regressor']
+        crit_choices = [["gini", "entropy"], ["mse", "mae"]][alg_type == 'regressor']
+        MachineLearningFrame.__init__(self, main_app_frame, data, 'Random Forest',
+                                      include_test_data=include_test_data, alg_type=alg_type, tool_tips=tool_tips)
 
         self.input = {'n_estimators': wx.TextCtrl(self, wx.ID_ANY, "100"),
-                      'criterion': wx.ComboBox(self, wx.ID_ANY, choices=["mse", "mae"],
+                      'criterion': wx.ComboBox(self, wx.ID_ANY, choices=crit_choices,
                                                style=wx.CB_DROPDOWN | wx.CB_READONLY),
                       'max_depth': wx.TextCtrl(self, wx.ID_ANY, "None"),
                       'min_samples_split': wx.TextCtrl(self, wx.ID_ANY, "2"),
@@ -338,7 +342,7 @@ class RandomForestFrame(MachineLearningFrame):
                       'random_state': wx.TextCtrl(self, wx.ID_ANY, "None")}
 
         self.defaults = {'n_estimators': 100,
-                         'criterion': 'mse',
+                         'criterion': crit_choices[0],
                          'max_depth': None,
                          'min_samples_split': 2,
                          'min_samples_leaf': 1,
@@ -369,9 +373,9 @@ class RandomForestFrame(MachineLearningFrame):
 
 
 class GradientBoostingFrame(MachineLearningFrame):
-    def __init__(self, main_app_frame, data, include_test_data=True):
+    def __init__(self, main_app_frame, data, include_test_data=True, alg_type='regressor'):
         MachineLearningFrame.__init__(self, main_app_frame, data, 'Gradient Boosting',
-                                      include_test_data=include_test_data)
+                                      include_test_data=include_test_data, alg_type=alg_type)
 
         self.input = {'loss': wx.ComboBox(self, wx.ID_ANY, choices=["ls", "lad", "huber", "quantile"],
                                           style=wx.CB_DROPDOWN | wx.CB_READONLY),
@@ -441,8 +445,9 @@ class GradientBoostingFrame(MachineLearningFrame):
 
 
 class DecisionTreeFrame(MachineLearningFrame):
-    def __init__(self, main_app_frame, data, include_test_data=True):
-        MachineLearningFrame.__init__(self, main_app_frame, data, 'Decision Tree', include_test_data=include_test_data)
+    def __init__(self, main_app_frame, data, include_test_data=True, alg_type='regressor'):
+        MachineLearningFrame.__init__(self, main_app_frame, data, 'Decision Tree',
+                                      include_test_data=include_test_data, alg_type=alg_type)
 
         self.input = {'criterion': wx.ComboBox(self, wx.ID_ANY, choices=["mse", "friedman_mse", "mae"],
                                                style=wx.CB_DROPDOWN | wx.CB_READONLY),
@@ -487,9 +492,9 @@ class DecisionTreeFrame(MachineLearningFrame):
 
 
 class SupportVectorRegressionFrame(MachineLearningFrame):
-    def __init__(self, main_app_frame, data, include_test_data=True):
+    def __init__(self, main_app_frame, data, include_test_data=True, alg_type='regressor'):
         MachineLearningFrame.__init__(self, main_app_frame, data, 'Support Vector Machine',
-                                      include_test_data=include_test_data)
+                                      include_test_data=include_test_data, alg_type=alg_type)
 
         self.input = {'kernel': wx.ComboBox(self, wx.ID_ANY, "rbf",
                                             choices=["linear", "poly", "rbf", "sigmoid", "precomputed"],
@@ -585,6 +590,11 @@ RF_TOOL_TIPS = {'n_estimators': "int\nThe number of trees in the forest.",
                 'random_state': "int or None\nIf int, random_state is the seed used by the random "
                                 "number generator; If None, the random number generator is the "
                                 "RandomState instance used by np.random."}
+
+RF_TOOL_TIPS_CLASSIFIER = {key: value for key, value in RF_TOOL_TIPS.items()}
+RF_TOOL_TIPS_CLASSIFIER['criterion'] = "The function to measure the quality of a split. Supported criteria " \
+                                       "are “gini” for the Gini impurity and “entropy” for the information gain. \n" \
+                                       "Note: this parameter is tree-specific."
 
 GB_TOOL_TIPS = {'loss': "loss function to be optimized. ‘ls’ refers to least squares regression. "
                         "‘lad’ (least absolute deviation) is a highly robust loss function solely "
@@ -781,15 +791,19 @@ DATA_SPLIT_TOOL_TIPS = {'test_size': "float, int, or None\n"
 
 
 ALGORITHMS = {'Random Forest': {'regressor': RandomForestRegressor,
+                                'classifier': RandomForestClassifier,
                                 'tool_tips': RF_TOOL_TIPS,
                                 'frame': RandomForestFrame},
               'Support Vector Machine': {'regressor': SVR,
+                                         'classifier': SVC,
                                          'tool_tips': SVR_TOOL_TIPS,
                                          'frame': SupportVectorRegressionFrame},
               'Gradient Boosting': {'regressor': GradientBoostingRegressor,
+                                    'classifier': GradientBoostingClassifier,
                                     'tool_tips': GB_TOOL_TIPS,
                                     'frame': GradientBoostingFrame},
               'Decision Tree': {'regressor': DecisionTreeRegressor,
+                                'classifier': DecisionTreeClassifier,
                                 'tool_tips': DT_TOOL_TIPS,
                                 'frame': DecisionTreeFrame}}
 
@@ -936,7 +950,7 @@ class MachineLearningModelViewer:
 
         self.y_variable = self.loaded_data['y_variable']
         self.regression = self.loaded_data['regression']
-        self.regressor = self.loaded_data['regressor']
+        self.model = self.loaded_data['model']
         self.tool_tips = self.loaded_data['tool_tips']
         self.x_variables = self.loaded_data['x_variables']
         self.title = self.loaded_data['title']
