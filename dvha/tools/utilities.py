@@ -926,7 +926,7 @@ def edit_study_uid(abs_file_path, study_uid):
     :param study_uid: new StudyInstanceUID
     """
     try:
-        ds = pydicom.read_file(abs_file_path, stop_before_pixels=True, force=True)
+        ds = pydicom.read_file(abs_file_path, force=True)
         ds.StudyInstanceUID = study_uid
         ds.save_as(abs_file_path)
     except Exception as e:
