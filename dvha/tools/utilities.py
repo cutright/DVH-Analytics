@@ -21,7 +21,6 @@ from os.path import join, isfile, isdir, splitext, basename, dirname, realpath, 
 import pickle
 import pydicom
 from pydicom.uid import ImplicitVRLittleEndian
-from pydicom.errors import InvalidDicomError
 import shutil
 from subprocess import check_output
 import sys
@@ -29,7 +28,6 @@ import tracemalloc
 from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import SQL_CNF_PATH, WIN_APP_ICON, PIP_LIST_PATH, DIRECTORIES, APP_DIR, BACKUP_DIR, DATA_DIR
 from dvha.tools.errors import push_to_log
-from pubsub import pub
 
 
 IGNORED_FILES = ['.ds_store']
@@ -900,42 +898,37 @@ def get_new_uid(used_uids=None):
     return uid
 
 
-def uid_prep_by_directory(start_path, callback=None):
+def get_new_uids_by_directory(start_path):
     """
     Generate new StudyInstanceUIDs, assuming all DICOM files in a directory are matched
     :param start_path: initial directory
     :type start_path str
-    :param callback: optional call-back function called after each file completes
-    :return: New StudyInstanceUIDs by directory, and edit history
-    :rtype: dict, dict
+    :return: New UIDs by directory, queue
+    :rtype: dict, list
     """
     file_paths = get_file_paths(start_path, search_subfolders=True, return_dict=True)
-    file_total = sum([len(files) for files in file_paths.values()])
-    edit_history = {}
     study_uids = {}
-    file_counter = 0
-    for i, (directory, files) in enumerate(file_paths.items()):
-        study_uids[directory] = get_new_uid(used_uids=list(study_uids.values()))
-        for f, file in enumerate(files):
-            if callback is not None:
-                msg = {"label": "Processing (%s of %s): %s" % (file_counter, file_total, file),
-                       "gauge": float(file_counter / file_total)}
-                wx.CallAfter(callback, msg)
-            abs_file_path = join(directory, file)
-            ds = None
-            try:
-                ds = pydicom.read_file(abs_file_path, stop_before_pixels=True, force=True)
-            except InvalidDicomError:
-                pass
-            except Exception as e:
-                push_to_log(e, file)
-            if ds is not None:
-                try:
-                    edit_history[abs_file_path] = {'old': ds.StudyInstanceUID, 'new': study_uids[directory]}
-                    ds.StudyInstanceUID = study_uids[directory]
-                    ds.save_as(abs_file_path)
-                except Exception:
-                    pass
-            file_counter += 1
+    queue = []
+    for directory, files in file_paths.items():
+        uid = get_new_uid(used_uids=list(study_uids.values()))
+        study_uids[directory] = uid
+        for file in files:
+            queue.append({'abs_file_path': join(directory, file),
+                          'study_uid': uid})
 
-    return study_uids, edit_history
+    return study_uids, queue
+
+
+def edit_study_uid(abs_file_path, study_uid):
+    """
+    Change the StudyInstanceUID of a DICOM file
+    :param abs_file_path: absolute file path of the DICOM file
+    :param study_uid: new StudyInstanceUID
+    """
+    try:
+        ds = pydicom.read_file(abs_file_path, stop_before_pixels=True, force=True)
+        ds.StudyInstanceUID = study_uid
+        ds.save_as(abs_file_path)
+    except Exception as e:
+        push_to_log(e, abs_file_path)
+

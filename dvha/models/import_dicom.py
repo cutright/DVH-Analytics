@@ -37,7 +37,7 @@ from dvha.tools.errors import ErrorDialog, push_to_log
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
     set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size,\
-    set_frame_icon, PopupMenu, MessageDialog, uid_prep_by_directory
+    set_frame_icon, PopupMenu, MessageDialog, get_new_uids_by_directory, edit_study_uid
 from dvha.tools.threading_progress import ProgressFrame
 
 
@@ -1847,17 +1847,14 @@ class AssignPTV(wx.Dialog):
 class PreprocessDicom:
     def __init__(self, parent):
         self.parent = parent
-        caption = "WARNING: This will edit the StudyInstanceUID your DICOM files!"
-        MessageDialog(parent, caption, action_yes_func=self.run)
-
-    def callback(self, msg):
-        pub.sendMessage("progress_update", msg=msg)
+        caption = "WARNING\nThis will edit the StudyInstanceUID of DICOM files selected in the next window!"
+        message = "This shouldn't be needed for DICOM compliant files, use with caution.\n\nAre you sure?"
+        MessageDialog(parent, caption, message, action_yes_func=self.run)
 
     def run(self):
         dlg = wx.DirDialog(self.parent, "Select a directory", "", wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:
-            obj_list = [{'start_path': dlg.GetPath(), 'callback': self.callback}]
-            action = uid_prep_by_directory
-            ProgressFrame(obj_list, action, title="Pre-Process DICOM Progress", kwargs=True)
-
+            _, obj_list = get_new_uids_by_directory(dlg.GetPath())
+            ProgressFrame(obj_list, edit_study_uid, title="Saving new StudyInstanceUIDs",
+                          action_msg="Processing File", kwargs=True)
         dlg.Destroy()

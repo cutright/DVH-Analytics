@@ -1,9 +1,10 @@
 # Change log of DVH Analytics
 
-v0.8.9 (2020.11.03)
+v0.8.9 (TBD)
 --------------------
  - [Import] Importing DICOM-RT Dose file no longer causes crash if no matching Plan is found [Issue 105](https://github.com/cutright/DVH-Analytics/issues/105)
  - [Import] Added a Pre-Process DICOM method in DICOM Import window to generate new StudyInstanceUIDs [Issue 106](https://github.com/cutright/DVH-Analytics/issues/106)
+ - [Machine Learning] New, more direct, work-flow to get to Machine Learning [Issue 107](https://github.com/cutright/DVH-Analytics/issues/107)
 
 v0.8.8 (2020.11.03)
 --------------------
