@@ -35,7 +35,7 @@ from dvha.models.queried_data import QueriedDataFrame
 from dvha.models.rad_bio import RadBioFrame
 from dvha.models.time_series import TimeSeriesFrame
 from dvha.models.correlation import CorrelationFrame
-from dvha.models.machine_learning import MachineLearningModelViewer, ALGORITHMS, RandomForestFrame
+from dvha.models.machine_learning import MachineLearningModelViewer, ALGORITHMS, MachineLearningSetupDlg
 from dvha.models.regression import RegressionFrame, LoadMultiVarModelFrame
 from dvha.models.control_chart import ControlChartFrame
 from dvha.models.roi_map import ROIMapFrame
@@ -187,6 +187,8 @@ class DVHAMainFrame(wx.Frame):
                   "pip install --upgrade git+https://github.com/dicompyler/dicompyler-core.git\n\nand relaunch DVHA"
             caption = "dicompyler-core Version Warning"
             ErrorDialog(self, msg, caption)
+
+        self.ml_views = []
 
     def __add_tool_bar(self):
         self.frame_toolbar = wx.ToolBar(self, -1, style=wx.TB_HORIZONTAL | wx.TB_TEXT)
@@ -683,56 +685,12 @@ class DVHAMainFrame(wx.Frame):
 
     def on_toolbar_ml(self, evt):
         if self.group_data[self.selected_group]['dvh'] is not None:
-            choices = self.group_data[self.selected_group][
-                'stats_data'].variables
-            dlg_y = SelectMLVarDialog(choices)
-            res_y = dlg_y.ShowModal()
-
-            dlg_X = None
-            y_var = None
-            X_vars = None
-            ml_type = None
-            ml_alg = None
-            if res_y == wx.ID_OK:
-                if dlg_y.selected_values:
-                    y_var = dlg_y.selected_values[0]
-                    choices = sorted(
-                        list(set(choices) - set(dlg_y.selected_values)))
-                    dlg_X = SelectMLVarDialog(choices, single_mode=False)
-
-            dlg_y.Destroy()
-            if dlg_X:
-                res_X = dlg_X.ShowModal()
-                if res_X == wx.ID_OK:
-                    X_vars = dlg_X.selected_values
-
-            if X_vars and y_var:
-                choices = ["Regression", "Classification"]
-                dlg_type = SelectMLVarDialog(choices, fit=True)
-                res_type = dlg_type.ShowModal()
-                if res_type == wx.ID_OK:
-                    if dlg_type.selected_values:
-                        ml_type = dlg_type.selected_values[0]
-                        ml_type = ['classifier', 'regressor'][ml_type == 'Regression']
-                        dlg_alg = SelectMLVarDialog(ALGORITHMS, algorithm=True, fit=True)
-                        res_alg = dlg_alg.ShowModal()
-                        if res_alg == wx.ID_OK:
-                            if dlg_alg.selected_values:
-                                ml_alg = dlg_alg.selected_values[0]
-
-            X, y, mrn, uid, dates = self.group_data[self.selected_group][
-                'stats_data'].get_X_and_y(y_var, X_vars,
-                                          include_patient_info=True)
-            stats_data = {'X': X,
-                          'y': y,
-                          'x_variables': X_vars,
-                          'y_variable': y_var,
-                          'options': self.options,
-                          'mrn': mrn,
-                          'study_date': dates,
-                          'uid': uid}
-            frame = ALGORITHMS[ml_alg]['frame']
-            frame(self, stats_data, alg_type=ml_type)
+            dlg = MachineLearningSetupDlg(self.group_data[self.selected_group]['stats_data'], self.options)
+            res = dlg.ShowModal()
+            if res == wx.ID_OK:
+                frame = ALGORITHMS[dlg.ml_alg]['frame']
+                self.ml_views.append(frame(self, dlg.ml_input_data, alg_type=dlg.alg_type))
+            dlg.Destroy()
         else:
             wx.MessageBox('There is no data to use! Please query some data first.', 'Data Error',
                           wx.OK | wx.ICON_WARNING)
@@ -982,6 +940,13 @@ class DVHAMainFrame(wx.Frame):
         for window in self.tool_bar_windows.values():
             if window and hasattr(window, 'Destroy'):
                 window.Destroy()
+
+        for view in self.ml_views:
+            if hasattr(view, 'Destroy'):
+                try:
+                    view.Destroy()
+                except RuntimeError:
+                    pass
 
         self.regression.close_mvr_frames()
 

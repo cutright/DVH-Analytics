@@ -21,7 +21,7 @@ from dvha.options import DefaultOptions
 from dvha.paths import MODELS_DIR
 from dvha.models.plot import PlotMachineLearning, PlotFeatureImportance
 from dvha.tools.stats import MultiVariableRegression
-from dvha.tools.utilities import set_msw_background_color, get_window_size, load_object_from_file, set_frame_icon
+from dvha.tools.utilities import set_msw_background_color, get_window_size, load_object_from_file, set_frame_icon, get_selected_listctrl_items
 
 
 class MachineLearningFrame(wx.Frame):
@@ -996,3 +996,136 @@ class MachineLearningModelViewer:
     def apply_plot_options(self):
         self.ml_frame.plot.apply_options()
         self.ml_frame.redraw_plot()
+
+
+class MachineLearningSetupDlg(wx.Dialog):
+    def __init__(self, stats_data, options):
+        wx.Dialog.__init__(self, None, title="Machine Learning")
+
+        self.stats_data = stats_data
+        self.options = options
+
+        self.combo_box_type = wx.ComboBox(self, wx.ID_ANY, choices=['Regression', 'Classification'], style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.combo_box_alg = wx.ComboBox(self, wx.ID_ANY, choices=sorted(list(ALGORITHMS.keys())), style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.combo_box_y = wx.ComboBox(self, wx.ID_ANY, choices=stats_data.variables, style=wx.CB_DROPDOWN | wx.CB_READONLY)
+
+        self.list_ctrl_features = wx.ListCtrl(self, wx.ID_ANY, style=wx.LC_NO_HEADER | wx.LC_REPORT)
+
+        self.button_select_all = wx.Button(self, wx.ID_ANY, "Select All")
+        self.button_deselect_all = wx.Button(self, wx.ID_ANY, "Deselect All")
+        self.button_ok = wx.Button(self, wx.ID_OK, "OK")
+
+        self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+
+        self.__set_features()
+
+        self.__do_bind()
+        self.__do_layout()
+
+    def __set_features(self):
+        self.list_ctrl_features.AppendColumn("Features", format=wx.LIST_FORMAT_LEFT, width=400)
+
+        for choice in self.stats_data.variables:
+            self.list_ctrl_features.InsertItem(50000, choice)
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_BUTTON, self.select_all, id=self.button_select_all.GetId())
+        self.Bind(wx.EVT_BUTTON, self.deselect_all, id=self.button_deselect_all.GetId())
+
+    def __do_layout(self):
+
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_main = wx.BoxSizer(wx.VERTICAL)
+        sizer_input_wrapper = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.HORIZONTAL)
+        sizer_input = wx.BoxSizer(wx.VERTICAL)
+        sizer_type = wx.BoxSizer(wx.VERTICAL)
+        sizer_alg = wx.BoxSizer(wx.VERTICAL)
+        sizer_y_var = wx.BoxSizer(wx.VERTICAL)
+        sizer_features = wx.BoxSizer(wx.VERTICAL)
+        sizer_select_all = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_ok_cancel = wx.BoxSizer(wx.HORIZONTAL)
+
+        label_type = wx.StaticText(self, wx.ID_ANY, "ML Type:")
+        label_alg = wx.StaticText(self, wx.ID_ANY, "Algorithm:")
+        label_y = wx.StaticText(self, wx.ID_ANY, "Dependent Variable:")
+        label_features = wx.StaticText(self, wx.ID_ANY, "Features:")
+
+        sizer_type.Add(label_type, 0, 0, 0)
+        sizer_type.Add(self.combo_box_type, 0, wx.EXPAND, 0)
+        sizer_input.Add(sizer_type, 0, wx.ALL | wx.EXPAND, 5)
+
+        sizer_alg.Add(label_alg, 0, 0, 0)
+        sizer_alg.Add(self.combo_box_alg, 0, wx.EXPAND, 0)
+        sizer_input.Add(sizer_alg, 0, wx.ALL | wx.EXPAND, 5)
+
+        sizer_y_var.Add(label_y, 0, 0, 0)
+        sizer_y_var.Add(self.combo_box_y, 0, wx.EXPAND, 0)
+        sizer_input.Add(sizer_y_var, 0, wx.ALL | wx.EXPAND, 5)
+
+        sizer_features.Add(label_features, 0, wx.BOTTOM | wx.EXPAND, 5)
+        sizer_features.Add(self.list_ctrl_features, 1, wx.EXPAND, 0)
+        sizer_select_all.Add(self.button_select_all, 0, wx.ALL, 5)
+        sizer_select_all.Add(self.button_deselect_all, 0, wx.ALL, 5)
+        sizer_features.Add(sizer_select_all, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
+
+        sizer_input.Add(sizer_features, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+
+        sizer_input_wrapper.Add(sizer_input, 1, wx.EXPAND, 0)
+        sizer_main.Add(sizer_input_wrapper, 1, wx.EXPAND | wx.RIGHT, 5)
+
+        sizer_ok_cancel.Add(self.button_ok, 0, wx.ALL, 5)
+        sizer_ok_cancel.Add(self.button_cancel, 0, wx.ALL, 5)
+        sizer_main.Add(sizer_ok_cancel, 0, wx.ALIGN_RIGHT | wx.RIGHT, 5)
+
+        sizer_wrapper.Add(sizer_main, 1, wx.ALL | wx.EXPAND, 5)
+
+        self.SetSizer(sizer_wrapper)
+        sizer_wrapper.Fit(self)
+
+        self.Layout()
+        self.Center()
+
+    def select_all(self, evt):
+        self.apply_global_selection()
+
+    def deselect_all(self, evt):
+        self.apply_global_selection(on=0)
+
+    def apply_global_selection(self, on=1):
+        for i in range(len(self.stats_data.variables)):
+            self.list_ctrl_features.Select(i, on=on)
+
+    @property
+    def selected_indices(self):
+        return get_selected_listctrl_items(self.list_ctrl_features)
+
+    @property
+    def selected_features(self):
+        features = [self.list_ctrl_features.GetItem(i, 0).GetText() for i in self.selected_indices]
+        return sorted(list(set(features) - {self.y}))
+
+    @property
+    def alg_type(self):
+        return ['classifier', 'regressor'][self.combo_box_type.GetValue() == 'Regression']
+
+    @property
+    def ml_alg(self):
+        return self.combo_box_alg.GetValue()
+
+    @property
+    def y(self):
+        return self.combo_box_y.GetValue()
+
+    @property
+    def ml_input_data(self):
+        X, y, mrn, uid, dates = self.stats_data.get_X_and_y(self.y, self.selected_features, include_patient_info=True)
+
+        return {'X': X,
+                'y': y,
+                'x_variables': self.selected_features,
+                'y_variable': self.y,
+                'options': self.options,
+                'mrn': mrn,
+                'study_date': dates,
+                'uid': uid}
+
