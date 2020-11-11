@@ -16,6 +16,7 @@ from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, R
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVR, SVC
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
+from sklearn.neural_network import MLPClassifier, MLPRegressor
 from dvha.dialogs.export import save_data_to_file
 from dvha.options import DefaultOptions
 from dvha.paths import MODELS_DIR
@@ -538,6 +539,96 @@ class SupportVectorRegressionFrame(MachineLearningFrame):
         self.run()
 
 
+class MLPFrame(MachineLearningFrame):
+    def __init__(self, main_app_frame, data, include_test_data=True, alg_type='regressor'):
+        MachineLearningFrame.__init__(self, main_app_frame, data, 'Multilayer Perceptron',
+                                      include_test_data=include_test_data, alg_type=alg_type)
+
+        self.input = {
+                      'activation': wx.ComboBox(self, wx.ID_ANY, "relu",
+                                                choices=["identity", "logistic", "tanh", "relu"],
+                                                style=wx.CB_DROPDOWN | wx.CB_READONLY),
+                      'solver': wx.ComboBox(self, wx.ID_ANY, "adam",
+                                            choices=["lbfgs", "sgd", "adam"],
+                                            style=wx.CB_DROPDOWN | wx.CB_READONLY),
+                      'alpha': wx.TextCtrl(self, wx.ID_ANY, "0.001"),
+                      'batch_size': wx.TextCtrl(self, wx.ID_ANY, "auto"),
+                      'learning_rate': wx.ComboBox(self, wx.ID_ANY, "constant",
+                                                   choices=["constant", "invscaling", "adaptive"],
+                                                   style=wx.CB_DROPDOWN | wx.CB_READONLY),
+                      'learning_rate_init': wx.TextCtrl(self, wx.ID_ANY, "0.001"),
+                      'power_t': wx.TextCtrl(self, wx.ID_ANY, "0.5"),
+                      'max_iter': wx.TextCtrl(self, wx.ID_ANY, "200"),
+                      'shuffle': wx.ComboBox(self, wx.ID_ANY, "True",
+                                             choices=["True", "False"],
+                                             style=wx.CB_DROPDOWN | wx.CB_READONLY),
+                      'random_state': wx.TextCtrl(self, wx.ID_ANY, "None"),
+                      'tol': wx.TextCtrl(self, wx.ID_ANY, "1e-4"),
+                      'warm_start': wx.ComboBox(self, wx.ID_ANY, "False",
+                                                choices=["True", "False"],
+                                                style=wx.CB_DROPDOWN | wx.CB_READONLY),
+                      'momentum': wx.TextCtrl(self, wx.ID_ANY, "0.9"),
+                      'nesterovs_momentum': wx.ComboBox(self, wx.ID_ANY, "True",
+                                                        choices=["True", "False"],
+                                                        style=wx.CB_DROPDOWN | wx.CB_READONLY),
+                      'early_stopping': wx.ComboBox(self, wx.ID_ANY, "False",
+                                                    choices=["True", "False"],
+                                                    style=wx.CB_DROPDOWN | wx.CB_READONLY),
+                      'validation_fraction': wx.TextCtrl(self, wx.ID_ANY, "0.1"),
+                      'beta_1': wx.TextCtrl(self, wx.ID_ANY, "0.9"),
+                      'beta_2': wx.TextCtrl(self, wx.ID_ANY, "0.999"),
+                      'epsilon': wx.TextCtrl(self, wx.ID_ANY, "1e-8"),
+                      'n_iter_no_change': wx.TextCtrl(self, wx.ID_ANY, "10")}
+
+        self.defaults = {
+                         'activation': 'relu',
+                         'solver': 'adam',
+                         'alpha': 0.0001,
+                         'batch_size': 'auto',
+                         'learning_rate': 'constant',
+                         'learning_rate_init': 0.001,
+                         'power_t': 0.5,
+                         'max_iter': 200,
+                         'shuffle': True,
+                         'random_state': None,
+                         'tol': 1e-4,
+                         'warm_start': False,
+                         'momentum': 0.9,
+                         'nesterovs_momentum': True,
+                         'early_stopping': False,
+                         'validation_fraction': 0.1,
+                         'beta_1': 0.9,
+                         'beta_2': 0.999,
+                         'epsilon': 1e-08,
+                         'n_iter_no_change': 10}
+
+        self.getters = {
+                        'activation': self.to_str,
+                        'solver': self.to_str,
+                        'alpha': self.to_float,
+                        'batch_size': self.to_float_or_str,
+                        'learning_rate': self.to_str,
+                        'learning_rate_init': self.to_float,
+                        'power_t': self.to_float,
+                        'max_iter': self.to_int,
+                        'shuffle': self.to_bool,
+                        'random_state': self.to_int_or_none,
+                        'tol': self.to_float,
+                        'warm_start': self.to_bool,
+                        'momentum': self.to_float,
+                        'nesterovs_momentum': self.to_bool,
+                        'early_stopping': self.to_bool,
+                        'validation_fraction': self.to_float,
+                        'beta_1': self.to_float,
+                        'beta_2': self.to_float,
+                        'epsilon': self.to_float,
+                        'n_iter_no_change': self.to_int}
+
+        self.button_importance.Disable()
+
+        self.run()
+
+
 RF_TOOL_TIPS = {'n_estimators': "int\nThe number of trees in the forest.",
                 'criterion': "The function to measure the quality of a split. Supported criteria are "
                              "“mse” for the mean squared error, which is equal to variance reduction as"
@@ -790,6 +881,87 @@ DATA_SPLIT_TOOL_TIPS = {'test_size': "float, int, or None\n"
                                    " must be None."}
 
 
+MLP_TOOL_TIPS = {'hidden_layer_sizes': "tuple, length = n_layers - 2\n",
+                 'activation': "string\n"
+                               "Activation function for the hidden layer.\n"
+                               "identity: no-op activation, useful to implement linear bottleneck, returns f(x) = x.\n"
+                               "logistic: the logistic sigmoid function, returns f(x) = 1 / (1 + exp(-x)).\n"
+                               "tanh: the hyperbolic tan function, returns f(x) = tanh(x).\n"
+                               "relu: the rectified linear unit function, returns f(x) = max(0, x)",
+                 'solver': "string\nThe solver for weight optimization."
+                           "lbfgs is an optimizer in the family of quasi-Newton methods.\n"
+                           "sgd refers to stochastic gradient descent.\n"
+                           "adam refers to a stochastic gradient-based optimizer proposed by Kingma, Diederik, "
+                           "and Jimmy Ba\n\n"
+                           "Note: The default solver ‘adam’ works pretty well on relatively large datasets "
+                           "(with thousands of training samples or more) in terms of both training time and validation "
+                           "score. For small datasets, however, ‘lbfgs’ can converge faster and perform better.",
+                 'alpha': "float\n"
+                          "L2 penalty (regularization term) parameter.",
+                 'batch_size': "int or string\n"
+                               "Size of minibatches for stochastic optimizers. If the solver is ‘lbfgs’, the "
+                               "classifier will not use minibatch. When set to “auto”, batch_size=min(200, n_samples)",
+                 'learning_rate': "string\n"
+                                  "Learning rate schedule for weight updates.\n"
+                                  "constant is a constant learning rate given by ‘learning_rate_init’.\n"
+                                  "invscaling gradually decreases the learning rate at each time step ‘t’ "
+                                  "using an inverse scaling exponent of ‘power_t’. effective_"
+                                  "learning_rate = learning_rate_init / pow(t, power_t)\n"
+                                  "adaptive keeps the learning rate constant to ‘learning_rate_init’ as long as "
+                                  "training loss keeps decreasing. Each time two consecutive epochs fail to decrease "
+                                  "training loss by at least tol, or fail to increase validation score by at least "
+                                  "tol if ‘early_stopping’ is on, the current learning rate is divided by 5.",
+                 'learning_rate_init': "double\n"
+                                       "The initial learning rate used. It controls the step-size in updating the "
+                                       "weights. Only used when solver=’sgd’ or ‘adam’.",
+                 'power_t': "double\n"
+                            "The exponent for inverse scaling learning rate. It is used in updating effective "
+                            "learning rate when the learning_rate is set to ‘invscaling’. Only used when solver=’sgd’.",
+                 'max_iter': "int\n"
+                             "Maximum number of iterations. The solver iterates until convergence (determined by "
+                             "‘tol’) or this number of iterations. For stochastic solvers (‘sgd’, ‘adam’), note that "
+                             "this determines the number of epochs (how many times each data point will be used), not "
+                             "the number of gradient steps.",
+                 'shuffle': "bool\n"
+                            "Whether to shuffle samples in each iteration. Only used when solver=’sgd’ or ‘adam’.",
+                 'random_state': "int or None\n"
+                                 "If int, random_state is the seed used by the random number generator; "
+                                 "If None, the random number generator is the RandomState instance used by np.random.",
+                 'tol': "float\n"
+                        "Tolerance for the optimization. When the loss or score is not improving by at least tol for "
+                        "n_iter_no_change consecutive iterations, unless learning_rate is set to ‘adaptive’, "
+                        "convergence is considered to be reached and training stops.",
+                 'warm_start': "bool\n"
+                               "When set to True, reuse the solution of the previous call to fit as initialization, "
+                               "otherwise, just erase the previous solution.",
+                 'momentum': "float\n"
+                             "Momentum for gradient descent update. Should be between 0 and 1. "
+                             "Only used when solver=’sgd’.",
+                 'nesterovs_momentum': "bool\n"
+                                       "Whether to use Nesterov’s momentum. Only used when solver=’sgd’ "
+                                       "and momentum > 0.",
+                 'early_stopping': "bool\n"
+                                   "Whether to use early stopping to terminate training when validation score is not "
+                                   "improving. If set to true, it will automatically set aside 10% of training data "
+                                   "as validation and terminate training when validation score is not improving by "
+                                   "at least tol for n_iter_no_change consecutive epochs. The split is stratified, "
+                                   "except in a multilabel setting. Only effective when solver=’sgd’ or ‘adam’",
+                 'validation_fraction': "float\n"
+                                        "The proportion of training data to set aside as validation set for early "
+                                        "stopping. Must be between 0 and 1. Only used if early_stopping is True",
+                 'beta_1': "float\n"
+                           "Exponential decay rate for estimates of first moment vector in adam, should be in [0, 1). "
+                           "Only used when solver=’adam’",
+                 'beta_2': "float\n"
+                           "Exponential decay rate for estimates of second moment vector in adam, should be in [0, 1)."
+                           " Only used when solver=’adam’",
+                 'epsilon': "float\n"
+                            "Value for numerical stability in adam. Only used when solver=’adam’",
+                 'n_iter_no_change': "int\n"
+                                     "Maximum number of epochs to not meet tol improvement. Only effective when "
+                                     "solver=’sgd’ or ‘adam’"}
+
+
 ALGORITHMS = {'Random Forest': {'regressor': RandomForestRegressor,
                                 'classifier': RandomForestClassifier,
                                 'tool_tips': RF_TOOL_TIPS,
@@ -805,7 +977,11 @@ ALGORITHMS = {'Random Forest': {'regressor': RandomForestRegressor,
               'Decision Tree': {'regressor': DecisionTreeRegressor,
                                 'classifier': DecisionTreeClassifier,
                                 'tool_tips': DT_TOOL_TIPS,
-                                'frame': DecisionTreeFrame}}
+                                'frame': DecisionTreeFrame},
+              'Multilayer Perceptron': {'regressor': MLPRegressor,
+                                        'classifier': MLPClassifier,
+                                        'tool_tips': MLP_TOOL_TIPS,
+                                        'frame': MLPFrame}}
 
 
 class MachineLearningPlotData:

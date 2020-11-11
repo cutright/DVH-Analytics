@@ -1852,7 +1852,7 @@ class PlotMachineLearning(Plot):
                                          'predict': figs['data'].circle('x', 'y', source=srcs['predict']),
                                          'diff': figs['diff'].circle(x='x', y='y0', source=srcs['diff'], alpha=0),
                                          'diff_ml': figs['diff'].varea(x='x', y1='y_ml', y2='y0', source=srcs['diff'])}
-            if self.multi_var_pred:
+            if self.multi_var_pred is not None:
                 self.renderers[data_type]['multi_var'] = figs['data'].circle('x', 'y', source=srcs['multi_var'])
                 self.renderers[data_type]['diff_mvr'] = figs['diff'].varea(x='x', y1='y_mvr', y2='y0', source=srcs['diff'])
 
@@ -1872,12 +1872,15 @@ class PlotMachineLearning(Plot):
                                                                              ('Value', '@y{0.2f}')],
                                                                    formatters={'study_date': 'datetime'}))
 
+            tooltips = [('ID', '@mrn'),
+                        ('Date', '@study_date'),
+                        ('Study', '@x{int}'),
+                        (self.ml_type_short, '@y_ml{0.2f}')]
+            if self.multi_var_pred is not None:
+                tooltips.append(('MVR', '@y_mvr{0.2f}'))
+
             self.ml_figures[data_type]['diff'].add_tools(HoverTool(show_arrow=True, mode='vline',
-                                                                   tooltips=[('ID', '@mrn'),
-                                                                             ('Date', '@study_date{%F}'),
-                                                                             ('Study', '@x{int}'),
-                                                                             (self.ml_type_short, '@y_ml{0.2f}'),
-                                                                             ('MVR', '@y_mvr{0.2f}')],
+                                                                   tooltips=tooltips,
                                                                    formatters={'study_date': 'datetime'}))
 
     def __add_legend_ml(self):
