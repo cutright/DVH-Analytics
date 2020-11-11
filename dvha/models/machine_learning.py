@@ -38,8 +38,9 @@ class MachineLearningFrame(wx.Frame):
         self.include_test_data = include_test_data
 
         self.reg = None
+        is_classifier = alg_type == 'classifier'
         self.plot = PlotMachineLearning(self, ml_type=self.title, ml_type_short=self.ml_type_short,
-                                        include_test_data=include_test_data, **self.data)
+                                        include_test_data=include_test_data, is_classifier=is_classifier, **self.data)
 
         self.feature_importance_dlg = None
 
@@ -1004,6 +1005,7 @@ class MachineLearningPlotData:
         self.predictions = {key: self.get_prediction(key) for key in self.y.keys()}
         self.residuals = {key: self.get_residual(key) for key in self.y.keys()}
         self.mse = {key: self.get_mse(key) for key in self.y.keys()}
+        self.accuracy = {key: self.get_accuracy(key) for key in self.y.keys()}
 
     def get_prediction(self, key):
         return self.reg.predict(self.X[key])
@@ -1013,6 +1015,10 @@ class MachineLearningPlotData:
 
     def get_residual(self, key):
         return np.subtract(self.y[key], self.reg.predict(self.X[key]))
+
+    def get_accuracy(self, key):
+        """Only applicable for classifiers"""
+        return np.count_nonzero(np.subtract(self.predictions[key], self.y[key]) == 0) / len(self.y[key])
 
     @property
     def feature_importances(self):
@@ -1183,9 +1189,13 @@ class MachineLearningSetupDlg(wx.Dialog):
 
         self.combo_box_type = wx.ComboBox(self, wx.ID_ANY, choices=['Regression', 'Classification'], style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_alg = wx.ComboBox(self, wx.ID_ANY, choices=sorted(list(ALGORITHMS.keys())), style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.combo_box_nan = wx.ComboBox(self, wx.ID_ANY, choices=['Ignore Study', 'Ignore Feature'], style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_y = wx.ComboBox(self, wx.ID_ANY, choices=stats_data.variables, style=wx.CB_DROPDOWN | wx.CB_READONLY)
 
         self.list_ctrl_features = wx.ListCtrl(self, wx.ID_ANY, style=wx.LC_NO_HEADER | wx.LC_REPORT)
+
+        bmp = wx.ArtProvider.GetBitmap(wx.ART_INFORMATION, size=(16, 16))
+        self.button_info = wx.BitmapButton(self, id=wx.ID_ANY, bitmap=bmp)
 
         self.button_select_all = wx.Button(self, wx.ID_ANY, "Select All")
         self.button_deselect_all = wx.Button(self, wx.ID_ANY, "Deselect All")
@@ -1193,20 +1203,26 @@ class MachineLearningSetupDlg(wx.Dialog):
 
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
-        self.__set_features()
+        self.__set_properties()
 
         self.__do_bind()
         self.__do_layout()
 
-    def __set_features(self):
+    def __set_properties(self):
         self.list_ctrl_features.AppendColumn("Features", format=wx.LIST_FORMAT_LEFT, width=400)
 
         for choice in self.stats_data.variables:
             self.list_ctrl_features.InsertItem(50000, choice)
 
+        self.combo_box_type.SetValue('Regression')
+        self.combo_box_alg.SetValue(sorted(list(ALGORITHMS.keys()))[0])
+        self.combo_box_nan.SetValue('Ignore Study')
+        self.combo_box_y.SetValue(self.stats_data.variables[0])
+
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.select_all, id=self.button_select_all.GetId())
         self.Bind(wx.EVT_BUTTON, self.deselect_all, id=self.button_deselect_all.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_info, id=self.button_info.GetId())
 
     def __do_layout(self):
 
@@ -1215,7 +1231,9 @@ class MachineLearningSetupDlg(wx.Dialog):
         sizer_input_wrapper = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.HORIZONTAL)
         sizer_input = wx.BoxSizer(wx.VERTICAL)
         sizer_type = wx.BoxSizer(wx.VERTICAL)
+        sizer_type_sub_sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer_alg = wx.BoxSizer(wx.VERTICAL)
+        sizer_nan_policy = wx.BoxSizer(wx.VERTICAL)
         sizer_y_var = wx.BoxSizer(wx.VERTICAL)
         sizer_features = wx.BoxSizer(wx.VERTICAL)
         sizer_select_all = wx.BoxSizer(wx.HORIZONTAL)
@@ -1223,16 +1241,23 @@ class MachineLearningSetupDlg(wx.Dialog):
 
         label_type = wx.StaticText(self, wx.ID_ANY, "ML Type:")
         label_alg = wx.StaticText(self, wx.ID_ANY, "Algorithm:")
+        label_nan_policy = wx.StaticText(self, wx.ID_ANY, "NaN Policy:")
         label_y = wx.StaticText(self, wx.ID_ANY, "Dependent Variable:")
         label_features = wx.StaticText(self, wx.ID_ANY, "Features:")
 
         sizer_type.Add(label_type, 0, 0, 0)
-        sizer_type.Add(self.combo_box_type, 0, wx.EXPAND, 0)
+        sizer_type_sub_sizer.Add(self.combo_box_type, 1, wx.EXPAND, 0)
+        sizer_type_sub_sizer.Add(self.button_info, 0, wx.EXPAND | wx.LEFT, 5)
+        sizer_type.Add(sizer_type_sub_sizer, 0, wx.EXPAND, 0)
         sizer_input.Add(sizer_type, 0, wx.ALL | wx.EXPAND, 5)
 
         sizer_alg.Add(label_alg, 0, 0, 0)
         sizer_alg.Add(self.combo_box_alg, 0, wx.EXPAND, 0)
         sizer_input.Add(sizer_alg, 0, wx.ALL | wx.EXPAND, 5)
+
+        sizer_nan_policy.Add(label_nan_policy, 0, 0, 0)
+        sizer_nan_policy.Add(self.combo_box_nan, 0, wx.EXPAND, 0)
+        sizer_input.Add(sizer_nan_policy, 0, wx.ALL | wx.EXPAND, 5)
 
         sizer_y_var.Add(label_y, 0, 0, 0)
         sizer_y_var.Add(self.combo_box_y, 0, wx.EXPAND, 0)
@@ -1273,12 +1298,17 @@ class MachineLearningSetupDlg(wx.Dialog):
 
     @property
     def selected_indices(self):
+        if len(get_selected_listctrl_items(self.list_ctrl_features)) == 0:
+            self.apply_global_selection()
         return get_selected_listctrl_items(self.list_ctrl_features)
 
     @property
     def selected_features(self):
         features = [self.list_ctrl_features.GetItem(i, 0).GetText() for i in self.selected_indices]
-        return sorted(list(set(features) - {self.y}))
+        ignore_me = [self.y]
+        if self.delete_feature_if_nan:
+            ignore_me.extend(self.stats_data.vars_with_none_values)
+        return sorted(list(set(features) - set(ignore_me)))
 
     @property
     def alg_type(self):
@@ -1293,6 +1323,10 @@ class MachineLearningSetupDlg(wx.Dialog):
         return self.combo_box_y.GetValue()
 
     @property
+    def delete_feature_if_nan(self):
+        return self.combo_box_nan.GetValue() == 'Ignore Feature'
+
+    @property
     def ml_input_data(self):
         X, y, mrn, uid, dates = self.stats_data.get_X_and_y(self.y, self.selected_features, include_patient_info=True)
 
@@ -1305,3 +1339,10 @@ class MachineLearningSetupDlg(wx.Dialog):
                 'study_date': dates,
                 'uid': uid}
 
+    def on_info(self, *evt):
+        msg = "You can add new features by going to Data -> Show Stats Data in the menu bar. " \
+              "Right-click a column header to add a new column. You can copy/paste data to/from MS Excel.\n\n" \
+              "This is how you can add categorical data for a classifier (e.g., toxicity grade), however, " \
+              "data currently MUST be numeric. You'll need to use integers to represent your categories."
+        wx.MessageBox(msg, 'Pro Tip',
+                      wx.OK | wx.OK_DEFAULT | wx.ICON_INFORMATION)

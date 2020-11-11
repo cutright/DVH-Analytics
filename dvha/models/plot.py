@@ -1771,7 +1771,7 @@ class PlotMachineLearning(Plot):
     Generate plot for Machine Learning frames created in the MultiVariable Regression frame
     """
     def __init__(self, parent, options, x_variables, y_variable, mrn, study_date, uid, multi_var_pred=None,
-                 ml_type=None, ml_type_short=None, include_test_data=True, **kwargs):
+                 ml_type=None, ml_type_short=None, include_test_data=True, is_classifier=False, **kwargs):
         """
         :param parent: the wx UI object where the plot will be displayed
         :param options: user preferences
@@ -1789,9 +1789,10 @@ class PlotMachineLearning(Plot):
         self.uid = uid
         self.X, self.y = None, None
         self.include_test_data = include_test_data
+        self.is_classifier = is_classifier
 
         x_size = [0.64, 0.38][include_test_data]
-        self.size_factor = {'data': (x_size, 0.425),
+        self.size_factor = {'data': (x_size, [0.425, 0.85][is_classifier]),
                             'diff': (x_size, 0.425)}
 
         self.options = options
@@ -1857,11 +1858,19 @@ class PlotMachineLearning(Plot):
                 self.renderers[data_type]['diff_mvr'] = figs['diff'].varea(x='x', y1='y_mvr', y2='y0', source=srcs['diff'])
 
     def __do_layout(self):
-        self.bokeh_layout = row(column(self.div_title['train'], self.div_mse['train'],
-                                       self.ml_figures['train']['data'], self.ml_figures['train']['diff']))
+        if self.is_classifier:
+            self.bokeh_layout = row(column(self.div_title['train'], self.div_mse['train'],
+                                           self.ml_figures['train']['data']))
+        else:
+            self.bokeh_layout = row(column(self.div_title['train'], self.div_mse['train'],
+                                           self.ml_figures['train']['data'], self.ml_figures['train']['diff']))
         if self.include_test_data:
-            self.bokeh_layout.children.append(column(self.div_title['test'], self.div_mse['test'],
-                                                     self.ml_figures['test']['data'], self.ml_figures['test']['diff']))
+            if self.is_classifier:
+                self.bokeh_layout.children.append(column(self.div_title['test'], self.div_mse['test'],
+                                                         self.ml_figures['test']['data']))
+            else:
+                self.bokeh_layout.children.append(column(self.div_title['test'], self.div_mse['test'],
+                                                         self.ml_figures['test']['data'], self.ml_figures['test']['diff']))
 
     def __add_hover(self):
         for data_type in self.plot_types:
@@ -1992,8 +2001,11 @@ class PlotMachineLearning(Plot):
                 self.div_mse[data_type].text = "<u>Mean Square Error</u>: %s (%s) --- %s (MVR)" % \
                                                (mse_text[0], self.ml_type_short, mse_text[1])
             else:
-                self.div_mse[data_type].text = "<u>Mean Square Error</u>: %s (%s)" % \
-                                               (mse_text[0], self.ml_type_short)
+                if self.is_classifier:
+                    self.div_mse[data_type].text = "<u>Accuracy</u>: %0.2f%%" % (100 * plot_data.accuracy[data_type])
+                else:
+                    self.div_mse[data_type].text = "<u>Mean Square Error</u>: %s (%s)" % \
+                                                   (mse_text[0], self.ml_type_short)
 
         self.update_bokeh_layout_in_wx_python()
 

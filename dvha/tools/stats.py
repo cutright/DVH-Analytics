@@ -193,6 +193,10 @@ class StatsData:
     def trending_variables(self):
         return list(self.data)
 
+    @property
+    def vars_with_none_values(self):
+        return [v for v in self.variables if 'None' in self.data[v]['values']]
+
     def get_axis_title(self, variable):
         if self.data[variable]['units']:
             return "%s (%s)" % (variable, self.data[variable]['units'])
