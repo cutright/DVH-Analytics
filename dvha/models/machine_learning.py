@@ -1092,11 +1092,8 @@ class MachineLearningModelViewer:
                 if self.is_valid:
                     self.__set_X_and_y_data()
 
-                    if mvr:
-                        self.mvr = mvr
-                    else:
-                        self.mvr = MultiVariableRegression(self.X, self.y)
-                    self.multi_var_pred = self.mvr.predictions
+                    self.mvr = mvr
+                    self.multi_var_pred = None if mvr is None else self.mvr.predictions
 
                     data_keys = ['X', 'y', 'x_variables', 'y_variable', 'multi_var_pred', 'options', 'mrn',
                                  'study_date', 'uid']
@@ -1138,14 +1135,20 @@ class MachineLearningModelViewer:
         self.loaded_data = load_object_from_file(self.file_path)
 
         self.y_variable = self.loaded_data['y_variable']
-        self.model = self.loaded_data['model']
-        self.sklearn_predictor = self.loaded_data['sklearn_predictor']
         self.tool_tips = self.loaded_data['tool_tips']
         self.x_variables = self.loaded_data['x_variables']
         self.title = self.loaded_data['title']
         self.input_parameters = self.loaded_data['input_parameters']
         self.data_split = self.loaded_data['data_split']
         self.version = self.loaded_data['version']
+
+        # As of v0.8.9, model -> sklearn_predictor, regression -> model
+        if 'sklearn_predictor' in self.loaded_data.keys():
+            self.model = self.loaded_data['model']
+            self.sklearn_predictor = self.loaded_data['sklearn_predictor']
+        else:
+            self.model = self.loaded_data['regression']
+            self.sklearn_predictor = self.loaded_data['model']
 
     def __load_model(self):
         self.ml_frame.model = self.model
@@ -1313,8 +1316,8 @@ class MachineLearningSetupDlg(wx.Dialog):
     def selected_features(self):
         features = [self.list_ctrl_features.GetItem(i, 0).GetText() for i in self.selected_indices]
         ignore_me = [self.y]
-        if self.delete_feature_if_nan:
-            ignore_me.extend(self.stats_data.vars_with_none_values)
+        if self.ignore_feature_if_nan:
+            ignore_me.extend(self.stats_data.vars_with_nan_values)
         return sorted(list(set(features) - set(ignore_me)))
 
     @property
@@ -1330,12 +1333,14 @@ class MachineLearningSetupDlg(wx.Dialog):
         return self.combo_box_y.GetValue()
 
     @property
-    def delete_feature_if_nan(self):
+    def ignore_feature_if_nan(self):
         return self.combo_box_nan.GetValue() == 'Ignore Feature'
 
     @property
     def ml_input_data(self):
-        X, y, mrn, uid, dates = self.stats_data.get_X_and_y(self.y, self.selected_features, include_patient_info=True)
+        X, y, mrn, uid, dates = self.stats_data.get_X_and_y(self.y,
+                                                            self.selected_features,
+                                                            include_patient_info=True)
 
         return {'X': X,
                 'y': y,
@@ -1351,5 +1356,5 @@ class MachineLearningSetupDlg(wx.Dialog):
               "Right-click a column header to add a new column. You can copy/paste data to/from MS Excel.\n\n" \
               "This is how you can add categorical data for a classifier (e.g., toxicity grade), however, " \
               "data currently MUST be numeric. You'll need to use integers to represent your categories."
-        wx.MessageBox(msg, 'Pro Tip',
+        wx.MessageBox(msg, 'Data Editing Tip',
                       wx.OK | wx.OK_DEFAULT | wx.ICON_INFORMATION)
