@@ -18,6 +18,7 @@ from sklearn.svm import SVR, SVC
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.neural_network import MLPClassifier, MLPRegressor
 from dvha.dialogs.export import save_data_to_file
+from dvha.dialogs.main import ShowList
 from dvha.options import DefaultOptions
 from dvha.paths import MODELS_DIR
 from dvha.models.plot import PlotMachineLearning, PlotFeatureImportance
@@ -26,18 +27,18 @@ from dvha.tools.utilities import set_msw_background_color, get_window_size, load
 
 
 class MachineLearningFrame(wx.Frame):
-    def __init__(self, main_app_frame, data, title, model=None, alg_type='regressor',
+    def __init__(self, main_app_frame, data, title, sklearn_predictor=None, alg_type='regressor',
                  tool_tips=None, include_test_data=True):
         wx.Frame.__init__(self, None)
 
         self.main_app_frame = main_app_frame
         self.data = data
         self.title = title
-        self.model = [model, ALGORITHMS[title][alg_type]][model is None]
+        self.sklearn_predictor = [sklearn_predictor, ALGORITHMS[title][alg_type]][sklearn_predictor is None]
         self.tool_tips = [tool_tips, ALGORITHMS[title]['tool_tips']][tool_tips is None]
         self.include_test_data = include_test_data
 
-        self.reg = None
+        self.model = None
         is_classifier = alg_type == 'classifier'
         self.plot = PlotMachineLearning(self, ml_type=self.title, ml_type_short=self.ml_type_short,
                                         include_test_data=include_test_data, is_classifier=is_classifier, **self.data)
@@ -65,6 +66,7 @@ class MachineLearningFrame(wx.Frame):
                                    'shuffle': self.to_bool}
 
         self.button_calculate = wx.Button(self, wx.ID_ANY, "Calculate")
+        self.button_features = wx.Button(self, wx.ID_ANY, "Features")
         self.button_importance = wx.Button(self, wx.ID_ANY, "Importance Plot")
         self.button_export_data = wx.Button(self, wx.ID_ANY, "Export Data")
         self.button_save_figure = wx.Button(self, wx.ID_ANY, "Save Figure")
@@ -74,6 +76,7 @@ class MachineLearningFrame(wx.Frame):
 
     def do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_calculate, id=self.button_calculate.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_features, id=self.button_features.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_feature_importance, id=self.button_importance.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export_data.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_figure, id=self.button_save_figure.GetId())
@@ -117,6 +120,7 @@ class MachineLearningFrame(wx.Frame):
         sizer_side_bar.Add(sizer_split_param, 0, wx.ALL | wx.EXPAND, 5)
 
         sizer_actions.Add(self.button_calculate, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        sizer_actions.Add(self.button_features, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         sizer_actions.Add(self.button_importance, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         sizer_actions.Add(self.button_export_data, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_actions.Add(self.button_save_figure, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
@@ -249,15 +253,15 @@ class MachineLearningFrame(wx.Frame):
     @property
     def plot_data(self):
         try:
-            self.reg = self.model(**self.input_parameters)
-            return MachineLearningPlotData(self.data['X'], self.data['y'], self.reg, **self.data_split_parameters)
+            self.model = self.sklearn_predictor(**self.input_parameters)
+            return MachineLearningPlotData(self.data['X'], self.data['y'], self.model, **self.data_split_parameters)
         except Exception as e:
             wx.MessageBox(str(e), 'Error!',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
 
-    def do_regression(self):
-        self.reg = self.model(**self.input_parameters)
-        return MachineLearningPlotData(self.data['X'], self.data['y'], self.reg, **self.data_split_parameters)
+    def do_prediction(self):
+        self.model = self.sklearn_predictor(**self.input_parameters)
+        return MachineLearningPlotData(self.data['X'], self.data['y'], self.model, **self.data_split_parameters)
 
     def on_calculate(self, evt):
         data = self.plot_data
@@ -286,8 +290,8 @@ class MachineLearningFrame(wx.Frame):
 
     def on_save_model(self, evt):
         data = {'y_variable': self.plot.y_variable,
-                'regression': self.reg,
                 'model': self.model,
+                'sklearn_predictor': self.sklearn_predictor,
                 'tool_tips': self.tool_tips,
                 'x_variables': self.plot.x_variables,
                 'title': self.title,
@@ -295,7 +299,7 @@ class MachineLearningFrame(wx.Frame):
                 'data_split': self.data_split_parameters,
                 'version': DefaultOptions().VERSION}
         save_data_to_file(self, 'Save Model', data,
-                          wildcard="MODEL files (*.mlr)|*.mlr", data_type='pickle', initial_dir=MODELS_DIR)
+                          wildcard="MODEL files (*.ml)|*.ml", data_type='pickle', initial_dir=MODELS_DIR)
 
     def run(self):
         self.set_properties()
@@ -311,11 +315,14 @@ class MachineLearningFrame(wx.Frame):
     def ml_type_short(self):
         return ''.join([s[0] for s in self.title.split(' ')]).upper()
 
+    def on_features(self, *evt):
+        ShowList(self.plot.x_variables, "Features")
+
     def on_feature_importance(self, evt):
         title = "Importance Figure for %s (%s)" % (self.title, self.data['y_variable'])
         plot_title = "%s Feature Importances for %s" % (self.title, self.data['y_variable'])
         self.feature_importance_dlg = FeatureImportanceFrame(self.data['options'], self.data['x_variables'],
-                                                             self.reg.feature_importances_, title, plot_title)
+                                                             self.model.feature_importances_, title, plot_title)
         self.feature_importance_dlg.Show()
 
 
@@ -986,8 +993,8 @@ ALGORITHMS = {'Random Forest': {'regressor': RandomForestRegressor,
 
 
 class MachineLearningPlotData:
-    def __init__(self, X, y, reg, do_training=True, **kwargs):
-        self.reg = reg
+    def __init__(self, X, y, model, do_training=True, **kwargs):
+        self.model = model
         self.split_args = kwargs
 
         indices = list(range(len(y)))
@@ -1001,20 +1008,20 @@ class MachineLearningPlotData:
 
         # Train model, then calculate predictions, residuals, and mse
         if do_training:
-            self.reg.fit(self.X['train'], self.y['train'])
+            self.model.fit(self.X['train'], self.y['train'])
         self.predictions = {key: self.get_prediction(key) for key in self.y.keys()}
         self.residuals = {key: self.get_residual(key) for key in self.y.keys()}
         self.mse = {key: self.get_mse(key) for key in self.y.keys()}
         self.accuracy = {key: self.get_accuracy(key) for key in self.y.keys()}
 
     def get_prediction(self, key):
-        return self.reg.predict(self.X[key])
+        return self.model.predict(self.X[key])
 
     def get_mse(self, key):
         return np.mean(np.square(np.subtract(self.predictions[key], self.y[key])))
 
     def get_residual(self, key):
-        return np.subtract(self.y[key], self.reg.predict(self.X[key]))
+        return np.subtract(self.y[key], self.model.predict(self.X[key]))
 
     def get_accuracy(self, key):
         """Only applicable for classifiers"""
@@ -1022,8 +1029,8 @@ class MachineLearningPlotData:
 
     @property
     def feature_importances(self):
-        if hasattr(self.reg, 'feature_importances_'):
-            return self.reg.feature_importances_
+        if hasattr(self.model, 'feature_importances_'):
+            return self.model.feature_importances_
         return None
 
 
@@ -1080,7 +1087,7 @@ class MachineLearningModelViewer:
 
         if self.file_path:
 
-            self.__load_mlr_file()
+            self.__load_ml_file()
             try:
                 if self.is_valid:
                     self.__set_X_and_y_data()
@@ -1105,8 +1112,8 @@ class MachineLearningModelViewer:
                 else:
                     if self.stats_data is None:
                         msg = 'No data has been queried for Group %s.' % group
-                    elif not self.is_mlr:
-                        msg = 'Selected file is not a valid machine learning regression save file.'
+                    elif not self.is_ml:
+                        msg = 'Selected file is not a valid machine learning model save file.'
                     elif not self.stats_data_has_y:
                         msg = "The model's dependent variable is not found in your queried data:\n%s" % self.y_variable
                     elif self.missing_x_variables:
@@ -1121,18 +1128,18 @@ class MachineLearningModelViewer:
                 wx.MessageBox(msg, 'Model Loading Error', wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
 
     def file_select_dlg(self):
-        with wx.FileDialog(self.parent, "Load a machine learning regression model", wildcard='*.mlr',
+        with wx.FileDialog(self.parent, "Load a machine learning model", wildcard='*.ml',
                            style=wx.FD_FILE_MUST_EXIST | wx.FD_OPEN) as dlg:
             dlg.SetDirectory(MODELS_DIR)
             if dlg.ShowModal() == wx.ID_OK:
                 return dlg.GetPath()
 
-    def __load_mlr_file(self):
+    def __load_ml_file(self):
         self.loaded_data = load_object_from_file(self.file_path)
 
         self.y_variable = self.loaded_data['y_variable']
-        self.regression = self.loaded_data['regression']
         self.model = self.loaded_data['model']
+        self.sklearn_predictor = self.loaded_data['sklearn_predictor']
         self.tool_tips = self.loaded_data['tool_tips']
         self.x_variables = self.loaded_data['x_variables']
         self.title = self.loaded_data['title']
@@ -1141,7 +1148,7 @@ class MachineLearningModelViewer:
         self.version = self.loaded_data['version']
 
     def __load_model(self):
-        self.ml_frame.reg = self.regression
+        self.ml_frame.model = self.model
         self.ml_frame.set_input_parameters(self.input_parameters)
         self.ml_frame.set_data_split_parameters(self.data_split)
         self.__disable_input()
@@ -1159,13 +1166,13 @@ class MachineLearningModelViewer:
             self.stats_data.get_X_and_y(self.y_variable, self.x_variables, include_patient_info=True)
 
     @property
-    def is_mlr(self):
+    def is_ml(self):
         return 'title' in list(self.loaded_data) \
                and self.loaded_data['title'] in list(ALGORITHMS)
 
     @property
     def is_valid(self):
-        return self.stats_data is not None and self.is_mlr and not self.missing_x_variables and self.stats_data_has_y
+        return self.stats_data is not None and self.is_ml and not self.missing_x_variables and self.stats_data_has_y
 
     @property
     def missing_x_variables(self):

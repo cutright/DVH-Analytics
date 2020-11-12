@@ -1721,11 +1721,7 @@ class PlotControlChart(Plot):
 
         data = self.source['plot'].data
         resid = self.source['adj_plot'].data['y']
-        if resid:
-            # TODO: self.model_name?
-            residual_column = ',Residual%s' % [' (%s)' % self.model_name, ''][self.model_name is None]
-        else:
-            residual_column = ''
+        residual_column = ',Residual' if resid else ''
         csv_data = ['MRN,Study Instance UID,Study #,Date,%s%s' % (self.y_axis_label, residual_column)]
         for i in range(len(data['mrn'])):
             csv_data.append(','.join(str(data[key][i]).replace(',', '^') for key in ['mrn', 'uid', 'x', 'dates', 'y']))
@@ -2011,8 +2007,9 @@ class PlotMachineLearning(Plot):
 
     def get_csv(self):
 
-        col_titles = 'MRN,Study Instance UID,Study #,Date,%s,%s, Multi-Variable Regression' % \
-                     (self.y_variable, self.ml_type)
+        col_titles = 'MRN,Study Instance UID,Study #,Date,%s,%s' % (self.y_variable, self.ml_type)
+        if self.multi_var_pred is not None:
+            col_titles = col_titles + ",Multi-Variable Regression"
         csv_data = []
         for data_type in self.plot_types:
             data = self.source[data_type]['data'].data
@@ -2024,9 +2021,9 @@ class PlotMachineLearning(Plot):
             for i in range(len(data['mrn'])):
                 csv_data.append(','.join(str(data[key][i]).replace(',', '^')
                                          for key in ['mrn', 'uid', 'x', 'study_date', 'y']))
-                csv_data[-1] = "%s,%s,%s" % (csv_data[-1],
-                                             self.source[data_type]['predict'].data['y'][i],
-                                             self.source[data_type]['multi_var'].data['y'][i])
+                csv_data[-1] = "%s,%s" % (csv_data[-1], self.source[data_type]['predict'].data['y'][i])
+                if self.multi_var_pred is not None:
+                    csv_data[-1] = csv_data[-1] + ",%s" % self.source[data_type]['multi_var'].data['y'][i]
             csv_data.append('\n')
 
         # Original dataset (in case not all data was used for training and testing

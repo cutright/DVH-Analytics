@@ -1185,6 +1185,46 @@ class PythonLibraries(wx.Dialog):
         self.Destroy()
 
 
+class ShowList(wx.Dialog):
+    """Simple dialog to display a non-interactive List"""
+    def __init__(self, list_items, title="List of Items", *evt):
+        wx.Dialog.__init__(self, None, title=title)
+
+        self.list_ctrl = wx.ListCtrl(self, wx.ID_ANY,
+                                     style=wx.BORDER_SUNKEN | wx.LC_REPORT | wx.LC_NO_HEADER | wx.LC_SINGLE_SEL)
+        self.data_table = DataTable(self.list_ctrl, widths=[400])
+        self.list_items = list_items
+        self.data_table.set_data({'col': self.list_items}, ['col'])
+
+        self.data_table.set_column_widths(auto=True)
+
+        self.__do_bind()
+        self.__do_layout()
+
+        self.run()
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_select, id=self.list_ctrl.GetId())
+
+    def __do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_main = wx.BoxSizer(wx.VERTICAL)
+        sizer_main.Add(self.list_ctrl, 1, wx.EXPAND, 0)
+        sizer_wrapper.Add(sizer_main, 1, wx.EXPAND | wx.ALL, 10)
+
+        self.SetBackgroundColour(wx.WHITE)
+        self.SetSizer(sizer_wrapper)
+        self.SetSize(get_window_size(0.25, 0.8))
+        self.Center()
+
+    def run(self):
+        self.ShowModal()
+        self.Destroy()
+
+    def on_select(self, *evt):
+        self.data_table.apply_selection_to_all(False)
+
+
 def do_sqlite_backup(parent, options):
     flags = wx.ICON_ERROR | wx.OK | wx.OK_DEFAULT
     if options.DB_TYPE_GRPS[1] == 'sqlite':
