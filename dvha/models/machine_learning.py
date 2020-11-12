@@ -12,7 +12,8 @@ Classes to view and calculate Machine Learning predictions
 
 import wx
 import numpy as np
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, RandomForestClassifier, GradientBoostingClassifier
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor,\
+    RandomForestClassifier, GradientBoostingClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVR, SVC
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
@@ -22,8 +23,8 @@ from dvha.dialogs.main import ShowList
 from dvha.options import DefaultOptions
 from dvha.paths import MODELS_DIR
 from dvha.models.plot import PlotMachineLearning, PlotFeatureImportance
-from dvha.tools.stats import MultiVariableRegression
-from dvha.tools.utilities import set_msw_background_color, get_window_size, load_object_from_file, set_frame_icon, get_selected_listctrl_items
+from dvha.tools.utilities import set_msw_background_color, get_window_size,\
+    load_object_from_file, set_frame_icon, get_selected_listctrl_items
 
 
 class MachineLearningFrame(wx.Frame):

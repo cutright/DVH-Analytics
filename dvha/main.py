@@ -22,7 +22,7 @@ from pubsub import pub
 from dvha.db import sql_columns
 from dvha.db.sql_to_python import QuerySQL
 from dvha.db.sql_connector import echo_sql_db, initialize_db
-from dvha.dialogs.main import query_dlg, UserSettings, About, PythonLibraries, do_sqlite_backup, SelectMLVarDialog
+from dvha.dialogs.main import query_dlg, UserSettings, About, PythonLibraries, do_sqlite_backup
 from dvha.dialogs.database import SQLSettingsDialog
 from dvha.dialogs.export import ExportCSVDialog, ExportFigure, ExportPGSQLProgressFrame
 from dvha.models.import_dicom import ImportDicomFrame
@@ -129,7 +129,7 @@ class DVHAMainFrame(wx.Frame):
                                'data': {key: None for key in ['Plans', 'Beams', 'Rxs']},
                                'stats_data': None}}
 
-        self.toolbar_keys = ['Open', 'Close', 'Save', 'Export', 'Image', 'Import', 'Database', 'ROI Map', 'ML', 'Settings']
+        self.toolbar_keys = ['Open', 'Close', 'Save', 'Export', 'Image', 'Import', 'Database', 'ROI Map', 'AI', 'Settings']
         self.toolbar_ids = {key: i + 1000 for i, key in enumerate(self.toolbar_keys)}
 
         # sql_columns.py contains dictionaries of all queryable variables along with their
@@ -204,7 +204,7 @@ class DVHAMainFrame(wx.Frame):
                        'Settings': "User Settings",
                        'Database': "Database Administrator Tools",
                        'ROI Map': "Define ROI name aliases",
-                       'ML': "Machine Learning"}
+                       'AI': "Machine Learning"}
 
         for key in self.toolbar_keys:
             bitmap = wx.Bitmap(ICONS[key], wx.BITMAP_TYPE_ANY)
@@ -213,7 +213,7 @@ class DVHAMainFrame(wx.Frame):
             self.frame_toolbar.AddTool(self.toolbar_ids[key], key, bitmap,
                                        wx.NullBitmap, wx.ITEM_NORMAL, description[key], "")
 
-            if key in {'Close', 'Image', 'ROI Map', 'ML'}:
+            if key in {'Close', 'Image', 'ROI Map', 'AI'}:
                 separator_count = 4 if is_windows() else 1  # MSW separator is very thin compared to mac
                 for _ in range(separator_count):
                     self.frame_toolbar.AddSeparator()
@@ -225,7 +225,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.on_toolbar_database, id=self.toolbar_ids['Database'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_settings, id=self.toolbar_ids['Settings'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_roi_map, id=self.toolbar_ids['ROI Map'])
-        self.Bind(wx.EVT_TOOL, self.on_toolbar_ml, id=self.toolbar_ids['ML'])
+        self.Bind(wx.EVT_TOOL, self.on_toolbar_ml, id=self.toolbar_ids['AI'])
         self.Bind(wx.EVT_TOOL, self.on_close, id=self.toolbar_ids['Close'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_import, id=self.toolbar_ids['Import'])
 

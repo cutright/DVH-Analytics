@@ -65,7 +65,7 @@ ICONS = {'Open': "iconfinder_Open_1493293.png",
          'plan': "iconfinder_Clipboard-Plan_379537_zoom.png",
          'patient': "iconfinder_User_Yuppie_3_1218716.png",
          'Image': "iconfinder_m-52_4230522.png",
-         'ML': "neural-network-icon-23.jpg"}
+         'AI': "neural-network.jpg"}
 for key, value in ICONS.items():
     ICONS[key] = join(ICONS_DIR, value)
 
