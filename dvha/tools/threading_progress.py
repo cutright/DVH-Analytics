@@ -115,8 +115,8 @@ class ProgressFrameWorker(Thread):
     def get_queue(self):
         queue = Queue()
         for i, obj in enumerate(self.obj_list):
-            msg = {'label': 'Initializing...',
-                   'gauge': 0}
+            msg = {'label': "%s (%s of %s)" % (self.action_msg, i, len(self.obj_list)),
+                   'gauge': float(i / len(self.obj_list))}
             queue.put((obj, msg))
         return queue
 

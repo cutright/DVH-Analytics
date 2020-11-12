@@ -193,6 +193,18 @@ class StatsData:
     def trending_variables(self):
         return list(self.data)
 
+    @property
+    def vars_with_nan_values(self):
+        ans = []
+        for var in self.variables:
+            for val in self.data[var]['values']:
+                try:
+                    float(val)
+                except Exception:
+                    ans.append(var)
+                    break
+        return ans
+
     def get_axis_title(self, variable):
         if self.data[variable]['units']:
             return "%s (%s)" % (variable, self.data[variable]['units'])
@@ -221,7 +233,7 @@ class StatsData:
         for var in x_variables:
             x_var_data = []
             for value in self.data[var]['values']:
-                x_var_data.append([value, np.nan][value == 'None'])
+                x_var_data.append([value, np.nan][str(value).lower() == 'none'])
             data.append(x_var_data)
 
         data = np.array(data)

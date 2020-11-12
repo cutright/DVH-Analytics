@@ -15,7 +15,7 @@ from pubsub import pub
 from dvha.tools.errors import ErrorDialog
 from dvha.models.plot import PlotRegression, PlotMultiVarRegression
 from dvha.models.machine_learning import RandomForestFrame, GradientBoostingFrame, DecisionTreeFrame,\
-    SupportVectorRegressionFrame, MachineLearningModelViewer
+    SupportVectorRegressionFrame, MachineLearningModelViewer, MLPFrame
 from dvha.dialogs.export import save_data_to_file
 from dvha.dialogs.main import SelectRegressionVariablesDialog
 from dvha.options import DefaultOptions
@@ -438,7 +438,7 @@ class MultiVarResultsFrame(wx.Frame):
         self.button_save_figure = wx.Button(self, wx.ID_ANY, 'Save Figure')
         self.button_save_model = wx.Button(self, wx.ID_ANY, 'Save MVR Model')
         self.button_load_mlr_model = wx.Button(self, wx.ID_ANY, 'Load ML Model')
-        algorithms = ['Random Forest', 'Support Vector Machine', 'Decision Tree', 'Gradient Boosting']
+        algorithms = ['Random Forest', 'Support Vector Machine', 'Decision Tree', 'Gradient Boosting', 'Multilayer Perceptron']
         self.button = {key: wx.Button(self, wx.ID_ANY, key) for key in algorithms}
         self.radiobox_include_back_elim = wx.RadioBox(self, wx.ID_ANY, 'Include all x-variables?', choices=['Yes', 'No'])
 
@@ -461,6 +461,8 @@ class MultiVarResultsFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_decision_tree, id=self.button['Decision Tree'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_support_vector_regression,
                   id=self.button['Support Vector Machine'].GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_multilayer_perceptron,
+                  id=self.button['Multilayer Perceptron'].GetId())
         self.Bind(wx.EVT_BUTTON, self.on_back_elimination, id=self.button_back_elimination.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_figure, id=self.button_save_figure.GetId())
@@ -515,6 +517,9 @@ class MultiVarResultsFrame(wx.Frame):
 
     def on_support_vector_regression(self, evt):
         self.ml_frames.append(SupportVectorRegressionFrame(self.main_app_frame, self.final_stats_data))
+
+    def on_multilayer_perceptron(self, evt):
+        self.ml_frames.append(MLPFrame(self.main_app_frame, self.final_stats_data))
 
     def on_export(self, evt):
         save_data_to_file(self, 'Save multi-variable regression data to csv', self.plot.get_csv_data())

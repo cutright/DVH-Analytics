@@ -35,7 +35,7 @@ from dvha.models.queried_data import QueriedDataFrame
 from dvha.models.rad_bio import RadBioFrame
 from dvha.models.time_series import TimeSeriesFrame
 from dvha.models.correlation import CorrelationFrame
-from dvha.models.machine_learning import MachineLearningModelViewer
+from dvha.models.machine_learning import MachineLearningModelViewer, ALGORITHMS, MachineLearningSetupDlg
 from dvha.models.regression import RegressionFrame, LoadMultiVarModelFrame
 from dvha.models.control_chart import ControlChartFrame
 from dvha.models.roi_map import ROIMapFrame
@@ -129,7 +129,7 @@ class DVHAMainFrame(wx.Frame):
                                'data': {key: None for key in ['Plans', 'Beams', 'Rxs']},
                                'stats_data': None}}
 
-        self.toolbar_keys = ['Open', 'Close', 'Save', 'Export', 'Image', 'Import', 'Database', 'ROI Map', 'Settings']
+        self.toolbar_keys = ['Open', 'Close', 'Save', 'Export', 'Image', 'Import', 'Database', 'ROI Map', 'AI', 'Settings']
         self.toolbar_ids = {key: i + 1000 for i, key in enumerate(self.toolbar_keys)}
 
         # sql_columns.py contains dictionaries of all queryable variables along with their
@@ -188,6 +188,8 @@ class DVHAMainFrame(wx.Frame):
             caption = "dicompyler-core Version Warning"
             ErrorDialog(self, msg, caption)
 
+        self.ml_views = []
+
     def __add_tool_bar(self):
         self.frame_toolbar = wx.ToolBar(self, -1, style=wx.TB_HORIZONTAL | wx.TB_TEXT)
         self.SetToolBar(self.frame_toolbar)
@@ -201,7 +203,8 @@ class DVHAMainFrame(wx.Frame):
                        'Import': "DICOM import wizard",
                        'Settings': "User Settings",
                        'Database': "Database Administrator Tools",
-                       'ROI Map': "Define ROI name aliases"}
+                       'ROI Map': "Define ROI name aliases",
+                       'AI': "Machine Learning"}
 
         for key in self.toolbar_keys:
             bitmap = wx.Bitmap(ICONS[key], wx.BITMAP_TYPE_ANY)
@@ -210,7 +213,7 @@ class DVHAMainFrame(wx.Frame):
             self.frame_toolbar.AddTool(self.toolbar_ids[key], key, bitmap,
                                        wx.NullBitmap, wx.ITEM_NORMAL, description[key], "")
 
-            if key in {'Close', 'Image', 'ROI Map'}:
+            if key in {'Close', 'Image', 'ROI Map', 'AI'}:
                 separator_count = 4 if is_windows() else 1  # MSW separator is very thin compared to mac
                 for _ in range(separator_count):
                     self.frame_toolbar.AddSeparator()
@@ -222,6 +225,7 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.on_toolbar_database, id=self.toolbar_ids['Database'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_settings, id=self.toolbar_ids['Settings'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_roi_map, id=self.toolbar_ids['ROI Map'])
+        self.Bind(wx.EVT_TOOL, self.on_toolbar_ml, id=self.toolbar_ids['AI'])
         self.Bind(wx.EVT_TOOL, self.on_close, id=self.toolbar_ids['Close'])
         self.Bind(wx.EVT_TOOL, self.on_toolbar_import, id=self.toolbar_ids['Import'])
 
@@ -679,6 +683,18 @@ class DVHAMainFrame(wx.Frame):
     def on_toolbar_roi_map(self, evt):
         self.check_db_then_call(ROIMapFrame, 'roi_map', self.roi_map)
 
+    def on_toolbar_ml(self, evt):
+        if self.group_data[self.selected_group]['dvh'] is not None:
+            dlg = MachineLearningSetupDlg(self.group_data[self.selected_group]['stats_data'], self.options)
+            res = dlg.ShowModal()
+            if res == wx.ID_OK:
+                frame = ALGORITHMS[dlg.ml_alg]['frame']
+                self.ml_views.append(frame(self, dlg.ml_input_data, alg_type=dlg.alg_type))
+            dlg.Destroy()
+        else:
+            wx.MessageBox('There is no data to use! Please query some data first.', 'Data Error',
+                          wx.OK | wx.ICON_WARNING)
+
     def on_sqlite_backup(self, *evt):
         wx.CallAfter(do_sqlite_backup, self, self.options)
 
@@ -924,6 +940,13 @@ class DVHAMainFrame(wx.Frame):
         for window in self.tool_bar_windows.values():
             if window and hasattr(window, 'Destroy'):
                 window.Destroy()
+
+        for view in self.ml_views:
+            if hasattr(view, 'Destroy'):
+                try:
+                    view.Destroy()
+                except RuntimeError:
+                    pass
 
         self.regression.close_mvr_frames()
 

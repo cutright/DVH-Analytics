@@ -12,32 +12,37 @@ Classes to view and calculate Machine Learning predictions
 
 import wx
 import numpy as np
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor,\
+    RandomForestClassifier, GradientBoostingClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.svm import SVR
-from sklearn.tree import DecisionTreeRegressor
+from sklearn.svm import SVR, SVC
+from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
+from sklearn.neural_network import MLPClassifier, MLPRegressor
 from dvha.dialogs.export import save_data_to_file
+from dvha.dialogs.main import ShowList
 from dvha.options import DefaultOptions
 from dvha.paths import MODELS_DIR
 from dvha.models.plot import PlotMachineLearning, PlotFeatureImportance
-from dvha.tools.stats import MultiVariableRegression
-from dvha.tools.utilities import set_msw_background_color, get_window_size, load_object_from_file, set_frame_icon
+from dvha.tools.utilities import set_msw_background_color, get_window_size,\
+    load_object_from_file, set_frame_icon, get_selected_listctrl_items
 
 
 class MachineLearningFrame(wx.Frame):
-    def __init__(self, main_app_frame, data, title, regressor=None, tool_tips=None, include_test_data=True):
+    def __init__(self, main_app_frame, data, title, sklearn_predictor=None, alg_type='regressor',
+                 tool_tips=None, include_test_data=True):
         wx.Frame.__init__(self, None)
 
         self.main_app_frame = main_app_frame
         self.data = data
         self.title = title
-        self.regressor = [regressor, ALGORITHMS[title]['regressor']][regressor is None]
+        self.sklearn_predictor = [sklearn_predictor, ALGORITHMS[title][alg_type]][sklearn_predictor is None]
         self.tool_tips = [tool_tips, ALGORITHMS[title]['tool_tips']][tool_tips is None]
         self.include_test_data = include_test_data
 
-        self.reg = None
+        self.model = None
+        is_classifier = alg_type == 'classifier'
         self.plot = PlotMachineLearning(self, ml_type=self.title, ml_type_short=self.ml_type_short,
-                                        include_test_data=include_test_data, **self.data)
+                                        include_test_data=include_test_data, is_classifier=is_classifier, **self.data)
 
         self.feature_importance_dlg = None
 
@@ -62,6 +67,7 @@ class MachineLearningFrame(wx.Frame):
                                    'shuffle': self.to_bool}
 
         self.button_calculate = wx.Button(self, wx.ID_ANY, "Calculate")
+        self.button_features = wx.Button(self, wx.ID_ANY, "Features")
         self.button_importance = wx.Button(self, wx.ID_ANY, "Importance Plot")
         self.button_export_data = wx.Button(self, wx.ID_ANY, "Export Data")
         self.button_save_figure = wx.Button(self, wx.ID_ANY, "Save Figure")
@@ -71,6 +77,7 @@ class MachineLearningFrame(wx.Frame):
 
     def do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_calculate, id=self.button_calculate.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_features, id=self.button_features.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_feature_importance, id=self.button_importance.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export_data.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_figure, id=self.button_save_figure.GetId())
@@ -114,6 +121,7 @@ class MachineLearningFrame(wx.Frame):
         sizer_side_bar.Add(sizer_split_param, 0, wx.ALL | wx.EXPAND, 5)
 
         sizer_actions.Add(self.button_calculate, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        sizer_actions.Add(self.button_features, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         sizer_actions.Add(self.button_importance, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         sizer_actions.Add(self.button_export_data, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         sizer_actions.Add(self.button_save_figure, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
@@ -246,15 +254,15 @@ class MachineLearningFrame(wx.Frame):
     @property
     def plot_data(self):
         try:
-            self.reg = self.regressor(**self.input_parameters)
-            return MachineLearningPlotData(self.data['X'], self.data['y'], self.reg, **self.data_split_parameters)
+            self.model = self.sklearn_predictor(**self.input_parameters)
+            return MachineLearningPlotData(self.data['X'], self.data['y'], self.model, **self.data_split_parameters)
         except Exception as e:
             wx.MessageBox(str(e), 'Error!',
                           wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
 
-    def do_regression(self):
-        self.reg = self.regressor(**self.input_parameters)
-        return MachineLearningPlotData(self.data['X'], self.data['y'], self.reg, **self.data_split_parameters)
+    def do_prediction(self):
+        self.model = self.sklearn_predictor(**self.input_parameters)
+        return MachineLearningPlotData(self.data['X'], self.data['y'], self.model, **self.data_split_parameters)
 
     def on_calculate(self, evt):
         data = self.plot_data
@@ -283,8 +291,8 @@ class MachineLearningFrame(wx.Frame):
 
     def on_save_model(self, evt):
         data = {'y_variable': self.plot.y_variable,
-                'regression': self.reg,
-                'regressor': self.regressor,
+                'model': self.model,
+                'sklearn_predictor': self.sklearn_predictor,
                 'tool_tips': self.tool_tips,
                 'x_variables': self.plot.x_variables,
                 'title': self.title,
@@ -292,7 +300,7 @@ class MachineLearningFrame(wx.Frame):
                 'data_split': self.data_split_parameters,
                 'version': DefaultOptions().VERSION}
         save_data_to_file(self, 'Save Model', data,
-                          wildcard="MODEL files (*.mlr)|*.mlr", data_type='pickle', initial_dir=MODELS_DIR)
+                          wildcard="MODEL files (*.ml)|*.ml", data_type='pickle', initial_dir=MODELS_DIR)
 
     def run(self):
         self.set_properties()
@@ -308,20 +316,26 @@ class MachineLearningFrame(wx.Frame):
     def ml_type_short(self):
         return ''.join([s[0] for s in self.title.split(' ')]).upper()
 
+    def on_features(self, *evt):
+        ShowList(self.plot.x_variables, "Features")
+
     def on_feature_importance(self, evt):
         title = "Importance Figure for %s (%s)" % (self.title, self.data['y_variable'])
         plot_title = "%s Feature Importances for %s" % (self.title, self.data['y_variable'])
         self.feature_importance_dlg = FeatureImportanceFrame(self.data['options'], self.data['x_variables'],
-                                                             self.reg.feature_importances_, title, plot_title)
+                                                             self.model.feature_importances_, title, plot_title)
         self.feature_importance_dlg.Show()
 
 
 class RandomForestFrame(MachineLearningFrame):
-    def __init__(self, main_app_frame, data, include_test_data=True):
-        MachineLearningFrame.__init__(self, main_app_frame, data, 'Random Forest', include_test_data=include_test_data)
+    def __init__(self, main_app_frame, data, include_test_data=True, alg_type='regressor'):
+        tool_tips = [RF_TOOL_TIPS_CLASSIFIER, RF_TOOL_TIPS][alg_type == 'regressor']
+        crit_choices = [["gini", "entropy"], ["mse", "mae"]][alg_type == 'regressor']
+        MachineLearningFrame.__init__(self, main_app_frame, data, 'Random Forest',
+                                      include_test_data=include_test_data, alg_type=alg_type, tool_tips=tool_tips)
 
         self.input = {'n_estimators': wx.TextCtrl(self, wx.ID_ANY, "100"),
-                      'criterion': wx.ComboBox(self, wx.ID_ANY, choices=["mse", "mae"],
+                      'criterion': wx.ComboBox(self, wx.ID_ANY, choices=crit_choices,
                                                style=wx.CB_DROPDOWN | wx.CB_READONLY),
                       'max_depth': wx.TextCtrl(self, wx.ID_ANY, "None"),
                       'min_samples_split': wx.TextCtrl(self, wx.ID_ANY, "2"),
@@ -338,7 +352,7 @@ class RandomForestFrame(MachineLearningFrame):
                       'random_state': wx.TextCtrl(self, wx.ID_ANY, "None")}
 
         self.defaults = {'n_estimators': 100,
-                         'criterion': 'mse',
+                         'criterion': crit_choices[0],
                          'max_depth': None,
                          'min_samples_split': 2,
                          'min_samples_leaf': 1,
@@ -369,9 +383,9 @@ class RandomForestFrame(MachineLearningFrame):
 
 
 class GradientBoostingFrame(MachineLearningFrame):
-    def __init__(self, main_app_frame, data, include_test_data=True):
+    def __init__(self, main_app_frame, data, include_test_data=True, alg_type='regressor'):
         MachineLearningFrame.__init__(self, main_app_frame, data, 'Gradient Boosting',
-                                      include_test_data=include_test_data)
+                                      include_test_data=include_test_data, alg_type=alg_type)
 
         self.input = {'loss': wx.ComboBox(self, wx.ID_ANY, choices=["ls", "lad", "huber", "quantile"],
                                           style=wx.CB_DROPDOWN | wx.CB_READONLY),
@@ -441,8 +455,9 @@ class GradientBoostingFrame(MachineLearningFrame):
 
 
 class DecisionTreeFrame(MachineLearningFrame):
-    def __init__(self, main_app_frame, data, include_test_data=True):
-        MachineLearningFrame.__init__(self, main_app_frame, data, 'Decision Tree', include_test_data=include_test_data)
+    def __init__(self, main_app_frame, data, include_test_data=True, alg_type='regressor'):
+        MachineLearningFrame.__init__(self, main_app_frame, data, 'Decision Tree',
+                                      include_test_data=include_test_data, alg_type=alg_type)
 
         self.input = {'criterion': wx.ComboBox(self, wx.ID_ANY, choices=["mse", "friedman_mse", "mae"],
                                                style=wx.CB_DROPDOWN | wx.CB_READONLY),
@@ -487,9 +502,9 @@ class DecisionTreeFrame(MachineLearningFrame):
 
 
 class SupportVectorRegressionFrame(MachineLearningFrame):
-    def __init__(self, main_app_frame, data, include_test_data=True):
+    def __init__(self, main_app_frame, data, include_test_data=True, alg_type='regressor'):
         MachineLearningFrame.__init__(self, main_app_frame, data, 'Support Vector Machine',
-                                      include_test_data=include_test_data)
+                                      include_test_data=include_test_data, alg_type=alg_type)
 
         self.input = {'kernel': wx.ComboBox(self, wx.ID_ANY, "rbf",
                                             choices=["linear", "poly", "rbf", "sigmoid", "precomputed"],
@@ -527,6 +542,96 @@ class SupportVectorRegressionFrame(MachineLearningFrame):
                         'shrinking': self.to_bool,
                         'cache_size': self.to_float_or_none,
                         'max_iter': self.to_int}
+
+        self.button_importance.Disable()
+
+        self.run()
+
+
+class MLPFrame(MachineLearningFrame):
+    def __init__(self, main_app_frame, data, include_test_data=True, alg_type='regressor'):
+        MachineLearningFrame.__init__(self, main_app_frame, data, 'Multilayer Perceptron',
+                                      include_test_data=include_test_data, alg_type=alg_type)
+
+        self.input = {
+                      'activation': wx.ComboBox(self, wx.ID_ANY, "relu",
+                                                choices=["identity", "logistic", "tanh", "relu"],
+                                                style=wx.CB_DROPDOWN | wx.CB_READONLY),
+                      'solver': wx.ComboBox(self, wx.ID_ANY, "adam",
+                                            choices=["lbfgs", "sgd", "adam"],
+                                            style=wx.CB_DROPDOWN | wx.CB_READONLY),
+                      'alpha': wx.TextCtrl(self, wx.ID_ANY, "0.001"),
+                      'batch_size': wx.TextCtrl(self, wx.ID_ANY, "auto"),
+                      'learning_rate': wx.ComboBox(self, wx.ID_ANY, "constant",
+                                                   choices=["constant", "invscaling", "adaptive"],
+                                                   style=wx.CB_DROPDOWN | wx.CB_READONLY),
+                      'learning_rate_init': wx.TextCtrl(self, wx.ID_ANY, "0.001"),
+                      'power_t': wx.TextCtrl(self, wx.ID_ANY, "0.5"),
+                      'max_iter': wx.TextCtrl(self, wx.ID_ANY, "200"),
+                      'shuffle': wx.ComboBox(self, wx.ID_ANY, "True",
+                                             choices=["True", "False"],
+                                             style=wx.CB_DROPDOWN | wx.CB_READONLY),
+                      'random_state': wx.TextCtrl(self, wx.ID_ANY, "None"),
+                      'tol': wx.TextCtrl(self, wx.ID_ANY, "1e-4"),
+                      'warm_start': wx.ComboBox(self, wx.ID_ANY, "False",
+                                                choices=["True", "False"],
+                                                style=wx.CB_DROPDOWN | wx.CB_READONLY),
+                      'momentum': wx.TextCtrl(self, wx.ID_ANY, "0.9"),
+                      'nesterovs_momentum': wx.ComboBox(self, wx.ID_ANY, "True",
+                                                        choices=["True", "False"],
+                                                        style=wx.CB_DROPDOWN | wx.CB_READONLY),
+                      'early_stopping': wx.ComboBox(self, wx.ID_ANY, "False",
+                                                    choices=["True", "False"],
+                                                    style=wx.CB_DROPDOWN | wx.CB_READONLY),
+                      'validation_fraction': wx.TextCtrl(self, wx.ID_ANY, "0.1"),
+                      'beta_1': wx.TextCtrl(self, wx.ID_ANY, "0.9"),
+                      'beta_2': wx.TextCtrl(self, wx.ID_ANY, "0.999"),
+                      'epsilon': wx.TextCtrl(self, wx.ID_ANY, "1e-8"),
+                      'n_iter_no_change': wx.TextCtrl(self, wx.ID_ANY, "10")}
+
+        self.defaults = {
+                         'activation': 'relu',
+                         'solver': 'adam',
+                         'alpha': 0.0001,
+                         'batch_size': 'auto',
+                         'learning_rate': 'constant',
+                         'learning_rate_init': 0.001,
+                         'power_t': 0.5,
+                         'max_iter': 200,
+                         'shuffle': True,
+                         'random_state': None,
+                         'tol': 1e-4,
+                         'warm_start': False,
+                         'momentum': 0.9,
+                         'nesterovs_momentum': True,
+                         'early_stopping': False,
+                         'validation_fraction': 0.1,
+                         'beta_1': 0.9,
+                         'beta_2': 0.999,
+                         'epsilon': 1e-08,
+                         'n_iter_no_change': 10}
+
+        self.getters = {
+                        'activation': self.to_str,
+                        'solver': self.to_str,
+                        'alpha': self.to_float,
+                        'batch_size': self.to_float_or_str,
+                        'learning_rate': self.to_str,
+                        'learning_rate_init': self.to_float,
+                        'power_t': self.to_float,
+                        'max_iter': self.to_int,
+                        'shuffle': self.to_bool,
+                        'random_state': self.to_int_or_none,
+                        'tol': self.to_float,
+                        'warm_start': self.to_bool,
+                        'momentum': self.to_float,
+                        'nesterovs_momentum': self.to_bool,
+                        'early_stopping': self.to_bool,
+                        'validation_fraction': self.to_float,
+                        'beta_1': self.to_float,
+                        'beta_2': self.to_float,
+                        'epsilon': self.to_float,
+                        'n_iter_no_change': self.to_int}
 
         self.button_importance.Disable()
 
@@ -585,6 +690,11 @@ RF_TOOL_TIPS = {'n_estimators': "int\nThe number of trees in the forest.",
                 'random_state': "int or None\nIf int, random_state is the seed used by the random "
                                 "number generator; If None, the random number generator is the "
                                 "RandomState instance used by np.random."}
+
+RF_TOOL_TIPS_CLASSIFIER = {key: value for key, value in RF_TOOL_TIPS.items()}
+RF_TOOL_TIPS_CLASSIFIER['criterion'] = "The function to measure the quality of a split. Supported criteria " \
+                                       "are “gini” for the Gini impurity and “entropy” for the information gain. \n" \
+                                       "Note: this parameter is tree-specific."
 
 GB_TOOL_TIPS = {'loss': "loss function to be optimized. ‘ls’ refers to least squares regression. "
                         "‘lad’ (least absolute deviation) is a highly robust loss function solely "
@@ -780,23 +890,112 @@ DATA_SPLIT_TOOL_TIPS = {'test_size': "float, int, or None\n"
                                    " must be None."}
 
 
+MLP_TOOL_TIPS = {'hidden_layer_sizes': "tuple, length = n_layers - 2\n",
+                 'activation': "string\n"
+                               "Activation function for the hidden layer.\n"
+                               "identity: no-op activation, useful to implement linear bottleneck, returns f(x) = x.\n"
+                               "logistic: the logistic sigmoid function, returns f(x) = 1 / (1 + exp(-x)).\n"
+                               "tanh: the hyperbolic tan function, returns f(x) = tanh(x).\n"
+                               "relu: the rectified linear unit function, returns f(x) = max(0, x)",
+                 'solver': "string\nThe solver for weight optimization."
+                           "lbfgs is an optimizer in the family of quasi-Newton methods.\n"
+                           "sgd refers to stochastic gradient descent.\n"
+                           "adam refers to a stochastic gradient-based optimizer proposed by Kingma, Diederik, "
+                           "and Jimmy Ba\n\n"
+                           "Note: The default solver ‘adam’ works pretty well on relatively large datasets "
+                           "(with thousands of training samples or more) in terms of both training time and validation "
+                           "score. For small datasets, however, ‘lbfgs’ can converge faster and perform better.",
+                 'alpha': "float\n"
+                          "L2 penalty (regularization term) parameter.",
+                 'batch_size': "int or string\n"
+                               "Size of minibatches for stochastic optimizers. If the solver is ‘lbfgs’, the "
+                               "classifier will not use minibatch. When set to “auto”, batch_size=min(200, n_samples)",
+                 'learning_rate': "string\n"
+                                  "Learning rate schedule for weight updates.\n"
+                                  "constant is a constant learning rate given by ‘learning_rate_init’.\n"
+                                  "invscaling gradually decreases the learning rate at each time step ‘t’ "
+                                  "using an inverse scaling exponent of ‘power_t’. effective_"
+                                  "learning_rate = learning_rate_init / pow(t, power_t)\n"
+                                  "adaptive keeps the learning rate constant to ‘learning_rate_init’ as long as "
+                                  "training loss keeps decreasing. Each time two consecutive epochs fail to decrease "
+                                  "training loss by at least tol, or fail to increase validation score by at least "
+                                  "tol if ‘early_stopping’ is on, the current learning rate is divided by 5.",
+                 'learning_rate_init': "double\n"
+                                       "The initial learning rate used. It controls the step-size in updating the "
+                                       "weights. Only used when solver=’sgd’ or ‘adam’.",
+                 'power_t': "double\n"
+                            "The exponent for inverse scaling learning rate. It is used in updating effective "
+                            "learning rate when the learning_rate is set to ‘invscaling’. Only used when solver=’sgd’.",
+                 'max_iter': "int\n"
+                             "Maximum number of iterations. The solver iterates until convergence (determined by "
+                             "‘tol’) or this number of iterations. For stochastic solvers (‘sgd’, ‘adam’), note that "
+                             "this determines the number of epochs (how many times each data point will be used), not "
+                             "the number of gradient steps.",
+                 'shuffle': "bool\n"
+                            "Whether to shuffle samples in each iteration. Only used when solver=’sgd’ or ‘adam’.",
+                 'random_state': "int or None\n"
+                                 "If int, random_state is the seed used by the random number generator; "
+                                 "If None, the random number generator is the RandomState instance used by np.random.",
+                 'tol': "float\n"
+                        "Tolerance for the optimization. When the loss or score is not improving by at least tol for "
+                        "n_iter_no_change consecutive iterations, unless learning_rate is set to ‘adaptive’, "
+                        "convergence is considered to be reached and training stops.",
+                 'warm_start': "bool\n"
+                               "When set to True, reuse the solution of the previous call to fit as initialization, "
+                               "otherwise, just erase the previous solution.",
+                 'momentum': "float\n"
+                             "Momentum for gradient descent update. Should be between 0 and 1. "
+                             "Only used when solver=’sgd’.",
+                 'nesterovs_momentum': "bool\n"
+                                       "Whether to use Nesterov’s momentum. Only used when solver=’sgd’ "
+                                       "and momentum > 0.",
+                 'early_stopping': "bool\n"
+                                   "Whether to use early stopping to terminate training when validation score is not "
+                                   "improving. If set to true, it will automatically set aside 10% of training data "
+                                   "as validation and terminate training when validation score is not improving by "
+                                   "at least tol for n_iter_no_change consecutive epochs. The split is stratified, "
+                                   "except in a multilabel setting. Only effective when solver=’sgd’ or ‘adam’",
+                 'validation_fraction': "float\n"
+                                        "The proportion of training data to set aside as validation set for early "
+                                        "stopping. Must be between 0 and 1. Only used if early_stopping is True",
+                 'beta_1': "float\n"
+                           "Exponential decay rate for estimates of first moment vector in adam, should be in [0, 1). "
+                           "Only used when solver=’adam’",
+                 'beta_2': "float\n"
+                           "Exponential decay rate for estimates of second moment vector in adam, should be in [0, 1)."
+                           " Only used when solver=’adam’",
+                 'epsilon': "float\n"
+                            "Value for numerical stability in adam. Only used when solver=’adam’",
+                 'n_iter_no_change': "int\n"
+                                     "Maximum number of epochs to not meet tol improvement. Only effective when "
+                                     "solver=’sgd’ or ‘adam’"}
+
+
 ALGORITHMS = {'Random Forest': {'regressor': RandomForestRegressor,
+                                'classifier': RandomForestClassifier,
                                 'tool_tips': RF_TOOL_TIPS,
                                 'frame': RandomForestFrame},
               'Support Vector Machine': {'regressor': SVR,
+                                         'classifier': SVC,
                                          'tool_tips': SVR_TOOL_TIPS,
                                          'frame': SupportVectorRegressionFrame},
               'Gradient Boosting': {'regressor': GradientBoostingRegressor,
+                                    'classifier': GradientBoostingClassifier,
                                     'tool_tips': GB_TOOL_TIPS,
                                     'frame': GradientBoostingFrame},
               'Decision Tree': {'regressor': DecisionTreeRegressor,
+                                'classifier': DecisionTreeClassifier,
                                 'tool_tips': DT_TOOL_TIPS,
-                                'frame': DecisionTreeFrame}}
+                                'frame': DecisionTreeFrame},
+              'Multilayer Perceptron': {'regressor': MLPRegressor,
+                                        'classifier': MLPClassifier,
+                                        'tool_tips': MLP_TOOL_TIPS,
+                                        'frame': MLPFrame}}
 
 
 class MachineLearningPlotData:
-    def __init__(self, X, y, reg, do_training=True, **kwargs):
-        self.reg = reg
+    def __init__(self, X, y, model, do_training=True, **kwargs):
+        self.model = model
         self.split_args = kwargs
 
         indices = list(range(len(y)))
@@ -810,24 +1009,29 @@ class MachineLearningPlotData:
 
         # Train model, then calculate predictions, residuals, and mse
         if do_training:
-            self.reg.fit(self.X['train'], self.y['train'])
+            self.model.fit(self.X['train'], self.y['train'])
         self.predictions = {key: self.get_prediction(key) for key in self.y.keys()}
         self.residuals = {key: self.get_residual(key) for key in self.y.keys()}
         self.mse = {key: self.get_mse(key) for key in self.y.keys()}
+        self.accuracy = {key: self.get_accuracy(key) for key in self.y.keys()}
 
     def get_prediction(self, key):
-        return self.reg.predict(self.X[key])
+        return self.model.predict(self.X[key])
 
     def get_mse(self, key):
         return np.mean(np.square(np.subtract(self.predictions[key], self.y[key])))
 
     def get_residual(self, key):
-        return np.subtract(self.y[key], self.reg.predict(self.X[key]))
+        return np.subtract(self.y[key], self.model.predict(self.X[key]))
+
+    def get_accuracy(self, key):
+        """Only applicable for classifiers"""
+        return np.count_nonzero(np.subtract(self.predictions[key], self.y[key]) == 0) / len(self.y[key])
 
     @property
     def feature_importances(self):
-        if hasattr(self.reg, 'feature_importances_'):
-            return self.reg.feature_importances_
+        if hasattr(self.model, 'feature_importances_'):
+            return self.model.feature_importances_
         return None
 
 
@@ -884,16 +1088,13 @@ class MachineLearningModelViewer:
 
         if self.file_path:
 
-            self.__load_mlr_file()
+            self.__load_ml_file()
             try:
                 if self.is_valid:
                     self.__set_X_and_y_data()
 
-                    if mvr:
-                        self.mvr = mvr
-                    else:
-                        self.mvr = MultiVariableRegression(self.X, self.y)
-                    self.multi_var_pred = self.mvr.predictions
+                    self.mvr = mvr
+                    self.multi_var_pred = None if mvr is None else self.mvr.predictions
 
                     data_keys = ['X', 'y', 'x_variables', 'y_variable', 'multi_var_pred', 'options', 'mrn',
                                  'study_date', 'uid']
@@ -909,8 +1110,8 @@ class MachineLearningModelViewer:
                 else:
                     if self.stats_data is None:
                         msg = 'No data has been queried for Group %s.' % group
-                    elif not self.is_mlr:
-                        msg = 'Selected file is not a valid machine learning regression save file.'
+                    elif not self.is_ml:
+                        msg = 'Selected file is not a valid machine learning model save file.'
                     elif not self.stats_data_has_y:
                         msg = "The model's dependent variable is not found in your queried data:\n%s" % self.y_variable
                     elif self.missing_x_variables:
@@ -925,18 +1126,16 @@ class MachineLearningModelViewer:
                 wx.MessageBox(msg, 'Model Loading Error', wx.OK | wx.OK_DEFAULT | wx.ICON_WARNING)
 
     def file_select_dlg(self):
-        with wx.FileDialog(self.parent, "Load a machine learning regression model", wildcard='*.mlr',
+        with wx.FileDialog(self.parent, "Load a machine learning model", wildcard='*.ml',
                            style=wx.FD_FILE_MUST_EXIST | wx.FD_OPEN) as dlg:
             dlg.SetDirectory(MODELS_DIR)
             if dlg.ShowModal() == wx.ID_OK:
                 return dlg.GetPath()
 
-    def __load_mlr_file(self):
+    def __load_ml_file(self):
         self.loaded_data = load_object_from_file(self.file_path)
 
         self.y_variable = self.loaded_data['y_variable']
-        self.regression = self.loaded_data['regression']
-        self.regressor = self.loaded_data['regressor']
         self.tool_tips = self.loaded_data['tool_tips']
         self.x_variables = self.loaded_data['x_variables']
         self.title = self.loaded_data['title']
@@ -944,8 +1143,16 @@ class MachineLearningModelViewer:
         self.data_split = self.loaded_data['data_split']
         self.version = self.loaded_data['version']
 
+        # As of v0.8.9, model -> sklearn_predictor, regression -> model
+        if 'sklearn_predictor' in self.loaded_data.keys():
+            self.model = self.loaded_data['model']
+            self.sklearn_predictor = self.loaded_data['sklearn_predictor']
+        else:
+            self.model = self.loaded_data['regression']
+            self.sklearn_predictor = self.loaded_data['model']
+
     def __load_model(self):
-        self.ml_frame.reg = self.regression
+        self.ml_frame.model = self.model
         self.ml_frame.set_input_parameters(self.input_parameters)
         self.ml_frame.set_data_split_parameters(self.data_split)
         self.__disable_input()
@@ -963,13 +1170,13 @@ class MachineLearningModelViewer:
             self.stats_data.get_X_and_y(self.y_variable, self.x_variables, include_patient_info=True)
 
     @property
-    def is_mlr(self):
+    def is_ml(self):
         return 'title' in list(self.loaded_data) \
                and self.loaded_data['title'] in list(ALGORITHMS)
 
     @property
     def is_valid(self):
-        return self.stats_data is not None and self.is_mlr and not self.missing_x_variables and self.stats_data_has_y
+        return self.stats_data is not None and self.is_ml and not self.missing_x_variables and self.stats_data_has_y
 
     @property
     def missing_x_variables(self):
@@ -982,3 +1189,173 @@ class MachineLearningModelViewer:
     def apply_plot_options(self):
         self.ml_frame.plot.apply_options()
         self.ml_frame.redraw_plot()
+
+
+class MachineLearningSetupDlg(wx.Dialog):
+    def __init__(self, stats_data, options):
+        wx.Dialog.__init__(self, None, title="Machine Learning")
+
+        self.stats_data = stats_data
+        self.options = options
+
+        self.combo_box_type = wx.ComboBox(self, wx.ID_ANY, choices=['Regression', 'Classification'], style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.combo_box_alg = wx.ComboBox(self, wx.ID_ANY, choices=sorted(list(ALGORITHMS.keys())), style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.combo_box_nan = wx.ComboBox(self, wx.ID_ANY, choices=['Ignore Study', 'Ignore Feature'], style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.combo_box_y = wx.ComboBox(self, wx.ID_ANY, choices=stats_data.variables, style=wx.CB_DROPDOWN | wx.CB_READONLY)
+
+        self.list_ctrl_features = wx.ListCtrl(self, wx.ID_ANY, style=wx.LC_NO_HEADER | wx.LC_REPORT)
+
+        bmp = wx.ArtProvider.GetBitmap(wx.ART_INFORMATION, size=(16, 16))
+        self.button_info = wx.BitmapButton(self, id=wx.ID_ANY, bitmap=bmp)
+
+        self.button_select_all = wx.Button(self, wx.ID_ANY, "Select All")
+        self.button_deselect_all = wx.Button(self, wx.ID_ANY, "Deselect All")
+        self.button_ok = wx.Button(self, wx.ID_OK, "OK")
+
+        self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
+
+        self.__set_properties()
+
+        self.__do_bind()
+        self.__do_layout()
+
+    def __set_properties(self):
+        self.list_ctrl_features.AppendColumn("Features", format=wx.LIST_FORMAT_LEFT, width=400)
+
+        for choice in self.stats_data.variables:
+            self.list_ctrl_features.InsertItem(50000, choice)
+
+        self.combo_box_type.SetValue('Regression')
+        self.combo_box_alg.SetValue(sorted(list(ALGORITHMS.keys()))[0])
+        self.combo_box_nan.SetValue('Ignore Study')
+        self.combo_box_y.SetValue(self.stats_data.variables[0])
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_BUTTON, self.select_all, id=self.button_select_all.GetId())
+        self.Bind(wx.EVT_BUTTON, self.deselect_all, id=self.button_deselect_all.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_info, id=self.button_info.GetId())
+
+    def __do_layout(self):
+
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_main = wx.BoxSizer(wx.VERTICAL)
+        sizer_input_wrapper = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, ""), wx.HORIZONTAL)
+        sizer_input = wx.BoxSizer(wx.VERTICAL)
+        sizer_type = wx.BoxSizer(wx.VERTICAL)
+        sizer_type_sub_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_alg = wx.BoxSizer(wx.VERTICAL)
+        sizer_nan_policy = wx.BoxSizer(wx.VERTICAL)
+        sizer_y_var = wx.BoxSizer(wx.VERTICAL)
+        sizer_features = wx.BoxSizer(wx.VERTICAL)
+        sizer_select_all = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_ok_cancel = wx.BoxSizer(wx.HORIZONTAL)
+
+        label_type = wx.StaticText(self, wx.ID_ANY, "ML Type:")
+        label_alg = wx.StaticText(self, wx.ID_ANY, "Algorithm:")
+        label_nan_policy = wx.StaticText(self, wx.ID_ANY, "NaN Policy:")
+        label_y = wx.StaticText(self, wx.ID_ANY, "Dependent Variable:")
+        label_features = wx.StaticText(self, wx.ID_ANY, "Features:")
+
+        sizer_type.Add(label_type, 0, 0, 0)
+        sizer_type_sub_sizer.Add(self.combo_box_type, 1, wx.EXPAND, 0)
+        sizer_type_sub_sizer.Add(self.button_info, 0, wx.EXPAND | wx.LEFT, 5)
+        sizer_type.Add(sizer_type_sub_sizer, 0, wx.EXPAND, 0)
+        sizer_input.Add(sizer_type, 0, wx.ALL | wx.EXPAND, 5)
+
+        sizer_alg.Add(label_alg, 0, 0, 0)
+        sizer_alg.Add(self.combo_box_alg, 0, wx.EXPAND, 0)
+        sizer_input.Add(sizer_alg, 0, wx.ALL | wx.EXPAND, 5)
+
+        sizer_nan_policy.Add(label_nan_policy, 0, 0, 0)
+        sizer_nan_policy.Add(self.combo_box_nan, 0, wx.EXPAND, 0)
+        sizer_input.Add(sizer_nan_policy, 0, wx.ALL | wx.EXPAND, 5)
+
+        sizer_y_var.Add(label_y, 0, 0, 0)
+        sizer_y_var.Add(self.combo_box_y, 0, wx.EXPAND, 0)
+        sizer_input.Add(sizer_y_var, 0, wx.ALL | wx.EXPAND, 5)
+
+        sizer_features.Add(label_features, 0, wx.BOTTOM | wx.EXPAND, 5)
+        sizer_features.Add(self.list_ctrl_features, 1, wx.EXPAND, 0)
+        sizer_select_all.Add(self.button_select_all, 0, wx.ALL, 5)
+        sizer_select_all.Add(self.button_deselect_all, 0, wx.ALL, 5)
+        sizer_features.Add(sizer_select_all, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
+
+        sizer_input.Add(sizer_features, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+
+        sizer_input_wrapper.Add(sizer_input, 1, wx.EXPAND, 0)
+        sizer_main.Add(sizer_input_wrapper, 1, wx.EXPAND | wx.RIGHT, 5)
+
+        sizer_ok_cancel.Add(self.button_ok, 0, wx.ALL, 5)
+        sizer_ok_cancel.Add(self.button_cancel, 0, wx.ALL, 5)
+        sizer_main.Add(sizer_ok_cancel, 0, wx.ALIGN_RIGHT | wx.RIGHT, 5)
+
+        sizer_wrapper.Add(sizer_main, 1, wx.ALL | wx.EXPAND, 5)
+
+        self.SetSizer(sizer_wrapper)
+        sizer_wrapper.Fit(self)
+
+        self.Layout()
+        self.Center()
+
+    def select_all(self, evt):
+        self.apply_global_selection()
+
+    def deselect_all(self, evt):
+        self.apply_global_selection(on=0)
+
+    def apply_global_selection(self, on=1):
+        for i in range(len(self.stats_data.variables)):
+            self.list_ctrl_features.Select(i, on=on)
+
+    @property
+    def selected_indices(self):
+        if len(get_selected_listctrl_items(self.list_ctrl_features)) == 0:
+            self.apply_global_selection()
+        return get_selected_listctrl_items(self.list_ctrl_features)
+
+    @property
+    def selected_features(self):
+        features = [self.list_ctrl_features.GetItem(i, 0).GetText() for i in self.selected_indices]
+        ignore_me = [self.y]
+        if self.ignore_feature_if_nan:
+            ignore_me.extend(self.stats_data.vars_with_nan_values)
+        return sorted(list(set(features) - set(ignore_me)))
+
+    @property
+    def alg_type(self):
+        return ['classifier', 'regressor'][self.combo_box_type.GetValue() == 'Regression']
+
+    @property
+    def ml_alg(self):
+        return self.combo_box_alg.GetValue()
+
+    @property
+    def y(self):
+        return self.combo_box_y.GetValue()
+
+    @property
+    def ignore_feature_if_nan(self):
+        return self.combo_box_nan.GetValue() == 'Ignore Feature'
+
+    @property
+    def ml_input_data(self):
+        X, y, mrn, uid, dates = self.stats_data.get_X_and_y(self.y,
+                                                            self.selected_features,
+                                                            include_patient_info=True)
+
+        return {'X': X,
+                'y': y,
+                'x_variables': self.selected_features,
+                'y_variable': self.y,
+                'options': self.options,
+                'mrn': mrn,
+                'study_date': dates,
+                'uid': uid}
+
+    def on_info(self, *evt):
+        msg = "You can add new features by going to Data -> Show Stats Data in the menu bar. " \
+              "Right-click a column header to add a new column. You can copy/paste data to/from MS Excel.\n\n" \
+              "This is how you can add categorical data for a classifier (e.g., toxicity grade), however, " \
+              "data currently MUST be numeric. You'll need to use integers to represent your categories."
+        wx.MessageBox(msg, 'Data Editing Tip',
+                      wx.OK | wx.OK_DEFAULT | wx.ICON_INFORMATION)

@@ -1721,11 +1721,7 @@ class PlotControlChart(Plot):
 
         data = self.source['plot'].data
         resid = self.source['adj_plot'].data['y']
-        if resid:
-            # TODO: self.model_name?
-            residual_column = ',Residual%s' % [' (%s)' % self.model_name, ''][self.model_name is None]
-        else:
-            residual_column = ''
+        residual_column = ',Residual' if resid else ''
         csv_data = ['MRN,Study Instance UID,Study #,Date,%s%s' % (self.y_axis_label, residual_column)]
         for i in range(len(data['mrn'])):
             csv_data.append(','.join(str(data[key][i]).replace(',', '^') for key in ['mrn', 'uid', 'x', 'dates', 'y']))
@@ -1770,8 +1766,8 @@ class PlotMachineLearning(Plot):
     """
     Generate plot for Machine Learning frames created in the MultiVariable Regression frame
     """
-    def __init__(self, parent, options, multi_var_pred, x_variables, y_variable, mrn, study_date, uid,
-                 ml_type=None, ml_type_short=None, include_test_data=True, **kwargs):
+    def __init__(self, parent, options, x_variables, y_variable, mrn, study_date, uid, multi_var_pred=None,
+                 ml_type=None, ml_type_short=None, include_test_data=True, is_classifier=False, **kwargs):
         """
         :param parent: the wx UI object where the plot will be displayed
         :param options: user preferences
@@ -1789,9 +1785,10 @@ class PlotMachineLearning(Plot):
         self.uid = uid
         self.X, self.y = None, None
         self.include_test_data = include_test_data
+        self.is_classifier = is_classifier
 
         x_size = [0.64, 0.38][include_test_data]
-        self.size_factor = {'data': (x_size, 0.425),
+        self.size_factor = {'data': (x_size, [0.425, 0.85][is_classifier]),
                             'diff': (x_size, 0.425)}
 
         self.options = options
@@ -1850,17 +1847,26 @@ class PlotMachineLearning(Plot):
             figs = self.ml_figures[data_type]
             self.renderers[data_type] = {'data': figs['data'].cross('x', 'y', source=srcs['data']),
                                          'predict': figs['data'].circle('x', 'y', source=srcs['predict']),
-                                         'multi_var': figs['data'].circle('x', 'y', source=srcs['multi_var']),
                                          'diff': figs['diff'].circle(x='x', y='y0', source=srcs['diff'], alpha=0),
-                                         'diff_ml': figs['diff'].varea(x='x', y1='y_ml', y2='y0', source=srcs['diff']),
-                                         'diff_mvr': figs['diff'].varea(x='x', y1='y_mvr', y2='y0', source=srcs['diff'])}
+                                         'diff_ml': figs['diff'].varea(x='x', y1='y_ml', y2='y0', source=srcs['diff'])}
+            if self.multi_var_pred is not None:
+                self.renderers[data_type]['multi_var'] = figs['data'].circle('x', 'y', source=srcs['multi_var'])
+                self.renderers[data_type]['diff_mvr'] = figs['diff'].varea(x='x', y1='y_mvr', y2='y0', source=srcs['diff'])
 
     def __do_layout(self):
-        self.bokeh_layout = row(column(self.div_title['train'], self.div_mse['train'],
-                                       self.ml_figures['train']['data'], self.ml_figures['train']['diff']))
+        if self.is_classifier:
+            self.bokeh_layout = row(column(self.div_title['train'], self.div_mse['train'],
+                                           self.ml_figures['train']['data']))
+        else:
+            self.bokeh_layout = row(column(self.div_title['train'], self.div_mse['train'],
+                                           self.ml_figures['train']['data'], self.ml_figures['train']['diff']))
         if self.include_test_data:
-            self.bokeh_layout.children.append(column(self.div_title['test'], self.div_mse['test'],
-                                                     self.ml_figures['test']['data'], self.ml_figures['test']['diff']))
+            if self.is_classifier:
+                self.bokeh_layout.children.append(column(self.div_title['test'], self.div_mse['test'],
+                                                         self.ml_figures['test']['data']))
+            else:
+                self.bokeh_layout.children.append(column(self.div_title['test'], self.div_mse['test'],
+                                                         self.ml_figures['test']['data'], self.ml_figures['test']['diff']))
 
     def __add_hover(self):
         for data_type in self.plot_types:
@@ -1871,28 +1877,40 @@ class PlotMachineLearning(Plot):
                                                                              ('Value', '@y{0.2f}')],
                                                                    formatters={'study_date': 'datetime'}))
 
+            tooltips = [('ID', '@mrn'),
+                        ('Date', '@study_date'),
+                        ('Study', '@x{int}'),
+                        (self.ml_type_short, '@y_ml{0.2f}')]
+            if self.multi_var_pred is not None:
+                tooltips.append(('MVR', '@y_mvr{0.2f}'))
+
             self.ml_figures[data_type]['diff'].add_tools(HoverTool(show_arrow=True, mode='vline',
-                                                                   tooltips=[('ID', '@mrn'),
-                                                                             ('Date', '@study_date{%F}'),
-                                                                             ('Study', '@x{int}'),
-                                                                             (self.ml_type_short, '@y_ml{0.2f}'),
-                                                                             ('MVR', '@y_mvr{0.2f}')],
+                                                                   tooltips=tooltips,
                                                                    formatters={'study_date': 'datetime'}))
 
     def __add_legend_ml(self):
         legend = {}
         for data_type in self.plot_types:
-            legend[data_type] = {'data': Legend(items=[("Data  ", [self.renderers[data_type]['data']]),
-                                                       ("%s  " % self.ml_type,
-                                                        [self.renderers[data_type]['predict']]),
-                                                       ("Multi-Variable Reg.  ",
-                                                        [self.renderers[data_type]['multi_var']])],
-                                                orientation='horizontal'),
-                                 'diff': Legend(items=[("%s  " % self.ml_type,
-                                                        [self.renderers[data_type]['diff_ml']]),
-                                                       ("Multi-Variable Reg.  ",
-                                                        [self.renderers[data_type]['diff_mvr']])],
-                                                orientation='horizontal')}
+            if self.multi_var_pred is not None:
+                legend[data_type] = {'data': Legend(items=[("Data  ", [self.renderers[data_type]['data']]),
+                                                           ("%s  " % self.ml_type,
+                                                            [self.renderers[data_type]['predict']]),
+                                                           ("Multi-Variable Reg.  ",
+                                                            [self.renderers[data_type]['multi_var']])],
+                                                    orientation='horizontal'),
+                                     'diff': Legend(items=[("%s  " % self.ml_type,
+                                                            [self.renderers[data_type]['diff_ml']]),
+                                                           ("Multi-Variable Reg.  ",
+                                                            [self.renderers[data_type]['diff_mvr']])],
+                                                    orientation='horizontal')}
+            else:
+                legend[data_type] = {'data': Legend(items=[("Data  ", [self.renderers[data_type]['data']]),
+                                                           ("%s  " % self.ml_type,
+                                                            [self.renderers[data_type]['predict']])],
+                                                    orientation='horizontal'),
+                                     'diff': Legend(items=[("%s  " % self.ml_type,
+                                                            [self.renderers[data_type]['diff_ml']])],
+                                                    orientation='horizontal')}
             for key in {'data', 'diff'}:
                 self.ml_figures[data_type][key].add_layout(legend[data_type][key], 'above')
                 self.ml_figures[data_type][key].legend.click_policy = "hide"
@@ -1942,7 +1960,10 @@ class PlotMachineLearning(Plot):
             x = plot_data.x[plot_data_type]
             y = plot_data.y[plot_data_type]
             y_pred = plot_data.predictions[plot_data_type]
-            multi_var_pred = [self.multi_var_pred[i] for i in plot_data.indices[plot_data_type]]
+            if self.multi_var_pred is not None:
+                multi_var_pred = [self.multi_var_pred[i] for i in plot_data.indices[plot_data_type]]
+            else:
+                multi_var_pred = None
             mrn = [self.mrn[i] for i in plot_data.indices[plot_data_type]]
             uid = [self.uid[i] for i in plot_data.indices[plot_data_type]]
             study_date = [self.study_date[i] for i in plot_data.indices[plot_data_type]]
@@ -1951,30 +1972,44 @@ class PlotMachineLearning(Plot):
 
             srcs['data'].data = {'x': x, 'y': y, 'mrn': mrn, 'study_date': study_date, 'uid': uid}
             srcs['predict'].data = {'x': x, 'y': y_pred, 'mrn': mrn, 'study_date': study_date}
-            srcs['multi_var'].data = {'x': x, 'y': multi_var_pred, 'mrn': mrn, 'study_date': study_date}
-            srcs['diff'].data = {'x': x,
-                                 'y_mvr': np.subtract(np.array(y), np.array(multi_var_pred)),
-                                 'y_ml': np.subtract(np.array(y), np.array(y_pred)),
-                                 'y0': [0] * len(x),
-                                 'mrn': mrn, 'study_date': study_date}
+            if multi_var_pred is not None:
+                srcs['multi_var'].data = {'x': x, 'y': multi_var_pred, 'mrn': mrn, 'study_date': study_date}
 
-            mse_values = [plot_data.mse[data_type],
-                          mean_squared_error(y, multi_var_pred)]
+            data = {'x': x,
+                    'y_ml': np.subtract(np.array(y), np.array(y_pred)),
+                    'y0': [0] * len(x),
+                    'mrn': mrn, 'study_date': study_date}
+            if multi_var_pred is not None:
+                data['y_mvr'] = np.subtract(np.array(y), np.array(multi_var_pred))
+
+            srcs['diff'].data = data
+
+            mse_values = [plot_data.mse[data_type]]
+            if multi_var_pred is not None:
+                mse_values.append(mean_squared_error(y, multi_var_pred))
             mse_text = []
             for i, mse in enumerate(mse_values):
                 if 1.0 < mse < 1000:
                     mse_text.append("%0.2f" % mse)
                 else:
                     mse_text.append("%0.2E" % mse)
-            self.div_mse[data_type].text = "<u>Mean Square Error</u>: %s (%s) --- %s (MVR)" % \
-                                           (mse_text[0], self.ml_type_short, mse_text[1])
+            if multi_var_pred is not None:
+                self.div_mse[data_type].text = "<u>Mean Square Error</u>: %s (%s) --- %s (MVR)" % \
+                                               (mse_text[0], self.ml_type_short, mse_text[1])
+            else:
+                if self.is_classifier:
+                    self.div_mse[data_type].text = "<u>Accuracy</u>: %0.2f%%" % (100 * plot_data.accuracy[data_type])
+                else:
+                    self.div_mse[data_type].text = "<u>Mean Square Error</u>: %s (%s)" % \
+                                                   (mse_text[0], self.ml_type_short)
 
         self.update_bokeh_layout_in_wx_python()
 
     def get_csv(self):
 
-        col_titles = 'MRN,Study Instance UID,Study #,Date,%s,%s, Multi-Variable Regression' % \
-                     (self.y_variable, self.ml_type)
+        col_titles = 'MRN,Study Instance UID,Study #,Date,%s,%s' % (self.y_variable, self.ml_type)
+        if self.multi_var_pred is not None:
+            col_titles = col_titles + ",Multi-Variable Regression"
         csv_data = []
         for data_type in self.plot_types:
             data = self.source[data_type]['data'].data
@@ -1986,9 +2021,9 @@ class PlotMachineLearning(Plot):
             for i in range(len(data['mrn'])):
                 csv_data.append(','.join(str(data[key][i]).replace(',', '^')
                                          for key in ['mrn', 'uid', 'x', 'study_date', 'y']))
-                csv_data[-1] = "%s,%s,%s" % (csv_data[-1],
-                                             self.source[data_type]['predict'].data['y'][i],
-                                             self.source[data_type]['multi_var'].data['y'][i])
+                csv_data[-1] = "%s,%s" % (csv_data[-1], self.source[data_type]['predict'].data['y'][i])
+                if self.multi_var_pred is not None:
+                    csv_data[-1] = csv_data[-1] + ",%s" % self.source[data_type]['multi_var'].data['y'][i]
             csv_data.append('\n')
 
         # Original dataset (in case not all data was used for training and testing
@@ -2021,7 +2056,8 @@ class PlotMachineLearning(Plot):
             glyph.line_color = getattr(self.options, 'MACHINE_LEARNING_COLOR_DATA')
             glyph.fill_color = getattr(self.options, 'MACHINE_LEARNING_COLOR_DATA')
 
-            for line_type in ['predict', 'multi_var']:
+            line_types = ['predict', 'multi_var'] if self.multi_var_pred is not None else ['predict']
+            for line_type in line_types:
                 glyph = self.renderers[data_type][line_type].glyph
                 glyph.size = getattr(self.options, 'MACHINE_LEARNING_SIZE_%s' % line_type.upper())
                 glyph.line_alpha = getattr(self.options, 'MACHINE_LEARNING_ALPHA')
@@ -2029,7 +2065,8 @@ class PlotMachineLearning(Plot):
                 glyph.line_color = getattr(self.options, 'MACHINE_LEARNING_COLOR_%s' % line_type.upper())
                 glyph.fill_color = getattr(self.options, 'MACHINE_LEARNING_COLOR_%s' % line_type.upper())
 
-            for diff_type in ['ml', 'mvr']:
+            diff_types = ['ml', 'mvr'] if self.multi_var_pred is not None else ['ml']
+            for diff_type in diff_types:
                 glyph = self.renderers[data_type]['diff_%s' % diff_type].glyph
                 color_modifier = ['PREDICT', 'MULTI_VAR'][diff_type == 'mvr']
                 glyph.fill_color = getattr(self.options, 'MACHINE_LEARNING_COLOR_%s' % color_modifier)

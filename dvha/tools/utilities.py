@@ -105,7 +105,7 @@ def get_tree_ctrl_image(file_path, file_type=wx.BITMAP_TYPE_PNG, width=16, heigh
     return wx.Image(file_path, file_type).Scale(width, height).ConvertToBitmap()
 
 
-def get_file_paths(start_path, search_subfolders=False, extension=None):
+def get_file_paths(start_path, search_subfolders=False, extension=None, return_dict=False):
     """
     Get a list of absolute file paths for a given directory
     :param start_path: initial directory
@@ -115,19 +115,25 @@ def get_file_paths(start_path, search_subfolders=False, extension=None):
     :param extension: optionally include only files with specified extension
     :type extension: str
     :return: absolute file paths
-    :rtype: list
+    :rtype: list or dict
     """
     if isdir(start_path):
+        file_paths = []
+        file_paths_dict = {}
         if search_subfolders:
-            file_paths = []
             for root, dirs, files in walk(start_path, topdown=False):
                 for name in files:
                     if extension is None or splitext(name)[1].lower() == extension.lower():
                         if name.lower() not in IGNORED_FILES:
                             file_paths.append(join(root, name))
+                            if return_dict:
+                                if root not in file_paths_dict.keys():
+                                    file_paths_dict[root] = []
+                                file_paths_dict[root].append(name)
+            if return_dict:
+                return file_paths_dict
             return file_paths
 
-        file_paths = []
         for f in listdir(start_path):
             if isfile(join(start_path, f)):
                 if extension is None or splitext(f)[1].lower() == extension.lower():
@@ -873,3 +879,56 @@ def recalculate_plan_complexities_from_beams():
 
             if plan_complexity is not None:
                 cnx.update('Plans', 'complexity', plan_complexity, condition)
+
+
+def get_new_uid(used_uids=None):
+    """
+    Get a new UID using pydicom
+    :param used_uids: Do not return a UID that is in this list
+    :type used_uids: list
+    :return: A new UID not found in the current DVHA database or in the used_uids
+    :rtype: str
+    """
+    uid_found = False
+    used_uids = [] if used_uids is None else used_uids
+    with DVH_SQL() as cnx:
+        while not uid_found:
+            uid = pydicom.uid.generate_uid()
+            uid_found = not cnx.is_uid_imported(uid) and uid not in used_uids
+    return uid
+
+
+def get_new_uids_by_directory(start_path):
+    """
+    Generate new StudyInstanceUIDs, assuming all DICOM files in a directory are matched
+    :param start_path: initial directory
+    :type start_path str
+    :return: New UIDs by directory, queue
+    :rtype: dict, list
+    """
+    file_paths = get_file_paths(start_path, search_subfolders=True, return_dict=True)
+    study_uids = {}
+    queue = []
+    for directory, files in file_paths.items():
+        uid = get_new_uid(used_uids=list(study_uids.values()))
+        study_uids[directory] = uid
+        for file in files:
+            queue.append({'abs_file_path': join(directory, file),
+                          'study_uid': uid})
+
+    return study_uids, queue
+
+
+def edit_study_uid(abs_file_path, study_uid):
+    """
+    Change the StudyInstanceUID of a DICOM file
+    :param abs_file_path: absolute file path of the DICOM file
+    :param study_uid: new StudyInstanceUID
+    """
+    try:
+        ds = pydicom.read_file(abs_file_path, force=True)
+        ds.StudyInstanceUID = study_uid
+        ds.save_as(abs_file_path)
+    except Exception as e:
+        push_to_log(e, abs_file_path)
+

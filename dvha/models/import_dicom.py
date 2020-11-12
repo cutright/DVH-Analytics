@@ -37,7 +37,8 @@ from dvha.tools.errors import ErrorDialog, push_to_log
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
     set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size,\
-    set_frame_icon, PopupMenu
+    set_frame_icon, PopupMenu, MessageDialog, get_new_uids_by_directory, edit_study_uid
+from dvha.tools.threading_progress import ProgressFrame
 
 
 class ImportDicomFrame(wx.Frame):
@@ -116,6 +117,7 @@ class ImportDicomFrame(wx.Frame):
         self.button_import = wx.Button(self, wx.ID_ANY, "Import")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
         self.button_save_roi_map = wx.Button(self, wx.ID_ANY, "Save ROI Map")
+        self.button_preprocess = wx.Button(self, wx.ID_ANY, "Pre-Process DICOM")
 
         self.panel_roi_tree = wx.Panel(self, wx.ID_ANY, style=wx.BORDER_SUNKEN)
         self.input_roi = {'physician': wx.ComboBox(self, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY),
@@ -151,6 +153,8 @@ class ImportDicomFrame(wx.Frame):
 
         self.incomplete_studies = []
 
+        self.PreprocessDicom = None
+
         self.run()
 
     def __do_subscribe(self):
@@ -158,6 +162,7 @@ class ImportDicomFrame(wx.Frame):
         pub.subscribe(self.parse_dicom_data, "parse_dicom_data")
         pub.subscribe(self.set_pre_import_parsed_dicom_data, 'set_pre_import_parsed_dicom_data')
         pub.subscribe(self.pre_import_complete, "pre_import_complete")
+        pub.subscribe(self.build_dicom_file_tree, "build_dicom_file_tree")
 
     def __do_bind(self):
         self.Bind(wx.EVT_BUTTON, self.on_browse, id=self.button_browse.GetId())
@@ -190,6 +195,7 @@ class ImportDicomFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_import, id=self.button_import.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_cancel, id=self.button_cancel.GetId())
         self.Bind(wx.EVT_BUTTON, self.on_save_roi_map, id=self.button_save_roi_map.GetId())
+        self.Bind(wx.EVT_BUTTON, self.on_preprocess, id=self.button_preprocess.GetId())
 
         self.Bind(wx.EVT_BUTTON, self.on_roi_manager, id=self.button_roi_manager.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.on_physician_roi_change, id=self.input_roi['physician'].GetId())
@@ -415,6 +421,7 @@ class ImportDicomFrame(wx.Frame):
 
         sizer_warning_buttons.Add(sizer_warning, 1, wx.ALL | wx.EXPAND, 5)
         # sizer_buttons.Add(self.button_assign_ptv_test, 0, wx.ALL, 5)
+        sizer_buttons.Add(self.button_preprocess, 0, wx.ALL, 5)
         sizer_buttons.Add(self.button_save_roi_map, 0, wx.ALL, 5)
         sizer_buttons.Add(self.button_import, 0, wx.ALL, 5)
         sizer_buttons.Add(self.button_cancel, 0, wx.ALL, 5)
@@ -451,9 +458,13 @@ class ImportDicomFrame(wx.Frame):
         pub.unsubAll(topicName="parse_dicom_data")
         pub.unsubAll(topicName="set_pre_import_parsed_dicom_data")
         pub.unsubAll(topicName="pre_import_complete")
+        pub.unsubAll(topicName="build_dicom_file_tree")
 
     def on_save_roi_map(self, evt):
         RemapROIFrame(self.roi_map)
+
+    def on_preprocess(self, evt):
+        self.PreprocessDicom = PreprocessDicom(self)
 
     def on_browse(self, evt):
         """
@@ -467,15 +478,20 @@ class ImportDicomFrame(wx.Frame):
 
         dlg = wx.DirDialog(self, "Select inbox directory", starting_dir, wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:
-            self.parsed_dicom_data = {}
-            for key in list(self.global_plan_over_rides):
-                self.global_plan_over_rides[key] = {'value': None, 'only_if_missing': False}
-            self.clear_plan_data()
-            if self.dicom_importer:
-                self.tree_ctrl_roi.DeleteChildren(self.dicom_importer.root_rois)
+            self.build_dicom_file_tree(dlg.GetPath())
 
-            self.text_ctrl_directory.SetValue(dlg.GetPath())
-            self.dicom_importer = self.get_importer()
+    def build_dicom_file_tree(self, directory):
+        self.parsed_dicom_data = {}
+        for key in list(self.global_plan_over_rides):
+            self.global_plan_over_rides[key] = {'value': None, 'only_if_missing': False}
+        self.clear_plan_data()
+        if self.dicom_importer:
+            self.tree_ctrl_roi.DeleteChildren(self.dicom_importer.root_rois)
+
+        self.text_ctrl_directory.SetValue(directory)
+        self.dicom_importer = self.get_importer()
+
+        self.PreprocessDicom = None
 
     def get_importer(self):
         return DicomTreeBuilder(self.text_ctrl_directory.GetValue(), self.tree_ctrl_import,
@@ -1835,3 +1851,43 @@ class AssignPTV(wx.Dialog):
         self.button_back.Enable(self.current_index > 0)
         label = 'Next' if self.current_index < len(self.uids) - 1 else 'Finish'
         self.button_next.SetLabel(label)
+
+
+class PreprocessDicom:
+    def __init__(self, parent):
+        self.parent = parent
+        self.directory = None
+
+        self.__do_subscribe()
+
+        self.run_warning()  # will call self.run()
+
+    def __do_subscribe(self):
+        pub.subscribe(self.build_dicom_file_tree_prompt, "build_dicom_file_tree_prompt")
+
+    def __do_unsubscribe(self):
+        pub.unsubAll(topicName="build_dicom_file_tree_prompt")
+
+    def run_warning(self):
+        caption = "WARNING\nThis will edit the StudyInstanceUID of DICOM files selected in the next window!"
+        message = "This shouldn't be needed for DICOM compliant files, use with caution.\n\nAre you sure?"
+        MessageDialog(self.parent, caption, message, action_yes_func=self.run)
+
+    def run(self):
+        dlg = wx.DirDialog(self.parent, "Select a directory", "", wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.directory = dlg.GetPath()
+            _, obj_list = get_new_uids_by_directory(self.directory)
+            ProgressFrame(obj_list, edit_study_uid, title="Writing New StudyInstanceUIDs",
+                          action_msg="Processing File", close_msg="build_dicom_file_tree_prompt", kwargs=True)
+        dlg.Destroy()
+
+    def build_dicom_file_tree(self):
+        if self.directory is not None:
+            pub.sendMessage("build_dicom_file_tree", directory=self.directory)
+
+    def build_dicom_file_tree_prompt(self):
+        caption = "Parse this directory for import?"
+        MessageDialog(self.parent, caption, action_yes_func=self.build_dicom_file_tree)
+        self.__do_unsubscribe()
+

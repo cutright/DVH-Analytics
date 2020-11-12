@@ -257,7 +257,7 @@ class SelectFromListDialog(wx.Dialog):
     """
     Select an item in a list
     """
-    def __init__(self, title, column, choices, exclude=None, size=None, column_width=200, selections=None):
+    def __init__(self, title, column, choices, exclude=None, size=None, column_width=200, selections=None, single_mode=False):
         wx.Dialog.__init__(self, None, title=title)
 
         self.column = column
@@ -265,15 +265,19 @@ class SelectFromListDialog(wx.Dialog):
         self.exclude = [exclude, []][exclude is None]
         self.size = size
         self.column_width = column_width
+        self.single_mode = single_mode
 
-        self.list_ctrl = wx.ListCtrl(self, wx.ID_ANY, style=wx.LC_REPORT)
-        self.button_select_all = wx.Button(self, wx.ID_ANY, "Select All")
-        self.button_deselect_all = wx.Button(self, wx.ID_ANY, "Deselect All")
+        style = wx.LC_SINGLE_SEL | wx.LC_REPORT if single_mode else wx.LC_REPORT
+        self.list_ctrl = wx.ListCtrl(self, wx.ID_ANY, style=style)
+        if not self.single_mode:
+            self.button_select_all = wx.Button(self, wx.ID_ANY, "Select All")
+            self.button_deselect_all = wx.Button(self, wx.ID_ANY, "Deselect All")
         self.button_ok = wx.Button(self, wx.ID_OK, "OK")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
-        self.Bind(wx.EVT_BUTTON, self.select_all, id=self.button_select_all.GetId())
-        self.Bind(wx.EVT_BUTTON, self.deselect_all, id=self.button_deselect_all.GetId())
+        if not self.single_mode:
+            self.Bind(wx.EVT_BUTTON, self.select_all, id=self.button_select_all.GetId())
+            self.Bind(wx.EVT_BUTTON, self.deselect_all, id=self.button_deselect_all.GetId())
 
         self.__set_properties()
         self.__do_layout()
@@ -295,8 +299,9 @@ class SelectFromListDialog(wx.Dialog):
         sizer_select_buttons = wx.BoxSizer(wx.HORIZONTAL)
 
         sizer_select.Add(self.list_ctrl, 1, wx.ALL | wx.EXPAND, 5)
-        sizer_select_buttons.Add(self.button_select_all, 0, wx.ALL, 5)
-        sizer_select_buttons.Add(self.button_deselect_all, 0, wx.ALL, 5)
+        if not self.single_mode:
+            sizer_select_buttons.Add(self.button_select_all, 0, wx.ALL, 5)
+            sizer_select_buttons.Add(self.button_deselect_all, 0, wx.ALL, 5)
         sizer_select.Add(sizer_select_buttons, 0, wx.ALIGN_CENTER | wx.ALL, 0)
         sizer_wrapper.Add(sizer_select, 1, wx.ALL | wx.EXPAND, 5)
 
@@ -355,6 +360,19 @@ class SelectRegressionVariablesDialog(SelectFromListDialog):
         SelectFromListDialog.__init__(self, "Select Variables for %s" % dependent_variable,
                                       "Independent Variables", independent_variable_choices,
                                       size=(350, size[1]), column_width=300, selections=selections)
+
+
+class SelectMLVarDialog(SelectFromListDialog):
+    def __init__(self, variable_choices, selections=None, single_mode=True, algorithm=False, fit=False):
+        if algorithm:
+            column = "Algorithm"
+            self.variable_choices = sorted(list(variable_choices))
+        else:
+            column = "Select %sependent Variable%s" % (["D", "Ind"][single_mode], ["s", ""][single_mode])
+            self.variable_choices = variable_choices
+        size = (350, get_window_size(1, 0.5)[1]) if not fit else None
+        SelectFromListDialog.__init__(self, "Machine Learning", column, variable_choices,
+                                      size=size, column_width=300, selections=selections, single_mode=single_mode)
 
 
 def query_dlg(parent, query_type, set_values=False):
@@ -1165,6 +1183,46 @@ class PythonLibraries(wx.Dialog):
     def run(self):
         self.ShowModal()
         self.Destroy()
+
+
+class ShowList(wx.Dialog):
+    """Simple dialog to display a non-interactive List"""
+    def __init__(self, list_items, title="List of Items", *evt):
+        wx.Dialog.__init__(self, None, title=title)
+
+        self.list_ctrl = wx.ListCtrl(self, wx.ID_ANY,
+                                     style=wx.BORDER_SUNKEN | wx.LC_REPORT | wx.LC_NO_HEADER | wx.LC_SINGLE_SEL)
+        self.data_table = DataTable(self.list_ctrl, widths=[400])
+        self.list_items = list_items
+        self.data_table.set_data({'col': self.list_items}, ['col'])
+
+        self.data_table.set_column_widths(auto=True)
+
+        self.__do_bind()
+        self.__do_layout()
+
+        self.run()
+
+    def __do_bind(self):
+        self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_select, id=self.list_ctrl.GetId())
+
+    def __do_layout(self):
+        sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
+        sizer_main = wx.BoxSizer(wx.VERTICAL)
+        sizer_main.Add(self.list_ctrl, 1, wx.EXPAND, 0)
+        sizer_wrapper.Add(sizer_main, 1, wx.EXPAND | wx.ALL, 10)
+
+        self.SetBackgroundColour(wx.WHITE)
+        self.SetSizer(sizer_wrapper)
+        self.SetSize(get_window_size(0.25, 0.8))
+        self.Center()
+
+    def run(self):
+        self.ShowModal()
+        self.Destroy()
+
+    def on_select(self, *evt):
+        self.data_table.apply_selection_to_all(False)
 
 
 def do_sqlite_backup(parent, options):
