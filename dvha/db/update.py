@@ -99,7 +99,8 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
     oar_coordinates_string = query('dvhs', 'roi_coord_string',
                                    "study_instance_uid = '%s' and roi_name = '%s'" % (study_instance_uid, roi_name))
 
-    treatment_volume_coord = pre_calc
+    treatment_volume_roi = pre_calc
+    treatment_volume_coord = get_treatment_volume_coord(pre_calc)
     if treatment_volume_coord is None:
         with DVH_SQL() as cnx:
             ptv_coordinates_strings = cnx.query('dvhs', 'roi_coord_string',
@@ -107,7 +108,8 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
                                                 % study_instance_uid)
 
         ptvs = [roi_form.get_planes_from_string(ptv[0]) for ptv in ptv_coordinates_strings]
-        treatment_volume_coord = roi_form.get_roi_coordinates_from_planes(roi_geom.union(ptvs))
+        treatment_volume_roi = roi_geom.union(ptvs)
+        treatment_volume_coord = roi_form.get_roi_coordinates_from_planes(treatment_volume_roi)
 
     oar_coordinates = roi_form.get_roi_coordinates_from_string(oar_coordinates_string[0][0])
 
@@ -115,12 +117,15 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
     oar_coordinates = sample_roi(oar_coordinates)
 
     try:
-        data = roi_geom.min_distances_to_target(oar_coordinates, treatment_volume_coord)
+        is_inside = [[1, -1][roi_geom.is_point_inside_roi(point, treatment_volume_roi)] for point in oar_coordinates]
+        data = roi_geom.min_distances_to_target(oar_coordinates, treatment_volume_coord, factors=is_inside)
     except MemoryError:
         try:
             treatment_volume_coord = sample_roi(treatment_volume_coord, max_point_count=3000)
             oar_coordinates = sample_roi(oar_coordinates,  max_point_count=3000)
-            data = roi_geom.min_distances_to_target(oar_coordinates, treatment_volume_coord)
+            is_inside = [[1, -1][roi_geom.is_point_inside_roi(point, treatment_volume_roi)] for point in
+                         oar_coordinates]
+            data = roi_geom.min_distances_to_target(oar_coordinates, treatment_volume_coord, factors=is_inside)
         except Exception as e:
             msg = 'db.update.min_distances: Error reported for %s with study_instance_uid %s\n' \
                   'Skipping PTV distance and DTH calculations for this ROI.' % (roi_name, study_instance_uid)
@@ -130,7 +135,7 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
     if data is not None:
         try:
             dth = roi_geom.dth(data)
-            dth_string = ','.join(['%.3f' % num for num in dth])
+            dth_string = ','.join(['%0.6f' % num for num in dth])
 
             data_map = {'dist_to_ptv_min': round(float(np.min(data)), 2),
                         'dist_to_ptv_mean': round(float(np.mean(data)), 2),

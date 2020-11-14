@@ -19,6 +19,7 @@ Tools for geometric calculations
 from scipy.spatial.distance import cdist
 import numpy as np
 from math import ceil
+from shapely.geometry import Point
 from dvha.tools.roi_formatter import points_to_shapely_polygon, dicompyler_roi_to_sets_of_points,\
     get_shapely_from_sets_of_points
 
@@ -83,7 +84,7 @@ def union(rois):
     return new_roi
 
 
-def min_distances_to_target(oar_coordinates, target_coordinates):
+def min_distances_to_target(oar_coordinates, target_coordinates, factors=None):
     """
     Calculate all OAR-point-to-Target-point euclidean distances
     :param oar_coordinates: numpy arrays of 3D points defining the surface of the OAR
@@ -96,10 +97,33 @@ def min_distances_to_target(oar_coordinates, target_coordinates):
     # TODO: This very computationally expensive, needs a sampling method prior to calling cdist
     min_distances = []
     all_distances = cdist(oar_coordinates, target_coordinates, 'euclidean')
-    for oar_point in all_distances:
+    for i, oar_point in enumerate(all_distances):
         min_distances.append(float(np.min(oar_point)/10.))
+        if factors is not None:
+            min_distances[i] *= factors[i]
 
     return min_distances
+
+
+def is_point_inside_roi(point, roi):
+    """
+    Check if a point is within an ROI
+    :param point: x, y, z
+    :type point: list
+    :param roi:roi: a "sets of points" formatted dictionary
+    :type roi: dict
+    :return: Whether or not the poin is within the roi
+    :rtype: bool
+    """
+    z_keys = list(roi.keys())
+    roi_z = np.array([float(z) for z in z_keys])
+    if np.max(roi_z) > point[2] > np.min(roi_z):
+        nearest_z_index = (np.abs(roi_z - point[2])).argmin()
+        nearest_z_key = z_keys[nearest_z_index]
+        shapely_roi = points_to_shapely_polygon(roi[nearest_z_key])
+        shapely_point = Point(point[0], point[1])
+        return shapely_point.within(shapely_roi)
+    return False
 
 
 def cross_section(roi):
@@ -299,11 +323,25 @@ def spread(roi):
 def dth(min_distances):
     """
     :param min_distances: the output from min_distances_to_target
-    :return: histogram of distances in 0.1mm bin widths
+    :return: histogram of distances in 1mm bin widths
     :rtype: numpy.array
     """
+    min_distances = 10. * np.array(min_distances)
+    max_abs_value = int(ceil(np.max(np.abs(min_distances))))
+    data, bins = np.histogram(min_distances, bins=max_abs_value * 2 + 1, range=(-max_abs_value-1, max_abs_value))
 
-    bin_count = int(ceil(np.max(min_distances) * 10.))
-    data, bins = np.histogram(min_distances, bins=bin_count)
+    return np.divide(data, np.sum(data))
 
-    return data
+
+def process_dth_string(dth_string):
+    """Convert a dth_string from the database into data and bins
+    DVHA stores 1-mm binned surface DTHs with an odd number of bins, middle bin is 0.
+
+    :param dth_string: a value from the dth_string column
+    :return: counts, bin positions (mm)
+    """
+    counts = np.array(dth_string.split(','), dtype=np.float)
+    max_bin = (len(counts)-1)/2
+    bins = np.linspace(-max_bin, max_bin, len(counts))
+    return bins, counts
+

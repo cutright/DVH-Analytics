@@ -1316,10 +1316,10 @@ class StudyImporter:
                                       db_update.dist_to_ptv_centroids, tv_centroid)
 
                 # Calculate minimum, mean, median, and max distances and DTH
-                tv_coord = db_update.get_treatment_volume_coord(tv)
-                tv_coord = sample_roi(tv_coord)
+                # tv_coord = db_update.get_treatment_volume_coord(tv)
+                # tv_coord = sample_roi(tv_coord)
                 self.post_import_calc('Distances to PTV', study_uid, post_import_rois,
-                                      db_update.min_distances, tv_coord)
+                                      db_update.min_distances, tv)
 
                 self.update_ptv_data_in_db(tv, study_uid)
 
