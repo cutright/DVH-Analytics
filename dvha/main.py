@@ -188,6 +188,15 @@ class DVHAMainFrame(wx.Frame):
             caption = "dicompyler-core Version Warning"
             ErrorDialog(self, msg, caption)
 
+        if self.options.SHOW_NEW_PTV_CALC_WARNING:
+            msg = "As of DVHA v0.8.9, there are new PTV Distance calculations. " \
+                  "Go to Data -> Database Administrator. Click Calculate for PTV Distances to ensure " \
+                  "all of your data is calculated consistently across studies/patients.\n\n" \
+                  "This warning will only show once. Must perform for each of your databases separately."
+            caption = "New PTV Distance Calculations"
+            ErrorDialog(self, msg, caption)
+            self.options.set_option("SHOW_NEW_PTV_CALC_WARNING", False)
+
         self.ml_views = []
 
     def __add_tool_bar(self):

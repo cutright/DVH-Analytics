@@ -217,6 +217,8 @@ class DefaultOptions:
 
         self.MIN_RESOLUTION_MAIN = (1350, 900)
 
+        self.SHOW_NEW_PTV_CALC_WARNING = True
+
 
 class Options(DefaultOptions):
     def __init__(self):

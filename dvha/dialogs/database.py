@@ -22,7 +22,7 @@ from dvha.models.import_dicom import ImportDicomFrame
 from dvha.paths import DATA_DIR
 from dvha.tools.errors import SQLError, SQLErrorDialog
 from dvha.tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file, get_file_paths,\
-    delete_imported_dicom_files, move_imported_dicom_files, MessageDialog
+    delete_imported_dicom_files, move_imported_dicom_files, MessageDialog, get_window_size
 from dvha.tools.threading_progress import ProgressFrame
 from pubsub import pub
 
@@ -35,14 +35,12 @@ class CalculationsDialog(wx.Dialog):
         wx.Dialog.__init__(self, None, title="Calculations")
 
         self.choices = ["PTV Distances", "PTV Overlap", "ROI Spread", "ROI Cross-Section", "ROI Surface Area",
-                        "ROI Volume", "OAR-PTV Centroid Distance", "All"]
+                        "OAR-PTV Centroid Distance", "All"]
         self.combo_box_calculate = wx.ComboBox(self, wx.ID_ANY, choices=self.choices, style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.checkbox = wx.CheckBox(self, wx.ID_ANY, "Only Calculate Missing Values")
         self.text_ctrl_condition = wx.TextCtrl(self, wx.ID_ANY, "")
         self.button_ok = wx.Button(self, wx.ID_OK, "Calculate")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
-        self.__set_properties()
         self.__do_layout()
 
         self.LUT = {"PTV Distances": {'func': db_update.update_ptv_dist_data,
@@ -57,19 +55,14 @@ class CalculationsDialog(wx.Dialog):
                     "ROI Cross-Section": {'func': db_update.update_roi_cross_section,
                                           'title': "Calculating ROI Cross-Sections"},
                     "ROI Surface Area": {'func': db_update.update_roi_surface_area,
-                                         'title': "Calculating ROI Surface Areas"},
-                    "ROI Volume": {'func': db_update.update_roi_volume,
-                                   'title': "Calculating ROI Volume"}
+                                         'title': "Calculating ROI Surface Areas"}
                     }
 
         pub.subscribe(self.do_next_calculation, "do_next_calculation")
 
-        self.run_all = False
+        self.close_msg = None
 
         self.run()
-
-    def __set_properties(self):
-        self.checkbox.SetValue(1)
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -84,7 +77,6 @@ class CalculationsDialog(wx.Dialog):
         sizer_calculate.Add(label_calculate, 0, wx.BOTTOM, 5)
         sizer_calculate.Add(self.combo_box_calculate, 0, 0, 0)
         sizer_calc_and_check.Add(sizer_calculate, 0, wx.EXPAND, 0)
-        sizer_calc_and_check.Add(self.checkbox, 0, wx.LEFT | wx.TOP, 20)
         sizer_input.Add(sizer_calc_and_check, 0, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
 
         label_condition = wx.StaticText(self, wx.ID_ANY, "Condition:")
@@ -102,13 +94,15 @@ class CalculationsDialog(wx.Dialog):
         self.SetSizer(sizer_wrapper)
         sizer_wrapper.Fit(self)
         self.Layout()
+
+        self.SetSize((get_window_size(0.3, 1)[0], self.Size[1]))
         self.Center()
 
     def run(self):
         res = self.ShowModal()
         if res == wx.ID_OK:
             if self.calculation == 'All':
-                self.run_all = True
+                self.close_msg = "do_next_calculation"
                 self.do_next_calculation(init=True)
             else:
                 self.run_calculation()
@@ -132,10 +126,6 @@ class CalculationsDialog(wx.Dialog):
             self.combo_box_calculate.SetValue(self.choices[index + 1])
         else:
             self.close()
-
-    @property
-    def close_msg(self):
-        return "do_next_calculation" if self.run_all else None
 
     @property
     def condition(self):
