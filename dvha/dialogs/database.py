@@ -17,38 +17,52 @@ from datetime import datetime
 from os import mkdir, rename
 from os.path import join, basename
 from dvha.db.sql_connector import DVH_SQL, echo_sql_db, is_file_sqlite_db, write_test
+import dvha.db.update as db_update
 from dvha.models.import_dicom import ImportDicomFrame
 from dvha.paths import DATA_DIR
 from dvha.tools.errors import SQLError, SQLErrorDialog
 from dvha.tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file, get_file_paths,\
-    delete_imported_dicom_files, move_imported_dicom_files, MessageDialog
+    delete_imported_dicom_files, move_imported_dicom_files, MessageDialog, get_window_size
+from dvha.tools.threading_progress import ProgressFrame
+from pubsub import pub
 
 
 class CalculationsDialog(wx.Dialog):
-    # TODO: Add functionality to OK button
     """
     Dialog to perform various calculations for values not stored in DICOM files.
     """
     def __init__(self):
         wx.Dialog.__init__(self, None, title="Calculations")
 
-        choices = ["PTV Distances", "PTV Overlap", "ROI Centroid", "ROI Spread", "ROI Cross-Section",
-                   "OAR-PTV Centroid Distance", "Beam Complexities", "Plan Complexities", "All (except age)",
-                   "Patient Ages"]
-        self.combo_box_calculate = wx.ComboBox(self, wx.ID_ANY, choices=choices, style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.checkbox = wx.CheckBox(self, wx.ID_ANY, "Only Calculate Missing Values")
+        self.choices = ["PTV Distances", "PTV Overlap", "ROI Spread", "ROI Cross-Section", "ROI Surface Area",
+                        "OAR-PTV Centroid Distance", "All"]
+        self.combo_box_calculate = wx.ComboBox(self, wx.ID_ANY, choices=self.choices, style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.text_ctrl_condition = wx.TextCtrl(self, wx.ID_ANY, "")
         self.button_ok = wx.Button(self, wx.ID_OK, "Calculate")
-        self.button_ok.Disable()  # Remove this line once functionality is added
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
-        self.__set_properties()
         self.__do_layout()
 
-        self.run()
+        self.LUT = {"PTV Distances": {'func': db_update.update_ptv_dist_data,
+                                      'title': "Calculating PTV Distance Metrics"
+                                      },
+                    "PTV Overlap": {'func': db_update.update_ptv_overlap,
+                                    'title': "Calculating PTV Overlap"},
+                    "OAR-PTV Centroid Distance": {'func': db_update.update_ptv_centroid_distances,
+                                                  'title': "Calculating OAR-PTV Centroid Distances"},
+                    "ROI Spread": {'func': db_update.update_roi_spread,
+                                   'title': "Calculating ROI Spreads"},
+                    "ROI Cross-Section": {'func': db_update.update_roi_cross_section,
+                                          'title': "Calculating ROI Cross-Sections"},
+                    "ROI Surface Area": {'func': db_update.update_roi_surface_area,
+                                         'title': "Calculating ROI Surface Areas"}
+                    }
 
-    def __set_properties(self):
-        self.checkbox.SetValue(1)
+        pub.subscribe(self.do_next_calculation, "do_next_calculation")
+
+        self.close_msg = None
+
+        self.run()
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -63,7 +77,6 @@ class CalculationsDialog(wx.Dialog):
         sizer_calculate.Add(label_calculate, 0, wx.BOTTOM, 5)
         sizer_calculate.Add(self.combo_box_calculate, 0, 0, 0)
         sizer_calc_and_check.Add(sizer_calculate, 0, wx.EXPAND, 0)
-        sizer_calc_and_check.Add(self.checkbox, 0, wx.LEFT | wx.TOP, 20)
         sizer_input.Add(sizer_calc_and_check, 0, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
 
         label_condition = wx.StaticText(self, wx.ID_ANY, "Condition:")
@@ -81,13 +94,64 @@ class CalculationsDialog(wx.Dialog):
         self.SetSizer(sizer_wrapper)
         sizer_wrapper.Fit(self)
         self.Layout()
+
+        self.SetSize((get_window_size(0.3, 1)[0], self.Size[1]))
         self.Center()
 
     def run(self):
         res = self.ShowModal()
         if res == wx.ID_OK:
-            pass
+            if self.calculation == 'All':
+                self.close_msg = "do_next_calculation"
+                self.do_next_calculation(init=True)
+            else:
+                self.run_calculation()
+                self.close()
+
+    def close(self):
+        pub.unsubAll(topicName="do_next_calculation")
         self.Destroy()
+
+    def run_calculation(self):
+        ProgressFrame(self.threading_obj_list, self.func, title=self.title, close_msg=self.close_msg,
+                      action_msg="Processing Study", sub_gauge=True, kwargs=True)
+
+    def do_next_calculation(self, init=False):
+        if init:
+            self.combo_box_calculate.SetValue(self.choices[0])
+
+        if self.calculation != 'All':
+            self.run_calculation()
+            index = self.choices.index(self.calculation)
+            self.combo_box_calculate.SetValue(self.choices[index + 1])
+        else:
+            self.close()
+
+    @property
+    def condition(self):
+        text = self.text_ctrl_condition.GetValue()
+        return text if text else None
+
+    @property
+    def threading_obj_list(self):
+        uids = db_update.query('DVHs', 'study_instance_uid', self.condition, unique=True)
+        return [{"uid": uid, "callback": self.callback} for uid in uids]
+
+    @property
+    def calculation(self):
+        return self.combo_box_calculate.GetValue()
+
+    @property
+    def title(self):
+        return self.LUT[self.calculation]['title']
+
+    @property
+    def func(self):
+        return self.LUT[self.calculation]['func']
+
+    @staticmethod
+    def callback(msg):
+        pub.sendMessage("sub_progress_update", msg=msg)
 
 
 class ChangeOrDeleteBaseClass(wx.Dialog):

@@ -20,7 +20,7 @@ from time import sleep
 class ProgressFrame(wx.Dialog):
     """Create a window to display progress and begin provided worker"""
     def __init__(self, obj_list, action, close_msg=None, action_msg=None, action_gui_phrase='Processing',
-                 title='Progress', kwargs=False):
+                 title='Progress', sub_gauge=False, kwargs=False):
         wx.Dialog.__init__(self, None)
 
         self.close_msg = close_msg
@@ -28,7 +28,9 @@ class ProgressFrame(wx.Dialog):
         self.action_gui_phrase = action_gui_phrase
 
         self.gauge = wx.Gauge(self, wx.ID_ANY, 100)
+        self.sub_gauge = wx.Gauge(self, wx.ID_ANY, 100) if sub_gauge else None
         self.label = wx.StaticText(self, wx.ID_ANY, "Initializing...")
+        self.sub_label = wx.StaticText(self, wx.ID_ANY, "") if sub_gauge else None
 
         self.__set_properties()
         self.__do_subscribe()
@@ -46,12 +48,14 @@ class ProgressFrame(wx.Dialog):
 
     def __do_subscribe(self):
         pub.subscribe(self.update, "progress_update")
+        pub.subscribe(self.sub_update, "sub_progress_update")
         pub.subscribe(self.set_title, "progress_set_title")
         pub.subscribe(self.close, "progress_close")
 
     @staticmethod
     def __do_unsubscribe():
         pub.unsubAll(topicName="progress_update")
+        pub.unsubAll(topicName="sub_progress_update")
         pub.unsubAll(topicName="progress_set_title")
         pub.unsubAll(topicName="progress_close")
 
@@ -60,6 +64,9 @@ class ProgressFrame(wx.Dialog):
         sizer_objects = wx.BoxSizer(wx.VERTICAL)
         sizer_objects.Add(self.label, 0, 0, 0)
         sizer_objects.Add(self.gauge, 0, wx.EXPAND, 0)
+        if self.sub_gauge is not None:
+            sizer_objects.Add(self.sub_label, 0, 0, 0)
+            sizer_objects.Add(self.sub_gauge, 0, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_objects, 0, wx.ALL | wx.EXPAND, 10)
         self.SetSizer(sizer_wrapper)
         self.Fit()
@@ -78,6 +85,11 @@ class ProgressFrame(wx.Dialog):
         label = msg['label']
         wx.CallAfter(self.label.SetLabelText, label)
         wx.CallAfter(self.gauge.SetValue, int(100 * msg['gauge']))
+
+    def sub_update(self, msg):
+        label = msg['label']
+        wx.CallAfter(self.sub_label.SetLabelText, label)
+        wx.CallAfter(self.sub_gauge.SetValue, int(100 * msg['gauge']))
 
     def close(self):
         """Destroy layout in GUI and send message close message for parent"""
@@ -115,7 +127,7 @@ class ProgressFrameWorker(Thread):
     def get_queue(self):
         queue = Queue()
         for i, obj in enumerate(self.obj_list):
-            msg = {'label': "%s (%s of %s)" % (self.action_msg, i, len(self.obj_list)),
+            msg = {'label': "%s (%s of %s)" % (self.action_msg, i+1, len(self.obj_list)),
                    'gauge': float(i / len(self.obj_list))}
             queue.put((obj, msg))
         return queue
