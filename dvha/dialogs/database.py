@@ -28,16 +28,15 @@ from pubsub import pub
 
 
 class CalculationsDialog(wx.Dialog):
-    # TODO: Add functionality to OK button
     """
     Dialog to perform various calculations for values not stored in DICOM files.
     """
     def __init__(self):
         wx.Dialog.__init__(self, None, title="Calculations")
 
-        choices = ["PTV Distances", "PTV Overlap", "ROI Spread", "ROI Cross-Section", "ROI Surface Area",
-                   "ROI Volume", "OAR-PTV Centroid Distance"]
-        self.combo_box_calculate = wx.ComboBox(self, wx.ID_ANY, choices=choices, style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.choices = ["PTV Distances", "PTV Overlap", "ROI Spread", "ROI Cross-Section", "ROI Surface Area",
+                        "ROI Volume", "OAR-PTV Centroid Distance", "All"]
+        self.combo_box_calculate = wx.ComboBox(self, wx.ID_ANY, choices=self.choices, style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.checkbox = wx.CheckBox(self, wx.ID_ANY, "Only Calculate Missing Values")
         self.text_ctrl_condition = wx.TextCtrl(self, wx.ID_ANY, "")
         self.button_ok = wx.Button(self, wx.ID_OK, "Calculate")
@@ -62,6 +61,10 @@ class CalculationsDialog(wx.Dialog):
                     "ROI Volume": {'func': db_update.update_roi_volume,
                                    'title': "Calculating ROI Volume"}
                     }
+
+        pub.subscribe(self.do_next_calculation, "do_next_calculation")
+
+        self.run_all = False
 
         self.run()
 
@@ -104,12 +107,35 @@ class CalculationsDialog(wx.Dialog):
     def run(self):
         res = self.ShowModal()
         if res == wx.ID_OK:
-            self.run_calculation()
+            if self.calculation == 'All':
+                self.run_all = True
+                self.do_next_calculation(init=True)
+            else:
+                self.run_calculation()
+                self.close()
+
+    def close(self):
+        pub.unsubAll(topicName="do_next_calculation")
         self.Destroy()
 
     def run_calculation(self):
-        ProgressFrame(self.threading_obj_list, self.func, title=self.title,
+        ProgressFrame(self.threading_obj_list, self.func, title=self.title, close_msg=self.close_msg,
                       action_msg="Processing Study", sub_gauge=True, kwargs=True)
+
+    def do_next_calculation(self, init=False):
+        if init:
+            self.combo_box_calculate.SetValue(self.choices[0])
+
+        if self.calculation != 'All':
+            self.run_calculation()
+            index = self.choices.index(self.calculation)
+            self.combo_box_calculate.SetValue(self.choices[index + 1])
+        else:
+            self.close()
+
+    @property
+    def close_msg(self):
+        return "do_next_calculation" if self.run_all else None
 
     @property
     def condition(self):

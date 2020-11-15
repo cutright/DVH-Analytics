@@ -7,6 +7,7 @@ v0.8.9 (TBD)
  - [Machine Learning] New, more direct, work-flow to get to Machine Learning [Issue 107](https://github.com/cutright/DVH-Analytics/issues/107)
  - [Misc] Properly catch NaN values for ML and Regression [Issue 109](https://github.com/cutright/DVH-Analytics/issues/109)
  - [Import] DTHs now include negative distances (inside the PTV) [Issue 111](https://github.com/cutright/DVH-Analytics/issues/111)
+ - [Database] New feature added to recalculate various PTV/ROI metrics
 
 v0.8.8 (2020.11.03)
 --------------------
