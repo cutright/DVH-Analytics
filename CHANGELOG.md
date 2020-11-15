@@ -6,6 +6,7 @@ v0.8.9 (TBD)
  - [Import] Added a Pre-Process DICOM method in DICOM Import window to generate new StudyInstanceUIDs [Issue 106](https://github.com/cutright/DVH-Analytics/issues/106)
  - [Machine Learning] New, more direct, work-flow to get to Machine Learning [Issue 107](https://github.com/cutright/DVH-Analytics/issues/107)
  - [Misc] Properly catch NaN values for ML and Regression [Issue 109](https://github.com/cutright/DVH-Analytics/issues/109)
+ - [Import] DTHs now include negative distances (inside the PTV) [Issue 111](https://github.com/cutright/DVH-Analytics/issues/111)
 
 v0.8.8 (2020.11.03)
 --------------------

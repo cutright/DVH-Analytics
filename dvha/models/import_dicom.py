@@ -36,7 +36,7 @@ from dvha.tools.dicom_dose_sum import DoseGrid
 from dvha.tools.errors import ErrorDialog, push_to_log
 from dvha.tools.roi_name_manager import clean_name
 from dvha.tools.utilities import datetime_to_date_string, get_elapsed_time, move_files_to_new_path, rank_ptvs_by_D95,\
-    set_msw_background_color, is_windows, get_tree_ctrl_image, sample_roi, remove_empty_sub_folders, get_window_size,\
+    set_msw_background_color, is_windows, get_tree_ctrl_image, remove_empty_sub_folders, get_window_size,\
     set_frame_icon, PopupMenu, MessageDialog, get_new_uids_by_directory, edit_study_uid
 from dvha.tools.threading_progress import ProgressFrame
 

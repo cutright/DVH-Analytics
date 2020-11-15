@@ -17,11 +17,14 @@ from datetime import datetime
 from os import mkdir, rename
 from os.path import join, basename
 from dvha.db.sql_connector import DVH_SQL, echo_sql_db, is_file_sqlite_db, write_test
+import dvha.db.update as db_update
 from dvha.models.import_dicom import ImportDicomFrame
 from dvha.paths import DATA_DIR
 from dvha.tools.errors import SQLError, SQLErrorDialog
 from dvha.tools.utilities import delete_directory_contents, move_files_to_new_path, delete_file, get_file_paths,\
     delete_imported_dicom_files, move_imported_dicom_files, MessageDialog
+from dvha.tools.threading_progress import ProgressFrame
+from pubsub import pub
 
 
 class CalculationsDialog(wx.Dialog):
@@ -32,18 +35,31 @@ class CalculationsDialog(wx.Dialog):
     def __init__(self):
         wx.Dialog.__init__(self, None, title="Calculations")
 
-        choices = ["PTV Distances", "PTV Overlap", "ROI Centroid", "ROI Spread", "ROI Cross-Section",
-                   "OAR-PTV Centroid Distance", "Beam Complexities", "Plan Complexities", "All (except age)",
-                   "Patient Ages"]
+        choices = ["PTV Distances", "PTV Overlap", "ROI Spread", "ROI Cross-Section", "ROI Surface Area",
+                   "ROI Volume", "OAR-PTV Centroid Distance"]
         self.combo_box_calculate = wx.ComboBox(self, wx.ID_ANY, choices=choices, style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.checkbox = wx.CheckBox(self, wx.ID_ANY, "Only Calculate Missing Values")
         self.text_ctrl_condition = wx.TextCtrl(self, wx.ID_ANY, "")
         self.button_ok = wx.Button(self, wx.ID_OK, "Calculate")
-        self.button_ok.Disable()  # Remove this line once functionality is added
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
         self.__set_properties()
         self.__do_layout()
+
+        self.LUT = {"PTV Distances": {'func': db_update.update_ptv_dist_data,
+                                      'title': "Calculating PTV Distance Metrics"
+                                      },
+                    "PTV Overlap": {'func': db_update.update_ptv_overlap,
+                                    'title': "Calculating PTV Overlap"},
+                    "OAR-PTV Centroid Distance": {'func': db_update.update_ptv_centroid_distances,
+                                                  'title': "Calculating OAR-PTV Centroid Distances"},
+                    "ROI Spread": {'func': db_update.update_roi_spread,
+                                   'title': "Calculating ROI Spreads"},
+                    "ROI Cross-Section": {'func': db_update.update_roi_cross_section,
+                                          'title': "Calculating ROI Cross-Sections"},
+                    "ROI Surface Area": {'func': db_update.update_roi_surface_area,
+                                         'title': "Calculating ROI Surface Areas"}
+                    }
 
         self.run()
 
@@ -86,8 +102,38 @@ class CalculationsDialog(wx.Dialog):
     def run(self):
         res = self.ShowModal()
         if res == wx.ID_OK:
-            pass
+            self.run_calculation()
         self.Destroy()
+
+    def run_calculation(self):
+        ProgressFrame(self.threading_obj_list, self.func, title=self.title,
+                      action_msg="Processing Study", sub_gauge=True, kwargs=True)
+
+    @property
+    def condition(self):
+        text = self.text_ctrl_condition.GetValue()
+        return text if text else None
+
+    @property
+    def threading_obj_list(self):
+        uids = db_update.query('DVHs', 'study_instance_uid', self.condition, unique=True)
+        return [{"uid": uid, "callback": self.callback} for uid in uids]
+
+    @property
+    def calculation(self):
+        return self.combo_box_calculate.GetValue()
+
+    @property
+    def title(self):
+        return self.LUT[self.calculation]['title']
+
+    @property
+    def func(self):
+        return self.LUT[self.calculation]['func']
+
+    @staticmethod
+    def callback(msg):
+        pub.sendMessage("sub_progress_update", msg=msg)
 
 
 class ChangeOrDeleteBaseClass(wx.Dialog):

@@ -204,7 +204,7 @@ class DVHAMainFrame(wx.Frame):
                        'Settings': "User Settings",
                        'Database': "Database Administrator Tools",
                        'ROI Map': "Define ROI name aliases",
-                       'AI': "Machine Learning"}
+                       'AI': "Modeling with Scikit-Learn"}
 
         for key in self.toolbar_keys:
             bitmap = wx.Bitmap(ICONS[key], wx.BITMAP_TYPE_ANY)

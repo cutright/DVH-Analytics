@@ -84,7 +84,6 @@ def dist_to_ptv_centroids(study_instance_uid, roi_name, pre_calc=None):
     if ptv_centroid is None:
         tv = get_total_treatment_volume_of_study(study_instance_uid)
         ptv_centroid = get_treatment_volume_centroid(tv)
-
     data = float(np.linalg.norm(ptv_centroid - oar_centroid)) / 10.
 
     update_dvhs_table(study_instance_uid, roi_name, 'dist_to_ptv_centroids', round(float(data), 3))
@@ -374,17 +373,75 @@ def get_treatment_volume_coord(tv):
     return roi_form.get_roi_coordinates_from_planes(tv)
 
 
-def query(table, column, condition):
+def query(table, column, condition, unique=False):
     """
     Automatically creates connection for query
     """
     with DVH_SQL() as cnx:
-        ans = cnx.query(table, column, condition)
+        func = cnx.get_unique_values if unique else cnx.query
+        ans = func(table, column, condition)
     return ans
 
 
 def uid_has_ptvs(study_instance_uid):
     with DVH_SQL() as cnx:
-        ans = cnx.query('DVHs', 'roi_type', "study_instance_uid = '%s' and roi_type LIKE 'PTV%%'" % study_instance_uid)
+        condition = "study_instance_uid = '%s' and roi_type LIKE 'PTV%%'" % study_instance_uid
+        ans = cnx.query('DVHs', 'roi_type', condition)
     return bool(ans)
 
+
+def update_roi_metric(roi_metric_calc, uid, callback=None, centroid_calc=False, ptv_calc=True):
+    pre_calc = None
+    if ptv_calc:
+        condition = "study_instance_uid = '%s' and roi_type like 'PTV%%'" % uid
+        ptvs = [row[0] for row in query('DVHs', 'roi_name', condition)]
+        if len(ptvs):
+            pre_calc = get_total_treatment_volume_of_study(uid, ptvs=ptvs)
+            if centroid_calc:
+                pre_calc = get_treatment_volume_centroid(pre_calc)
+
+    if pre_calc is not None or not ptv_calc:
+        condition = "study_instance_uid = '%s' and roi_type not like 'PTV%%'" % uid
+        rois = [row[0] for row in query('DVHs', 'roi_name', condition)]
+
+        for i, roi in enumerate(rois):
+            if pre_calc is None:
+                roi_metric_calc(uid, roi)
+            else:
+                roi_metric_calc(uid, roi, pre_calc=pre_calc)
+            if callback is not None:
+                msg = {'label': "Processing (%s of %s): %s" % (i+1, len(rois), roi),
+                       'gauge': float(i / len(rois))}
+                callback(msg)
+
+
+def update_ptv_dist_data(uid, callback=None):
+    update_roi_metric(min_distances, uid, callback)
+
+
+def update_ptv_overlap(uid, callback=None):
+    update_roi_metric(treatment_volume_overlap, uid, callback)
+
+
+def update_ptv_centroid_distances(uid, callback=None):
+    update_roi_metric(dist_to_ptv_centroids, uid, callback, centroid_calc=True)
+
+
+def update_roi_centroid(uid, callback=None):
+    update_roi_metric(centroid, uid, callback, ptv_calc=False)
+
+
+def update_roi_spread(uid, callback=None):
+    update_roi_metric(spread, uid, callback, ptv_calc=False)
+
+
+def update_roi_cross_section(uid, callback=None):
+    update_roi_metric(cross_section, uid, callback, ptv_calc=False)
+
+
+def update_roi_surface_area(uid, callback=None):
+    update_roi_metric(surface_area, uid, callback, ptv_calc=False)
+
+
+def update_roi_volume(uid, callback=None):
+    update_roi_metric(surface_area, uid, callback, ptv_calc=False)
