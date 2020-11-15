@@ -58,7 +58,9 @@ class CalculationsDialog(wx.Dialog):
                     "ROI Cross-Section": {'func': db_update.update_roi_cross_section,
                                           'title': "Calculating ROI Cross-Sections"},
                     "ROI Surface Area": {'func': db_update.update_roi_surface_area,
-                                         'title': "Calculating ROI Surface Areas"}
+                                         'title': "Calculating ROI Surface Areas"},
+                    "ROI Volume": {'func': db_update.update_roi_volume,
+                                   'title': "Calculating ROI Volume"}
                     }
 
         self.run()
