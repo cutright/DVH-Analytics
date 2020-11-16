@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.8.9.post1 (2020.11.16)
+--------------------
+ - [Import] Resolved bug where empty ROI slice crashed DTH calculation [Issue 113](https://github.com/cutright/DVH-Analytics/issues/113)
+
 v0.8.9 (2020.11.15)
 --------------------
  - [Import] Importing DICOM-RT Dose file no longer causes crash if no matching Plan is found [Issue 105](https://github.com/cutright/DVH-Analytics/issues/105)

@@ -118,7 +118,7 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
     try:
         is_inside = [[1, -1][roi_geom.is_point_inside_roi(point, treatment_volume_roi)] for point in oar_coordinates]
         data = roi_geom.min_distances_to_target(oar_coordinates, treatment_volume_coord, factors=is_inside)
-    except MemoryError:
+    except Exception:
         try:
             treatment_volume_coord = sample_roi(treatment_volume_coord, max_point_count=3000)
             oar_coordinates = sample_roi(oar_coordinates,  max_point_count=3000)
