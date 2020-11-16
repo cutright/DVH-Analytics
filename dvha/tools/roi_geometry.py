@@ -120,9 +120,11 @@ def is_point_inside_roi(point, roi):
     if np.max(roi_z) > point[2] > np.min(roi_z):
         nearest_z_index = (np.abs(roi_z - point[2])).argmin()
         nearest_z_key = z_keys[nearest_z_index]
-        shapely_roi = points_to_shapely_polygon(roi[nearest_z_key])
-        shapely_point = Point(point[0], point[1])
-        return shapely_point.within(shapely_roi)
+        if abs(float(nearest_z_key) - point[2]) < 0.5:  # make sure point is within 0.5mm
+            if len(roi[nearest_z_key]) > 2:  # make sure there are 3 points to make a polygon
+                shapely_roi = points_to_shapely_polygon(roi[nearest_z_key])
+                shapely_point = Point(point[0], point[1])
+                return shapely_point.within(shapely_roi)
     return False
 
 
