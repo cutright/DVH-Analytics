@@ -106,6 +106,10 @@ class DVH:
                                                                  "study_instance_uid in ('%s')" % "','".join(self.uid)))
             self.total_fxs = self.get_plan_values('fxs')
             self.fx_dose = self.get_rx_values('fx_dose')
+
+            self.tx_site = self.get_plan_values('tx_site')
+            self.keys.append('tx_site')
+
         else:
             self.count = 0
 

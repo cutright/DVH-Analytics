@@ -303,7 +303,7 @@ class PlotStatDVH(Plot):
         self.dvh = group_data[1]['dvh']
         self.dvh_2 = group_data[2]['dvh']
         self.source = {'dvh': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], roi_name=[], roi_type=[], group=[],
-                                                         x_dose=[], volume=[], min_dose=[], mean_dose=[], max_dose=[])),
+                                                         x_dose=[], volume=[], min_dose=[], mean_dose=[], max_dose=[], tx_site=[])),
                        'stats': ColumnDataSource(data=dict(x=[], min=[], mean=[], median=[], max=[], mrn=[])),
                        'patch': ColumnDataSource(data=dict(x=[], y1=[], y2=[])),
                        'stats_2': ColumnDataSource(data=dict(x=[], min=[], mean=[], median=[], max=[], mrn=[])),
@@ -335,6 +335,7 @@ class PlotStatDVH(Plot):
                     </style>
 
                     <b>MRN: </b> @mrn <br>
+                    <b>TxSite: </b> @tx_site <br>
                     <b>Dose: </b> $x{i} cGy <br>
                     <b>Volume: </b> $y
                 """
@@ -382,7 +383,8 @@ class PlotStatDVH(Plot):
                    TableColumn(field="mean_dose", title="Mean Dose", width=80,
                                formatter=NumberFormatter(format="0.00")),
                    TableColumn(field="max_dose", title="Max Dose", width=80,
-                               formatter=NumberFormatter(format="0.00")), ]
+                               formatter=NumberFormatter(format="0.00")),
+                   TableColumn(field="tx_site", title="Tx Site"),]
         self.table = DataTable(source=self.source['dvh'], columns=columns,)
 
     def set_figure_dimensions(self):
