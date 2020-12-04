@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.8.9.post2 (2020.12.4)
+--------------------
+ - [Control Chart] Fix bug that crashed DVHA when no dates are available [Issue 115](https://github.com/cutright/DVH-Analytics/issues/115)
+
 v0.8.9.post1 (2020.11.16)
 --------------------
  - [Import] Resolved bug where empty ROI slice crashed DTH calculation [Issue 113](https://github.com/cutright/DVH-Analytics/issues/113)

@@ -1607,40 +1607,45 @@ class PlotControlChart(Plot):
 
         x, y, mrn, uid, dates = self.clean_data(x, y, mrn=mrn, uid=uid, dates=dates)
 
-        center_line, ucl, lcl = get_control_limits(y)
-        if cl_overrides is not None:
-            if 'UCL' in cl_overrides and cl_overrides['UCL'] is not None:
-                ucl = cl_overrides['UCL']
-            if 'LCL' in cl_overrides and cl_overrides['LCL'] is not None:
-                lcl = cl_overrides['LCL']
+        if len(x) > 1:
 
-        plot_color = [self.options.PLOT_COLOR_2, self.options.PLOT_COLOR][self.group == 1]
-        ooc_color = [self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR_2,
-                     self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR][self.group == 1]
-        colors = [ooc_color, plot_color]
-        alphas = [self.options.CONTROL_CHART_OUT_OF_CONTROL_ALPHA, self.options.CONTROL_CHART_CIRCLE_ALPHA]
-        color = [colors[ucl >= value >= lcl] for value in y]
-        alpha = [alphas[ucl >= value >= lcl] for value in y]
+            center_line, ucl, lcl = get_control_limits(y)
+            if cl_overrides is not None:
+                if 'UCL' in cl_overrides and cl_overrides['UCL'] is not None:
+                    ucl = cl_overrides['UCL']
+                if 'LCL' in cl_overrides and cl_overrides['LCL'] is not None:
+                    lcl = cl_overrides['LCL']
 
-        self.source['plot'].data = {'x': x, 'y': y, 'mrn': mrn, 'uid': uid,
-                                    'color': color, 'alpha': alpha, 'dates': dates}
+            plot_color = [self.options.PLOT_COLOR_2, self.options.PLOT_COLOR][self.group == 1]
+            ooc_color = [self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR_2,
+                         self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR][self.group == 1]
+            colors = [ooc_color, plot_color]
+            alphas = [self.options.CONTROL_CHART_OUT_OF_CONTROL_ALPHA, self.options.CONTROL_CHART_CIRCLE_ALPHA]
+            color = [colors[ucl >= value >= lcl] for value in y]
+            alpha = [alphas[ucl >= value >= lcl] for value in y]
 
-        self.source['patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
-                                     'y': [ucl, ucl, lcl, lcl], 'color': [plot_color] * 4}
-        self.source['center_line'].data = {'x': [min(x), max(x)],
-                                           'y': [center_line] * 2,
-                                           'mrn': ['center line'] * 2}
+            self.source['plot'].data = {'x': x, 'y': y, 'mrn': mrn, 'uid': uid,
+                                        'color': color, 'alpha': alpha, 'dates': dates}
 
-        self.source['lcl_line'].data = {'x': [min(x), max(x)],
-                                        'y': [lcl] * 2,
-                                        'mrn': ['center line'] * 2}
-        self.source['ucl_line'].data = {'x': [min(x), max(x)],
-                                        'y': [ucl] * 2,
-                                        'mrn': ['center line'] * 2}
+            self.source['patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
+                                         'y': [ucl, ucl, lcl, lcl], 'color': [plot_color] * 4}
+            self.source['center_line'].data = {'x': [min(x), max(x)],
+                                               'y': [center_line] * 2,
+                                               'mrn': ['center line'] * 2}
 
-        self.div_center_line.text = "<b>Center line</b>: %0.3f" % center_line
-        self.div_ucl.text = "<b>UCL</b>: %0.3f" % ucl
-        self.div_lcl.text = "<b>LCL</b>: %0.3f" % lcl
+            self.source['lcl_line'].data = {'x': [min(x), max(x)],
+                                            'y': [lcl] * 2,
+                                            'mrn': ['center line'] * 2}
+            self.source['ucl_line'].data = {'x': [min(x), max(x)],
+                                            'y': [ucl] * 2,
+                                            'mrn': ['center line'] * 2}
+
+            self.div_center_line.text = "<b>Center line</b>: %0.3f" % center_line
+            self.div_ucl.text = "<b>UCL</b>: %0.3f" % ucl
+            self.div_lcl.text = "<b>LCL</b>: %0.3f" % lcl
+        else:
+            self.clear_sources()
+            self.clear_plot()
 
         if update_layout:
             self.update_bokeh_layout_in_wx_python()
