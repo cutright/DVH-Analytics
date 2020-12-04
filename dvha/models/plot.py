@@ -251,7 +251,7 @@ class Plot:
         ans = [[value for i, value in enumerate(var) if i not in bad_indices] for var in data]
 
         for var in [mrn, uid, dates]:
-            if var:
+            if var is not None:
                 ans.append([value for i, value in enumerate(var) if i not in bad_indices])
 
         return tuple(ans)
