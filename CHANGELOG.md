@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.9.0 (TBD)
+--------------------
+ - [Database] New feature to apply edits to database by uploading a CSV for SQL commands
+
 v0.8.9.post2 (2020.12.4)
 --------------------
  - [Control Chart] Fix bug that crashed DVHA when no dates are available [Issue 115](https://github.com/cutright/DVH-Analytics/issues/115)

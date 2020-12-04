@@ -679,6 +679,20 @@ class DVH_SQL:
         uids = [uid[0] for uid in results]
         return {uid: uids.count(uid) for uid in list(set(uids))}
 
+    def update_db_with_csv(self, file_path):
+        """Load a CSV file, update database with values
+
+        :param file_path: file_path to CSV file
+        """
+        with open(file_path, 'r') as fp:
+            lines = fp.readlines()
+            if lines and lines[0].strip() == "table,column,value,condition":
+                for line in lines[1:]:
+                    try:
+                        self.update(*csv_to_list(line.strip()))
+                    except Exception as e:
+                        push_to_log(e, msg="Database update from CSV failure!")
+
 
 def truncate_string(input_string, character_limit):
     """
@@ -806,3 +820,57 @@ def is_file_sqlite_db(sqlite_db_file):
             pass
 
     return False
+
+
+def csv_to_list(csv_str, delimiter=","):
+    """Split a CSV into a list
+
+    Parameters
+    ----------
+    csv_str : str
+        A comma-separated value string (with double quotes around values
+        containing the delimiter)
+    delimiter : str
+        The str separator between values
+
+    Returns
+    ----------
+    list
+       csv_str split by the delimiter
+    """
+    if '"' not in csv_str:
+        return csv_str.split(delimiter)
+
+    # add an empty value with another ",", but ignore it
+    # ensures next_csv_element always finds a ","
+    next_value, csv_str = next_csv_element(csv_str + ",", delimiter)
+    ans = [next_value.replace("<>", "\n")]
+    while csv_str:
+        next_value, csv_str = next_csv_element(csv_str, delimiter)
+        ans.append(next_value.replace("<>", "\n"))
+
+    return ans
+
+
+def next_csv_element(csv_str, delimiter=","):
+    """Helper function for csv_to_list
+
+    Parameters
+    ----------
+    csv_str : str
+        A comma-separated value string (with double quotes around values
+        containing the delimiter)
+    delimiter : str
+        The str separator between values
+
+    Returns
+    ----------
+    str, str
+        Return a tuple, the next value and remainder of csv_str
+    """
+    if csv_str.startswith('"'):
+        split = csv_str[1:].find('"') + 1
+        return csv_str[1:split], csv_str[split + 2 :]
+
+    next_delimiter = csv_str.find(delimiter)
+    return csv_str[:next_delimiter], csv_str[next_delimiter + 1 :]
