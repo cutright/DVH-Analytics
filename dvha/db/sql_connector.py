@@ -220,7 +220,7 @@ class DVH_SQL:
             self.cursor.execute(update)
             self.cnx.commit()
         except Exception as e:
-            raise SQLError(str(e), update)
+            push_to_log(e, msg="Database update failure!")
 
     def is_study_instance_uid_in_table(self, table_name, study_instance_uid):
         # As of DVH v0.7.5, study_instance_uid may end with _N where N is the nth plan of a file set
@@ -806,3 +806,57 @@ def is_file_sqlite_db(sqlite_db_file):
             pass
 
     return False
+
+
+def csv_to_list(csv_str, delimiter=","):
+    """Split a CSV into a list
+
+    Parameters
+    ----------
+    csv_str : str
+        A comma-separated value string (with double quotes around values
+        containing the delimiter)
+    delimiter : str
+        The str separator between values
+
+    Returns
+    ----------
+    list
+       csv_str split by the delimiter
+    """
+    if '"' not in csv_str:
+        return csv_str.split(delimiter)
+
+    # add an empty value with another ",", but ignore it
+    # ensures next_csv_element always finds a ","
+    next_value, csv_str = next_csv_element(csv_str + ",", delimiter)
+    ans = [next_value.replace("<>", "\n")]
+    while csv_str:
+        next_value, csv_str = next_csv_element(csv_str, delimiter)
+        ans.append(next_value.replace("<>", "\n"))
+
+    return ans
+
+
+def next_csv_element(csv_str, delimiter=","):
+    """Helper function for csv_to_list
+
+    Parameters
+    ----------
+    csv_str : str
+        A comma-separated value string (with double quotes around values
+        containing the delimiter)
+    delimiter : str
+        The str separator between values
+
+    Returns
+    ----------
+    str, str
+        Return a tuple, the next value and remainder of csv_str
+    """
+    if csv_str.startswith('"'):
+        split = csv_str[1:].find('"') + 1
+        return csv_str[1:split], csv_str[split + 2 :]
+
+    next_delimiter = csv_str.find(delimiter)
+    return csv_str[:next_delimiter], csv_str[next_delimiter + 1 :]

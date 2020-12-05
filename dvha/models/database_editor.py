@@ -20,6 +20,8 @@ from dvha.models.data_table import DataTable
 from dvha.dialogs.export import save_data_to_file
 from dvha.tools.utilities import set_msw_background_color, get_window_size, set_frame_icon
 from dvha.models.roi_map import RemapROIFrame
+from dvha.tools.errors import ErrorDialog, push_to_log
+from dvha.tools.threading_progress import ProgressFrame
 
 
 class DatabaseEditorFrame(wx.Frame):
@@ -65,6 +67,7 @@ class DatabaseEditorFrame(wx.Frame):
                        'clear': wx.Button(self.window_pane_query, wx.ID_ANY, "Clear"),
                        'export_csv': wx.Button(self.window_pane_query, wx.ID_ANY, "Export"),
                        'remap_roi_names': wx.Button(self, wx.ID_ANY, "Remap ROI Names"),
+                       'update_from_csv': wx.Button(self, wx.ID_ANY, "Update from CSV"),
                        # 'plan_complexity': wx.Button(self, wx.ID_ANY, "Recalc Plan Complexities"),
                        'auto_fit_columns': wx.Button(self.window_pane_query, wx.ID_ANY, "Auto-fit Columns")}
 
@@ -114,18 +117,21 @@ class DatabaseEditorFrame(wx.Frame):
         sizer_condition = wx.BoxSizer(wx.VERTICAL)
         sizer_combo_box = wx.BoxSizer(wx.VERTICAL)
         sizer_db_tree = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_dialog_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_dialog_buttons = wx.BoxSizer(wx.VERTICAL)
+        sizer_dialog_buttons_1 = wx.BoxSizer(wx.HORIZONTAL)
 
-        sizer_dialog_buttons.Add(self.button['calculations'], 0, wx.ALL, 5)
-        sizer_dialog_buttons.Add(self.button['edit_db'], 0, wx.ALL, 5)
-        sizer_dialog_buttons.Add(self.button['reimport'], 0, wx.ALL, 5)
-        sizer_dialog_buttons.Add(self.button['delete_study'], 0, wx.ALL, 5)
-        sizer_dialog_buttons.Add(self.button['change_mrn_uid'], 0, wx.ALL, 5)
-        sizer_dialog_buttons.Add(self.button['rebuild_db'], 0, wx.ALL, 5)
-        sizer_dialog_buttons.Add(self.button['delete_all_data'], 0, wx.ALL, 5)
-        sizer_dialog_buttons.Add(self.button['remap_roi_names'], 0, wx.ALL, 5)
+        sizer_dialog_buttons_1.Add(self.button['calculations'], 0, wx.ALL, 5)
+        sizer_dialog_buttons_1.Add(self.button['edit_db'], 0, wx.ALL, 5)
+        sizer_dialog_buttons_1.Add(self.button['reimport'], 0, wx.ALL, 5)
+        sizer_dialog_buttons_1.Add(self.button['delete_study'], 0, wx.ALL, 5)
+        sizer_dialog_buttons_1.Add(self.button['change_mrn_uid'], 0, wx.ALL, 5)
+        sizer_dialog_buttons_1.Add(self.button['rebuild_db'], 0, wx.ALL, 5)
+        sizer_dialog_buttons_1.Add(self.button['delete_all_data'], 0, wx.ALL, 5)
+        sizer_dialog_buttons_1.Add(self.button['remap_roi_names'], 0, wx.ALL, 5)
+        sizer_dialog_buttons_1.Add(self.button['update_from_csv'], 0, wx.ALL, 5)
         # sizer_dialog_buttons.Add(self.button['plan_complexity'], 0, wx.ALL, 5)
-        sizer_dialog_buttons.Add(self.checkbox_auto_backup, 0, wx.LEFT | wx.ALIGN_CENTER_VERTICAL, 20)
+        sizer_dialog_buttons.Add(sizer_dialog_buttons_1, 0, 0, 0)
+        sizer_dialog_buttons.Add(self.checkbox_auto_backup, 0, wx.LEFT, 5)
         sizer_wrapper.Add(sizer_dialog_buttons, 0, wx.ALL, 5)
 
         sizer_db_tree.Add(self.tree_ctrl_db, 1, wx.EXPAND, 0)
@@ -287,3 +293,83 @@ class DatabaseEditorFrame(wx.Frame):
     # def on_plan_complexity(*evt):
     #     with wx.BusyCursor() as busy:
     #         recalculate_plan_complexities_from_beams()
+
+    def on_update_from_csv(self, *evt):
+        msg = "Load a CSV file and update your database. Please see manual for " \
+              "more information. Formatting is critical, this can not be undone!"
+        caption = "USE WITH EXTREME CAUTION"
+        ErrorDialog(self, msg, caption,
+                    flags=wx.ICON_WARNING | wx.OK | wx.OK_DEFAULT)
+
+        with wx.FileDialog(self, "Load CSV into Database", style=wx.FD_FILE_MUST_EXIST | wx.FD_OPEN) as fileDialog:
+            if fileDialog.ShowModal() == wx.ID_CANCEL:
+                return
+            pathname = fileDialog.GetPath()
+            with open(pathname, 'r') as fp:
+                lines = fp.readlines()
+                header_row = "table,column,value,condition"
+                if lines and lines[0].strip() == header_row:
+                    params = [csv_to_list(line.strip()) for line in lines[1:]]
+                    ProgressFrame(params, update_db_with_csv,
+                                  title="Update Database from CSV file",
+                                  action_msg="Processing row", star_map=True)
+
+
+def update_db_with_csv(*args):
+    """Create SQL connection and call update"""
+    with DVH_SQL() as cnx:
+        cnx.update(*args)
+
+
+def csv_to_list(csv_str, delimiter=","):
+    """Split a CSV into a list
+
+    Parameters
+    ----------
+    csv_str : str
+        A comma-separated value string (with double quotes around values
+        containing the delimiter)
+    delimiter : str
+        The str separator between values
+
+    Returns
+    ----------
+    list
+       csv_str split by the delimiter
+    """
+    if '"' not in csv_str:
+        return csv_str.split(delimiter)
+
+    # add an empty value with another ",", but ignore it
+    # ensures next_csv_element always finds a ","
+    next_value, csv_str = next_csv_element(csv_str + ",", delimiter)
+    ans = [next_value.replace("<>", "\n")]
+    while csv_str:
+        next_value, csv_str = next_csv_element(csv_str, delimiter)
+        ans.append(next_value.replace("<>", "\n"))
+
+    return ans
+
+
+def next_csv_element(csv_str, delimiter=","):
+    """Helper function for csv_to_list
+
+    Parameters
+    ----------
+    csv_str : str
+        A comma-separated value string (with double quotes around values
+        containing the delimiter)
+    delimiter : str
+        The str separator between values
+
+    Returns
+    ----------
+    str, str
+        Return a tuple, the next value and remainder of csv_str
+    """
+    if csv_str.startswith('"'):
+        split = csv_str[1:].find('"') + 1
+        return csv_str[1:split], csv_str[split + 2 :]
+
+    next_delimiter = csv_str.find(delimiter)
+    return csv_str[:next_delimiter], csv_str[next_delimiter + 1 :]
