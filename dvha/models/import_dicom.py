@@ -758,13 +758,13 @@ class ImportDicomFrame(wx.Frame):
         for key in list(over_rides):
             value = self.input[key].GetValue()
             if 'date' in key:
-                over_rides[key] = self.validate_date(value)
+                value = self.validate_date(value)
             elif key == 'rx_dose':
-                over_rides[key] = self.validate_dose(value)
+                value = self.validate_dose(value)
             else:
                 if not value:
                     value = None
-                over_rides[key] = value
+            over_rides[key] = value
 
             # Apply all
             if "%s_1" % key in list(self.checkbox):
@@ -1083,7 +1083,7 @@ class ImportStatusDialog(wx.Dialog):
         # sizer_error_window = wx.BoxSizer(wx.HORIZONTAL)
         # sizer_error_text = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.label_study_counter = wx.StaticText(self, wx.ID_ANY, "Plan 1 of 10", style=wx.ALIGN_CENTER)
+        self.label_study_counter = wx.StaticText(self, wx.ID_ANY, " " * 12, style=wx.ALIGN_CENTER)
         sizer_study.Add(self.label_study_counter, 0, wx.ALIGN_CENTER, 0)
         self.label_patient = wx.StaticText(self, wx.ID_ANY, "Patient:")
         sizer_study.Add(self.label_patient, 0, 0, 0)
