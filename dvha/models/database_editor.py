@@ -20,7 +20,7 @@ from dvha.models.data_table import DataTable
 from dvha.dialogs.export import save_data_to_file
 from dvha.tools.utilities import set_msw_background_color, get_window_size, set_frame_icon
 from dvha.models.roi_map import RemapROIFrame
-from dvha.tools.errors import ErrorDialog, push_to_log
+from dvha.tools.errors import ErrorDialog
 from dvha.tools.threading_progress import ProgressFrame
 
 
