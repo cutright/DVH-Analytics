@@ -220,7 +220,7 @@ class DVH_SQL:
             self.cursor.execute(update)
             self.cnx.commit()
         except Exception as e:
-            raise SQLError(str(e), update)
+            push_to_log(e, msg="Database update failure!")
 
     def is_study_instance_uid_in_table(self, table_name, study_instance_uid):
         # As of DVH v0.7.5, study_instance_uid may end with _N where N is the nth plan of a file set
@@ -678,20 +678,6 @@ class DVH_SQL:
         results = self.query("DVHs", "study_instance_uid", "roi_type like 'PTV%'")
         uids = [uid[0] for uid in results]
         return {uid: uids.count(uid) for uid in list(set(uids))}
-
-    def update_db_with_csv(self, file_path):
-        """Load a CSV file, update database with values
-
-        :param file_path: file_path to CSV file
-        """
-        with open(file_path, 'r') as fp:
-            lines = fp.readlines()
-            if lines and lines[0].strip() == "table,column,value,condition":
-                for line in lines[1:]:
-                    try:
-                        self.update(*csv_to_list(line.strip()))
-                    except Exception as e:
-                        push_to_log(e, msg="Database update from CSV failure!")
 
 
 def truncate_string(input_string, character_limit):
