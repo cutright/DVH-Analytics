@@ -14,3 +14,4 @@ regressors
 rapidfuzz
 selenium
 pandas <= 0.25.3
+scikit-image

@@ -673,6 +673,10 @@ class UserSettings(wx.Frame):
         self.dvh_bin_max_dose = wx.TextCtrl(self, wx.ID_ANY, "")
         self.dvh_bin_max_dose_units = wx.ComboBox(self, wx.ID_ANY, choices=self.options.dvh_bin_max_dose_options,
                                                   style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.dvh_small_volume_threshold = wx.SpinCtrl(self, wx.ID_ANY, "10", min=1, max=50, style=wx.SP_ARROW_KEYS)
+        self.dvh_segments_between = wx.SpinCtrl(self, wx.ID_ANY, "10", min=0, max=20, style=wx.SP_ARROW_KEYS)
+        self.dvh_high_resolution = wx.ComboBox(self, wx.ID_ANY, choices=self.options.DVH_HIGH_RESOLUTION_FACTOR_OPTIONS,
+                                               style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_colors_category = wx.ComboBox(self, wx.ID_ANY, choices=color_variables,
                                                      style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.combo_box_colors_selection = wx.ComboBox(self, wx.ID_ANY, choices=colors,
@@ -722,6 +726,15 @@ class UserSettings(wx.Frame):
         self.dvh_bin_max_dose.SetToolTip("Prevent memory issues if dose grid contains very large, unrealistic doses")
         self.dvh_bin_max_dose.SetValue(str(self.options.dvh_bin_max_dose[self.options.dvh_bin_max_dose_units]))
         self.dvh_bin_max_dose_units.SetValue(self.options.dvh_bin_max_dose_units)
+        self.dvh_small_volume_threshold.SetToolTip("If ROI volume is less than this value, it will be recalculated with a "
+                                                   "resolution of the dose grid spacing divided by 16")
+        self.dvh_small_volume_threshold.SetValue(str(self.options.DVH_SMALL_VOLUME_THRESHOLD))
+        self.dvh_segments_between.SetToolTip("If ROI volume is less than threshold, it will be recalculated with a this many "
+                                             "segments interpolated between slices")
+        self.dvh_segments_between.SetValue(str(self.options.DVH_HIGH_RESOLUTION_SEGMENTS_BETWEEN))
+        self.dvh_high_resolution.SetToolTip("If ROI volume is less than the volume threshold, the in-plane resolution will be "
+                                            "increased by this factor (e.g., interpolate in-between the dose grid)")
+        self.dvh_high_resolution.SetValue(str(self.options.DVH_HIGH_RESOLUTION_FACTOR))
         # self.dvh_bin_width_input.SetMinSize((50, 22))
         # self.dvh_bin_max_dose_units.SetMinSize((50, 22))
         self.combo_box_colors_category.SetMinSize((250, self.combo_box_colors_category.GetSize()[1]))
@@ -751,6 +764,9 @@ class UserSettings(wx.Frame):
         sizer_dvh_options = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "DVH Options"), wx.VERTICAL)
         sizer_dvh_bin_width = wx.BoxSizer(wx.HORIZONTAL)
         sizer_dvh_bin_max = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_dvh_small_vol = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_dvh_segments_between = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_dvh_high_resolution = wx.BoxSizer(wx.HORIZONTAL)
         sizer_alpha = wx.BoxSizer(wx.VERTICAL)
         sizer_alpha_input = wx.BoxSizer(wx.HORIZONTAL)
         sizer_line_styles = wx.BoxSizer(wx.VERTICAL)
@@ -788,21 +804,42 @@ class UserSettings(wx.Frame):
         sizer_dicom_directories.Add(sizer_imported_wrapper, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_dicom_directories, 0, wx.ALL | wx.EXPAND, 10)
 
-        sizer_dvh_options.Add(self.checkbox_dicom_dvh, 0, wx.ALL, 5)
+        sizer_dvh_options.Add(self.checkbox_dicom_dvh, 0, wx.LEFT, 5)
         sizer_dvh_options.Add((20, 10), 0, 0, 0)
         label_dvh_bin_width = wx.StaticText(self, wx.ID_ANY, "DVH Bin Width (cGy):")
         label_dvh_bin_width.SetToolTip("Value must be an integer")
-        sizer_dvh_bin_width.Add(label_dvh_bin_width, 0, wx.EXPAND | wx.TOP | wx.LEFT, 5)
-        sizer_dvh_bin_width.Add(self.dvh_bin_width_input, 1, wx.ALL, 5)
+        sizer_dvh_bin_width.Add(label_dvh_bin_width, 1, wx.EXPAND | wx.TOP | wx.LEFT, 5)
+        sizer_dvh_bin_width.Add(self.dvh_bin_width_input, 0, wx.ALL, 5)
         label_max_dose_bin = wx.StaticText(self, wx.ID_ANY, "Max Dose Bin Limit:")
-        label_max_dose_bin.SetToolTip("Prevent memory issues if dose grid contains very large, unrealistic doses")
-        sizer_dvh_bin_max.Add(label_max_dose_bin, 0, wx.EXPAND | wx.TOP | wx.LEFT, 5)
+        label_max_dose_bin.SetToolTip("Prevent memory issues if dose grid contains very large doses")
+        sizer_dvh_bin_max.Add(label_max_dose_bin, 1, wx.EXPAND | wx.TOP | wx.LEFT, 5)
         sizer_dvh_bin_max.Add((20, 20), 0, 0, 0)
-        sizer_dvh_bin_max.Add(self.dvh_bin_max_dose, 0, wx.EXPAND, 0)
+        sizer_dvh_bin_max.Add(self.dvh_bin_max_dose, 0, 0, 0)
         sizer_dvh_bin_max.Add((20, 20), 0, 0, 0)
-        sizer_dvh_bin_max.Add(self.dvh_bin_max_dose_units, 0, wx.EXPAND, 0)
-        sizer_dvh_options.Add(sizer_dvh_bin_width, 0, wx.BOTTOM, 10)
-        sizer_dvh_options.Add(sizer_dvh_bin_max, 0, 0, 0)
+        sizer_dvh_bin_max.Add(self.dvh_bin_max_dose_units, 0, 0, 0)
+        sizer_dvh_options.Add(sizer_dvh_bin_width, 0, wx.EXPAND | wx.BOTTOM, 0)
+        sizer_dvh_options.Add(sizer_dvh_bin_max, 0, wx.EXPAND, 0)
+
+        label_dvh_small_volume = wx.StaticText(self, wx.ID_ANY, "Small volume threshold (cc):")
+        label_dvh_small_volume.SetToolTip("If ROI volume is less than this value, it will be recalculated with "
+                                          "a higher resolution using interpolation")
+        sizer_dvh_small_vol.Add(label_dvh_small_volume, 1, wx.EXPAND | wx.TOP, 5)
+        sizer_dvh_small_vol.Add(self.dvh_small_volume_threshold, 0, wx.TOP, 5)
+        sizer_dvh_options.Add(sizer_dvh_small_vol, 0, wx.EXPAND | wx.TOP | wx.LEFT, 5)
+
+        label_dvh_segments_between = wx.StaticText(self, wx.ID_ANY, "Interpolated segments between planes:")
+        label_dvh_segments_between.SetToolTip("If ROI volume is less than threshold, it will be recalculated with a this many "
+                                              "segments interpolated between slices")
+        sizer_dvh_segments_between.Add(label_dvh_segments_between, 1, wx.EXPAND | wx.TOP, 5)
+        sizer_dvh_segments_between.Add(self.dvh_segments_between, 0, wx.TOP, 5)
+        sizer_dvh_options.Add(sizer_dvh_segments_between, 0, wx.EXPAND | wx.TOP | wx.LEFT, 5)
+
+        label_dvh_high_resolution = wx.StaticText(self, wx.ID_ANY, "High resolution interpolation factor :")
+        label_dvh_high_resolution.SetToolTip("If ROI volume is less than the volume threshold, the in-plane resolution will be "
+                                             "increased by this factor (e.g., interpolate in-between the dose grid)")
+        sizer_dvh_high_resolution.Add(label_dvh_high_resolution, 1, wx.EXPAND | wx.TOP, 5)
+        sizer_dvh_high_resolution.Add(self.dvh_high_resolution, 0, wx.TOP, 5)
+        sizer_dvh_options.Add(sizer_dvh_high_resolution, 0, wx.EXPAND | wx.TOP | wx.LEFT, 5)
 
         sizer_wrapper.Add(sizer_dvh_options, 0, wx.ALL | wx.EXPAND, 10)
 
@@ -868,6 +905,9 @@ class UserSettings(wx.Frame):
         self.Bind(wx.EVT_TEXT, self.update_dvh_bin_width_val, id=self.dvh_bin_width_input.GetId())
         self.Bind(wx.EVT_TEXT, self.update_dvh_bin_max_dose_val, id=self.dvh_bin_max_dose.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.update_dvh_bin_max_dose_units_val, id=self.dvh_bin_max_dose_units.GetId())
+        self.Bind(wx.EVT_TEXT, self.update_dvh_small_volume_val, id=self.dvh_small_volume_threshold.GetId())
+        self.Bind(wx.EVT_TEXT, self.update_dvh_segments_between, id=self.dvh_segments_between.GetId())
+        self.Bind(wx.EVT_COMBOBOX, self.update_dvh_high_resolution_factor, id=self.dvh_high_resolution.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.update_input_colors_var, id=self.combo_box_colors_category.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.update_size_var, id=self.combo_box_sizes_category.GetId())
         self.Bind(wx.EVT_COMBOBOX, self.update_line_width_var, id=self.combo_box_line_widths_category.GetId())
@@ -893,8 +933,8 @@ class UserSettings(wx.Frame):
         self.close()
 
     def on_cancel(self, *evt):
+        self.options.load()
         if self.is_edited:  # Tracks edits since last options save
-            self.options.load()
             self.apply_and_redraw_plots()
         self.close()
 
@@ -1073,6 +1113,24 @@ class UserSettings(wx.Frame):
 
     def update_dvh_bin_max_dose_units_var(self, *args):
         self.dvh_bin_max_dose_units.SetValue(self.options.dvh_bin_max_dose_units)
+
+    def update_dvh_small_volume_val(self, *args):
+        try:
+            new = int(float(self.dvh_small_volume_threshold.GetValue()))
+            self.options.set_option('DVH_SMALL_VOLUME_THRESHOLD', new)
+        except ValueError:
+            self.dvh_small_volume_threshold.SetValue(str(self.options.DVH_SMALL_VOLUME_THRESHOLD))
+
+    def update_dvh_segments_between(self, *args):
+        try:
+            new = int(float(self.dvh_segments_between.GetValue()))
+            self.options.set_option('DVH_HIGH_RESOLUTION_SEGMENTS_BETWEEN', new)
+        except ValueError:
+            self.dvh_small_volume_threshold.SetValue(str(self.options.DVH_HIGH_RESOLUTION_SEGMENTS_BETWEEN))
+
+    def update_dvh_high_resolution_factor(self, *args):
+        new = int(float(self.dvh_high_resolution.GetValue()))
+        self.options.set_option('DVH_HIGH_RESOLUTION_FACTOR', new)
 
     def refresh_options(self):
         self.update_dvh_bin_width_var()
