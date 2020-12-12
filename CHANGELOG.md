@@ -3,7 +3,8 @@
 v0.9.1 (TBD)
 --------------------
  - [Options] Clicking 'Cancel' in user options properly reloads options from file now
- - [Import] High resolution DVH calculation with interpolation for small volume ROIs
+ - [Import] High resolution DVH calculation with interpolation for small volume ROIs [Issue 119](https://github.com/cutright/DVH-Analytics/issues/119)
+ - [Import] DVHs in the SQL DB now store 5 decimals instead 2 [Issue 119](https://github.com/cutright/DVH-Analytics/issues/119)
 
 v0.9.0 (2020.12.4)
 --------------------

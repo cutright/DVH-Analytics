@@ -474,7 +474,7 @@ class DICOM_Parser:
                     'min_dose': [dvh.min, 'real'],
                     'mean_dose': [dvh.mean, 'real'],
                     'max_dose': [dvh.max, 'real'],
-                    'dvh_string': [','.join(['%.2f' % num for num in dvh.counts]), 'text'],
+                    'dvh_string': [','.join(['%.5f' % num for num in dvh.counts]), 'text'],
                     'roi_coord_string': [geometries['roi_coord_str'], 'text'],
                     'dist_to_ptv_min': [None, 'real'],
                     'dist_to_ptv_mean': [None, 'real'],

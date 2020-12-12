@@ -85,7 +85,7 @@ class DVH:
             for i in range(self.count):
                 # Process dvh_string to numpy array, and pad with zeros at the end
                 # so that all dvhs are the same length
-                current_dvh = np.array(dvh_split[i], dtype='|S4').astype(np.float)
+                current_dvh = np.array(dvh_split[i], dtype=np.float)
                 current_dvh_max = np.max(current_dvh)
                 if current_dvh_max > 0:
                     current_dvh = np.divide(current_dvh, current_dvh_max)
@@ -96,7 +96,7 @@ class DVH:
             for i in range(self.count):
                 # Process dth_string to numpy array
                 try:
-                    self.dth.append(np.array(self.dth_string[i].split(','), dtype='|S4').astype(np.float))
+                    self.dth.append(np.array(self.dth_string[i].split(','), dtype=np.float))
                 except Exception:
                     self.dth.append(np.array([0]))
 
