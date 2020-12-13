@@ -225,9 +225,9 @@ class DefaultOptions:
                                'interpolation_segments_between_planes': 0,
                                'memmap_rtdose': False}
         self.DVH_SMALL_VOLUME_THRESHOLD = 10  # compute high resolution DVH if volume less than this (cc)
-        self.DVH_HIGH_RESOLUTION_FACTOR = 8  # Must be a factor of (2^n)/4, where n is an integer
-        self.DVH_HIGH_RESOLUTION_FACTOR_OPTIONS = ['4', '8', '16', '32']
-        self.DVH_HIGH_RESOLUTION_SEGMENTS_BETWEEN = 2  # Must be int
+        self.DVH_HIGH_RESOLUTION_FACTOR = 8  # Must be a factor of 2
+        self.DVH_HIGH_RESOLUTION_FACTOR_OPTIONS = ['2', '4', '8', '16', '32']
+        self.DVH_HIGH_RESOLUTION_SEGMENTS_BETWEEN = 3  # Must be int
 
 
 class Options(DefaultOptions):
