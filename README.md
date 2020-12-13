@@ -74,6 +74,7 @@ Dependencies
 * [NumPy](http://numpy.org)
 * [Shapely](https://github.com/Toblerity/Shapely) < 1.7.0
 * [Statsmodels](https://github.com/statsmodels/statsmodels) >=0.8.0
+* [Scikit-image](https://scikit-image.org)  
 * [Scikit-learn](http://scikit-learn.org) >= 0.21.0
 * [regressors](https://pypi.org/project/regressors/)
 * [RapidFuzz](https://github.com/rhasspy/rapidfuzz)
