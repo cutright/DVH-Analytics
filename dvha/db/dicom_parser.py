@@ -441,25 +441,36 @@ class DICOM_Parser:
                 pass
 
         if dvh is None:
-            try:
-                dvh = dvhcalc.get_dvh(self.rt_data['structure'], self.rt_data['dose'], dvh_index,
-                                      callback=self.send_dvh_progress, limit=limit, **self.get_dvh_kwargs)
+            kwargs = {key: value for key, value in self.get_dvh_kwargs.items()}  # make copy
+            kwargs['structure'] = self.rt_data['structure']
+            kwargs['dose'] = self.rt_data['dose']
+            kwargs['roi'] = dvh_index
+            kwargs['limit'] = limit
+            kwargs['callback'] = self.send_dvh_progress
 
-            except AttributeError:
-                dose = validate_transfer_syntax_uid(self.rt_data['dose'])
-                structure = validate_transfer_syntax_uid(self.rt_data['structure'])
-                dvh = dvhcalc.get_dvh(structure, dose, dvh_index,
-                                      callback=self.send_dvh_progress, limit=limit, **self.get_dvh_kwargs)
+            try:
+                try:
+                    dvh = dvhcalc.get_dvh(**kwargs)
+                except AttributeError:
+                    kwargs['dose'] = validate_transfer_syntax_uid(self.rt_data['dose'])
+                    kwargs['structure'] = validate_transfer_syntax_uid(self.rt_data['structure'])
+                    dvh = dvhcalc.get_dvh(**kwargs)
+            except MemoryError:
+                kwargs['memmap_rtdose'] = True
+                dvh = dvhcalc.get_dvh(**kwargs)
 
             # If small volume, increase resolution
             if dvh.volume < self.dvh_small_volume_threshold:
-                kwargs = {key: value for key, value in self.get_dvh_kwargs.items()}  # make copy
                 kwargs['interpolation_resolution'] = (self.rt_data['dose'].PixelSpacing[0] / self.dvh_high_resolution_factor,
                                                       self.rt_data['dose'].PixelSpacing[1] / self.dvh_high_resolution_factor)
                 kwargs['interpolation_segments_between_planes'] = self.dvh_high_resolution_segments_between
 
-                dvh = dvhcalc.get_dvh(self.rt_data['structure'], self.rt_data['dose'], dvh_index,
-                                      callback=self.send_dvh_progress, limit=limit, **kwargs)
+                try:
+                    dvh = dvhcalc.get_dvh(**kwargs)
+                except MemoryError:
+                    kwargs['memmap_rtdose'] = True
+                    # dicompyler-core needs to re-parse the dose file
+                    dvh = dvhcalc.get_dvh(**kwargs)
 
         if dvh and dvh.volume > 0:  # ignore points and empty ROIs
             geometries = self.get_dvh_geometries(dvh_index)
