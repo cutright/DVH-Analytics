@@ -1,6 +1,6 @@
 # Change log of DVH Analytics
 
-v0.9.1 (TBD)
+v0.9.1 (2020.12.13)
 --------------------
  - [Options] Clicking 'Cancel' in user options properly reloads options from file now
  - [Import] High resolution DVH calculation with interpolation for small volume ROIs [Issue 119](https://github.com/cutright/DVH-Analytics/issues/119)

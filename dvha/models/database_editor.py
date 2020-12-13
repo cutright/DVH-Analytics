@@ -308,11 +308,17 @@ class DatabaseEditorFrame(wx.Frame):
             with open(pathname, 'r') as fp:
                 lines = fp.readlines()
                 header_row = "table,column,value,condition"
-                if lines and lines[0].strip() == header_row:
+                if lines and header_row in lines[0].strip():
                     params = [csv_to_list(line.strip()) for line in lines[1:]]
                     ProgressFrame(params, update_db_with_csv,
                                   title="Update Database from CSV file",
                                   action_msg="Processing row", star_map=True)
+                else:
+                    msg = "The selected file was not recognized. " \
+                          "Be sure you have a header row of: %s" % header_row
+                    caption = "CSV load failure"
+                    ErrorDialog(self, msg, caption,
+                                flags=wx.ICON_WARNING | wx.OK | wx.OK_DEFAULT)
 
 
 def update_db_with_csv(*args):
