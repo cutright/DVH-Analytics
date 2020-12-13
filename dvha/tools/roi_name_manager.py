@@ -38,7 +38,7 @@ class PhysicianROI:
     def add_variations(self, variations):
         if type(variations) is not list:
             variations = [variations]
-        variations = [v.replace('"', "'") for v in variations]
+        variations = [v.replace('"', "`") for v in variations]
         clean_variations = self.clean_variations
         for variation in variations:
             if clean_name(variation) not in clean_variations and variation.lower() not in {'uncategorized'}:
