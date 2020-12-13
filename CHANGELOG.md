@@ -1,5 +1,13 @@
 # Change log of DVH Analytics
 
+v0.9.1 (TBD)
+--------------------
+ - [Options] Clicking 'Cancel' in user options properly reloads options from file now
+ - [Import] High resolution DVH calculation with interpolation for small volume ROIs [Issue 119](https://github.com/cutright/DVH-Analytics/issues/119)
+ - [Import] DVHs in the SQL DB now store 5 decimals instead 2 [Issue 119](https://github.com/cutright/DVH-Analytics/issues/119)
+ - [Import] Use dicompyler-core's memory mapping on dvh calculation MemoryError [Issue 119](https://github.com/cutright/DVH-Analytics/issues/119)
+ - [ROI Map] Allow commas in roi names [Issue 121](https://github.com/cutright/DVH-Analytics/issues/121)
+
 v0.9.0 (2020.12.4)
 --------------------
  - [Database] New feature to apply edits to database by uploading a CSV for SQL commands

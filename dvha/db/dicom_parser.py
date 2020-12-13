@@ -63,6 +63,10 @@ class DICOM_Parser:
         self.dvh_bin_max_dose = options.dvh_bin_max_dose
         self.dvh_bin_max_dose_units = options.dvh_bin_max_dose_units
         self.mlca_options = options.MLC_ANALYZER_OPTIONS
+        self.get_dvh_kwargs = options.GET_DVH_KWARGS
+        self.dvh_small_volume_threshold = options.DVH_SMALL_VOLUME_THRESHOLD
+        self.dvh_high_resolution_factor = options.DVH_HIGH_RESOLUTION_FACTOR
+        self.dvh_high_resolution_segments_between = options.DVH_HIGH_RESOLUTION_SEGMENTS_BETWEEN
 
         self.plan_file = plan_file
         self.structure_file = structure_file
@@ -437,14 +441,36 @@ class DICOM_Parser:
                 pass
 
         if dvh is None:
+            kwargs = {key: value for key, value in self.get_dvh_kwargs.items()}  # make copy
+            kwargs['structure'] = self.rt_data['structure']
+            kwargs['dose'] = self.rt_data['dose']
+            kwargs['roi'] = dvh_index
+            kwargs['limit'] = limit
+            kwargs['callback'] = self.send_dvh_progress
+
             try:
-                dvh = dvhcalc.get_dvh(self.rt_data['structure'], self.rt_data['dose'], dvh_index,
-                                      callback=self.send_dvh_progress, limit=limit)
-            except AttributeError:
-                dose = validate_transfer_syntax_uid(self.rt_data['dose'])
-                structure = validate_transfer_syntax_uid(self.rt_data['structure'])
-                dvh = dvhcalc.get_dvh(structure, dose, dvh_index,
-                                      callback=self.send_dvh_progress, limit=limit)
+                try:
+                    dvh = dvhcalc.get_dvh(**kwargs)
+                except AttributeError:
+                    kwargs['dose'] = validate_transfer_syntax_uid(self.rt_data['dose'])
+                    kwargs['structure'] = validate_transfer_syntax_uid(self.rt_data['structure'])
+                    dvh = dvhcalc.get_dvh(**kwargs)
+            except MemoryError:
+                kwargs['memmap_rtdose'] = True
+                dvh = dvhcalc.get_dvh(**kwargs)
+
+            # If small volume, increase resolution
+            if dvh.volume < self.dvh_small_volume_threshold:
+                kwargs['interpolation_resolution'] = (self.rt_data['dose'].PixelSpacing[0] / self.dvh_high_resolution_factor,
+                                                      self.rt_data['dose'].PixelSpacing[1] / self.dvh_high_resolution_factor)
+                kwargs['interpolation_segments_between_planes'] = self.dvh_high_resolution_segments_between
+
+                try:
+                    dvh = dvhcalc.get_dvh(**kwargs)
+                except MemoryError:
+                    kwargs['memmap_rtdose'] = True
+                    # dicompyler-core needs to re-parse the dose file
+                    dvh = dvhcalc.get_dvh(**kwargs)
 
         if dvh and dvh.volume > 0:  # ignore points and empty ROIs
             geometries = self.get_dvh_geometries(dvh_index)
@@ -459,7 +485,7 @@ class DICOM_Parser:
                     'min_dose': [dvh.min, 'real'],
                     'mean_dose': [dvh.mean, 'real'],
                     'max_dose': [dvh.max, 'real'],
-                    'dvh_string': [','.join(['%.2f' % num for num in dvh.counts]), 'text'],
+                    'dvh_string': [','.join(['%.5f' % num for num in dvh.counts]), 'text'],
                     'roi_coord_string': [geometries['roi_coord_str'], 'text'],
                     'dist_to_ptv_min': [None, 'real'],
                     'dist_to_ptv_mean': [None, 'real'],
@@ -1681,7 +1707,7 @@ class PreImportData:
                         'message': "MRN is empty."},
                 'study_instance_uid': {'status': self.is_study_instance_uid_to_be_imported_valid,
                                        'value': self.study_instance_uid_to_be_imported,
-                                       'message': "Study Instance UID already exists in the database."},
+                                       'message': "Study Instance UID used in the database."},
                 'ptv': {'status': self.ptv_exists,
                         'value': self.ptv_names,
                         'message': "No PTV found."},

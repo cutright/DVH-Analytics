@@ -19,7 +19,7 @@ from dvha.db.sql_connector import DVH_SQL
 from dvha.paths import PREF_DIR
 from dvha.tools.roi_map_generator import ROIMapGenerator
 from dvha.tools.errors import push_to_log
-from dvha.tools.utilities import flatten_list_of_lists, initialize_directories
+from dvha.tools.utilities import flatten_list_of_lists, initialize_directories, csv_to_list
 
 
 class PhysicianROI:
@@ -38,6 +38,7 @@ class PhysicianROI:
     def add_variations(self, variations):
         if type(variations) is not list:
             variations = [variations]
+        variations = [v.replace('"', "`") for v in variations]
         clean_variations = self.clean_variations
         for variation in variations:
             if clean_name(variation) not in clean_variations and variation.lower() not in {'uncategorized'}:
@@ -99,6 +100,7 @@ class Physician:
         return clean_name(variation) in self.all_clean_variations
 
     def add_physician_roi(self, institutional_roi, physician_roi, variations=None, roi_type='NONE'):
+        physician_roi = physician_roi.replace(':', '^').replace('"', "'")
         self.rois[physician_roi] = PhysicianROI(physician_roi, institutional_roi, roi_type)
         if variations is not None:
             self.add_variations(physician_roi, variations)
@@ -273,7 +275,8 @@ class DatabaseROIs:
             for line in document:
                 if not line:
                     continue
-                line = str(line).strip().replace(':', ',').split(',')
+                line = str(line).strip().replace(':', ',', 1).replace(':', ',', 1)
+                line = csv_to_list(line)
                 institutional_roi = line.pop(0)
                 if institutional_mode:
                     self.add_institutional_roi(institutional_roi)
@@ -332,6 +335,7 @@ class DatabaseROIs:
                 return self.physicians[physician].get_institutional_roi(physician_roi)
 
     def add_institutional_roi(self, roi):
+        roi = roi.replace(':', '^').replace('"', "'")
         if clean_name(roi) not in self.clean_institutional_rois:
             self.institutional_rois.append(roi)
             self.add_physician_roi('DEFAULT', roi, roi)
@@ -510,9 +514,9 @@ class DatabaseROIs:
         for physician in list(self.physicians) + ['DEFAULT']:
             lines = []
             for physician_roi in self.get_physician_rois(physician):
-                institutional_roi = self.get_institutional_roi(physician, physician_roi)
-                variations = ', '.join(self.get_variations(physician, physician_roi))
-                lines.append(': '.join([institutional_roi, physician_roi, variations]))
+                institutional_roi = '"%s"' % self.get_institutional_roi(physician, physician_roi)
+                variations = '"%s"' % '","'.join(self.get_variations(physician, physician_roi))
+                lines.append(':'.join([institutional_roi, '"%s"' % physician_roi, variations]))
             lines.sort()
             physicians_file_data[physician] = lines
 
@@ -573,7 +577,10 @@ class DatabaseROIs:
                 for line in difflib.unified_diff(old_lines, new_data[physician]):
                     if include:
                         if line[0] in {'+', '-'}:
-                            i_roi, p_roi, variations = tuple(i for i in line.split(': '))
+                            line_split = line.split(':')
+                            i_roi, p_roi = line_split[0].strip(), line_split[1].strip()
+                            variations = ':'.join(line_split[2:])
+
                             if p_roi not in diff[physician]:
                                 diff[physician][p_roi] = {'-': {'institutional': '', 'variations': []},
                                                           '+': {'institutional': '', 'variations': []}}
