@@ -932,3 +932,79 @@ def edit_study_uid(abs_file_path, study_uid):
     except Exception as e:
         push_to_log(e, abs_file_path)
 
+
+def get_csv_row(data, columns, delimiter=","):
+    """Convert a dictionary of data into a row for a csv file
+
+    Parameters
+    ----------
+    data : dict
+        a dictionary with values with str representations
+    columns : list
+        a list of keys dictating the order of the csv
+    delimiter : str
+        Optionally use the provided delimiter rather than a comma
+
+    Returns
+    ----------
+    str
+        a csv string delimited by delimiter
+    """
+    str_data = [str(data[c]) for c in columns]
+    clean_str_data = ['"%s"' % s if delimiter in s else s for s in str_data]
+    clean_str_data = [s.replace("\n", "<>") for s in clean_str_data]
+    return delimiter.join(clean_str_data)
+
+
+def csv_to_list(csv_str, delimiter=","):
+    """Split a CSV into a list
+
+    Parameters
+    ----------
+    csv_str : str
+        A comma-separated value string (with double quotes around values
+        containing the delimiter)
+    delimiter : str
+        The str separator between values
+
+    Returns
+    ----------
+    list
+       csv_str split by the delimiter
+    """
+    if '"' not in csv_str:
+        return csv_str.split(delimiter)
+
+    # add an empty value with another ",", but ignore it
+    # ensures next_csv_element always finds a ","
+    next_value, csv_str = next_csv_element(csv_str + ",", delimiter)
+    ans = [next_value.replace("<>", "\n")]
+    while csv_str:
+        next_value, csv_str = next_csv_element(csv_str, delimiter)
+        ans.append(next_value.replace("<>", "\n"))
+
+    return ans
+
+
+def next_csv_element(csv_str, delimiter=","):
+    """Helper function for csv_to_list
+
+    Parameters
+    ----------
+    csv_str : str
+        A comma-separated value string (with double quotes around values
+        containing the delimiter)
+    delimiter : str
+        The str separator between values
+
+    Returns
+    ----------
+    str, str
+        Return a tuple, the next value and remainder of csv_str
+    """
+    if csv_str.startswith('"'):
+        split = csv_str[1:].find('"') + 1
+        return csv_str[1:split], csv_str[split + 2 :]
+
+    next_delimiter = csv_str.find(delimiter)
+    return csv_str[:next_delimiter], csv_str[next_delimiter + 1 :]
