@@ -525,8 +525,8 @@ class DICOM_Parser:
                           "could not parse beam isocenter" % self.mrn
                     push_to_log(e, msg=msg)
         if distances:
-            return {'min': float(np.min(distances)),
-                    'max': float(np.max(distances))}
+            return {'min': float(np.min(distances) / 10),
+                    'max': float(np.max(distances)) / 10}
         return {'min': None, 'max': None}
 
     def get_dicom_file_row(self):
