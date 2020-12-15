@@ -247,36 +247,44 @@ class DVH_SQL:
         :param row: data returned from DICOM_Parser.get_<table>_row()
         """
         columns = list(row)
+        allowed_columns = self.get_column_names(table)
+        used_columns = []
 
         values = []
         for column in columns:
-            if row[column] is None or row[column][0] is None or row[column][0] == '':
-                if column == 'import_time_stamp':
-                    values.append(self.sql_cmd_now)
+            if column in allowed_columns:
+                used_columns.append(column)
+                if row[column] is None or row[column][0] is None or row[column][0] == '':
+                    if column == 'import_time_stamp':
+                        values.append(self.sql_cmd_now)
+                    else:
+                        values.append("NULL")
                 else:
-                    values.append("NULL")
-            else:
-                value = row[column][0]
-                value_type = row[column][1]
+                    value = row[column][0]
+                    value_type = row[column][1]
 
-                if 'varchar' in value_type:
-                    max_length = int(value_type.replace('varchar(', '').replace(')', ''))
-                    values.append("'%s'" % truncate_string(value, max_length))
+                    if 'varchar' in value_type:
+                        max_length = int(value_type.replace('varchar(', '').replace(')', ''))
+                        values.append("'%s'" % truncate_string(value, max_length))
 
-                elif value_type in {'time_stamp', 'date'}:
-                    date = date_parser(value)
-                    value = date.date()
-                    if value_type == 'time_stamp':
-                        value = "%s %s" % (value, date.time())
-                    if self.db_type == 'pgsql':  # sqlite3 does not support ::date
-                        values.append("'%s'::date" % value)
+                    elif value_type in {'time_stamp', 'date'}:
+                        date = date_parser(value)
+                        value = date.date()
+                        if value_type == 'time_stamp':
+                            value = "%s %s" % (value, date.time())
+                        if self.db_type == 'pgsql':  # sqlite3 does not support ::date
+                            values.append("'%s'::date" % value)
+                        else:
+                            values.append("'%s'" % value)
+
                     else:
                         values.append("'%s'" % value)
+            else:
+                msg = "Failed to update SQL column %s in table %s, " \
+                      "it does not exist" % (column, table)
+                push_to_log(msg=msg)
 
-                else:
-                    values.append("'%s'" % value)
-
-        cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (table, ','.join(columns), ",".join(values))
+        cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (table, ','.join(used_columns), ",".join(values))
         self.execute_str(cmd)
 
     def insert_data_set(self, data_set):

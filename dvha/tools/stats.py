@@ -48,18 +48,18 @@ class StatsData:
                 var_name = self.column_info[var]['var_name']
                 table = self.column_info[var]['table']
 
-                if table == 'DVHs':
+                if table == 'DVHs' and hasattr(self.dvhs, var_name):
                     self.data[var] = {'units': self.column_info[var]['units'],
                                       'values': getattr(self.dvhs, var_name)}
 
                 # single value variables
-                elif table == 'Plans':
+                elif table == 'Plans' and hasattr(self.table_data[table], var_name):
                     src = self.table_data[table]
                     self.data[var] = {'units': self.column_info[var]['units'],
                                       'values': [getattr(src, var_name)[self.get_plan_index(uid)] for uid in self.uids]}
 
                 # multi value variables
-                elif table == 'Beams':
+                elif table == 'Beams' and hasattr(self.table_data[table], var_name):
                     src = self.table_data[table]
 
                     if str_starts_with_any_in_list(var, ['Beam Complexity', 'Beam Area', 'Control Point MU',
