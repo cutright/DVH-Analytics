@@ -474,6 +474,7 @@ class DICOM_Parser:
 
         if dvh and dvh.volume > 0:  # ignore points and empty ROIs
             geometries = self.get_dvh_geometries(dvh_index)
+            iso_dist = self.get_roi_centroid_to_isocenter_dist(geometries['centroid'])
 
             return {'mrn': [self.mrn, 'text'],
                     'study_instance_uid': [self.study_instance_uid_to_be_imported, 'text'],
@@ -494,7 +495,7 @@ class DICOM_Parser:
                     'surface_area': [geometries['surface_area'], 'real'],
                     'ptv_overlap': [None, 'real'],
                     'import_time_stamp': [None, 'timestamp'],
-                    'centroid': [geometries['centroid'], 'varchar(35)'],
+                    'centroid': [','.join([str(round(x, 3)) for x in geometries['centroid']]), 'varchar(35)'],
                     'dist_to_ptv_centroids': [None, 'real'],
                     'dth_string': [None, 'text'],
                     'spread_x': [geometries['spread'][0], 'real'],
@@ -502,7 +503,31 @@ class DICOM_Parser:
                     'spread_z': [geometries['spread'][2], 'real'],
                     'cross_section_max': [geometries['cross_sections']['max'], 'real'],
                     'cross_section_median': [geometries['cross_sections']['median'], 'real'],
+                    'centroid_dist_to_iso_min': [iso_dist['min'], 'real'],
+                    'centroid_dist_to_iso_max': [iso_dist['max'], 'real'],
                     'toxicity_grade': [None, 'smallint']}
+
+    def get_roi_centroid_to_isocenter_dist(self, roi_centroid):
+        """Get the distance from ROI centroid to beam isocenter
+        :param roi_centroid: centroid of ROI in DICOM coordinates
+        :type roi_centroid: list
+        :return: min and max iso-to-centroid distances (checked over every beam)
+        :rtype: dict
+        """
+        centroid = np.array(roi_centroid)
+        distances = []
+        for beam_set in self.beam_data.values():
+            for beam in beam_set:
+                try:
+                    distances.append(np.linalg.norm(beam.isocenter_np - centroid))
+                except Exception as e:
+                    msg = "ROI Centroid calculation failed for mrn: %s, " \
+                          "could not parse beam isocenter" % self.mrn
+                    push_to_log(e, msg=msg)
+        if distances:
+            return {'min': float(np.min(distances)),
+                    'max': float(np.max(distances))}
+        return {'min': None, 'max': None}
 
     def get_dicom_file_row(self):
         """
@@ -954,7 +979,7 @@ class DICOM_Parser:
 
         return {'roi_coord_str': roi_coord_str,
                 'surface_area': surface_area,
-                'centroid': ','.join([str(round(x, 3)) for x in centroid]),
+                'centroid': centroid,
                 'spread': spread,
                 'cross_sections': cross_sections}
 
@@ -1225,6 +1250,10 @@ class BeamParser:
     @property
     def isocenter(self):
         return self.get_point_attribute(self.cp_seq[0], 'IsocenterPosition')
+
+    @property
+    def isocenter_np(self):
+        return np.array(self.get_data_attribute(self.cp_seq[0], 'IsocenterPosition'))
 
     @property
     def beam_type(self):

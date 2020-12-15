@@ -1,5 +1,10 @@
 # Change log of DVH Analytics
 
+v0.9.2 (TBD)
+--------------------
+ - [Database] Added centroid_dist_to_iso_min and centroid_dist_to_iso_max columns to DVHs table 
+ 
+
 v0.9.1 (2020.12.13)
 --------------------
  - [Options] Clicking 'Cancel' in user options properly reloads options from file now
