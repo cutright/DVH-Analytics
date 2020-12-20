@@ -71,4 +71,4 @@ latex_elements = {
 }
 
 autodoc_mock_imports = ['numpy', 'pydicom', 'PIL', 'matplotlib', 'skimage',
-                        'scipy', 'wx']
+                        'scipy', 'wx', 'bokeh']
