@@ -1,0 +1,13 @@
+dicompyler-core>=0.5.4
+pypubsub
+pydicom
+bokeh<2.0.0
+psycopg2-binary
+shapely[vectorized]
+python-dateutil
+statsmodels >= 0.8.0
+scikit-learn
+regressors
+rapidfuzz
+selenium
+scikit-image

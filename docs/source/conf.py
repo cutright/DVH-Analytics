@@ -70,7 +70,6 @@ latex_elements = {
   'extraclassoptions': 'openany,oneside'
 }
 
-add_module_names = False
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 html_short_title = 'DVHA Docs'
@@ -79,4 +78,9 @@ html_short_title = 'DVHA Docs'
 # of the sidebar.
 html_logo = '_static/logo.png'
 
-autodoc_mock_imports = ['dicompyler-core', 'wxpython', 'regressors']
+autodoc_mock_imports = ['wxpython']
+
+
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
+if on_rtd:
+    install_requires = ['dicompyler-core', ]
