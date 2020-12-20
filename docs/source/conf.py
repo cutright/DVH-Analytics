@@ -70,5 +70,13 @@ latex_elements = {
   'extraclassoptions': 'openany,oneside'
 }
 
-autodoc_mock_imports = ['numpy', 'pydicom', 'PIL', 'matplotlib', 'skimage',
-                        'scipy', 'wx', 'bokeh', 'wxpython']
+add_module_names = False
+
+# A shorter title for the navigation bar.  Default is the same as html_title.
+html_short_title = 'DVHA Docs'
+
+# The name of an image file (relative to this directory) to place at the top
+# of the sidebar.
+html_logo = '_static/logo.png'
+
+autodoc_mock_imports = ['dicompyler-core', 'wxpython', 'regressors']
