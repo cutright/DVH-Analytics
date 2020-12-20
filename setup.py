@@ -10,11 +10,17 @@ A setuptools setup file for DVH Analytics
 #    See the file LICENSE included with this distribution, also
 #    available at https://github.com/cutright/DVH-Analytics
 
+import os
 from setuptools import setup, find_packages
 from dvha._version import __version__
 
 
-with open('requirements.txt', 'r') as doc:
+if os.environ.get('READTHEDOCS') == 'True':
+    requirements_path = 'docs/requirements.txt'
+else:
+    requirements_path = 'requirements.txt'
+
+with open(requirements_path, 'r') as doc:
     requires = [line.strip() for line in doc]
 
 with open('README.rst', 'r') as doc:

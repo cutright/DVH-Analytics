@@ -1,11 +1,11 @@
-dicompyler-core>=0.5.4
+dicompyler-core
 pypubsub
 pydicom
 bokeh<2.0.0
 psycopg2-binary
 shapely[vectorized]
 python-dateutil
-statsmodels >= 0.8.0
+statsmodels
 scikit-learn
 regressors
 rapidfuzz
