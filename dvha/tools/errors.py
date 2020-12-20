@@ -13,8 +13,14 @@ Classes for DVHA specific error handling
 import wx
 from dvha.paths import APP_DIR
 import logging
+from os import environ
 
 logger = logging.getLogger('dvha')
+
+if environ.get('READTHEDOCS') == 'True':
+    ERR_DLG_FLAGS = None
+else:
+    ERR_DLG_FLAGS = wx.ICON_ERROR | wx.OK | wx.OK_DEFAULT
 
 
 class SQLError(Exception):
@@ -63,7 +69,7 @@ class PhantomJSError(Exception):
 
 
 class ErrorDialog:
-    def __init__(self, parent, message, caption, flags=wx.ICON_ERROR | wx.OK | wx.OK_DEFAULT):
+    def __init__(self, parent, message, caption, flags=ERR_DLG_FLAGS):
         """
         This class allows error messages to be called with a one-liner else-where
         :param parent: wx parent object

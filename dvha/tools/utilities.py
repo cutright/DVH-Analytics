@@ -32,6 +32,11 @@ from dvha.tools.errors import push_to_log
 
 IGNORED_FILES = ['.ds_store']
 
+if environ.get('READTHEDOCS') == 'True':
+    MSG_DLG_FLAGS = None
+else:
+    MSG_DLG_FLAGS = wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT
+
 
 def is_windows():
     """ """
@@ -840,7 +845,7 @@ class MessageDialog:
 
     """
     def __init__(self, parent, caption, message="Are you sure?", action_yes_func=None, action_no_func=None,
-                 flags=wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT):
+                 flags=MSG_DLG_FLAGS):
         if is_windows():
             message = '\n'.join([caption, message])
             caption = ' '

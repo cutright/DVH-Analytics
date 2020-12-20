@@ -78,4 +78,4 @@ html_short_title = 'DVHA Docs'
 # of the sidebar.
 html_logo = '_static/logo.png'
 
-autodoc_mock_imports = ['wxpython']
+autodoc_mock_imports = ['wx']
