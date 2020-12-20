@@ -70,4 +70,5 @@ latex_elements = {
   'extraclassoptions': 'openany,oneside'
 }
 
-separate = True
+autodoc_mock_imports = ['numpy', 'pydicom', 'PIL', 'matplotlib', 'skimage',
+                        'scipy', 'wxpython']
