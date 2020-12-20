@@ -32,7 +32,7 @@ from dvha.tools.errors import push_to_log
 
 IGNORED_FILES = ['.ds_store']
 
-if environ.get('READTHEDOCS') == 'True':
+if environ.get('READTHEDOCS') == 'True' or 'sphinx' in sys.prefix:
     MSG_DLG_FLAGS = None
 else:
     MSG_DLG_FLAGS = wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT
@@ -951,8 +951,8 @@ def remove_every_nth_element(some_list, n):
 def sample_roi(roi_coord, max_point_count=5000, iterative_reduction=0.1):
     """Iteratively sample a list of 3D points by the iterative_reduction until the size of the list is < max_point_count
     This is used to reduce the number of points used in the ptv distance calculations because:
-        1) Shapely returns a much large number of points when calculating total PTVs
-        2) Users could easily run into memory issues using scip.dist if all points are used (particularly on MSW)
+    1) Shapely returns a much large number of points when calculating total PTVs
+    2) Users could easily run into memory issues using scip.dist if all points are used (particularly on MSW)
 
     Parameters
     ----------

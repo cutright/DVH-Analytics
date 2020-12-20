@@ -4,8 +4,7 @@
 # tools.utilities.mlc_analyzer.py
 """
 Tools for analyzing beam and control point information from DICOM files
-Hierarchy of classes:
-    Plan -> FxGroup -> Beam -> ControlPoint
+Hierarchy of classes: Plan -> FxGroup -> Beam -> ControlPoint
 """
 # Copyright (c) 2016-2020 Dan Cutright
 # This file is part of DVH Analytics, released under a BSD license.

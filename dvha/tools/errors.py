@@ -14,10 +14,11 @@ import wx
 from dvha.paths import APP_DIR
 import logging
 from os import environ
+from sys import prefix
 
 logger = logging.getLogger('dvha')
 
-if environ.get('READTHEDOCS') == 'True':
+if environ.get('READTHEDOCS') == 'True' or 'sphinx' in prefix:
     ERR_DLG_FLAGS = None
 else:
     ERR_DLG_FLAGS = wx.ICON_ERROR | wx.OK | wx.OK_DEFAULT
