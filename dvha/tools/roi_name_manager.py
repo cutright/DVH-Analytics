@@ -23,6 +23,7 @@ from dvha.tools.utilities import flatten_list_of_lists, initialize_directories, 
 
 
 class PhysicianROI:
+    """ """
     def __init__(self, physician_roi, institutional_roi=None, roi_type='NONE'):
         self.institutional_roi = institutional_roi if institutional_roi is not None else 'uncategorized'
         self.physician_roi = physician_roi
@@ -36,6 +37,17 @@ class PhysicianROI:
         return clean_name(variation) in self.clean_variations
 
     def add_variations(self, variations):
+        """
+
+        Parameters
+        ----------
+        variations :
+            
+
+        Returns
+        -------
+
+        """
         if type(variations) is not list:
             variations = [variations]
         variations = [v.replace('"', "`") for v in variations]
@@ -45,6 +57,17 @@ class PhysicianROI:
                 self.variations.append(variation)
 
     def get_variation(self, variation):
+        """
+
+        Parameters
+        ----------
+        variation :
+            
+
+        Returns
+        -------
+
+        """
         clean_variation = variation
         clean_variations = self.clean_variations
         if clean_variation in clean_variations:
@@ -53,13 +76,26 @@ class PhysicianROI:
 
     @property
     def clean_variations(self):
+        """ """
         return [clean_name(v) for v in self.variations]
 
     @property
     def clean_top_level(self):
+        """ """
         return [clean_name(v) for v in [self.institutional_roi, self.physician_roi]]
 
     def del_variation(self, variations):
+        """
+
+        Parameters
+        ----------
+        variations :
+            
+
+        Returns
+        -------
+
+        """
         if type(variations) is not list:
             variations = list(variations)
 
@@ -70,12 +106,24 @@ class PhysicianROI:
                 self.variations.pop(index)
 
     def del_all_variations(self):
+        """ """
         self.variations = [self.physician_roi]
         if self.institutional_roi.lower() != 'uncategorized' and \
                 clean_name(self.institutional_roi) != clean_name(self.physician_roi):
             self.variations.append(self.institutional_roi)
 
     def set_institutional_roi(self, new):
+        """
+
+        Parameters
+        ----------
+        new :
+            
+
+        Returns
+        -------
+
+        """
         clean_old = clean_name(self.institutional_roi)
         if clean_old in self.clean_variations and \
                 clean_old != clean_name(self.physician_roi):
@@ -87,12 +135,19 @@ class PhysicianROI:
 
 
 class Physician:
-    """Represents a physician in the roi map"""
+    """Represents a physician in the roi map
+
+    Parameters
+    ----------
+    name : str
+        the label to be used to represent the physician, should be all upper case
+
+    Returns
+    -------
+
+    """
     def __init__(self, name):
-        """
-        :param name: the label to be used to represent the physician, should be all upper case
-        :type name: str
-        """
+
         self.name = name
         self.rois = {}
 
@@ -100,38 +155,115 @@ class Physician:
         return clean_name(variation) in self.all_clean_variations
 
     def add_physician_roi(self, institutional_roi, physician_roi, variations=None, roi_type='NONE'):
+        """
+
+        Parameters
+        ----------
+        institutional_roi :
+            
+        physician_roi :
+            
+        variations :
+             (Default value = None)
+        roi_type :
+             (Default value = 'NONE')
+
+        Returns
+        -------
+
+        """
         physician_roi = physician_roi.replace(':', '^').replace('"', "'")
         self.rois[physician_roi] = PhysicianROI(physician_roi, institutional_roi, roi_type)
         if variations is not None:
             self.add_variations(physician_roi, variations)
 
     def del_physician_roi(self, physician_roi):
+        """
+
+        Parameters
+        ----------
+        physician_roi :
+            
+
+        Returns
+        -------
+
+        """
         clean_roi = clean_name(physician_roi)
         clean_rois_map = self.clean_physician_rois_map
         if clean_roi in list(clean_rois_map):
             self.rois.pop(clean_rois_map[clean_roi], None)
 
     def add_variations(self, physician_roi, variations):
+        """
+
+        Parameters
+        ----------
+        physician_roi :
+            
+        variations :
+            
+
+        Returns
+        -------
+
+        """
         if physician_roi in list(self.rois):
             self.rois[physician_roi].add_variations(variations)
 
     def del_variations(self, physician_roi, variations):
+        """
+
+        Parameters
+        ----------
+        physician_roi :
+            
+        variations :
+            
+
+        Returns
+        -------
+
+        """
         if physician_roi in list(self.rois):
             self.rois[physician_roi].del_variation(variations)
 
     def delete_all_variations(self, physician_roi=None):
+        """
+
+        Parameters
+        ----------
+        physician_roi :
+             (Default value = None)
+
+        Returns
+        -------
+
+        """
         physician_rois = [physician_roi] if physician_roi is None else list(self.rois)
         for physician_roi in physician_rois:
             self.rois[physician_roi].del_all_variations()
 
     @property
     def all_variations(self):
+        """ """
         variations = []
         for physician_roi in self.rois.values():
             variations.extend(physician_roi.variations)
         return variations
 
     def get_variations(self, physician_roi):
+        """
+
+        Parameters
+        ----------
+        physician_roi :
+            
+
+        Returns
+        -------
+
+        """
         clean_physician_roi = clean_name(physician_roi)
         clean_map = self.clean_physician_rois_map
         if clean_physician_roi in list(clean_map):
@@ -139,25 +271,43 @@ class Physician:
 
     @property
     def all_clean_variations(self):
+        """ """
         return [clean_name(v) for v in self.all_variations]
 
     @property
     def institutional_rois(self):
+        """ """
         return [physician_roi.institutional_roi for physician_roi in self.rois.values()]
 
     @property
     def clean_institutional_rois_map(self):
+        """ """
         return {clean_name(roi): roi for roi in self.institutional_rois}
 
     @property
     def clean_physician_rois(self):
+        """ """
         return [clean_name(roi) for roi in list(self.rois)]
 
     @property
     def clean_physician_rois_map(self):
+        """ """
         return {clean_name(roi): roi for roi in self.rois}
 
     def get_institutional_roi(self, variation, return_physician_roi=False):
+        """
+
+        Parameters
+        ----------
+        variation :
+            
+        return_physician_roi :
+             (Default value = False)
+
+        Returns
+        -------
+
+        """
         for physician_roi_str, physician_roi in self.rois.items():
             if variation in physician_roi:
                 if return_physician_roi:
@@ -168,20 +318,68 @@ class Physician:
             return None, None
 
     def rename_institutional_roi(self, new, old):
+        """
+
+        Parameters
+        ----------
+        new :
+            
+        old :
+            
+
+        Returns
+        -------
+
+        """
         _, physician_roi_str = self.get_institutional_roi(old, return_physician_roi=True)
         if physician_roi_str is not None:
             self.rois[physician_roi_str].set_institutional_roi(new)
 
     def get_physician_roi(self, variation):
+        """
+
+        Parameters
+        ----------
+        variation :
+            
+
+        Returns
+        -------
+
+        """
         for physician_roi_str, physician_roi in self.rois.items():
             if variation in physician_roi:
                 return physician_roi_str
         return 'uncategorized'
 
     def is_physician_roi(self, physician_roi):
+        """
+
+        Parameters
+        ----------
+        physician_roi :
+            
+
+        Returns
+        -------
+
+        """
         return clean_name(physician_roi) in self.clean_physician_rois
 
     def rename_physician_roi(self, new, old):
+        """
+
+        Parameters
+        ----------
+        new :
+            
+        old :
+            
+
+        Returns
+        -------
+
+        """
         clean_old = clean_name(old)
         clean_rois = self.clean_physician_rois_map
         if clean_old in list(clean_rois):
@@ -191,18 +389,53 @@ class Physician:
             self.rois[new].physician_roi = new
 
     def get_variation(self, variation):
+        """
+
+        Parameters
+        ----------
+        variation :
+            
+
+        Returns
+        -------
+
+        """
         for physician_roi in self.rois.values():
             ans = physician_roi.get_variation(variation)
             if ans is not None:
                 return ans
 
     def get_roi_type(self, roi_name):
+        """
+
+        Parameters
+        ----------
+        roi_name :
+            
+
+        Returns
+        -------
+
+        """
         physician_roi = self.get_physician_roi(roi_name)
         if physician_roi == 'uncategorized':
             return 'NONE'
         return self.rois[physician_roi].roi_type
 
     def set_roi_type(self, roi_name, roi_type):
+        """
+
+        Parameters
+        ----------
+        roi_name :
+            
+        roi_type :
+            
+
+        Returns
+        -------
+
+        """
         physician_roi = self.get_physician_roi(roi_name)
         if physician_roi != 'uncategorized':
             self.rois[physician_roi].roi_type = roi_type
@@ -210,6 +443,7 @@ class Physician:
 
     @property
     def physician_rois_with_edited_roi_type(self):
+        """ """
         return [p_roi for p_roi, obj in self.rois.items() if obj.roi_type_is_edited]
 
 
@@ -228,6 +462,7 @@ class DatabaseROIs:
         self.import_from_file()
 
     def import_from_file(self):
+        """ """
         self.physicians_from_file = get_physicians_from_roi_files()
         self.physicians = {}
         self.institutional_rois = []
@@ -253,6 +488,7 @@ class DatabaseROIs:
     # Import from file functions
     ##############################################
     def import_physician_roi_maps(self):
+        """ """
 
         for physician in get_physicians_from_roi_files():
             rel_path = 'physician_%s.roi' % physician
@@ -262,6 +498,19 @@ class DatabaseROIs:
             self.load_roi_types_from_file(physician)
 
     def import_physician_roi_map(self, abs_file_path, physician=None):
+        """
+
+        Parameters
+        ----------
+        abs_file_path :
+            
+        physician :
+             (Default value = None)
+
+        Returns
+        -------
+
+        """
 
         institutional_mode = physician == 'DEFAULT'
 
@@ -290,9 +539,21 @@ class DatabaseROIs:
     # Physician functions
     ###################################
     def get_physicians(self):
+        """ """
         return ['DEFAULT'] + sorted(set(self.physicians) - {'DEFAULT'})
 
     def add_physician(self, physician):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+
+        Returns
+        -------
+
+        """
         physician = clean_name(physician, physician=True)
         if physician not in list(self.physicians):
             self.physicians[physician] = Physician(physician)
@@ -302,6 +563,21 @@ class DatabaseROIs:
                 self.add_physician_roi(physician, institutional_roi, institutional_roi)
 
     def copy_physician(self, new_physician, copy_from=None, include_variations=True):
+        """
+
+        Parameters
+        ----------
+        new_physician :
+            
+        copy_from :
+             (Default value = None)
+        include_variations :
+             (Default value = True)
+
+        Returns
+        -------
+
+        """
         new_physician = clean_name(new_physician, physician=True)
         if copy_from is None or copy_from == 'DEFAULT':
             self.add_physician(new_physician)
@@ -311,13 +587,48 @@ class DatabaseROIs:
                 self.physicians[new_physician].delete_all_variations()
 
     def delete_physician(self, physician):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+
+        Returns
+        -------
+
+        """
         if physician in list(self.physicians):
             self.physicians.pop(physician, None)
 
     def is_physician(self, physician):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+
+        Returns
+        -------
+
+        """
         return physician in list(self.physicians)
 
     def rename_physician(self, new_physician, physician):
+        """
+
+        Parameters
+        ----------
+        new_physician :
+            
+        physician :
+            
+
+        Returns
+        -------
+
+        """
         new_physician = clean_name(new_physician, physician=True)
         physician = clean_name(physician, physician=True)
         self.physicians[new_physician] = self.physicians.pop(physician)
@@ -327,20 +638,58 @@ class DatabaseROIs:
     #################################
     @property
     def clean_institutional_rois(self):
+        """ """
         return [clean_name(roi) for roi in self.institutional_rois]
 
     def get_institutional_roi(self, physician, physician_roi):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+        physician_roi :
+            
+
+        Returns
+        -------
+
+        """
         if physician in list(self.physicians):
             if physician_roi in self.physicians[physician]:
                 return self.physicians[physician].get_institutional_roi(physician_roi)
 
     def add_institutional_roi(self, roi):
+        """
+
+        Parameters
+        ----------
+        roi :
+            
+
+        Returns
+        -------
+
+        """
         roi = roi.replace(':', '^').replace('"', "'")
         if clean_name(roi) not in self.clean_institutional_rois:
             self.institutional_rois.append(roi)
             self.add_physician_roi('DEFAULT', roi, roi)
 
     def rename_institutional_roi(self, new, old):
+        """
+
+        Parameters
+        ----------
+        new :
+            
+        old :
+            
+
+        Returns
+        -------
+
+        """
         if old in self.institutional_rois:
             index = self.institutional_rois.index(old)
             self.institutional_rois.pop(index)
@@ -350,17 +699,65 @@ class DatabaseROIs:
                 self.add_institutional_roi(new)
 
     def set_linked_institutional_roi(self, new_institutional_roi, physician, physician_roi):
+        """
+
+        Parameters
+        ----------
+        new_institutional_roi :
+            
+        physician :
+            
+        physician_roi :
+            
+
+        Returns
+        -------
+
+        """
         if physician in list(self.physicians) and physician_roi in list(self.physicians[physician].rois):
             self.physicians[physician].rois[physician_roi].set_institutional_roi(new_institutional_roi)
 
     def delete_institutional_roi(self, roi):
+        """
+
+        Parameters
+        ----------
+        roi :
+            
+
+        Returns
+        -------
+
+        """
         self.rename_institutional_roi('uncategorized', roi)
         self.delete_physician_roi('DEFAULT', roi)
 
     def is_institutional_roi(self, roi):
+        """
+
+        Parameters
+        ----------
+        roi :
+            
+
+        Returns
+        -------
+
+        """
         return clean_name(roi) in self.clean_institutional_rois
 
     def get_unused_institutional_rois(self, physician):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+
+        Returns
+        -------
+
+        """
         physician = clean_name(physician, physician=True)
         used_rois = []
         if physician in list(self.physicians):
@@ -379,12 +776,36 @@ class DatabaseROIs:
     # Physician ROI functions
     ########################################
     def get_physician_rois(self, physician):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+
+        Returns
+        -------
+
+        """
         physician = clean_name(physician, physician=True)
         if physician in list(self.physicians):
             return sorted(list(self.physicians[physician].rois))
         return []
 
     def get_physician_roi(self, physician, roi):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+        roi :
+            
+
+        Returns
+        -------
+
+        """
         physician = clean_name(physician, physician=True)
         if physician in self.physicians:
             ans = self.physicians[physician].get_physician_roi(roi)
@@ -393,30 +814,112 @@ class DatabaseROIs:
         return 'uncategorized'
 
     def get_physician_roi_from_institutional_roi(self, physician, institutional_roi):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+        institutional_roi :
+            
+
+        Returns
+        -------
+
+        """
         physician = clean_name(physician, physician=True)
         if physician in list(self.physicians):
             return self.physicians[physician].get_physician_roi(institutional_roi)
 
     def add_physician_roi(self, physician, institutional_roi, physician_roi, variations=None):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+        institutional_roi :
+            
+        physician_roi :
+            
+        variations :
+             (Default value = None)
+
+        Returns
+        -------
+
+        """
         self.add_institutional_roi(institutional_roi)  # will skip if already exists
         if physician in list(self.physicians):
             self.physicians[physician].add_physician_roi(institutional_roi, physician_roi, variations)
 
     def rename_physician_roi(self, new_physician_roi, physician, physician_roi):
+        """
+
+        Parameters
+        ----------
+        new_physician_roi :
+            
+        physician :
+            
+        physician_roi :
+            
+
+        Returns
+        -------
+
+        """
         if physician in list(self.physicians):
             self.physicians[physician].rename_physician_roi(new_physician_roi, physician_roi)
 
     def delete_physician_roi(self, physician, physician_roi):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+        physician_roi :
+            
+
+        Returns
+        -------
+
+        """
         physician = clean_name(physician, physician=True)
         if physician in list(self.physicians):
             self.physicians[physician].del_physician_roi(physician_roi)
 
     def is_physician_roi(self, roi, physician):
+        """
+
+        Parameters
+        ----------
+        roi :
+            
+        physician :
+            
+
+        Returns
+        -------
+
+        """
         physician = clean_name(physician, physician=True)
         if physician in list(self.physicians):
             return self.physicians[physician].is_physician_roi(roi)
 
     def get_unused_physician_rois(self, physician):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+
+        Returns
+        -------
+
+        """
         physician = clean_name(physician, physician=True)
 
         unused_rois = []
@@ -427,6 +930,21 @@ class DatabaseROIs:
         return unused_rois
 
     def merge_physician_rois(self, physician, physician_rois, final_physician_roi):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+        physician_rois :
+            
+        final_physician_roi :
+            
+
+        Returns
+        -------
+
+        """
 
         variation_lists = [self.get_variations(physician, physician_roi) for physician_roi in physician_rois]
         variations = flatten_list_of_lists(variation_lists, remove_duplicates=True)
@@ -437,10 +955,38 @@ class DatabaseROIs:
                 self.delete_physician_roi(physician, physician_roi)
 
     def set_roi_type(self, physician, roi, roi_type):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+        roi :
+            
+        roi_type :
+            
+
+        Returns
+        -------
+
+        """
         if self.is_physician(physician):
             self.physicians[physician].set_roi_type(roi, roi_type)
 
     def get_roi_type(self, physician, roi):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+        roi :
+            
+
+        Returns
+        -------
+
+        """
         if self.is_physician(physician):
             return self.physicians[physician].get_roi_type(roi)
         return 'NONE'
@@ -449,6 +995,19 @@ class DatabaseROIs:
     # Variation-of-Physician-ROI functions
     ###################################################
     def get_variations(self, physician, physician_roi):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+        physician_roi :
+            
+
+        Returns
+        -------
+
+        """
         physician = clean_name(physician, physician=True)
         physician_roi = clean_name(physician_roi)
         if physician_roi == 'uncategorized':
@@ -461,6 +1020,17 @@ class DatabaseROIs:
         return []
 
     def get_all_variations_of_physician(self, physician):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+
+        Returns
+        -------
+
+        """
         physician = clean_name(physician, physician=True)
         if physician in list(self.physicians):
             variations = self.physicians[physician].all_variations
@@ -469,16 +1039,59 @@ class DatabaseROIs:
         return []
 
     def is_variation_used(self, physician, variation):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+        variation :
+            
+
+        Returns
+        -------
+
+        """
         if physician in list(self.physicians):
             return variation in self.physicians[physician]
         return False
 
     def add_variations(self, physician, physician_roi, variation):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+        physician_roi :
+            
+        variation :
+            
+
+        Returns
+        -------
+
+        """
         physician = clean_name(physician, physician=True)
         if physician in list(self.physicians):
             self.physicians[physician].add_variations(physician_roi, variation)
 
     def delete_variations(self, physician, physician_roi, variations):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+        physician_roi :
+            
+        variations :
+            
+
+        Returns
+        -------
+
+        """
         physician = clean_name(physician, physician=True)
         if physician in list(self.physicians):
             if type(variations) is not list:
@@ -486,12 +1099,40 @@ class DatabaseROIs:
             self.physicians[physician].del_variations(physician_roi, variations)
 
     def set_variation(self, new_variation, physician, physician_roi, variation):
+        """
+
+        Parameters
+        ----------
+        new_variation :
+            
+        physician :
+            
+        physician_roi :
+            
+        variation :
+            
+
+        Returns
+        -------
+
+        """
         physician = clean_name(physician, physician=True)
         if new_variation != variation:
             self.add_variations(physician, physician_roi, new_variation)
             self.delete_variations(physician, physician_roi, variation)
 
     def is_roi(self, roi):
+        """
+
+        Parameters
+        ----------
+        roi :
+            
+
+        Returns
+        -------
+
+        """
         if clean_name(roi) in self.clean_institutional_rois:
             return True
         for physician in self.physicians.values():
@@ -503,6 +1144,7 @@ class DatabaseROIs:
     # Export to file
     ########################
     def write_to_file(self):
+        """ """
         for physician, data in self.physician_roi_file_data.items():
             self.write_physician_file(physician, data)
             self.write_roi_types_to_file(physician)
@@ -510,6 +1152,7 @@ class DatabaseROIs:
 
     @property
     def physician_roi_file_data(self):
+        """ """
         physicians_file_data = {}
         for physician in list(self.physicians) + ['DEFAULT']:
             lines = []
@@ -524,12 +1167,18 @@ class DatabaseROIs:
 
     @staticmethod
     def write_physician_file(physician, lines):
-        """
-        Write the physician map to a .roi file
-        :param physician: name of physicain
-        :type physician: str
-        :param lines: the lines of data to be written to the file
-        :type lines: list of str
+        """Write the physician map to a .roi file
+
+        Parameters
+        ----------
+        physician : str
+            name of physicain
+        lines : list of str
+            the lines of data to be written to the file
+
+        Returns
+        -------
+
         """
         abs_file_path = os.path.join(PREF_DIR, 'physician_' + physician + '.roi')
         if lines:
@@ -538,10 +1187,16 @@ class DatabaseROIs:
                     document.write(line + '\n')
 
     def remove_unused_roi_files(self):
-        """
-        Delete any physician .roi or .rtype files that are no longer in the ROI map
-        :return: the physicians that have been removed
-        :rtype: list
+        """Delete any physician .roi or .rtype files that are no longer in the ROI map
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        list
+            the physicians that have been removed
+
         """
         for physician in self.deleted_physicians:
             for file_type in ['.roi', '.rtype']:
@@ -551,19 +1206,27 @@ class DatabaseROIs:
 
     @property
     def deleted_physicians(self):
+        """ """
         return list(set(get_physicians_from_roi_files()) - set(self.get_physicians()))
 
     @property
     def added_physicians(self):
+        """ """
         return list(set(self.get_physicians()) - set(get_physicians_from_roi_files()))
 
     def get_roi_map_changes(self):
-        """
-        Use difflib to detect changes between current roi map and previously saved .roi file
+        """Use difflib to detect changes between current roi map and previously saved .roi file
         format of returned dict: diff[physician][physician_roi][delta] = {'institutional': i_roi, 'variations': list}
         where delta is either '+' or '-' based on difflib.unified_diff output
-        :return: a tiered dictionary of lines that changed in the proposed .roi file
-        :rtype: dict
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        dict
+            a tiered dictionary of lines that changed in the proposed .roi file
+
         """
         new_data = self.physician_roi_file_data
         diff = {}
@@ -613,13 +1276,21 @@ class DatabaseROIs:
 
     @property
     def physicians_to_remap(self):
+        """ """
         return list(set(self.deleted_physicians + self.added_physicians))
 
     @property
     def variations_to_update(self):
         """
-        :return: all variations that have changed physician or institutional rois, in a dict with physician for the key
-        :rtype: dict
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        dict
+            all variations that have changed physician or institutional rois, in a dict with physician for the key
+
         """
         changes = self.get_roi_map_changes()
         variations_to_update = {}
@@ -637,6 +1308,7 @@ class DatabaseROIs:
         return variations_to_update
 
     def remap_rois(self):
+        """ """
 
         with DVH_SQL() as cnx:
             for physician, variations in self.variations_to_update.items():
@@ -663,6 +1335,21 @@ class DatabaseROIs:
     # Plotting tools
     ################
     def get_physician_roi_visual_coordinates(self, physician, physician_roi, institutional_roi):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+        physician_roi :
+            
+        institutional_roi :
+            
+
+        Returns
+        -------
+
+        """
 
         # All 0.5 subtractions due to a workaround of a Bokeh 0.12.9 bug
 
@@ -703,6 +1390,19 @@ class DatabaseROIs:
         return table
 
     def get_all_institutional_roi_visual_coordinates(self, physician, ignored_physician_rois=None):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+        ignored_physician_rois :
+             (Default value = None)
+
+        Returns
+        -------
+
+        """
         # TODO: Although functional and faster, hard to follow
         # Still slowest part of ROI Map plot generation
         ignored_physician_rois = [] if ignored_physician_rois is None else ignored_physician_rois
@@ -741,6 +1441,17 @@ class DatabaseROIs:
 
     @staticmethod
     def get_roi_visual_y_values(table):
+        """
+
+        Parameters
+        ----------
+        table :
+            
+
+        Returns
+        -------
+
+        """
         y_values = {}
         for i, x in enumerate(table['x']):
             if x == 0.5:
@@ -753,6 +1464,21 @@ class DatabaseROIs:
         return y_values
 
     def update_duplicate_y_entries(self, table, physician, inst_map):
+        """
+
+        Parameters
+        ----------
+        table :
+            
+        physician :
+            
+        inst_map :
+            
+
+        Returns
+        -------
+
+        """
 
         y_values = self.get_roi_visual_y_values(table)
 
@@ -776,9 +1502,21 @@ class DatabaseROIs:
 
     @property
     def tree(self):
+        """ """
         return {physician: self.get_physician_tree(physician) for physician in self.get_physicians()}
 
     def get_physician_tree(self, physician):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+
+        Returns
+        -------
+
+        """
         phys_rois = self.get_physician_rois(physician)
         unused_inst_rois = self.get_unused_institutional_rois(physician)
         inst_rois = [roi for roi in self.institutional_rois if roi not in unused_inst_rois]
@@ -795,6 +1533,17 @@ class DatabaseROIs:
     # Save and Load ROI Type
     ########################
     def write_roi_types_to_file(self, physician):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+
+        Returns
+        -------
+
+        """
         if self.is_physician(physician):
             rois = self.physicians[physician].rois
             roi_types = ["%s:%s" % (name, obj.roi_type) for name, obj in rois.items() if obj.roi_type != 'NONE']
@@ -804,6 +1553,17 @@ class DatabaseROIs:
                     doc.write('\n'.join(roi_types))
 
     def load_roi_types_from_file(self, physician):
+        """
+
+        Parameters
+        ----------
+        physician :
+            
+
+        Returns
+        -------
+
+        """
         if self.is_physician(physician):
             file_path = os.path.join(PREF_DIR, 'physician_%s.rtype' % physician)
             if os.path.isfile(file_path):
@@ -822,6 +1582,19 @@ class DatabaseROIs:
 
 
 def clean_name(name, physician=False):
+    """
+
+    Parameters
+    ----------
+    name :
+        
+    physician :
+         (Default value = False)
+
+    Returns
+    -------
+
+    """
     ans = str(name).replace('\'', '`').replace('_', ' ').replace(':', ';').strip()
     while '  ' in ans:
         ans = ans.replace('  ', ' ')
@@ -832,6 +1605,7 @@ def clean_name(name, physician=False):
 
 
 def get_physicians_from_roi_files():
+    """ """
 
     physicians = []
     for file_name in os.listdir(PREF_DIR):
@@ -844,6 +1618,17 @@ def get_physicians_from_roi_files():
 
 
 def get_physician_from_uid(uid):
+    """
+
+    Parameters
+    ----------
+    uid :
+        
+
+    Returns
+    -------
+
+    """
     with DVH_SQL() as cnx:
         results = cnx.query('Plans', 'physician', "study_instance_uid = '" + uid + "'")
 
@@ -855,6 +1640,7 @@ def get_physician_from_uid(uid):
 
 
 def update_uncategorized_rois_in_database():
+    """ """
     roi_map = DatabaseROIs()
     dvh_data = QuerySQL('DVHs', "physician_roi = 'uncategorized'")
 

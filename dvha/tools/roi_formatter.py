@@ -38,10 +38,17 @@ if speedups.available:
 
 def get_planes_from_string(roi_coord_string):
     """
-    :param roi_coord_string: roi string representation of an roi as formatted in the SQL database
-    :type roi_coord_string: str
-    :return: a "sets of points" formatted dictionary
-    :rtype: dict
+
+    Parameters
+    ----------
+    roi_coord_string : string: str
+        roi string representation of an roi as formatted in the SQL database
+
+    Returns
+    -------
+    dict
+        a "sets of points" formatted dictionary
+
     """
     planes = {}
     contours = roi_coord_string.split(':')
@@ -67,9 +74,17 @@ def get_planes_from_string(roi_coord_string):
 
 def points_to_shapely_polygon(sets_of_points):
     """
-    :param sets_of_points: a "sets of points" formatted dictionary
-    :type sets_of_points: dict
-    :return: a composite polygon as a shapely object (either polygon or multipolygon)
+
+    Parameters
+    ----------
+    sets_of_points : dict
+        a "sets of points" formatted dictionary
+
+    Returns
+    -------
+    type
+        a composite polygon as a shapely object (either polygon or multipolygon)
+
     """
 
     composite_polygon = None
@@ -95,10 +110,17 @@ def points_to_shapely_polygon(sets_of_points):
 
 def get_roi_coordinates_from_string(roi_coord_string):
     """
-    :param roi_coord_string: roi string representation of an roi as formatted in the SQL database
-    :type roi_coord_string: str
-    :return: a list of numpy arrays, each array is the x, y, z coordinates of the given point
-    :rtype: list
+
+    Parameters
+    ----------
+    roi_coord_string : string: str
+        roi string representation of an roi as formatted in the SQL database
+
+    Returns
+    -------
+    list
+        a list of numpy arrays, each array is the x, y, z coordinates of the given point
+
     """
     roi_coordinates = []
     contours = roi_coord_string.split(':')
@@ -117,10 +139,17 @@ def get_roi_coordinates_from_string(roi_coord_string):
 
 def get_roi_coordinates_from_planes(sets_of_points):
     """
-    :param sets_of_points: a "sets of points" formatted dictionary
-    :type sets_of_points: dict
-    :return: a list of numpy arrays, each array is the x, y, z coordinates of the given point
-    :rtype: list
+
+    Parameters
+    ----------
+    sets_of_points : dict
+        a "sets of points" formatted dictionary
+
+    Returns
+    -------
+    list
+        a list of numpy arrays, each array is the x, y, z coordinates of the given point
+
     """
     roi_coordinates = []
 
@@ -133,9 +162,17 @@ def get_roi_coordinates_from_planes(sets_of_points):
 
 def dicompyler_roi_coord_to_db_string(coord):
     """
-    :param coord: dicompyler structure coordinates from GetStructureCoordinates()
-    :return: roi string representation of an roi as formatted in the SQL database (roi_coord_string)
-    :rtype:  str
+
+    Parameters
+    ----------
+    coord :
+        dicompyler structure coordinates from GetStructureCoordinates()
+
+    Returns
+    -------
+    str
+        roi string representation of an roi as formatted in the SQL database (roi_coord_string)
+
     """
     contours = []
     for z in coord:
@@ -150,10 +187,17 @@ def dicompyler_roi_coord_to_db_string(coord):
 
 def get_shapely_from_sets_of_points(sets_of_points):
     """
-    :param sets_of_points: a "sets of points" formatted dictionary
-    :type sets_of_points: dict
-    :return: roi_slices which is a dictionary of lists of z, thickness, and a Shapely Polygon class object
-    :rtype: list
+
+    Parameters
+    ----------
+    sets_of_points : dict
+        a "sets of points" formatted dictionary
+
+    Returns
+    -------
+    list
+        roi_slices which is a dictionary of lists of z, thickness, and a Shapely Polygon class object
+
     """
 
     roi_slices = {'z': [], 'thickness': [], 'polygon': []}
@@ -181,9 +225,17 @@ def get_shapely_from_sets_of_points(sets_of_points):
 
 def dicompyler_roi_to_sets_of_points(coord):
     """
-    :param coord: dicompyler structure coordinates from GetStructureCoordinates()
-    :return: a "sets of points" formatted dictionary
-    :rtype: dict
+
+    Parameters
+    ----------
+    coord :
+        dicompyler structure coordinates from GetStructureCoordinates()
+
+    Returns
+    -------
+    dict
+        a "sets of points" formatted dictionary
+
     """
     all_points = {}
     for z in coord:

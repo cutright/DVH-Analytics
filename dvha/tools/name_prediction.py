@@ -3,11 +3,19 @@ from dvha.tools.roi_name_manager import clean_name
 
 
 class ROINamePredictor:
+    """
+
+    Parameters
+    ----------
+    roi_map : DatabaseROIs
+        ROI map object
+
+    Returns
+    -------
+
+    """
     def __init__(self, roi_map, weight_simple=1., weight_partial=0.6, threshold=0):
-        """
-        :param roi_map: ROI map object
-        :type roi_map: DatabaseROIs
-        """
+
         self.roi_map = roi_map
         norm_weight = weight_partial + weight_simple
         self.weight = {'simple': 2 * weight_simple / norm_weight,
@@ -15,6 +23,21 @@ class ROINamePredictor:
         self.threshold = threshold
 
     def get_best_roi_match(self, roi, physician, return_score=False):
+        """
+
+        Parameters
+        ----------
+        roi :
+            
+        physician :
+            
+        return_score :
+             (Default value = False)
+
+        Returns
+        -------
+
+        """
         physician_variations = self.roi_map.get_all_variations_of_physician(physician)
         fuzz_scores = self.get_combined_fuzz_scores(roi, physician_variations)
         if fuzz_scores:
@@ -26,6 +49,21 @@ class ROINamePredictor:
                 return prediction
 
     def get_combined_fuzz_score(self, a, b, mode='geom_mean'):
+        """
+
+        Parameters
+        ----------
+        a :
+            
+        b :
+            
+        mode :
+             (Default value = 'geom_mean')
+
+        Returns
+        -------
+
+        """
         a, b = clean_name(a), clean_name(b)
 
         simple = float(fuzz.ratio(a, b) * self.weight['simple'])
@@ -35,6 +73,21 @@ class ROINamePredictor:
 
     @staticmethod
     def combine_scores(score_1, score_2, mode='average'):
+        """
+
+        Parameters
+        ----------
+        score_1 :
+            
+        score_2 :
+            
+        mode :
+             (Default value = 'average')
+
+        Returns
+        -------
+
+        """
         if mode == 'geom_mean':
             return (score_1 * score_2) ** 0.5
         elif mode == 'product':
@@ -43,6 +96,19 @@ class ROINamePredictor:
             return (score_1 + score_2) / 2.
 
     def get_combined_fuzz_scores(self, string, list_of_strings):
+        """
+
+        Parameters
+        ----------
+        string :
+            
+        list_of_strings :
+            
+
+        Returns
+        -------
+
+        """
         scores = [self.get_combined_fuzz_score(string, string_b) for string_b in list_of_strings]
         if scores:
             order_index = sorted(range(len(scores)), key=lambda k: scores[k])

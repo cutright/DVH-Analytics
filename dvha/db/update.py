@@ -3,7 +3,7 @@
 
 # db.update.py
 """
-Functions to call appropriate calculations and update various columns in the SQL database
+Functions to update various columns in the SQL database
 """
 # Copyright (c) 2016-2019 Dan Cutright
 # This file is part of DVH Analytics, released under a BSD license.
@@ -23,8 +23,14 @@ from dvha.tools.utilities import calc_stats, sample_roi
 
 
 def centroid(study_instance_uid, roi_name):
-    """
-    Recalculate the centroid of an roi based on data in the SQL DB.
+    """Recalculate the centroid of an roi based on data in the SQL DB.
+
+    Parameters
+    ----------
+    study_instance_uid : str
+        study instance uid
+    roi_name : str
+        name of roi
     """
 
     coordinates_string = query('dvhs', 'roi_coord_string',
@@ -39,8 +45,15 @@ def centroid(study_instance_uid, roi_name):
 
 
 def cross_section(study_instance_uid, roi_name):
-    """
-    Recalculate the centroid of an roi based on data in the SQL DB.
+    """Recalculate the centroid of an roi based on data in the SQL DB.
+
+    Parameters
+    ----------
+    study_instance_uid : str
+        study instance uid
+    roi_name : str
+        name of roi
+
     """
 
     coordinates_string = query('dvhs', 'roi_coord_string',
@@ -54,8 +67,15 @@ def cross_section(study_instance_uid, roi_name):
 
 
 def spread(study_instance_uid, roi_name):
-    """
-    Recalculate the spread of an roi based on data in the SQL DB.
+    """Recalculate the spread of an roi based on data in the SQL DB.
+
+    Parameters
+    ----------
+    study_instance_uid : str
+        study instance uid
+    roi_name : str
+        name of roi
+    
     """
 
     coordinates_string = query('dvhs', 'roi_coord_string',
@@ -71,9 +91,18 @@ def spread(study_instance_uid, roi_name):
 
 
 def dist_to_ptv_centroids(study_instance_uid, roi_name, pre_calc=None):
-    """
-    Recalculate the OAR-to-PTV centroid distance based on data in the SQL DB.
+    """Recalculate the OAR-to-PTV centroid distance based on data in the SQL DB.
     Optionally provide pre-calculated centroid of combined PTV
+
+    Parameters
+    ----------
+    study_instance_uid : str
+        study instance uid
+    roi_name : str
+        name of roi
+    pre_calc : np.ndarray
+        Return from get_treatment_volume_centroid
+    
     """
 
     oar_centroid_string = query('dvhs', 'centroid',
@@ -90,9 +119,18 @@ def dist_to_ptv_centroids(study_instance_uid, roi_name, pre_calc=None):
 
 
 def min_distances(study_instance_uid, roi_name, pre_calc=None):
-    """
-    Recalculate the min, mean, median, and max PTV distances an roi based on data in the SQL DB.
-    Optionally provide coordinates of combined PTV, return from get_treatment_volume_coord
+    """Recalculate the min, mean, median, and max PTV distances an roi based
+    on data in the SQL DB.
+
+    Parameters
+    ----------
+    study_instance_uid : str
+        study instance uid
+    roi_name : str
+        name of roi
+    pre_calc : list, optional
+        coordinates of combined PTV, return from get_treatment_volume_coord
+    
     """
 
     oar_coordinates_string = query('dvhs', 'roi_coord_string',
@@ -153,9 +191,17 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
 
 
 def treatment_volume_overlap(study_instance_uid, roi_name, pre_calc=None):
-    """
-    Recalculate the PTV overlap of an roi based on data in the SQL DB.
-    Optional provide union of PTVs, return from get_total_treatment_volume_of_study
+    """Recalculate the PTV overlap of an roi based on data in the SQL DB.
+
+    Parameters
+    ----------
+    study_instance_uid : str
+        study instance uid
+    roi_name : str
+        name of roi
+    pre_calc : dict, optional
+        union of PTVs, return from get_total_treatment_volume_of_study
+    
     """
 
     oar_coordinates_string = query('dvhs', 'roi_coord_string',
@@ -171,8 +217,15 @@ def treatment_volume_overlap(study_instance_uid, roi_name, pre_calc=None):
 
 
 def volumes(study_instance_uid, roi_name):
-    """
-    Recalculate the volume of an roi based on data in the SQL DB.
+    """Recalculate the volume of an roi based on data in the SQL DB.
+
+    Parameters
+    ----------
+    study_instance_uid : str
+        study instance uid
+    roi_name : str
+        name of roi
+
     """
 
     coordinates_string = query('dvhs', 'roi_coord_string',
@@ -186,8 +239,15 @@ def volumes(study_instance_uid, roi_name):
 
 
 def surface_area(study_instance_uid, roi_name):
-    """
-    Recalculate the surface area of an roi based on data in the SQL DB.
+    """Recalculate the surface area of an roi based on data in the SQL DB.
+
+    Parameters
+    ----------
+    study_instance_uid : str
+        study instance uid
+    roi_name : str
+        name of roi
+
     """
 
     coordinates_string = query('dvhs', 'roi_coord_string',
@@ -201,15 +261,19 @@ def surface_area(study_instance_uid, roi_name):
 
 
 def update_dvhs_table(study_instance_uid, roi_name, column, value):
-    """
-    Generic function to update a value in the DVHs table
-    :param study_instance_uid: study instance uid in the SQL table
-    :type study_instance_uid: str
-    :param roi_name: the roi name associated with the value to be updated
-    :type roi_name: str
-    :param column: the SQL column of the value to be updated
-    :type column: str
-    :param value: the value to be set, it's type should match the type as specified in the SQL table
+    """Generic function to update a value in the DVHs table
+
+    Parameters
+    ----------
+    study_instance_uid : str
+        study instance uid in the SQL table
+    roi_name : str
+        the roi name associated with the value to be updated
+    column : str
+        the SQL column of the value to be updated
+    value : str, int, float, datetime
+        the value to be set, it's type should match the type as specified in the SQL table
+    
     """
     with DVH_SQL() as cnx:
         cnx.update('dvhs', column, value,
@@ -217,12 +281,15 @@ def update_dvhs_table(study_instance_uid, roi_name, column, value):
 
 
 def update_plan_toxicity_grades(cnx, study_instance_uid):
-    """
-    Query the toxicities in the DVHs table and update the values in the associated plan row(s)
-    :param cnx: connection to DVHA SQL database
-    :type cnx: DVH_SQL
-    :param study_instance_uid: study_instance_uid in SQL database
-    :type study_instance_uid: str
+    """Query the toxicities in the DVHs table and update the values in the associated plan row(s)
+
+    Parameters
+    ----------
+    cnx : DVH_SQL
+        connection to DVHA SQL database
+    study_instance_uid : str
+        study_instance_uid in SQL database
+    
     """
     toxicities = cnx.get_unique_values('DVHs', 'toxicity_grade', "study_instance_uid = '%s'" % study_instance_uid)
     toxicities = [t for t in toxicities if t.isdigit()]
@@ -232,10 +299,14 @@ def update_plan_toxicity_grades(cnx, study_instance_uid):
 
 def plan_complexity(cnx, study_instance_uid):
     """
-    :param cnx: connection to DVHA SQL database
-    :type cnx: DVH_SQL
-    :param study_instance_uid: study_instance_uid in SQL database
-    :type study_instance_uid: str
+
+    Parameters
+    ----------
+    cnx : DVH_SQL
+        connection to DVHA SQL database
+    study_instance_uid : str
+        study_instance_uid in SQL database
+    
     """
     condition = "study_instance_uid = '%s'" % study_instance_uid
     beam_data = query('Beams', 'complexity, beam_mu', condition)
@@ -254,10 +325,14 @@ def plan_complexity(cnx, study_instance_uid):
 
 def beam_complexity(cnx, study_instance_uid):
     """
-    :param cnx: connection to DVHA SQL database
-    :type cnx: DVH_SQL
-    :param study_instance_uid: study_instance_uid in SQL database
-    :type study_instance_uid: str
+
+    Parameters
+    ----------
+    cnx : DVH_SQL
+        connection to DVHA SQL database
+    study_instance_uid : str
+        study_instance_uid in SQL database
+    
     """
 
     rt_plan_query = cnx.query('DICOM_Files', 'folder_path, plan_file',
@@ -291,15 +366,18 @@ def beam_complexity(cnx, study_instance_uid):
 
 
 def update_all_generic(table, func, condition):
-    """
-    Generic function to call a function that accepts a DVH_SQL object and study_instance_uid.
+    """Generic function to call ``func`` that accepts a DVH_SQL object and study_instance_uid.
     Intended for beam_complexities, plan_complexities, update_all_plan_toxicity_grades, etc.
-    :param table: SQL table name
-    :type table: str
-    :param func: the function to be called with parameters of DVH_SQL and study_instance_uid
-    :param condition: optional SQL condition to apply to the study_instance_uid list retrieval
-    :type condition: str
-    :return:
+
+    Parameters
+    ----------
+    table : str
+        SQL table name
+    func :
+        the function to be called with parameters of DVH_SQL and study_instance_uid
+    condition : str
+        optional SQL condition to apply to the study_instance_uid list retrieval
+    
     """
     if condition:
         condition = condition[0]
@@ -310,23 +388,51 @@ def update_all_generic(table, func, condition):
 
 
 def update_all_plan_toxicity_grades(condition=None):
+    """Call update_plan_toxicity_grades on all Plan rows
+
+    Parameters
+    ----------
+    condition : str
+        SQL condition
+    
+    """
     update_all_generic('Plans', update_plan_toxicity_grades, condition)
 
 
 def plan_complexities(condition=None):
+    """Call plan_complexity on all Plan rows
+
+    Parameters
+    ----------
+    condition : str
+        SQL condition
+    
+    """
     update_all_generic('Plans', plan_complexity, condition)
 
 
 def beam_complexities(condition=None):
+    """Call beam_complexity on all Beams rows
+
+    Parameters
+    ----------
+    condition : str
+        SQL condition
+    
+    """
     update_all_generic('Beams', beam_complexity, condition)
 
 
 def update_ptv_data(tv, study_instance_uid):
-    """
-    :param tv: treatment volume formatted as a "sets of points" object specified in tools.roi_geometry
-    :type tv: dict
-    :param study_instance_uid: study_instance_uid in SQL database
-    :type study_instance_uid: str
+    """Update ptv related columns based on a total treatment volume
+
+    Parameters
+    ----------
+    tv : dict
+        treatment volume formatted as a "sets of points" object specified in tools.roi_geometry
+    study_instance_uid : str
+        study_instance_uid in SQL database
+    
     """
     ptv_cross_section = roi_geom.cross_section(tv)
     ptv_spread = roi_geom.spread(tv)
@@ -351,8 +457,20 @@ def update_ptv_data(tv, study_instance_uid):
 
 
 def get_total_treatment_volume_of_study(study_instance_uid, ptvs=None):
-    """
-    Calculate combined PTV for the provided study_instance_uid
+    """Calculate combined PTV for the provided study_instance_uid
+
+    Parameters
+    ----------
+    study_instance_uid : str
+        study instance uid
+    ptvs : list, optional
+        names of ptvs (as stored in roi_name column)
+
+    Returns
+    -------
+    dict
+        a "sets of points" dictionary representing the total treatment volume
+    
     """
 
     condition = "study_instance_uid = '%s' and roi_type like 'PTV%%'" % study_instance_uid
@@ -366,16 +484,58 @@ def get_total_treatment_volume_of_study(study_instance_uid, ptvs=None):
 
 
 def get_treatment_volume_centroid(tv):
+    """Get the centroid of a treatment volume
+
+    Parameters
+    ----------
+    tv : dict
+        treatment volume formatted as a "sets of points" object specified in tools.roi_geometry
+
+    Returns
+    -------
+    np.ndarray
+        DICOM coordinates of treatment volume centroid
+    
+    """
     return np.array(roi_geom.centroid(tv))
 
 
 def get_treatment_volume_coord(tv):
+    """Get the volume
+
+    Parameters
+    ----------
+    tv : dict
+        treatment volume formatted as a "sets of points" object specified in tools.roi_geometry
+
+    Returns
+    -------
+    list
+        The coordinates of the treatment volume, using tools.roi_formatter.get_roi_coordinates_from_planes
+    
+    """
     return roi_form.get_roi_coordinates_from_planes(tv)
 
 
 def query(table, column, condition, unique=False):
-    """
-    Automatically creates connection for query
+    """Helper function, automatically creates connection for query
+
+    Parameters
+    ----------
+    table : str
+        DVHs', 'Plans', 'Rxs', 'Beams', or 'DICOM_Files'
+    column : str: str
+        a csv of SQL columns to be returned
+    condition : str: str
+        a condition in SQL syntax
+    unique : bool, optional
+        Call DVH_SQL.get_unique_values if true, DVH_SQL.query if false
+
+    Returns
+    -------
+    list
+        return of query
+    
     """
     with DVH_SQL() as cnx:
         func = cnx.get_unique_values if unique else cnx.query
@@ -384,6 +544,19 @@ def query(table, column, condition, unique=False):
 
 
 def uid_has_ptvs(study_instance_uid):
+    """Check if study instance uid has PTVs
+
+    Parameters
+    ----------
+    study_instance_uid : str
+        study instance uid
+
+    Returns
+    -------
+    bool
+        True if uid has any roi_name with an roi_type LIKE PTV%
+
+    """
     with DVH_SQL() as cnx:
         condition = "study_instance_uid = '%s' and roi_type LIKE 'PTV%%'" % study_instance_uid
         ans = cnx.query('DVHs', 'roi_type', condition)
@@ -391,6 +564,22 @@ def uid_has_ptvs(study_instance_uid):
 
 
 def update_roi_metric(roi_metric_calc, uid, callback=None, centroid_calc=False, ptv_calc=True):
+    """Call roi_metric_calc for ``uid``
+
+    Parameters
+    ----------
+    roi_metric_calc : callable
+        Function with parameters: study_insstance_uid, roi_name, precalc
+    uid : str
+        study instance uid
+    callback : callable, optional
+        Accepts a dict with keys of 'label' and 'gauge'
+    centroid_calc : bool, optional
+        Update pre_calc with get_treatment_volume_centroid
+    ptv_calc : bool, optional
+        roi_metric_calc involves getting a total treatment volume
+
+    """
     pre_calc = None
     if ptv_calc:
         condition = "study_instance_uid = '%s' and roi_type like 'PTV%%'" % uid
@@ -416,32 +605,113 @@ def update_roi_metric(roi_metric_calc, uid, callback=None, centroid_calc=False, 
 
 
 def update_ptv_dist_data(uid, callback=None):
+    """Update PTV distance data with min_distances function
+
+    Parameters
+    ----------
+    uid : str
+        study instance uid
+    callback : callable, optional
+        Accepts a dict with keys of 'label' and 'gauge'
+    
+    """
     update_roi_metric(min_distances, uid, callback)
 
 
 def update_ptv_overlap(uid, callback=None):
+    """Update PTV overlap data with treatment_volume_overlap function
+
+    Parameters
+    ----------
+    uid : str
+        study instance uid
+    callback : callable, optional
+        Accepts a dict with keys of 'label' and 'gauge'
+    
+    """
     update_roi_metric(treatment_volume_overlap, uid, callback)
 
 
 def update_ptv_centroid_distances(uid, callback=None):
+    """Update PTV centroid distances with dist_to_ptv_centroids function
+
+    Parameters
+    ----------
+    uid : str
+        study instance uid
+    callback : callable, optional
+        Accepts a dict with keys of 'label' and 'gauge'
+    
+    """
     update_roi_metric(dist_to_ptv_centroids, uid, callback, centroid_calc=True)
 
 
 def update_roi_centroid(uid, callback=None):
+    """Update ROI centroids with centroid function
+
+    Parameters
+    ----------
+    uid : str
+        study instance uid
+    callback : callable, optional
+        Accepts a dict with keys of 'label' and 'gauge'
+    
+    """
     update_roi_metric(centroid, uid, callback, ptv_calc=False)
 
 
 def update_roi_spread(uid, callback=None):
+    """Update ROI spread values with spread function
+
+    Parameters
+    ----------
+    uid : str
+        study instance uid
+    callback : callable, optional
+        Accepts a dict with keys of 'label' and 'gauge'
+    
+    """
     update_roi_metric(spread, uid, callback, ptv_calc=False)
 
 
 def update_roi_cross_section(uid, callback=None):
+    """Update ROI cross section data with cross_section function
+
+    Parameters
+    ----------
+    uid : str
+        study instance uid
+    callback : callable, optional
+        Accepts a dict with keys of 'label' and 'gauge'
+
+    """
     update_roi_metric(cross_section, uid, callback, ptv_calc=False)
 
 
 def update_roi_surface_area(uid, callback=None):
+    """Update ROI surface areas with surface_area function
+
+    Parameters
+    ----------
+    uid : str
+        study instance uid
+    callback : callable, optional
+        Accepts a dict with keys of 'label' and 'gauge'
+    
+    """
     update_roi_metric(surface_area, uid, callback, ptv_calc=False)
 
 
 def update_roi_volume(uid, callback=None):
-    update_roi_metric(surface_area, uid, callback, ptv_calc=False)
+    """Update ROI volume with volumes function
+
+    Parameters
+    ----------
+    uid : str
+        study instance uid
+    callback : callable, optional
+        Accepts a dict with keys of 'label' and 'gauge'
+
+    
+    """
+    update_roi_metric(volumes, uid, callback, ptv_calc=False)

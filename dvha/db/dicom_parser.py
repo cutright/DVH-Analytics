@@ -28,33 +28,34 @@ from dvha.db.sql_connector import DVH_SQL
 
 
 class DICOM_Parser:
-    """
-    Parse a set of DICOM files for database
+    """Parse a set of DICOM files for database import
+
+    Parameters
+    ----------
+    plan_file : str
+        absolute path of DICOM RT Plan file
+    structure_file : structure_file: str
+        absolute path of DICOM RT Struct file
+    dose_file : str
+        absolute path of DICOM RT Dose file
+    dose_sum_file : str
+        DICOM RT Dose file with summed dose
+    plan_over_rides : dict
+        Values from import GUI to override DICOM file data
+    global_plan_over_rides : dict
+        Values from import GUI to override DICOM file data
+    roi_over_ride : dict
+        lookup up for roi name and type overrides
+    roi_map : DatabaseROIs
+        roi name map
+    use_dicom_dvh : bool
+        use the DVH stored in DICOM RT-Dose if it exists
+    plan_ptvs : list, iterable
+        assign specific PTVs for distance calculations
+
     """
     def __init__(self, plan_file=None, structure_file=None, dose_file=None, dose_sum_file=None, plan_over_rides=None,
                  global_plan_over_rides=None, roi_over_ride=None, roi_map=None, use_dicom_dvh=False, plan_ptvs=None, other_dicom_files=None):
-        """
-        :param plan_file: absolute path of DICOM RT Plan file
-        :type plan_file: str
-        :param structure_file: absolute path of DICOM RT Struct file
-        :type structure_file: str
-        :param dose_file: absolute path of DICOM RT Dose file
-        :type dose_file: str
-        :param dose_sum_file: DICOM RT Dose file with summed dose
-        :type dose_sum_file: str
-        :param plan_over_rides: Values from import GUI to override DICOM file data
-        :type plan_over_rides: dict
-        :param global_plan_over_rides: Values from import GUI to override DICOM file data
-        :type global_plan_over_rides: dict
-        :param roi_over_ride: lookup up for roi name and type overrides
-        :type roi_over_ride: dict
-        :param roi_map: roi name map
-        :type roi_map: DatabaseROIs
-        :param use_dicom_dvh: use the DVH stored in DICOM RT-Dose if it exists
-        :type use_dicom_dvh: bool
-        :param plan_ptvs: assign specifc PTVs for distance calculations
-        :type plan_ptvs: list
-        """
 
         self.database_rois = DatabaseROIs() if roi_map is None else roi_map
 
@@ -120,6 +121,7 @@ class DICOM_Parser:
         self.other_dicom_files = other_dicom_files
 
     def update_stored_values(self):
+        """Update stored_values, meant for PreImportData"""
         keys = ['study_instance_uid_to_be_imported', 'patient_name', 'mrn', 'sim_study_date', 'birth_date',
                 'rx_dose', 'ptv_names', 'physician', 'ptv_exists', 'tx_site', 'patient_orientation']
         self.stored_values = {key: getattr(self, key) for key in keys}
@@ -145,13 +147,22 @@ class DICOM_Parser:
 
     @staticmethod
     def get_referenced_beam_sequence_index(fx_grp_seq, beam_number):
-        """
-        Determine the index of the referenced beam sequence for a given beam_number. This properly connects BeamSequence
-        beams and ReferencedBeamSequence beams.
-        :param fx_grp_seq: Index of the fraction group (likely 0 unless TPS allows multiple prescriptions
-        :param beam_number: The beam number of the beam of interest within BeamSequence
-        :return: the ReferencedBeamSequence index that matches beam_number
-        :rtype: int
+        """Determine the index of the referenced beam sequence for a given
+        beam_number. This properly BeamSequence beams and
+        ReferencedBeamSequence beams.
+
+        Parameters
+        ----------
+        fx_grp_seq :
+            Index of the fraction group (likely 0 unless TPS allows multiple prescriptions
+        beam_number :
+            The beam number of the beam of interest within BeamSequence
+
+        Returns
+        -------
+        int
+            the ReferencedBeamSequence index that matches beam_number
+
         """
         for i, ref_beam_seq in enumerate(fx_grp_seq.ReferencedBeamSequence):
             if ref_beam_seq.ReferencedBeamNumber == beam_number:
@@ -160,16 +171,19 @@ class DICOM_Parser:
                         'ReferencedBeamSequence for beam number %s' % beam_number)
 
     def get_rx_data_from_dummy_rois(self):
-        """
-        DVH Analytics allows for the user to indicate prescription information embedded in POI names. Some TPSs do not
+        """DVH Analytics allows for the user to indicate prescription information embedded in POI names. Some TPSs do not
         include prescription information in the exported DICOM Plan file. For example, Pinnacle scripts are provided
         by DVHA which will create these POIs.  The scripts are found in resources/Pinnacle Scripts
-
+        
         A POI in the format:
-            "rx#: <rx name>: <rx dose in cGy> cGy x <fxs> to <norm. %>%: <norm. method>: <norm. object>"
-            where # is rx number starting from 1, will allow DVH-Analytics to retrieve rx information.
-        :return: data for the Rxs table that can be extracted from POIs
-        :rtype: dict
+        "rx#: <rx name>: <rx dose in cGy> cGy x <fxs> to <norm. %>%: <norm. method>: <norm. object>"
+        where # is rx number starting from 1, will allow DVH-Analytics to retrieve rx information.
+
+        Returns
+        -------
+        dict
+            data for the Rxs table that can be extracted from POIs
+
         """
 
         if self.structure_file:
@@ -206,16 +220,20 @@ class DICOM_Parser:
             return rx_data
 
     def get_tx_site_from_dummy_rois(self):
-        """
-        DVH Analytics allows for the user to indicate treatment information embedded in POI names. By default, DVHA
+        """DVH Analytics allows for the user to indicate treatment information embedded in POI names. By default, DVHA
         assumes the plan name is the tx site. However, if a POI is provided as follows, the tx site provided in the POI
         will be used instead. Pinnacle scripts are provided by DVHA which will create these POIs. The scripts are found
         in resources/Pinnacle Scripts
+
         A POI in the format:
-            "tx: <site>"
-            will allow DVH-Analytics to add this site name to the database upon import.
-        :return: treatment site name
-        :rtype: str
+        "tx: <site>"
+        will allow DVH-Analytics to add this site name to the database upon import.
+
+        Returns
+        -------
+        str
+            treatment site name
+
         """
 
         if self.structure_file:
@@ -226,11 +244,14 @@ class DICOM_Parser:
                 return struct_seq[tx_indices[0]].ROIName.split('tx: ')[1]
 
     def get_plan_row(self):
-        """
-        Get all data needed for a row in the Plans table of the database
-        :return: plan row data with the column name as the key and the values are lists in the format
-        [value, column variable type]. This object will be passed to DVH_SQL.insert_row
-        :rtype: dict
+        """Get all data needed for a row in the Plans table of the database
+
+        Returns
+        -------
+        dict
+            plan row data with the column name as the key and the values are lists in the format
+            [value, column variable type]. This object will be passed to DVH_SQL.insert_row
+
         """
 
         return {'mrn': [self.mrn, 'text'],
@@ -262,10 +283,13 @@ class DICOM_Parser:
                 'complexity': [self.plan_complexity, 'real']}
 
     def get_beam_rows(self):
-        """
-        Get all beam rows across all prescriptions
-        :return: a complete list of beam rows
-        :rtype: list
+        """Get all beam rows across all prescriptions
+
+        Returns
+        -------
+        list
+            a complete list of beam rows
+
         """
         beam_rows = []
         for rx_index, beam_set in self.beam_data.items():
@@ -280,20 +304,27 @@ class DICOM_Parser:
 
     @property
     def dummy_beam_row(self):
+        """Empty beam row object"""
         return [{'mrn': [self.mrn, 'text'],
                  'study_instance_uid': [self.study_instance_uid_to_be_imported, 'text'],
                  'import_time_stamp': [None, 'timestamp']}]
 
     def get_beam_row(self, rx_index, beam):
-        """
-        Get all data needed for a row in the Beams table of the database
-        :param rx_index: the index of self.rx_data associated with beam
-        :type rx_index: int
-        :param beam: the beam data object to be parsed
-        :type beam: BeamParser
-        :return: beam row data with the column name as the key and the values are lists in the format
-        [value, column variable type]. This object will be passed to DVH_SQL.insert_row
-        :rtype: dict
+        """Get all data needed for a row in the Beams table of the database
+
+        Parameters
+        ----------
+        rx_index : int
+            the index of self.rx_data associated with beam
+        beam : BeamParser
+            the beam data object to be parsed
+
+        Returns
+        -------
+        dict
+            beam row data with the column name as the key and the values are lists in the format
+            [value, column variable type]. This object will be passed to DVH_SQL.insert_row
+
         """
         rx = self.rx_data[rx_index]
 
@@ -372,21 +403,30 @@ class DICOM_Parser:
                 'tx_modality': [beam.tx_modality, 'varchar(35)']}
 
     def get_rx_rows(self):
-        """
-        Get all rx rows
-        :return: a complete list of rx data objects
-        :rtype: list
+        """Get all rx rows
+
+        Returns
+        -------
+        list
+            a complete list of rx data objects
+
         """
         return [self.get_rx_row(rx) for rx in self.rx_data]
 
     def get_rx_row(self, rx):
-        """
-        Get all data needed for a row in the Rxs table of the database
-        :param rx: a rx data object
-        :type rx: RxParser
-        :return: rx row data with the column name as the key and the values are lists in the format
-        [value, column variable type]. This object will be passed to DVH_SQL.insert_row
-        :rtype: dict
+        """Get all data needed for a row in the Rxs table of the database
+
+        Parameters
+        ----------
+        rx : RxParser
+            a rx data object
+
+        Returns
+        -------
+        dict
+            rx row data with the column name as the key and the values are lists in the format
+            [value, column variable type]. This object will be passed to DVH_SQL.insert_row
+
         """
 
         data = {'mrn': [self.mrn, 'text'],
@@ -415,13 +455,19 @@ class DICOM_Parser:
         return data
 
     def get_dvh_row(self, dvh_index):
-        """
-        Get all data needed for a row in the DVHs table of the database
-        :param dvh_index: the index of the ROI to be imported
-        :type dvh_index: int
-        :return: dvh row data with the column name as the key and the values are lists in the format
-        [value, column variable type]. This object will be passed to DVH_SQL.insert_row
-        :rtype: dict
+        """Get all data needed for a row in the DVHs table of the database
+
+        Parameters
+        ----------
+        dvh_index : int
+            the index of the ROI to be imported
+
+        Returns
+        -------
+        dict
+            dvh row data with the column name as the key and the values are lists in the format
+            [value, column variable type]. This object will be passed to DVH_SQL.insert_row
+
         """
 
         # dicompyler-core expects integer limit in cGy
@@ -509,10 +555,17 @@ class DICOM_Parser:
 
     def get_roi_centroid_to_isocenter_dist(self, roi_centroid):
         """Get the distance from ROI centroid to beam isocenter
-        :param roi_centroid: centroid of ROI in DICOM coordinates
-        :type roi_centroid: list
-        :return: min and max iso-to-centroid distances (checked over every beam)
-        :rtype: dict
+
+        Parameters
+        ----------
+        roi_centroid : list
+            centroid of ROI in DICOM coordinates
+
+        Returns
+        -------
+        dict
+            min and max iso-to-centroid distances (checked over every beam)
+
         """
         centroid = np.array(roi_centroid)
         distances = []
@@ -530,11 +583,14 @@ class DICOM_Parser:
         return {'min': None, 'max': None}
 
     def get_dicom_file_row(self):
-        """
-        Get all data needed for a row in the DICOM_Files table of the database
-        :return: dicom file data with the column name as the key and the values are lists in the format
-        [value, column variable type]. This object will be passed to DVH_SQL.insert_row
-        :rtype: dict
+        """Get all data needed for a row in the DICOM_Files table of the database
+
+        Returns
+        -------
+        dict
+            dicom file data with the column name as the key and the values are lists in the format
+            [value, column variable type]. This object will be passed to DVH_SQL.insert_row
+
         """
         return {'mrn': [self.mrn, 'text'],
                 'study_instance_uid': [self.study_instance_uid_to_be_imported, 'text'],
@@ -546,46 +602,114 @@ class DICOM_Parser:
 
     @property
     def mrn(self):
+        """medical record number
+
+        Returns
+        -------
+        str
+            mrn, with over rides applied
+        """
         if self.plan_over_rides['mrn'] is not None:
             return self.plan_over_rides['mrn']
         return self.rt_data['plan'].PatientID
 
     @property
     def study_instance_uid(self):
+        """study instance uid from DICOM
+
+        Returns
+        -------
+        str
+            study instance uid from DICOM-RT Plan
+        """
         return self.rt_data['plan'].StudyInstanceUID
 
     @property
     def study_instance_uid_to_be_imported(self):
+        """study instance uid to be written to database
+
+        Returns
+        -------
+        str
+            study instance uid
+        """
         if hasattr(self, 'plan_over_rides') and self.plan_over_rides['study_instance_uid']:
             return self.plan_over_rides['study_instance_uid']
         return self.rt_data['plan'].StudyInstanceUID
 
     @property
     def is_study_instance_uid_valid(self):
+        """Check if uid is used in database
+
+        Returns
+        -------
+        bool
+            False if study instance uid from DICOM is used in database
+        """
         return self.is_uid_valid(self.study_instance_uid)
 
     @property
     def is_study_instance_uid_to_be_imported_valid(self):
+        """Check if uid is used in database
+
+        Returns
+        -------
+        bool
+            False if study instance uid from DICOM is used in database
+        """
         return self.is_uid_valid(self.study_instance_uid_to_be_imported)
 
     @staticmethod
     def is_uid_valid(uid):
+        """Create DB connection, check if uid exists in database
+
+        Parameters
+        ----------
+        uid : str
+            study instance uid
+
+        Returns
+        -------
+        bool
+            True if uid is used in the database
+        """
         valid = False
         if uid:
             with DVH_SQL() as cnx:
-                valid = not cnx.is_study_instance_uid_in_table('Plans', uid)
+                valid = not cnx.is_uid_imported(uid)
         return valid
 
     @property
     def patient_name(self):
+        """PatientName from DICOM-RT Plan
+
+        Returns
+        -------
+        str
+            PatientName (0010, 0010)
+        """
         return str(self.rt_data['plan'].PatientName)
 
     @property
     def file_set_complete(self):
+        """Check if plan, structure, and dose files have been set
+
+        Returns
+        -------
+        bool
+            True if plan, structure, and dose files are set
+        """
         return all([self.plan_file, self.structure_file, self.dose_file])
 
     @property
     def missing_files(self):
+        """Get missing DICOM file types
+
+        Returns
+        -------
+        list
+            values of 'PLAN', 'STRUCTURE', 'DOSE' if missing
+        """
         return [key.capitalize() for key, value in self.rt_data.items() if value is None]
 
     # ------------------------------------------------------------------------------
@@ -593,6 +717,13 @@ class DICOM_Parser:
     # ------------------------------------------------------------------------------
     @property
     def tx_modality(self):
+        """Treatment modality
+
+        Returns
+        -------
+        str
+            CSV of BeamParser.tx_modality values
+        """
         tx_modalities = []
         for fx_grp_index, beam_parser_list in self.beam_data.items():
             for beam_parser in beam_parser_list:
@@ -602,6 +733,13 @@ class DICOM_Parser:
 
     @property
     def rx_dose(self):
+        """Prescription dose
+
+        Returns
+        -------
+        int, float
+            Prescription dose in Gy, summed over all Rx rows
+        """
         if self.plan_over_rides['rx_dose'] is not None:
             ans = self.plan_over_rides['rx_dose']
         elif self.poi_rx_data:
@@ -612,6 +750,13 @@ class DICOM_Parser:
 
     @property
     def total_mu(self):
+        """Total MU delivered
+
+        Returns
+        -------
+        int, float
+            The total MUs over all Rxs and fractions
+        """
         mus = []
         for fx_grp_index, beam_parser_list in self.beam_data.items():
             for beam_parser in beam_parser_list:
@@ -622,11 +767,19 @@ class DICOM_Parser:
 
     @property
     def heterogeneity_correction(self):
+        """DICOM-RT Dose TissueHeterogeneityCorrection
+
+        Returns
+        -------
+        str
+            TissueHeterogeneityCorrection (3004,0014)
+
+        """
         if hasattr(self.rt_data['dose'], 'TissueHeterogeneityCorrection'):
-            if isinstance(self.rt_data['dose'].TissueHeterogeneityCorrection, str):
-                heterogeneity_correction = self.rt_data['dose'].TissueHeterogeneityCorrection
-            else:
+            if isinstance(self.rt_data['dose'].TissueHeterogeneityCorrection, list):
                 heterogeneity_correction = ','.join(self.rt_data['dose'].TissueHeterogeneityCorrection)
+            else:
+                heterogeneity_correction = str(self.rt_data['dose'].TissueHeterogeneityCorrection)
         else:
             heterogeneity_correction = 'IMAGE'
 
@@ -634,10 +787,24 @@ class DICOM_Parser:
 
     @property
     def patient_sex(self):
+        """DICOM-RT Plan PatientSex
+
+        Returns
+        -------
+        str
+            PatientSex (0010,0040)
+        """
         return self.get_attribute('plan', 'PatientSex')
 
     @property
     def sim_study_date(self):
+        """Simulation study date
+
+        Returns
+        -------
+        str
+            StudyDate (0008,0020)
+        """
         if self.plan_over_rides['sim_study_date'] is not None:
             ans = self.plan_over_rides['sim_study_date']
         else:
@@ -645,11 +812,17 @@ class DICOM_Parser:
             if not ans:
                 ans = self.find_first_value_from_other_dicom_files('StudyDate')
                 ans = ans if ans else ''
-        ans = self.process_global_over_ride('sim_study_date', ans)
         return self.process_global_over_ride('sim_study_date', ans)
 
     @property
     def birth_date(self):
+        """ Birth date from DICOM-RT Plan
+
+        Returns
+        -------
+        str
+            PatientBirthDate (0010,0030)
+        """
         if self.plan_over_rides['birth_date'] is not None:
             ans = self.plan_over_rides['birth_date']
         else:
@@ -658,6 +831,13 @@ class DICOM_Parser:
 
     @property
     def age(self):
+        """Patient age at time of study date
+
+        Returns
+        -------
+        int
+            Patient age (years)
+        """
         if self.sim_study_date and self.birth_date:
             try:
                 dates = {'sim_study_date': None, 'birth_date': None}
@@ -675,6 +855,14 @@ class DICOM_Parser:
 
     @property
     def physician(self):
+        """Physician from DICOM-RT Plan
+
+        Returns
+        -------
+        str
+            PhysiciansOfRecord (0008,1048), ReferringPhysicianName
+            (0008,0090), or 'DEFAULT'
+        """
         if self.plan_over_rides['physician'] is not None:
             ans = self.plan_over_rides['physician']
         else:
@@ -685,6 +873,14 @@ class DICOM_Parser:
 
     @property
     def fxs(self):
+        """List of NumberOfFractionsPlanned
+
+        Returns
+        -------
+        list
+            NumberOfFractionsPlanned (300A,0078) for each
+            FractionGroupSequence (300A,0070)
+        """
         try:
             fx_grp_seq = self.rt_data['plan'].FractionGroupSequence
             return [int(float(fx_grp.NumberOfFractionsPlanned)) for fx_grp in fx_grp_seq]
@@ -693,16 +889,37 @@ class DICOM_Parser:
 
     @property
     def fxs_total(self):
+        """Total number of fractions across fraction groups
+
+        Returns
+        -------
+        int
+            Sum over fxs
+        """
         fxs = self.fxs
         if fxs:
             return sum(fxs)
 
     @property
     def fx_grp_count(self):
+        """Number of fraction groups
+
+        Returns
+        -------
+        int
+            Length of FractionGroupSequence (300A,0070)
+        """
         return len(self.rt_data['plan'].FractionGroupSequence)
 
     @property
     def patient_orientation(self):
+        """Patient Orientation as stored in DICOM-RT Plan
+
+        Returns
+        -------
+        str
+            PatientSetupSequence (300A,0180)
+        """
         # TODO: database assumes only one orientation (i.e., three characters)
         seq = self.get_attribute('plan', 'PatientSetupSequence')
         if seq is not None:
@@ -712,26 +929,68 @@ class DICOM_Parser:
 
     @property
     def plan_time_stamp(self):
+        """Datetime object of DICOM-RT Plan
+
+        Returns
+        -------
+        datetime
+            RTPlanDate (300A,0006) and RTPlanTime (300A,0007)
+        """
         return self.get_time_stamp('plan')
 
     @property
     def struct_time_stamp(self):
+        """Datetime object of DICOM-RT Structure
+
+        Returns
+        -------
+        datetime
+            StructureSetDate (3006,0008) and StructureSetTime (3006,0009)
+        """
         return self.get_time_stamp('structure')
 
     @property
     def dose_time_stamp(self):
+        """Datetime object of DICOM-RT Dose
+
+        Returns
+        -------
+        datetime
+            InstanceCreationDate (0008,0012) and InstanceCreationTime (0008,0013)
+        """
         return self.get_time_stamp('dose')
 
     @property
     def tps_manufacturer(self):
+        """TPS Manufacturer from DICOM-RT Plan
+
+        Returns
+        -------
+        str
+            Manufacturer (0008,0070)
+        """
         return self.get_attribute('plan', 'Manufacturer')
 
     @property
     def tps_software_name(self):
+        """TPS name from DICOM-RT Plan
+
+        Returns
+        -------
+        str
+            ManufacturerModelName (0008,1090)
+        """
         return self.get_attribute('plan', 'ManufacturerModelName')
 
     @property
     def tps_software_version(self):
+        """TPS software version
+
+        Returns
+        -------
+        str
+            SoftwareVersions (0018,1020)
+        """
         # Some TPSs may store the version in RT Dose rather than plan
         # SoftwareVersions may also be stored as a string rather than a list
         for rt_type in ['plan', 'dose', 'structure']:  # Check each rt_type until SoftwareVersions is found
@@ -743,6 +1002,13 @@ class DICOM_Parser:
 
     @property
     def tx_site(self):
+        """Treatment site
+
+        Returns
+        -------
+        str
+            RTPlanLabel (300A,0002)
+        """
         if self.plan_over_rides['tx_site'] is not None:
             ans = self.plan_over_rides['tx_site']
         elif self.poi_tx_site is not None:
@@ -753,24 +1019,65 @@ class DICOM_Parser:
 
     @property
     def brachy(self):
+        """Check if plan is a brachytherapy plan
+
+        Returns
+        -------
+        bool
+            True if DICOM-RT Plan has BrachyTreatmentType (300A, 0202)
+        """
         return hasattr(self.rt_data['plan'], 'BrachyTreatmentType')
 
     @property
     def brachy_type(self):
+        """Get the BrachyTreatmentType from DICOM-RT Plan
+
+        Returns
+        -------
+        str
+            BrachyTreatmentType (300A, 0202)
+        """
         return self.get_attribute('plan', 'BrachyTreatmentType')
 
     @property
     def proton(self):
+        """Check if plan is for an IonBeam
+
+        Returns
+        -------
+        bool
+            True if DICOM-RT Plan has IonBeamSequence (300A, 03A2)
+        """
         return hasattr(self.rt_data['plan'], 'IonBeamSequence')
 
     @property
     def beam_sequence(self):
+        """Get the beam sequence from DICOM-RT Plan
+
+        Returns
+        -------
+        list
+            Either BeamSequence (300A,0080) or IonBeamSequence (300A, 03A2)
+        """
         if hasattr(self.rt_data['plan'], 'BeamSequence'):
             return self.rt_data['plan'].BeamSequence
         elif hasattr(self.rt_data['plan'], 'IonBeamSequence'):
             return self.rt_data['plan'].IonBeamSequence
 
     def get_cp_sequence(self, beam_seq):
+        """Get the control point sequence for a beam
+
+        Parameters
+        ----------
+        beam_seq : pydicom beam seq element
+            Results from beam_sequence property
+
+        Returns
+        -------
+        list
+            Either ControlPointSequence (300A,0111) or IonBeamSequence (300A, 03A8)
+
+        """
         if hasattr(beam_seq, 'ControlPointSequence'):
             return beam_seq.ControlPointSequence
         elif hasattr(beam_seq, 'IonControlPointSequence'):
@@ -778,14 +1085,35 @@ class DICOM_Parser:
 
     @property
     def photon(self):
+        """Check if any beam is a photon beam
+
+        Returns
+        -------
+        bool
+            Check all beams for RadiationType (300A,00C6) of photon
+        """
         return self.is_beam_with_rad_type_in_plan('photon')
 
     @property
     def electron(self):
+        """Check if any beam is a photon beam
+
+        Returns
+        -------
+        bool
+            Check all beams for RadiationType (300A,00C6) of photon
+        """
         return self.is_beam_with_rad_type_in_plan('electron')
 
     @property
     def radiation_type(self):
+        """Get the radiation types used in this DICOM-RT Plan
+
+        Returns
+        -------
+        str
+            CSV of all radiation types
+        """
         rad_types = {'PHOTONS': self.photon,
                      'ELECTRONS': self.electron,
                      'PROTONS': self.proton,
@@ -795,6 +1123,14 @@ class DICOM_Parser:
 
     @property
     def tx_time(self):
+        """Get the treatment time (brachy only)
+
+        Returns
+        -------
+        str
+            Summation of ChannelTotalTime (300A,0286), formmated into a
+            hr:min:sec str
+        """
         if hasattr(self.rt_data['plan'], 'BrachyTreatmentType') and \
                 hasattr(self.rt_data['plan'], 'ApplicationSetupSequence'):
             seconds = 0
@@ -807,6 +1143,12 @@ class DICOM_Parser:
 
     @property
     def dose_grid_res(self):
+        """Dose grid resolution from DICOM-RT Dose
+
+        str
+            csv of x,y,z resolution using PixelSpacing (0028,0030) and
+            SliceThickness (0018,0050), each rounded to nearest 0.1mm
+        """
         try:
             dose_grid_resolution = [str(round(float(self.rt_data['dose'].PixelSpacing[0]), 1)),
                                     str(round(float(self.rt_data['dose'].PixelSpacing[1]), 1))]
@@ -817,6 +1159,22 @@ class DICOM_Parser:
             pass
 
     def process_global_over_ride(self, key, pre_over_ride_value):
+        """Get the value for ``key``, with over ride applied if applicable
+
+        Parameters
+        ----------
+        key : str
+            Key of DICOM_Parser.global_plan_over_rides
+        pre_over_ride_value : any
+            Original value of interest
+
+        Returns
+        -------
+        any
+            Apply DICOM_Parser.global_plan_over_rides to the provided key,
+            return original value if over ride not applicable
+
+        """
         if self.global_plan_over_rides:
             over_ride = self.global_plan_over_rides[key]
             if over_ride['value']:
@@ -826,7 +1184,15 @@ class DICOM_Parser:
 
     @property
     def plan_complexity(self):
-        plan_complexity = 0
+        """Get the sum of beam complexities
+
+        Returns
+        -------
+        float
+            Sum of beam complexities across fx groups (fx weighted) using
+            dvha.tools.mlc_analyzer
+        """
+        plan_complexity = 0.
         fx_counts = self.fxs
         for fx_index, fx in self.beam_data.items():
             fxs = fx_counts[fx_index]
@@ -841,12 +1207,18 @@ class DICOM_Parser:
     # DVH table data
     # ------------------------------------------------------------------------------
     def get_roi_type(self, key):
-        """
-        Get the ROI type as defined in DICOM (e.g., PTV, ORGAN, EXTERNAL, etc.)
-        :param key: index of ROI
-        :type key: int
-        :return: the roi type
-        :rtype: str
+        """Get the ROI type as defined in DICOM (e.g., PTV, ORGAN, EXTERNAL, etc.)
+
+        Parameters
+        ----------
+        key : int
+            index of ROI
+
+        Returns
+        -------
+        str
+            the roi type
+
         """
         if key in list(self.roi_over_ride['type']):
             return self.roi_over_ride['type'][key]
@@ -858,24 +1230,47 @@ class DICOM_Parser:
         return str(self.structure_name_and_type[key]['type']).upper()
 
     def reset_roi_type_over_ride(self, key):
+        """Set the roi_type over ride to ``None``
+
+        Parameters
+        ----------
+        key : int
+            index of ROI
+
+        """
         self.roi_over_ride['type'][key] = None
 
     def get_roi_name(self, key):
         """
-        :param key: the index of the roi
-        :return: roi name to be used in the database
-        :rtype: str
+
+        Parameters
+        ----------
+        key :
+            the index of the roi
+
+        Returns
+        -------
+        str
+            roi name to be used in the database
+
         """
         if key in list(self.roi_over_ride['name']):
             return clean_name(self.roi_over_ride['name'][key])
         return clean_name(self.structure_name_and_type[key]['name'])
 
     def get_physician_roi(self, key):
-        """
-        Look up the physician roi of the specified roi for this plan
-        :param key: the index of the roi
-        :return: physician roi or 'uncategorized'
-        :rtype: str
+        """Look up the physician roi of the specified roi for this plan
+
+        Parameters
+        ----------
+        key :
+            the index of the roi
+
+        Returns
+        -------
+        str
+            physician roi or 'uncategorized'
+
         """
         roi_name = self.get_roi_name(key)
         if self.database_rois.is_roi(roi_name):
@@ -884,11 +1279,18 @@ class DICOM_Parser:
         return 'uncategorized'
 
     def get_institutional_roi(self, key):
-        """
-        Look up the institutional roi of the specified roi for this plan
-        :param key: the index of the roi
-        :return: institutional roi or 'uncategorized'
-        :rtype: str
+        """Look up the institutional roi of the specified roi for this plan
+
+        Parameters
+        ----------
+        key :
+            the index of the roi
+
+        Returns
+        -------
+        str
+            institutional roi or 'uncategorized'
+
         """
         roi_name = self.get_roi_name(key)
         if self.database_rois.is_roi(roi_name):
@@ -900,9 +1302,12 @@ class DICOM_Parser:
 
     @property
     def ptv_exists(self):
-        """
-        Check if the plan has at least one PTV assigned
-        :rtype: bool
+        """Check if the plan has at least one PTV assigned
+
+        Returns
+        -------
+        bool
+            True if any roi is of type 'PTV'
         """
         if self.structure_name_and_type:
             for key in list(self.structure_name_and_type):
@@ -912,18 +1317,29 @@ class DICOM_Parser:
 
     @property
     def roi_names(self):
-        """
-        :return: roi_names for this plan per the plan (clean_name not applied)
-        :rtype: list
+        """Get all of the roi names
+
+        Returns
+        -------
+        list
+            roi_names for this plan per the plan (clean_name not applied)
+
         """
         return [self.get_roi_name(key) for key in list(self.structure_name_and_type)]
 
     def get_roi_key(self, roi_name):
-        """
-        Look-up the roi index for a given roi_name
-        :param roi_name: the ROI name to be looked-up
-        :return: the roi index or None
-        :rtype: int
+        """Look-up the roi index for a given roi_name
+
+        Parameters
+        ----------
+        roi_name :
+            the ROI name to be looked-up
+
+        Returns
+        -------
+        int
+            the roi index or None
+
         """
         roi_name = clean_name(roi_name)
         for key in list(self.structure_name_and_type):
@@ -932,20 +1348,34 @@ class DICOM_Parser:
 
     @property
     def ptv_names(self):
-        """
-        Scan all ROIs for PTVs
-        :return: PTV names
-        :rtype: list
+        """Scan all ROIs for PTVs
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        list
+            PTV names
+
         """
         if self.structure_name_and_type:
             return [self.get_roi_name(x) for x in list(self.structure_name_and_type) if self.get_roi_type(x) == 'PTV']
         return self.stored_values['ptv_names']
 
     def get_surface_area(self, key):
-        """
-        :param key: the index of the roi
-        :return: the surface area of the ROI in cm^2
-        :rtype: float
+        """Get the surface of area of an roi by key
+
+        Parameters
+        ----------
+        key :
+            the index of the roi
+
+        Returns
+        -------
+        float
+            the surface area of the ROI in cm^2
+
         """
         coord = self.dicompyler_data['structure'].GetStructureCoordinates(key)
         try:
@@ -955,11 +1385,19 @@ class DICOM_Parser:
             push_to_log(e, msg=msg)
 
     def get_dvh_geometries(self, key):
-        """
-        Collect ROI geometry information to be stored in the database
-        :param key: the index of the roi
-        :return: geometric information
-        :rtype: dict
+        """Collect ROI geometry information to be stored in the database
+
+        Parameters
+        ----------
+        key :
+            the index of the roi
+
+        Returns
+        -------
+        dict
+            geometric information with keys: 'roi_coord_str', 'surface_area',
+            'centroid', 'spread', 'cross_sections'
+
         """
 
         structure_coord = self.dicompyler_data['structure'].GetStructureCoordinates(key)
@@ -988,17 +1426,34 @@ class DICOM_Parser:
     # ------------------------------------------------------------------------------
     @property
     def init_param(self):
+        """Get initial parameters
+
+        Returns
+        -------
+        dict
+            Extract 'plan_file', 'structure_file', 'dose_file',
+            'dose_sum_file', 'plan_over_rides', 'global_plan_over_rides', and
+            'roi_over_ride' properties from DICOM_Parser mapped to a dict
+        """
         params = ['plan_file', 'structure_file', 'dose_file', 'dose_sum_file',
                   'plan_over_rides', 'global_plan_over_rides', 'roi_over_ride']
         return {key: getattr(self, key) for key in params}
 
     def get_attribute(self, rt_type, pydicom_attribute):
-        """
-        :param rt_type: plan. dose, or structure
-        :type rt_type: str
-        :param pydicom_attribute: attribute as specified in pydicom
-        :type pydicom_attribute: str or list of str
-        :return: pydicom value or None
+        """Short-hand function to get a pydicom attribute
+
+        Parameters
+        ----------
+        rt_type : str
+            plan, dose, or structure
+        pydicom_attribute : str or list of str
+            attribute as specified in pydicom
+
+        Returns
+        -------
+        type
+            pydicom value or None
+
         """
         if isinstance(pydicom_attribute, str):
             pydicom_attribute = [pydicom_attribute]
@@ -1008,11 +1463,18 @@ class DICOM_Parser:
                 return getattr(self.rt_data[rt_type], attribute)
 
     def get_time_stamp(self, rt_type):
-        """
-        Get the time stamp as specified in the DICOM file
-        :param rt_type: 'plan', 'structure' or 'dose'
-        :return: datetime
-        :type: datetime
+        """Get the time stamp as specified in the DICOM file
+
+        Parameters
+        ----------
+        rt_type :
+            'plan', 'structure' or 'dose'
+
+        Returns
+        -------
+        type
+            datetime
+
         """
 
         attribute = {'date': {'plan': 'RTPlanDate',
@@ -1035,12 +1497,19 @@ class DICOM_Parser:
             push_to_log(e, msg="DICOM_Parser: get_time_stamp failed")
 
     def is_beam_with_rad_type_in_plan(self, rad_type):
-        """
-        If a beam is photon or electron, beam data is stored in BeamSequence as opposed to IonBeamSequence
-        :param rad_type: the radiation type of the beam (e.g., 'photon' or 'electron')
-        :type rad_type: str
-        :return: True if any beam in plan is the specified rad_type
-        :rtype: bool
+        """If a beam is photon or electron, beam data is stored in
+        BeamSequence as opposed to IonBeamSequence
+
+        Parameters
+        ----------
+        rad_type : str
+            the radiation type of the beam (e.g., 'photon' or 'electron')
+
+        Returns
+        -------
+        bool
+            True if any beam in plan is the specified rad_type
+
         """
         if hasattr(self.rt_data['plan'], 'BeamSequence'):
             for beam in self.rt_data['plan'].BeamSequence:
@@ -1050,19 +1519,40 @@ class DICOM_Parser:
 
     @property
     def pre_import_data(self):
-        """
-        :return: Only the data needed for the pre import screen, pass to PreImportData
-        :rtype: dict
+        """Collect data for the Import DICOM window
+
+        Returns
+        -------
+        dict
+            Only the data needed for the pre import screen, pass to
+            PreImportData. Designed so actual DICOM files don't need to hang
+            out in memory during GUI importer
+
         """
         self.update_stored_values()
-        return {'file_set': {'plan': self.plan_file, 'dose': self.dose_file, 'structure': self.structure_file},
+        return {'file_set': {'plan': self.plan_file,
+                             'dose': self.dose_file,
+                             'structure': self.structure_file},
                 'stored_values': self.stored_values,
                 'dicompyler_rt_structures': self.structure_name_and_type,
                 'roi_map': self.database_rois}
 
     @staticmethod
     def get_structure_name_and_type(rt_struct_ds):
-        """Stripped down version of dicompylercore.dicomparser.GetStructures"""
+        """Stripped down version of dicompylercore's GetStructures
+
+        Parameters
+        ----------
+        rt_struct_ds : dicompylercore.dicomparser.DicomParser.ds
+            
+
+        Returns
+        -------
+        dict
+            structure data with keys of ROINumber, containing dicts with keys
+            of 'id', 'name', 'type'
+
+        """
         structures = {}
 
         # Locate the name and number of each ROI
@@ -1085,17 +1575,36 @@ class DICOM_Parser:
 
     @staticmethod
     def send_dvh_progress(current_plane, plane_count):
-        """
-        Callback for dicompyler-core dvh calculation
-        :param current_plane: the plane to be calculated
-        :type current_plane: int
-        :param plane_count: total number of planes to be calculated
-        :type plane_count: int
+        """Callback for dicompyler-core dvh calculation
+
+        Parameters
+        ----------
+        current_plane : int
+            the plane to be calculated
+        plane_count : int
+            total number of planes to be calculated
+
         """
         progress = float(current_plane) / float(plane_count)
         pub.sendMessage('update_dvh_progress', msg=progress)
 
     def find_first_value_from_other_dicom_files(self, attr):
+        """Scan ``other_dicom_files`` for CT, MR modality, report back
+        value for ``attr``
+
+        Parameters
+        ----------
+        attr : str
+            pydicom attribute
+
+        Returns
+        -------
+        any
+            Lookfs for the first CT or MR DICOM file for the ``attr``. This is
+            used, for example, to find a StudyDate when it is missing from
+            DICOM-RT Plan
+
+        """
         if self.other_dicom_files and self.study_instance_uid in self.other_dicom_files:
             for f in self.other_dicom_files[self.study_instance_uid]:
                 ds = pydicom.read_file(f)
@@ -1105,34 +1614,47 @@ class DICOM_Parser:
 
 
 class BeamParser:
-    """
-    This class is used to parse beam data needed for importing a plan into the database
+    """This class is used to parse beam data needed for importing a plan into
+    the database
+
+    Parameters
+    ----------
+    beam_data : BeamSequence element
+    ref_beam_data : ReferencedBeamSequence element
+    cp_seq : ControlPointSequence
+    mlc_analyzer_options : dvha.options.MLC_ANALYZER_OPTIONS
+
     """
     def __init__(self, beam_data, ref_beam_data, cp_seq, mlc_analyzer_options):
-        """
-        :param beam_data:
-        :param ref_beam_data:
-        :param cp_seq:
-        """
+
         self.beam_data = beam_data
         self.ref_beam_data = ref_beam_data
         self.cp_seq = cp_seq
         self.options = mlc_analyzer_options
 
-    ################################################################################
+    ##########################################################################
     # General beam parser tools
-    ################################################################################
+    ##########################################################################
     @staticmethod
     def get_data_attribute(data_obj, pydicom_attr, default=None, data_type=None):
-        """
-        Generic method to get the value of a pydicom dataset attribute
-        :param data_obj: a pydicom dataset
-        :param pydicom_attr: the attribute of interest
-        :type pydicom_attr: str
-        :param default: if attribute is not found, this value is returned
-        :param data_type: set to 'float' or 'int' to convert return value as specified
-        :type data_type: str
-        :return: the value of the pydicom attribute
+        """Generic method to get the value of a pydicom dataset attribute
+
+        Parameters
+        ----------
+        data_obj : pydicom dataset
+            a pydicom dataset
+        pydicom_attr : str
+            the attribute of interest
+        default : any
+            if attribute is not found, this value is returned
+        data_type : str
+            set to 'float' or 'int' to convert return value as specified
+
+        Returns
+        -------
+        any
+            the value of the pydicom attribute
+
         """
         if hasattr(data_obj, pydicom_attr):
             value = getattr(data_obj, pydicom_attr)
@@ -1144,29 +1666,45 @@ class BeamParser:
         return default
 
     def get_point_attribute(self, data_obj, pydicom_attr):
-        """
-        Generic method to get the value of a pydicom dataset attribute that represents a point
-        :param data_obj: a pydicom dataset
-        :param pydicom_attr: the attribute of interest
-        :return: a csv of the point values
-        :rtype: str
+        """Generic method to get the value of a pydicom dataset attribute that
+        represents a point
+
+        Parameters
+        ----------
+        data_obj : pydicom dataset
+            a pydicom dataset
+        pydicom_attr : str
+            the attribute of interest
+
+        Returns
+        -------
+        str
+            a csv of the point values
+
         """
         point = self.get_data_attribute(data_obj, pydicom_attr)
         if point:
             return ','.join([str(round(dim_value, 3)) for dim_value in point])
 
     def get_cp_attributes(self, pydicom_attr, force_float=False, force_int=False):
-        """
-        Generic method to get the values of a pydicom attribute for self.cp_seqeunce
-        This is used anytime you need to retrieve values that are specified for every control point
-        :param pydicom_attr: the attribute of interest
-        :type pydicom_attr: str
-        :param force_float: force values to be of type float
-        :type force_float: bool
-        :param force_int: force values to eb of type int
-        :type force_int: bool
-        :return: the values of the specified attribute across all control points
-        :rtype: list
+        """Generic method to get the values of a pydicom attribute for
+        ControlPointSequence. This is used anytime you need to retrieve values
+        that are specified for every control point
+
+        Parameters
+        ----------
+        pydicom_attr : str
+            the attribute of interest
+        force_float : bool, optional
+            force values to be of type float
+        force_int : bool, optional
+            force values to eb of type int
+
+        Returns
+        -------
+        list
+            the values of the specified attribute across all control points
+
         """
         values = []
         for cp in self.cp_seq:
@@ -1187,12 +1725,19 @@ class BeamParser:
         return values
 
     def get_angle_values(self, angle_type):
-        """
-        Collect data to be used for database import related to objects that have angles
-        :param angle_type: 'gantry', 'collimator' or 'couch'
-        :type angle_type: 'str
-        :return: start, end, rot_dir, range, min, and max values
-        :rtype: dict
+        """Collect data to be used for database import related to objects that
+        have angles
+
+        Parameters
+        ----------
+        angle_type : str
+            gantry', 'collimator' or 'couch'
+
+        Returns
+        -------
+        dict
+            start, end, rot_dir, range, min, and max values
+
         """
         angles = getattr(self, '%s_angles' % angle_type)
         return {'start': angles[0],
@@ -1204,11 +1749,19 @@ class BeamParser:
 
     @staticmethod
     def get_rotation_direction(rotation_list):
-        """
-        Given a list of rotation directions, return either the only direction or both with the initial direction first
-        :param rotation_list: rotation angles of a beam attribute
-        :return: concise description of rotation
-        :rtype: str
+        """Given a list of rotation directions, return either the only
+        direction, or both with the initial direction first
+
+        Parameters
+        ----------
+        rotation_list : list
+            rotation angles of a beam attribute
+
+        Returns
+        -------
+        str
+            concise description of rotation
+
         """
         if not rotation_list:
             return None
@@ -1216,15 +1769,30 @@ class BeamParser:
             return rotation_list[0]
         return ['CC/CW', 'CW/CC'][rotation_list[0] == 'CW']
 
-    ################################################################################
+    ###########################################################################
     # Properties
-    ################################################################################
+    ###########################################################################
     @property
     def beam_number(self):
+        """Get the beam number
+
+        Returns
+        -------
+        int
+            BeamNumber (300A,00C0) converted to an int
+        """
         return int(self.beam_data.BeamNumber)
 
     @property
     def beam_name(self):
+        """Get the beam name
+
+        Returns
+        -------
+        str
+            Returns BeamDescription (300A,00C3), BeamName (300A,00C2), or
+            BeamNumber (300A,00C0), in order of priority
+        """
         if hasattr(self.beam_data, 'BeamDescription'):
             return self.beam_data.BeamDescription
         if hasattr(self.beam_data, 'BeamName'):
@@ -1233,99 +1801,275 @@ class BeamParser:
 
     @property
     def treatment_machine(self):
+        """Get the treatment for this beam
+
+        Returns
+        -------
+        str
+            TreatmentMachineName (300A,00B2)
+        """
         return self.get_data_attribute(self.beam_data, 'TreatmentMachineName')
 
     @property
     def beam_dose(self):
+        """Get the beam dose
+
+        Returns
+        -------
+        float
+            BeamDose (300A,0084)
+        """
         return self.get_data_attribute(self.ref_beam_data, 'BeamDose', default=0., data_type='float')
 
     @property
     def beam_mu(self):
+        """Get the beam monitor units
+
+        Returns
+        -------
+        float
+            BeamMeterset (300A,0086)
+        """
         return self.get_data_attribute(self.ref_beam_data, 'BeamMeterset', default=0., data_type='float')
 
     @property
     def beam_dose_pt(self):
+        """Get the beam dose specification point
+
+        Returns
+        -------
+        str
+            Value from BeamDoseSpecificationPoint (300A,0082).
+            NOTE: DICOM has since retired this tag.
+        """
         return self.get_point_attribute(self.ref_beam_data, 'BeamDoseSpecificationPoint')
 
     @property
     def isocenter(self):
+        """Get the isocenter coordintes
+
+        Returns
+        -------
+        str
+            csv of the isocenter coordinates in IsocenterPosition (300A,012C),
+            for the first control point
+        """
         return self.get_point_attribute(self.cp_seq[0], 'IsocenterPosition')
 
     @property
     def isocenter_np(self):
+        """Get the isocenter position as a numpy array
+
+        Returns
+        -------
+        np.ndarray
+            IsocenterPosition (300A,012C) for the first control point
+        """
         return np.array(self.get_data_attribute(self.cp_seq[0], 'IsocenterPosition'))
 
     @property
     def beam_type(self):
+        """Get the beam type
+
+        Returns
+        -------
+        str
+            BeamType (300A,00C4)
+        """
         return self.get_data_attribute(self.beam_data, 'BeamType')
 
     @property
     def radiation_type(self):
+        """Get the radiation type
+
+        Returns
+        -------
+        str
+            RadiationType (300A,00C6)
+        """
         return self.get_data_attribute(self.beam_data, 'RadiationType')
 
     @property
     def scan_mode(self):
+        """Returns the scan mode (proton only)
+
+        Returns
+        -------
+        str
+            ScanMode (300A,0308)
+        """
         return self.get_data_attribute(self.beam_data, 'ScanMode')
 
     @property
     def scan_spot_count(self):
+        """Get the number of scan spot positions (proton only)
+
+        Returns
+        -------
+        int
+            Sum of NumberOfScanSpotPositions (300A,0392)
+        """
         if hasattr(self.cp_seq[0], 'NumberOfScanSpotPositions'):
             return sum([int(cp.NumberOfScanSpotPositions) for cp in self.cp_seq]) / 2
 
     @property
     def energies(self):
+        """Collect the nominal beam energies across control points
+
+        Returns
+        -------
+        list
+            NominalBeamEnergy (300A,0114) for each control point
+        """
         return self.get_cp_attributes('NominalBeamEnergy')
 
     @property
     def energy_min(self):
+        """Get the minimum energy control point energy
+
+        Returns
+        -------
+        float
+            Minimum value in BeamParser.energies, rounded to 2 decimals
+        """
         return round(min(self.energies), 2)
 
     @property
     def energy_max(self):
+        """Get the maximum energy control point energy
+
+        Returns
+        -------
+        float
+            Maximum value in BeamParser.energies, rounded to 2 decimals
+        """
         return round(max(self.energies), 2)
 
     @property
     def gantry_angles(self):
+        """Get all gantry angles
+
+        Returns
+        -------
+        list
+            GantryAngle (300A,011E) for each control point
+        """
         return self.get_cp_attributes('GantryAngle', force_float=True)
 
     @property
     def collimator_angles(self):
+        """Get all collimator angles
+
+        Returns
+        -------
+        list
+            BeamLimitingDeviceAngle (300A,0120) for each control point
+        """
         return self.get_cp_attributes('BeamLimitingDeviceAngle', force_float=True)
 
     @property
     def couch_angles(self):
+        """Get all couch angles
+
+        Returns
+        -------
+        list
+            PatientSupportAngle (300A,0122) for each control point
+        """
         return self.get_cp_attributes('PatientSupportAngle', force_float=True)
 
     @property
     def gantry_rot_dirs(self):
+        """Get all gantry rotation angles
+
+        Returns
+        -------
+        list
+            GantryRotationDirection (300A,011F) for each control point
+        """
         return self.get_cp_attributes('GantryRotationDirection', force_float=True)
 
     @property
     def collimator_rot_dirs(self):
+        """Get all collimator rotation angles
+
+        Returns
+        -------
+        list
+            BeamLimitingDeviceRotationDirection (300A,0121) for each control
+            point
+        """
         return self.get_cp_attributes('BeamLimitingDeviceRotationDirection')
 
     @property
     def couch_rot_dirs(self):
+        """Get all couch rotation angles
+
+        Returns
+        -------
+        list
+            PatientSupportRotationDirection (300A,0123) for each control point
+        """
         return self.get_cp_attributes('PatientSupportRotationDirection')
 
     @property
     def gantry_values(self):
+        """Get all gantry values
+
+        Returns
+        -------
+        dict
+            A collection of gantry values with keys of 'start', 'end',
+            'rot_dir', 'range', 'min' and 'max'
+        """
         return self.get_angle_values('gantry')
 
     @property
     def collimator_values(self):
+        """Get all collimator values
+
+        Returns
+        -------
+        dict
+            A collection of collimator values with keys of 'start', 'end',
+            'rot_dir', 'range', 'min' and 'max'
+        """
         return self.get_angle_values('collimator')
 
     @property
     def couch_values(self):
+        """Get all couch values
+
+        Returns
+        -------
+        dict
+            A collection of couch values with keys of 'start', 'end',
+            'rot_dir', 'range', 'min' and 'max'
+        """
         return self.get_angle_values('couch')
 
     @property
     def is_arc(self):
-        return bool(self.get_angle_values('gantry')['rot_dir'])
+        """Get whether beam is an arc or not
+
+        Returns
+        -------
+        bool
+            True if beam contains rotation directions
+        """
+
+        return bool(self.gantry_values['rot_dir'])
 
     @property
     def tx_modality(self):
+        """Get the tretament modality
+
+        Returns
+        -------
+        str
+            Returns BeamParser.radiation_type, modified with 3D or arc if
+            BeamParser.is_arc is true
+        """
         rad_type = str(self.radiation_type)
         if not rad_type:
             return None
@@ -1335,16 +2079,39 @@ class BeamParser:
 
     @property
     def control_point_count(self):
+        """Get the number of control points
+
+        Returns
+        -------
+        int
+            NumberOfControlPoints (300A,0110)
+        """
         return int(self.get_data_attribute(self.beam_data, 'NumberOfControlPoints'))
 
     @property
     def ssd(self):
+        """Get the SSD of the beam
+
+        Returns
+        -------
+        float
+            SourceToSurfaceDistance (300A,0130), if beam is an arc then this
+            will return the average over all control points
+        """
         ssds = self.get_cp_attributes('SourceToSurfaceDistance', force_float=True)
         if ssds:
             return round(float(np.average(ssds))/10., 2)
 
     @property
     def beam_mu_per_deg(self):
+        """Beam monitor units divided by range of rotation (deg)
+
+        Returns
+        -------
+        float
+            BeamParser.beam_mu / BeamParser.gantry_values['range'] rounded
+            to 2 decimals
+        """
         try:
             return round(self.beam_mu / self.gantry_values['range'], 2)
         except Exception:
@@ -1352,6 +2119,14 @@ class BeamParser:
 
     @property
     def beam_mu_per_cp(self):
+        """Beam monitor units divided by number of control points
+
+        Returns
+        -------
+        float
+            BeamParser.beam_mu / BeamParser.control_point_count rounded
+            to 2 decimals
+        """
         try:
             return round(self.beam_mu / self.control_point_count, 2)
         except Exception:
@@ -1359,6 +2134,14 @@ class BeamParser:
 
     @property
     def mlc_stat_data(self):
+        """A collection of MLC metrics
+
+        Returns
+        -------
+        dict
+            MLC metrics with keys of 'area', 'x_perim', 'y_perim', 'perim',
+            'cmp_score', 'cp_mu' based on dvha.tools.mlc_analyzer
+        """
         mlc_keys = ['area', 'x_perim', 'y_perim', 'perim', 'cmp_score', 'cp_mu']
         try:
             mlc_summary_data = mlca(self.beam_data, self.beam_mu, ignore_zero_mu_cp=True, **self.options).summary
@@ -1372,21 +2155,26 @@ class BeamParser:
 
 
 class RxParser:
-    """
-    This class is used to parse rx data needed for importing a plan into the database
+    """This class is used to parse rx data needed for importing a plan into the database
+
+    Parameters
+    ----------
+    rt_plan : pydicom.DataSet
+        the pydicom dataset object from reading the RT Plan DICOM file
+    dicompyler_plan : dicompylercore.dicomparser.DicomParser
+        the dicompyler-core object from reading the RT Plan DICOM file
+    rt_structure : pydicom.DataSet
+        the pydicom dataset object from reading the RT Structure DICOM file
+    fx_grp_index : int
+        the index of the fraction group associated with the rx to be parsed
+    pinnacle_rx_data : dict
+        prescription data extracted from dummy POIs
+    study_instance_uid : str
+        The study instance UID of the associated plan
+
     """
     def __init__(self, rt_plan, dicompyler_plan, rt_structure, fx_grp_index, pinnacle_rx_data, study_instance_uid):
-        """
-        :param rt_plan: the pydicom dataset object from reading the RT Plan DICOM file
-        :param dicompyler_plan: the dicompyler-core object from readying the RT Plan DICOM file
-        :param rt_structure: the pydicom dataset object from reading the RT Structure DICOM file
-        :param fx_grp_index: the index of the fraction group associated with the rx to be parsed
-        :type fx_grp_index: int
-        :param pinnacle_rx_data: prescription data extracted from dummy POIs
-        :type pinnacle_rx_data: dict
-        :param study_instance_uid: The study instance UID of the associated plan.
-        :type study_instance_uid: str
-        """
+
         self.rt_plan = rt_plan
         self.dicompyler_plan = dicompyler_plan
         self.rt_structure = rt_structure
@@ -1398,35 +2186,61 @@ class RxParser:
         if pinnacle_rx_data and fx_grp_index+1 in list(pinnacle_rx_data):
             self.pinnacle_rx_data = pinnacle_rx_data[fx_grp_index+1]
 
-    ################################################################################
+    ###########################################################################
     # General rx parser tools
-    ################################################################################
+    ###########################################################################
     def get_dose_ref_seq_index(self):
+        """ """
         if self.has_dose_ref:
             for i, dose_ref in enumerate(self.rt_plan.DoseReferenceSequence):
                 if dose_ref.DoseReferenceNumber == self.fx_grp_number:
                     return i
 
     def get_dose_ref_attr(self, pydicom_attr):
+        """Get a value from DoseReferenceSequence
+
+        Parameters
+        ----------
+        pydicom_attr : str
+            Any attribute in DoseReferenceSequence
+
+        Returns
+        -------
+        any
+            Value of ``pydicom_attr`` from DoseReferenceSequence (300A,0010)
+            based on RxParser.dose_ref_index
+        """
         if self.has_dose_ref and self.dose_ref_index is not None:
             dose_ref_data = self.rt_plan.DoseReferenceSequence[self.dose_ref_index]
             if hasattr(dose_ref_data, pydicom_attr):
                 return getattr(dose_ref_data, pydicom_attr)
 
-    ################################################################################
+    ###########################################################################
     # Properties
-    ################################################################################
+    ###########################################################################
     @property
     def plan_name(self):
+        """Get the plan name
+
+        Returns
+        -------
+        str
+            RTPlanLabel (300A,0002)
+        """
         if hasattr(self.rt_plan, 'RTPlanLabel'):
             return self.rt_plan.RTPlanLabel
 
     @property
     def fx_grp_number(self):
-        """
-        If there are multiple RT Plan files for a given study instance uid, this function will ensure fx_grp_number
-        is unique
-        :rtype: int
+        """If there are multiple RT Plan files for a given study instance uid,
+        this function will ensure fx_grp_number is unique
+
+        Returns
+        -------
+        int
+            FractionGroupNumber (300A,0071) plus the max ``fx_grp_number``
+            stored in the SQL database for this study instance uid
+
         """
         with DVH_SQL() as cnx:
             fraction_group_start = cnx.get_max_value('Rxs', 'fx_grp_number',
@@ -1437,16 +2251,39 @@ class RxParser:
 
     @property
     def fx_grp_name(self):
+        """Get the fraction group name
+
+        Returns
+        -------
+        str
+            RxParser.fx_grp_number prepended by 'FxGrp '
+        """
         if self.pinnacle_rx_data:
             return self.pinnacle_rx_data['fx_grp_name']
         return "FxGrp %s" % self.fx_grp_number
 
     @property
     def has_dose_ref(self):
+        """Check if DICOM-RT Plan as a DoseReferenceSequence
+
+        Returns
+        -------
+        bool
+            True if DICOM-RT Plan has DoseReferenceSequence (300A,0010)
+        """
         return hasattr(self.rt_plan, 'DoseReferenceSequence')
 
     @property
     def rx_dose(self):
+        """Get the prescription dose
+
+        Returns
+        -------
+        float
+            In order of priority, get the prescription dose from
+            RxParser.pinnacle_rx_data, TargetPrescriptionDose (300A,0026),
+            prescription dose reported by dicompyler-core
+        """
         if self.pinnacle_rx_data:
             return self.pinnacle_rx_data['rx_dose']
         ans = self.get_dose_ref_attr('TargetPrescriptionDose')
@@ -1456,15 +2293,37 @@ class RxParser:
 
     @property
     def rx_percentage(self):
+        """Get the prescription (Pinnacle only)
+
+        Returns
+        -------
+        float
+            Get RxParser.pinnacle_rx_data['rx_percentage'] if available
+        """
         if self.pinnacle_rx_data:
             return self.pinnacle_rx_data['rx_percentage']
 
     @property
     def fx_count(self):
+        """Get the number of planned fractions
+
+        Returns
+        -------
+        int
+            NumberOfFractionsPlanned (300A,0078)
+        """
         return int(self.fx_grp_data.NumberOfFractionsPlanned)
 
     @property
     def fx_dose(self):
+        """Get the fraction dose
+
+        Returns
+        -------
+        float
+            RxParser.pinnacle_rx_data['fx_dose'] if available, otherwise
+            RxParser.rx_dose / RxParser.fx_count rounded to 2 decimals
+        """
         if self.pinnacle_rx_data:
             return self.pinnacle_rx_data['fx_dose']
         try:
@@ -1474,12 +2333,29 @@ class RxParser:
 
     @property
     def normalization_method(self):
+        """Get the normalization method
+
+        Returns
+        -------
+        str
+            RxParser.pinnacle_rx_data['normalization_method'] if available,
+            otherwise DoseReferenceStructureType (300A,0014)
+        """
         if self.pinnacle_rx_data:
             return self.pinnacle_rx_data['normalization_method']
         return self.get_dose_ref_attr('DoseReferenceStructureType')
 
     @property
     def normalization_object(self):
+        """Get the normalization object
+
+        Returns
+        -------
+        str
+            In order of priority, RxParser.pinnacle_rx_data['normalization_object'],
+            `COORDINATE` if normalization_method matches, or
+            ManufacturerModelName
+        """
         if self.pinnacle_rx_data:
             return self.pinnacle_rx_data['normalization_object']
         if self.normalization_method:
@@ -1491,11 +2367,25 @@ class RxParser:
 
     @property
     def beam_count(self):
+        """Get the number of beams
+
+        Returns
+        -------
+        int
+            NumberOfBeams (300A,0080)
+        """
         if hasattr(self.fx_grp_data, 'NumberOfBeams'):
             return int(self.fx_grp_data.NumberOfBeams)
 
     @property
     def beam_numbers(self):
+        """Get the beam numbers for the plan
+
+        Returns
+        -------
+        list
+            ReferencedBeamNumber (300C,0006)
+        """
         return [ref_beam.ReferencedBeamNumber for ref_beam in self.fx_grp_data.ReferencedBeamSequence]
 
 

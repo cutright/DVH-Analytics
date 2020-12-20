@@ -29,6 +29,17 @@ COLUMNS = ['Patient Name', 'Patient MRN', 'Study Instance UID', 'TPS', 'Plan nam
 
 
 def get_options(over_rides):
+    """
+
+    Parameters
+    ----------
+    over_rides :
+        
+
+    Returns
+    -------
+
+    """
     options = {k: v for k, v in DEFAULT_OPTIONS.items()}
     for key, value in over_rides.items():
         if key in list(options):
@@ -42,14 +53,20 @@ if speedups.available:
 
 
 class Plan:
-    """
-    Collect plan information from an RT Plan DICOM file.
+    """Collect plan information from an RT Plan DICOM file.
     Automatically parses fraction data with FxGroup class
+
+    Parameters
+    ----------
+    rt_plan_file :
+        absolute file path of a DICOM RT Plan file
+
+    Returns
+    -------
+
     """
     def __init__(self, rt_plan_file, **kwargs):
-        """
-        :param rt_plan_file: absolute file path of a DICOM RT Plan file
-        """
+
         self.rt_plan_file = rt_plan_file
         rt_plan = pydicom.read_file(rt_plan_file)
 
@@ -106,17 +123,22 @@ class Plan:
 
 
 class FxGroup:
-    """
-    Collect fraction group information from fraction group and beam sequences of a pydicom RT Plan dataset
+    """Collect fraction group information from fraction group and beam sequences of a pydicom RT Plan dataset
     Automatically parses beam data with Beam class
+
+    Parameters
+    ----------
+    fx_grp_seq : Sequence
+        fraction group sequence object
+    plan_beam_sequences : Sequence
+        beam sequence object
+
+    Returns
+    -------
+
     """
     def __init__(self, fx_grp_seq, plan_beam_sequences, **kwargs):
-        """
-        :param fx_grp_seq: fraction group sequence object
-        :type fx_grp_seq: Sequence
-        :param plan_beam_sequences: beam sequence object
-        :type plan_beam_sequences: Sequence
-        """
+
         self.fxs = getattr(fx_grp_seq, 'NumberOfFractionsPlanned', 'UNKNOWN')
 
         self.options = get_options(kwargs)
@@ -163,19 +185,23 @@ class FxGroup:
 
 
 class Beam:
-    """
-    Collect beam information from a beam in a beam sequence of a pydicom RT Plan dataset
+    """Collect beam information from a beam in a beam sequence of a pydicom RT Plan dataset
     Automatically parses control point data with ControlPoint class
+
+    Parameters
+    ----------
+    beam_dataset : Dataset
+        a pydicom beam sequence object
+    meter_set : float
+        the monitor units for the beam_dataset
+    ignore_zero_mu_cp : bool
+        If True, skip over zero MU control points (e.g., as in Step-N-Shoot beams)
+
+    Returns
+    -------
+
     """
     def __init__(self, beam_dataset, meter_set, ignore_zero_mu_cp=False, **kwargs):
-        """
-        :param beam_dataset: a pydicom beam sequence object
-        :type beam_dataset: Dataset
-        :param meter_set: the monitor units for the beam_dataset
-        :type meter_set: float
-        :param ignore_zero_mu_cp: If True, skip over zero MU control points (e.g., as in Step-N-Shoot beams)
-        :type ignore_zero_mu_cp: bool
-        """
 
         self.options = get_options(kwargs)
 
@@ -245,30 +271,39 @@ class Beam:
 
     @property
     def mlc_borders(self):
+        """ """
         return [cp.mlc_borders for cp in self.control_point]
 
     @property
     def gantry_angle(self):
+        """ """
         return [float(cp.GantryAngle) for cp in self.cp_seq if hasattr(cp, 'GantryAngle')]
 
     @property
     def collimator_angle(self):
+        """ """
         return [float(cp.BeamLimitingDeviceAngle) for cp in self.cp_seq if hasattr(cp, 'BeamLimitingDeviceAngle')]
 
     @property
     def couch_angle(self):
+        """ """
         return [float(cp.PatientSupportAngle) for cp in self.cp_seq if hasattr(cp, 'PatientSupportAngle')]
 
 
 class ControlPoint:
-    """
-    Collect control point information from a ControlPointSequence in a beam dataset of a pydicom RT Plan dataset
+    """Collect control point information from a ControlPointSequence in a beam dataset of a pydicom RT Plan dataset
+
+    Parameters
+    ----------
+    cp_seq : Sequence
+        control point sequence object
+
+    Returns
+    -------
+
     """
     def __init__(self, cp_seq, leaf_boundaries, **kwargs):
-        """
-        :param cp_seq: control point sequence object
-        :type cp_seq: Sequence
-        """
+
 
         self.leaf_boundaries = leaf_boundaries
         self.options = get_options(kwargs)
@@ -303,11 +338,17 @@ class ControlPoint:
 
     @property
     def mlc_borders(self):
-        """
-        This function returns the boundaries of each MLC leaf for purposes of displaying a beam's eye view using
+        """This function returns the boundaries of each MLC leaf for purposes of displaying a beam's eye view using
         bokeh's quad() glyph
-        :return: the boundaries of each leaf within the control point
-        :rtype: dict
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        dict
+            the boundaries of each leaf within the control point
+
         """
         if self.mlc is not None:
             top = self.leaf_boundaries[0:-1] + self.leaf_boundaries[0:-1]
@@ -326,10 +367,16 @@ class ControlPoint:
 
     @property
     def aperture(self):
-        """
-        This function will return the outline of MLCs within jaws
-        :return: a shapely object of the complete MLC aperture as one shape (including MLC overlap)
-        :rtype: Polygon
+        """This function will return the outline of MLCs within jaws
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        Polygon
+            a shapely object of the complete MLC aperture as one shape (including MLC overlap)
+
         """
         lb = self.leaf_boundaries
         mlc = self.mlc
@@ -360,10 +407,16 @@ class ControlPoint:
 
     @property
     def jaws(self):
-        """
-        Get the jaw positions of a control point
-        :return: jaw positions (or max field size in lieu of a jaw)
-        :rtype: dict
+        """Get the jaw positions of a control point
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        dict
+            jaw positions (or max field size in lieu of a jaw)
+
         """
 
         jaws = {}

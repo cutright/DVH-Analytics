@@ -34,19 +34,35 @@ IGNORED_FILES = ['.ds_store']
 
 
 def is_windows():
+    """ """
     return wx.Platform == '__WXMSW__'
 
 
 def set_msw_background_color(window_obj, color='lightgrey'):
+    """
+
+    Parameters
+    ----------
+    window_obj :
+        
+    color :
+         (Default value = 'lightgrey')
+
+    Returns
+    -------
+
+    """
     if is_windows():
         window_obj.SetBackgroundColour(color)
 
 
 def is_linux():
+    """ """
     return wx.Platform == '__WXGTK__'
 
 
 def is_mac():
+    """ """
     return wx.Platform == '__WXMAC__'
 
 
@@ -58,10 +74,16 @@ def initialize_directories():
 
 
 def write_sql_connection_settings(config):
-    """
-    Create a file storing the SQL login credentials
-    :param config: contains values for 'host', 'dbname', 'port' and optionally 'user' and 'password'
-    :type config: dict
+    """Create a file storing the SQL login credentials
+
+    Parameters
+    ----------
+    config : dict
+        contains values for 'host', 'dbname', 'port' and optionally 'user' and 'password'
+
+    Returns
+    -------
+
     """
     # TODO: Make this more secure
 
@@ -73,16 +95,23 @@ def write_sql_connection_settings(config):
 
 
 def scale_bitmap(bitmap, width, height):
-    """
-    Used to scale tool bar images for MSW and GTK, MAC automatically scales
-    :param bitmap: bitmap to be scaled
-    type bitmap: Bitmap
-    :param width: width of output bitmap
-    :type width: int
-    :param height: height of output bitmap
-    :type height: int
-    :return: scaled bitmap
-    :rtype: Bitmap
+    """Used to scale tool bar images for MSW and GTK, MAC automatically scales
+
+    Parameters
+    ----------
+    bitmap :
+        bitmap to be scaled
+        type bitmap: Bitmap
+    width : int
+        width of output bitmap
+    height : int
+        height of output bitmap
+
+    Returns
+    -------
+    Bitmap
+        scaled bitmap
+
     """
     image = wx.Bitmap.ConvertToImage(bitmap)
     image = image.Scale(width, height, wx.IMAGE_QUALITY_HIGH)
@@ -90,32 +119,47 @@ def scale_bitmap(bitmap, width, height):
 
 
 def get_tree_ctrl_image(file_path, file_type=wx.BITMAP_TYPE_PNG, width=16, height=16):
-    """
-    Create an image top be used in the TreeCtrl from the provided file_path
-    :param file_path: absolute file_path of image
-    :type file_path: str
-    :param file_type: specify the image format (PNG by default)
-    :param width: width of output bitmap (16 default)
-    :type width: int
-    :param height: height of output bitmap (16 default)
-    :type height: int
-    :return: scaled image for TreeCtrl
-    :rtype: Image
+    """Create an image top be used in the TreeCtrl from the provided file_path
+
+    Parameters
+    ----------
+    file_path : str
+        absolute file_path of image
+    file_type :
+        specify the image format (PNG by default)
+    width : int
+        width of output bitmap (16 default)
+    height : int
+        height of output bitmap (16 default)
+
+    Returns
+    -------
+    Image
+        scaled image for TreeCtrl
+
     """
     return wx.Image(file_path, file_type).Scale(width, height).ConvertToBitmap()
 
 
 def get_file_paths(start_path, search_subfolders=False, extension=None, return_dict=False):
-    """
-    Get a list of absolute file paths for a given directory
-    :param start_path: initial directory
-    :type start_path str
-    :param search_subfolders: optionally search all sub folders
-    :type search_subfolders: bool
-    :param extension: optionally include only files with specified extension
-    :type extension: str
-    :return: absolute file paths
-    :rtype: list or dict
+    """Get a list of absolute file paths for a given directory
+
+    Parameters
+    ----------
+    start_path : str
+        initial directory
+    search_subfolders : bool
+        optionally search all sub folders (Default value = False)
+    extension : str
+        optionally include only files with specified extension (Default value = None)
+    return_dict :
+         (Default value = False)
+
+    Returns
+    -------
+    list or dict
+        absolute file paths
+
     """
     if isdir(start_path):
         file_paths = []
@@ -144,12 +188,21 @@ def get_file_paths(start_path, search_subfolders=False, extension=None, return_d
 
 
 def get_study_instance_uids(**kwargs):
-    """
-    Get lists of study instance uids in the SQL database that meet provided conditions
+    """Get lists of study instance uids in the SQL database that meet provided conditions
     The values return in the 'common' key are used for the DVH class in models.dvh.py
-    :param kwargs: keys are SQL table names and the values are conditions in SQL syntax
-    :return: study instance uids for each table, uids found in all tables, and a list of unique uids
-    :rtype: dict
+
+    Parameters
+    ----------
+    kwargs :
+        keys are SQL table names and the values are conditions in SQL syntax
+    **kwargs :
+        
+
+    Returns
+    -------
+    dict
+        study instance uids for each table, uids found in all tables, and a list of unique uids
+
     """
     with DVH_SQL() as cnx:
         uids = {table: cnx.get_unique_values(table, 'study_instance_uid', condition)
@@ -164,14 +217,20 @@ def get_study_instance_uids(**kwargs):
 
 
 def is_uid_in_all_keys(uid, uids):
-    """
-    Check if uid is found in each of the uid lists for each SQL table
-    :param uid: study instance uid
-    :type uid: str
-    :param uids: lists of study instance uids organized by SQL table
-    :type uids: dict
-    :return: True only if uid is found in each of the tables
-    :rtype: bool
+    """Check if uid is found in each of the uid lists for each SQL table
+
+    Parameters
+    ----------
+    uid : str
+        study instance uid
+    uids : dict
+        lists of study instance uids organized by SQL table
+
+    Returns
+    -------
+    bool
+        True only if uid is found in each of the tables
+
     """
 
     table_answer = {}
@@ -192,15 +251,22 @@ def is_uid_in_all_keys(uid, uids):
 
 
 def flatten_list_of_lists(some_list, remove_duplicates=False, sort=False):
-    """
-    Convert a list of lists into a list of all values
-    :param some_list: a list such that each value is a list
-    :type some_list: list
-    :param remove_duplicates: if True, return a unique list, otherwise keep duplicated values
-    :type remove_duplicates: bool
-    :param sort: if True, sort the list
-    :type sort: bool
-    :return: a new object containing all values in teh provided
+    """Convert a list of lists into a list of all values
+
+    Parameters
+    ----------
+    some_list : list: list
+        a list such that each value is a list
+    remove_duplicates : bool
+        if True, return a unique list, otherwise keep duplicated values (Default value = False)
+    sort : bool
+        if True, sort the list (Default value = False)
+
+    Returns
+    -------
+    type
+        a new object containing all values in teh provided
+
     """
     data = [item for sublist in some_list for item in sublist]
 
@@ -220,13 +286,21 @@ def flatten_list_of_lists(some_list, remove_duplicates=False, sort=False):
 
 
 def collapse_into_single_dates(x, y):
-    """
-    Function used for a time plot to convert multiple values into one value, while retaining enough information
+    """Function used for a time plot to convert multiple values into one value, while retaining enough information
     to perform a moving average over time
-    :param x: a list of dates in ascending order
-    :param y: a list of values and can use the '+' operator as a function of date
-    :return: a unique list of dates, sum of y for that date, and number of original points for that date
-    :rtype: dict
+
+    Parameters
+    ----------
+    x :
+        a list of dates in ascending order
+    y :
+        a list of values and can use the '+' operator as a function of date
+
+    Returns
+    -------
+    dict
+        a unique list of dates, sum of y for that date, and number of original points for that date
+
     """
 
     # average daily data and keep track of points per day
@@ -246,14 +320,20 @@ def collapse_into_single_dates(x, y):
 
 
 def moving_avg(xyw, avg_len):
-    """
-    Calculate a moving average for a given averaging length
-    :param xyw: output from collapse_into_single_dates
-    :type xyw: dict
-    :param avg_len: average of these number of points, i.e., look-back window
-    :type avg_len: int
-    :return: list of x values, list of y values
-    :rtype: tuple
+    """Calculate a moving average for a given averaging length
+
+    Parameters
+    ----------
+    xyw : dict
+        output from collapse_into_single_dates
+    avg_len : int
+        average of these number of points, i.e., look-back window
+
+    Returns
+    -------
+    tuple
+        list of x values, list of y values
+
     """
     cumsum, moving_aves, x_final = [0], [], []
 
@@ -268,6 +348,19 @@ def moving_avg(xyw, avg_len):
 
 
 def convert_value_to_str(value, rounding_digits=2):
+    """
+
+    Parameters
+    ----------
+    value :
+        
+    rounding_digits :
+         (Default value = 2)
+
+    Returns
+    -------
+
+    """
     try:
         formatter = "%%0.%df" % rounding_digits
         return formatter % value
@@ -276,12 +369,18 @@ def convert_value_to_str(value, rounding_digits=2):
 
 
 def get_selected_listctrl_items(list_control):
-    """
-    Get the indices of the currently selected items of a wx.ListCtrl object
-    :param list_control: any wx.ListCtrl object
-    :type list_control: ListCtrl
-    :return: indices of selected items
-    :rtype: list
+    """Get the indices of the currently selected items of a wx.ListCtrl object
+
+    Parameters
+    ----------
+    list_control : ListCtrl
+        any wx.ListCtrl object
+
+    Returns
+    -------
+    list
+        indices of selected items
+
     """
     selection = []
 
@@ -297,13 +396,19 @@ def get_selected_listctrl_items(list_control):
 
 def print_run_time(start_time, end_time, calc_title):
     """
-    :param start_time: start time of process
-    :type start_time: datetime
-    :param end_time: end time of process
-    :type end_time: datetime
-    :param calc_title: prepend the status message with this value
-    :type calc_title: str
-    :return:
+
+    Parameters
+    ----------
+    start_time : datetime
+        start time of process
+    end_time : datetime
+        end time of process
+    calc_title : str
+        prepend the status message with this value
+
+    Returns
+    -------
+
     """
     total_time = end_time - start_time
     seconds = total_time.seconds
@@ -318,19 +423,37 @@ def print_run_time(start_time, end_time, calc_title):
 
 
 def datetime_to_date_string(datetime_obj):
+    """
+
+    Parameters
+    ----------
+    datetime_obj :
+        
+
+    Returns
+    -------
+
+    """
     if isinstance(datetime_obj, str):
         datetime_obj = parse_date(datetime_obj)
     return "%s/%s/%s" % (datetime_obj.month, datetime_obj.day, datetime_obj.year)
 
 
 def change_angle_origin(angles, max_positive_angle):
-    """
-    Angles in DICOM are all positive values, but there is typically no mechanical continuity in across 180 degrees
-    :param angles: angles to be converted
-    :type angles list
-    :param max_positive_angle: the maximum positive angle, angles greater than this will be shifted to negative angles
-    :return: list of the same angles, but none exceed the max
-    :rtype: list
+    """Angles in DICOM are all positive values, but there is typically no mechanical continuity in across 180 degrees
+
+    Parameters
+    ----------
+    angles : list
+        angles to be converted
+    max_positive_angle :
+        the maximum positive angle, angles greater than this will be shifted to negative angles
+
+    Returns
+    -------
+    list
+        list of the same angles, but none exceed the max
+
     """
     if len(angles) == 1:
         if angles[0] > max_positive_angle:
@@ -354,12 +477,18 @@ def change_angle_origin(angles, max_positive_angle):
 
 
 def calc_stats(data):
-    """
-    Calculate a standard set of stats for DVHA
-    :param data: a list or numpy 1D array of numbers
-    :type data: list
-    :return:  max, 75%, median, mean, 25%, and min of data
-    :rtype: list
+    """Calculate a standard set of stats for DVHA
+
+    Parameters
+    ----------
+    data : list
+        a list or numpy 1D array of numbers
+
+    Returns
+    -------
+    list
+        max, 75%, median, mean, 25%, and min of data
+
     """
     data = [x for x in data if x != 'None']
     try:
@@ -378,18 +507,24 @@ def calc_stats(data):
 
 
 def move_files_to_new_path(files, new_dir, copy_files=False, new_file_names=None, callback=None):
-    """
-    Move all files provided to the new directory
-    :param files: absolute file paths
-    :type files: list
-    :param new_dir: absolute directory path
-    :type new_dir: str
-    :param copy_files: Set to True to keep original files and copy to new_dir, False to remove original files
-    :type copy_files: bool
-    :param new_file_names: optionally provide a list of new names
-    :type new_file_names: None or list of str
-    :param callback: optional function to call at the start of each iteration
-    :type callback: callable
+    """Move all files provided to the new directory
+
+    Parameters
+    ----------
+    files : list
+        absolute file paths
+    new_dir : str
+        absolute directory path
+    copy_files : bool
+        Set to True to keep original files and copy to new_dir, False to remove original files (Default value = False)
+    new_file_names : None or list of str
+        optionally provide a list of new names (Default value = None)
+    callback : callable
+        optional function to call at the start of each iteration (Default value = None)
+
+    Returns
+    -------
+
     """
     for i, file_path in enumerate(files):
         if callback is not None:
@@ -410,12 +545,34 @@ def move_files_to_new_path(files, new_dir, copy_files=False, new_file_names=None
 
 
 def delete_directory_contents(dir_to_delete):
+    """
+
+    Parameters
+    ----------
+    dir_to_delete :
+        
+
+    Returns
+    -------
+
+    """
     # https://stackoverflow.com/questions/185936/how-to-delete-the-contents-of-a-folder-in-python
     for the_file in listdir(dir_to_delete):
         delete_file(join(dir_to_delete, the_file))
 
 
 def delete_file(file_path):
+    """
+
+    Parameters
+    ----------
+    file_path :
+        
+
+    Returns
+    -------
+
+    """
     try:
         if isfile(file_path):
             unlink(file_path)
@@ -426,10 +583,16 @@ def delete_file(file_path):
 
 
 def delete_imported_dicom_files(dicom_files):
-    """
-    delete imported dicom files
-    :param dicom_files: the return from DVH_SQL().get_dicom_file_paths
-    :type dicom_files: dict
+    """delete imported dicom files
+
+    Parameters
+    ----------
+    dicom_files : dict
+        the return from DVH_SQL().get_dicom_file_paths
+
+    Returns
+    -------
+
     """
     for i, directory in enumerate(dicom_files['folder_path']):
         # Delete associated plan, structure, and dose files
@@ -456,10 +619,18 @@ def delete_imported_dicom_files(dicom_files):
 
 
 def move_imported_dicom_files(dicom_files, new_dir):
-    """
-    move imported dicom files
-    :param dicom_files: the return from DVH_SQL().get_dicom_file_paths
-    :type dicom_files: dict
+    """move imported dicom files
+
+    Parameters
+    ----------
+    dicom_files : dict
+        the return from DVH_SQL().get_dicom_file_paths
+    new_dir :
+        
+
+    Returns
+    -------
+
     """
     for i, directory in enumerate(dicom_files['folder_path']):
         files = [join(directory, dicom_files[key][i]) for key in ['plan_file', 'structure_file', 'dose_file']]
@@ -488,6 +659,17 @@ def move_imported_dicom_files(dicom_files, new_dir):
 
 
 def remove_empty_sub_folders(start_path):
+    """
+
+    Parameters
+    ----------
+    start_path :
+        
+
+    Returns
+    -------
+
+    """
     for (path, dirs, files) in walk(start_path, topdown=False):
         if files:
             continue
@@ -499,10 +681,18 @@ def remove_empty_sub_folders(start_path):
 
 
 def move_all_files(new_dir, old_dir):
-    """
-    This function will move all files from the old to new directory, it will ignore all files in subdirectories
-    :param new_dir: absolute directory path
-    :param old_dir: absolute directory path
+    """This function will move all files from the old to new directory, it will ignore all files in subdirectories
+
+    Parameters
+    ----------
+    new_dir :
+        absolute directory path
+    old_dir :
+        absolute directory path
+
+    Returns
+    -------
+
     """
     initial_path = dirname(realpath(__file__))
 
@@ -523,6 +713,19 @@ def move_all_files(new_dir, old_dir):
 
 
 def get_elapsed_time(start_time, end_time):
+    """
+
+    Parameters
+    ----------
+    start_time :
+        
+    end_time :
+        
+
+    Returns
+    -------
+
+    """
     total_time = end_time - start_time
     seconds = total_time.seconds
     m, s = divmod(seconds, 60)
@@ -535,6 +738,17 @@ def get_elapsed_time(start_time, end_time):
 
 
 def is_date(date):
+    """
+
+    Parameters
+    ----------
+    date :
+        
+
+    Returns
+    -------
+
+    """
     if isinstance(date, datetime):
         return True
 
@@ -549,17 +763,39 @@ def is_date(date):
 
 
 def rank_ptvs_by_D95(ptvs):
-    """
-    Determine the order of provided PTVs by their D_95% values
-    :param ptvs: dvh, volume, index of PTVs
-    :type ptvs: dict
-    :return: ptv numbers in order of D_95%
+    """Determine the order of provided PTVs by their D_95% values
+
+    Parameters
+    ----------
+    ptvs : dict
+        dvh, volume, index of PTVs
+
+    Returns
+    -------
+    type
+        ptv numbers in order of D_95%
+
     """
     doses_to_rank = get_dose_to_volume(ptvs['dvh'], ptvs['volume'], 0.95)
     return sorted(range(len(ptvs['dvh'])), key=lambda k: doses_to_rank[k])
 
 
 def get_dose_to_volume(dvhs, volumes, roi_fraction):
+    """
+
+    Parameters
+    ----------
+    dvhs :
+        
+    volumes :
+        
+    roi_fraction :
+        
+
+    Returns
+    -------
+
+    """
     # Not precise (i.e., no interpolation) but good enough for sorting PTVs
     doses = []
     for i, dvh in enumerate(dvhs):
@@ -575,6 +811,17 @@ def get_dose_to_volume(dvhs, volumes, roi_fraction):
 
 
 def float_or_none(value):
+    """
+
+    Parameters
+    ----------
+    value :
+        
+
+    Returns
+    -------
+
+    """
     try:
         return float(value)
     except ValueError:
@@ -582,9 +829,15 @@ def float_or_none(value):
 
 
 class MessageDialog:
-    """
-    This is the base class for Yes/No Dialog boxes
+    """This is the base class for Yes/No Dialog boxes
     Inherit this class, then over-write action_yes and action_no functions with appropriate behaviors
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
     """
     def __init__(self, parent, caption, message="Are you sure?", action_yes_func=None, action_no_func=None,
                  flags=wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT):
@@ -598,30 +851,51 @@ class MessageDialog:
         self.run()
 
     def run(self):
+        """ """
         res = self.dlg.ShowModal()
         [self.action_no, self.action_yes][res == wx.ID_YES]()
         self.dlg.Destroy()
 
     def action_yes(self):
+        """ """
         if self.action_yes_func is not None:
             self.action_yes_func()
 
     def action_no(self):
+        """ """
         if self.action_no_func is not None:
             self.action_no_func()
 
 
 def save_object_to_file(obj, abs_file_path):
-    """
-    Save a python object acceptable for pickle to the provided file path
+    """Save a python object acceptable for pickle to the provided file path
+
+    Parameters
+    ----------
+    obj :
+        
+    abs_file_path :
+        
+
+    Returns
+    -------
+
     """
     with open(abs_file_path, 'wb') as outfile:
         pickle.dump(obj, outfile)
 
 
 def load_object_from_file(abs_file_path):
-    """
-    Load a pickled object from the provided absolute file path
+    """Load a pickled object from the provided absolute file path
+
+    Parameters
+    ----------
+    abs_file_path :
+        
+
+    Returns
+    -------
+
     """
     if isfile(abs_file_path):
         with open(abs_file_path, 'rb') as infile:
@@ -630,16 +904,22 @@ def load_object_from_file(abs_file_path):
 
 
 def sample_list(some_list, max_size, n):
-    """
-    Reduce a list by given factor iteratively until list size less than max_size
-    :param some_list: any list you like!
-    :type some_list: list
-    :param max_size: the maximum number of items in the returned list
-    :type max_size: int
-    :param n: remove every nth element
-    :type n: int
-    :return: sampled list
-    :rtype: list
+    """Reduce a list by given factor iteratively until list size less than max_size
+
+    Parameters
+    ----------
+    some_list : list: list
+        any list you like!
+    max_size : int
+        the maximum number of items in the returned list
+    n : int
+        remove every nth element
+
+    Returns
+    -------
+    list
+        sampled list
+
     """
     while len(some_list) > max_size:
         some_list = remove_every_nth_element(some_list, n)
@@ -647,28 +927,58 @@ def sample_list(some_list, max_size, n):
 
 
 def remove_every_nth_element(some_list, n):
+    """
+
+    Parameters
+    ----------
+    some_list :
+        
+    n :
+        
+
+    Returns
+    -------
+
+    """
     return [value for i, value in enumerate(some_list) if i % n != 0]
 
 
 def sample_roi(roi_coord, max_point_count=5000, iterative_reduction=0.1):
-    """
-    Iteratively sample a list of 3D points by the iterative_reduction until the size of the list is < max_point_count
+    """Iteratively sample a list of 3D points by the iterative_reduction until the size of the list is < max_point_count
     This is used to reduce the number of points used in the ptv distance calculations because:
         1) Shapely returns a much large number of points when calculating total PTVs
         2) Users could easily run into memory issues using scip.dist if all points are used (particularly on MSW)
-    :param roi_coord: a list of 3D points representing an roi
-    :type roi_coord: list
-    :param max_point_count: the maximum number of points in the returned roi_coord
-    :type max_point_count: int
-    :param iterative_reduction: iteratively remove this fraction of points until len < max_point_count
-    :type iterative_reduction: float
-    :return: sampled roi
-    :rtype: list
+
+    Parameters
+    ----------
+    roi_coord : list
+        a list of 3D points representing an roi
+    max_point_count : int_count: int
+        the maximum number of points in the returned roi_coord (Default value = 5000)
+    iterative_reduction : float
+        iteratively remove this fraction of points until len < max_point_count (Default value = 0.1)
+
+    Returns
+    -------
+    list
+        sampled roi
+
     """
     return sample_list(roi_coord, max_point_count, int(1 / iterative_reduction))
 
 
 def get_sorted_indices(some_list):
+    """
+
+    Parameters
+    ----------
+    some_list :
+        
+
+    Returns
+    -------
+
+    """
     try:
         return [i[0] for i in sorted(enumerate(some_list), key=lambda x: x[1])]
     except TypeError:  # can't sort if a mix of str and float
@@ -681,12 +991,20 @@ def get_sorted_indices(some_list):
 
 
 def get_window_size(width, height):
-    """
-    Function used to adapt frames/windows for the user's resolution
-    :param width: fractional width of the user's screen
-    :param height: fractional height of the user's screen
-    :return: window size
-    :rtype: tuple
+    """Function used to adapt frames/windows for the user's resolution
+
+    Parameters
+    ----------
+    width :
+        fractional width of the user's screen
+    height :
+        fractional height of the user's screen
+
+    Returns
+    -------
+    tuple
+        window size
+
     """
     user_width, user_height = wx.GetDisplaySize()
     if user_width / user_height < 1.5:  # catch 4:3 or non-widescreen
@@ -695,12 +1013,37 @@ def get_window_size(width, height):
 
 
 def set_frame_icon(frame):
+    """
+
+    Parameters
+    ----------
+    frame :
+        
+
+    Returns
+    -------
+
+    """
     if not is_mac():
         frame.SetIcon(wx.Icon(WIN_APP_ICON))
 
 
 def trace_memory_alloc_pretty_top(snapshot, key_type='lineno', limit=10):
-    """From https://docs.python.org/3/library/tracemalloc.html"""
+    """From https://docs.python.org/3/library/tracemalloc.html
+
+    Parameters
+    ----------
+    snapshot :
+        
+    key_type :
+         (Default value = 'lineno')
+    limit :
+         (Default value = 10)
+
+    Returns
+    -------
+
+    """
     print('-----------------------------------------------------------------')
     snapshot = snapshot.filter_traces((
         tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
@@ -728,7 +1071,19 @@ def trace_memory_alloc_pretty_top(snapshot, key_type='lineno', limit=10):
 
 
 def trace_memory_alloc_simple_stats(snapshot, key_type='lineno'):
-    """From https://docs.python.org/3/library/tracemalloc.html"""
+    """From https://docs.python.org/3/library/tracemalloc.html
+
+    Parameters
+    ----------
+    snapshot :
+        
+    key_type :
+         (Default value = 'lineno')
+
+    Returns
+    -------
+
+    """
     print('-----------------------------------------------------------------')
     print("[ Top 10 ]")
     top_stats = snapshot.statistics(key_type)
@@ -737,14 +1092,29 @@ def trace_memory_alloc_simple_stats(snapshot, key_type='lineno'):
 
 
 class PopupMenu:
+    """ """
     def __init__(self, parent):
         self.parent = parent
         self.menus = []
 
     def add_menu_item(self, label, action):
+        """
+
+        Parameters
+        ----------
+        label :
+            
+        action :
+            
+
+        Returns
+        -------
+
+        """
         self.menus.append({'id': wx.NewId(), 'label': label, 'action': action})
 
     def run(self):
+        """ """
         popup_menu = wx.Menu()
         for menu in self.menus:
             popup_menu.Append(menu['id'], menu['label'])
@@ -755,6 +1125,17 @@ class PopupMenu:
 
 
 def validate_transfer_syntax_uid(data_set):
+    """
+
+    Parameters
+    ----------
+    data_set :
+        
+
+    Returns
+    -------
+
+    """
     meta = pydicom.Dataset()
     meta.ImplementationClassUID = pydicom.uid.generate_uid()
     meta.TransferSyntaxUID = ImplicitVRLittleEndian
@@ -787,10 +1168,22 @@ def get_installed_python_libraries():
 
 
 def save_pip_list():
+    """ """
     save_object_to_file(get_installed_python_libraries(), PIP_LIST_PATH)
 
 
 def get_wildcards(extensions):
+    """
+
+    Parameters
+    ----------
+    extensions :
+        
+
+    Returns
+    -------
+
+    """
     if type(extensions) is not list:
         extensions = [extensions]
     return '|'.join(["%s (*.%s)|*.%s" % (ext.upper(), ext, ext) for ext in extensions])
@@ -800,6 +1193,7 @@ FIG_WILDCARDS = get_wildcards(['svg', 'html', 'png'])
 
 
 def set_phantom_js_in_path():
+    """ """
     bundle_dir = getattr(sys, '_MEIPASS', None)
     phantom_js_path = APP_DIR if bundle_dir is None else bundle_dir
 
@@ -808,6 +1202,17 @@ def set_phantom_js_in_path():
 
 
 def backup_sqlite_db(options):
+    """
+
+    Parameters
+    ----------
+    options :
+        
+
+    Returns
+    -------
+
+    """
     if options.DB_TYPE == 'sqlite':
         db_file_name = basename(options.DEFAULT_CNF['sqlite']['host'])
         file_append = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -827,16 +1232,24 @@ def backup_sqlite_db(options):
 
 
 def main_is_frozen():
+    """ """
     # https://pyinstaller.readthedocs.io/en/stable/runtime-information.html
     return getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')
 
 
 def get_xy_path_lengths(shapely_object):
-    """
-    Get the x and y path lengths of a a Shapely object
-    :param shapely_object: either 'GeometryCollection', 'MultiPolygon', or 'Polygon'
-    :return: path lengths in the x and y directions
-    :rtype: list
+    """Get the x and y path lengths of a a Shapely object
+
+    Parameters
+    ----------
+    shapely_object :
+        either 'GeometryCollection', 'MultiPolygon', or 'Polygon'
+
+    Returns
+    -------
+    list
+        path lengths in the x and y directions
+
     """
     path = np.array([0., 0.])
     if shapely_object.type == 'GeometryCollection':
@@ -854,6 +1267,7 @@ def get_xy_path_lengths(shapely_object):
 
 
 def recalculate_plan_complexities_from_beams():
+    """ """
     with DVH_SQL() as cnx:
         uids = cnx.get_unique_values('Plans', 'study_instance_uid')
 
@@ -882,12 +1296,18 @@ def recalculate_plan_complexities_from_beams():
 
 
 def get_new_uid(used_uids=None):
-    """
-    Get a new UID using pydicom
-    :param used_uids: Do not return a UID that is in this list
-    :type used_uids: list
-    :return: A new UID not found in the current DVHA database or in the used_uids
-    :rtype: str
+    """Get a new UID using pydicom
+
+    Parameters
+    ----------
+    used_uids : list
+        Do not return a UID that is in this list (Default value = None)
+
+    Returns
+    -------
+    str
+        A new UID not found in the current DVHA database or in the used_uids
+
     """
     uid_found = False
     used_uids = [] if used_uids is None else used_uids
@@ -899,12 +1319,18 @@ def get_new_uid(used_uids=None):
 
 
 def get_new_uids_by_directory(start_path):
-    """
-    Generate new StudyInstanceUIDs, assuming all DICOM files in a directory are matched
-    :param start_path: initial directory
-    :type start_path str
-    :return: New UIDs by directory, queue
-    :rtype: dict, list
+    """Generate new StudyInstanceUIDs, assuming all DICOM files in a directory are matched
+
+    Parameters
+    ----------
+    start_path : str
+        initial directory
+
+    Returns
+    -------
+    dict, list
+        New UIDs by directory, queue
+
     """
     file_paths = get_file_paths(start_path, search_subfolders=True, return_dict=True)
     study_uids = {}
@@ -920,10 +1346,18 @@ def get_new_uids_by_directory(start_path):
 
 
 def edit_study_uid(abs_file_path, study_uid):
-    """
-    Change the StudyInstanceUID of a DICOM file
-    :param abs_file_path: absolute file path of the DICOM file
-    :param study_uid: new StudyInstanceUID
+    """Change the StudyInstanceUID of a DICOM file
+
+    Parameters
+    ----------
+    abs_file_path :
+        absolute file path of the DICOM file
+    study_uid :
+        new StudyInstanceUID
+
+    Returns
+    -------
+
     """
     try:
         ds = pydicom.read_file(abs_file_path, force=True)
@@ -943,12 +1377,14 @@ def get_csv_row(data, columns, delimiter=","):
     columns : list
         a list of keys dictating the order of the csv
     delimiter : str
-        Optionally use the provided delimiter rather than a comma
+        Optionally use the provided delimiter rather than a comma (Default value = ")
+    " :
+        
 
     Returns
-    ----------
-    str
-        a csv string delimited by delimiter
+    -------
+
+    
     """
     str_data = [str(data[c]) for c in columns]
     clean_str_data = ['"%s"' % s if delimiter in s else s for s in str_data]
@@ -965,12 +1401,14 @@ def csv_to_list(csv_str, delimiter=","):
         A comma-separated value string (with double quotes around values
         containing the delimiter)
     delimiter : str
-        The str separator between values
+        The str separator between values (Default value = ")
+    " :
+        
 
     Returns
-    ----------
-    list
-       csv_str split by the delimiter
+    -------
+
+    
     """
     if '"' not in csv_str:
         return csv_str.split(delimiter)
@@ -995,12 +1433,14 @@ def next_csv_element(csv_str, delimiter=","):
         A comma-separated value string (with double quotes around values
         containing the delimiter)
     delimiter : str
-        The str separator between values
+        The str separator between values (Default value = ")
+    " :
+        
 
     Returns
-    ----------
-    str, str
-        Return a tuple, the next value and remainder of csv_str
+    -------
+
+    
     """
     if csv_str.startswith('"'):
         split = csv_str[1:].find('"') + 1

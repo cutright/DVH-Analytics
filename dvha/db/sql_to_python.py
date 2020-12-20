@@ -16,24 +16,25 @@ from dvha.tools.errors import push_to_log
 
 
 class QuerySQL:
-    """
-    Object to generically query a specified table. Each column is stored as a property of the object
-
+    """Object to generically query a specified table. Each column is stored as a property of the object
+    
     For example, if you query 'dvhs' with condition string of "mrn = 'some_mrn'"
     you can access any column name 'some_column' with QuerySQL.some_column which will return a list of values
     for 'some_column'.  All properties contain lists with the order of their values synced, unless unique=True
+
+    Parameters
+    ----------
+    table_name : str
+        Beams', 'DVHs', 'Plans', or 'Rxs'
+    condition_str : str
+        condition in SQL syntax
+    unique : bool, optional
+        If True, only unique values stored
+    group : int, optional
+        either 1 or 2
+
     """
     def __init__(self, table_name, condition_str, unique=False, columns=None, group=1):
-        """
-        :param table_name: 'Beams', 'DVHs', 'Plans', or 'Rxs'
-        :type table_name: str
-        :param condition_str: condition in SQL syntax
-        :type condition_str: str
-        :param unique: If set to True, only unique values stored
-        :type unique: bool
-        :param group: either 1 or 2
-        :type group: int
-        """
 
         table_name = table_name.lower()
 
@@ -62,10 +63,18 @@ class QuerySQL:
             push_to_log(msg='QuerySQL: Table name in valid. Please select from Beams, DVHs, Plans, or Rxs.')
 
     def cursor_to_list(self, force_date=False):
-        """
-        Convert a cursor return into a list of values
-        :return: queried data
-        :rtype: list
+        """Convert a cursor return into a list of values
+
+        Parameters
+        ----------
+        force_date : bool, optional
+             Apply dateutil.parser to values
+
+        Returns
+        -------
+        list
+            queried data
+
         """
         rtn_list = []
         for row in self.cursor:
@@ -86,11 +95,18 @@ class QuerySQL:
 
 
 def get_unique_list(input_list):
-    """
-    Remove duplicates in list and retain order
-    :param input_list: any list of objects
-    :return: input_list without duplicates
-    :rtype: list
+    """Remove duplicates in list and retain order
+
+    Parameters
+    ----------
+    input_list : list
+        any list of objects
+
+    Returns
+    -------
+    list
+        input_list without duplicates
+
     """
     rtn_list_unique = []
     for value in input_list:
@@ -101,10 +117,16 @@ def get_unique_list(input_list):
 
 
 def get_database_tree():
-    """
-    Query SQL to get all columns of each table
-    :return: column data sorted by table
-    :rtype: dict
+    """Query SQL to get all columns of each table
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    dict
+        column data sorted by table
+
     """
     with DVH_SQL() as cnx:
         tree = {table: cnx.get_column_names(table) for table in cnx.tables}

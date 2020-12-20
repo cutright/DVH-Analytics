@@ -21,15 +21,22 @@ from dvha.db import sql_columns
 
 
 class StatsData:
+    """Class used to to collect data for Regression and Control Chart
+    This process is different than for Time Series since regressions require all variables to be the same length
+
+    Parameters
+    ----------
+    dvhs : DVH
+        data from DVH query
+    table_data : dict
+        table data other than from DVHs
+
+    Returns
+    -------
+
+    """
     def __init__(self, dvhs, table_data, group=1):
-        """
-        Class used to to collect data for Regression and Control Chart
-        This process is different than for Time Series since regressions require all variables to be the same length
-        :param dvhs: data from DVH query
-        :type dvhs: DVH
-        :param table_data: table data other than from DVHs
-        :type table_data: dict
-        """
+
         self.dvhs = dvhs
         self.table_data = table_data
         self.group = group
@@ -98,9 +105,7 @@ class StatsData:
         self.validate_data()
 
     def validate_data(self):
-        """
-        Remove any variables that are constant to avoid crash on regression
-        """
+        """Remove any variables that are constant to avoid crash on regression"""
         bad_vars = []
         for var_name, var_obj in self.data.items():
             if 'Date' in var_name:
@@ -115,9 +120,15 @@ class StatsData:
             self.data.pop(var)
 
     def update_endpoints_and_radbio(self):
-        """
-        Update endpoint and radbio data in self.data. This function is needed since all of these values are calculated
+        """Update endpoint and radbio data in self.data. This function is needed since all of these values are calculated
         after a query and user may change these values.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
         """
         if self.dvhs:
             if self.dvhs.endpoints['defs']:
@@ -141,24 +152,67 @@ class StatsData:
 
     @staticmethod
     def get_src_values(src, var_name, uid):
+        """
+
+        Parameters
+        ----------
+        src :
+            
+        var_name :
+            
+        uid :
+            
+
+        Returns
+        -------
+
+        """
         uid_indices = [i for i, x in enumerate(src.study_instance_uid) if x == uid]
         return [getattr(src, var_name)[i] for i in uid_indices]
 
     def get_plan_index(self, uid):
+        """
+
+        Parameters
+        ----------
+        uid :
+            
+
+        Returns
+        -------
+
+        """
         return self.table_data['Plans'].study_instance_uid.index(uid)
 
     def get_beam_indices(self, uid):
+        """
+
+        Parameters
+        ----------
+        uid :
+            
+
+        Returns
+        -------
+
+        """
         return [i for i, x in enumerate(self.table_data['Beams'].study_instance_uid) if x == uid]
 
     def get_bokeh_data(self, x, y):
-        """
-        Get data in a format compatible with bokeh's ColumnDataSource.data
-        :param x: x-variable name
-        :type x: str
-        :param y: y-variable name
-        :type y: str
-        :return: x and y data
-        :rtype: dict
+        """Get data in a format compatible with bokeh's ColumnDataSource.data
+
+        Parameters
+        ----------
+        x : str
+            x-variable name
+        y : str
+            y-variable name
+
+        Returns
+        -------
+        dict
+            x and y data
+
         """
         if x in list(self.data) and y in list(self.data):
             # TODO: potential data length issue with study_instance_uid
@@ -175,26 +229,32 @@ class StatsData:
 
     @property
     def uids(self):
+        """ """
         return self.dvhs.study_instance_uid
 
     @property
     def mrns(self):
+        """ """
         return self.dvhs.mrn
 
     @property
     def sim_study_dates(self):
+        """ """
         return self.data['Simulation Date']['values']
 
     @property
     def variables(self):
+        """ """
         return [var for var in list(self.data) if var != 'Simulation Date']
 
     @property
     def trending_variables(self):
+        """ """
         return list(self.data)
 
     @property
     def vars_with_nan_values(self):
+        """ """
         ans = []
         for var in self.variables:
             for val in self.data[var]['values']:
@@ -206,20 +266,38 @@ class StatsData:
         return ans
 
     def get_axis_title(self, variable):
+        """
+
+        Parameters
+        ----------
+        variable :
+            
+
+        Returns
+        -------
+
+        """
         if self.data[variable]['units']:
             return "%s (%s)" % (variable, self.data[variable]['units'])
         return variable
 
     def get_X_and_y(self, y_variable, x_variables, include_patient_info=False):
-        """
-        Collect data for input into multi-variable regression
-        :param y_variable: dependent variable
-        :type y_variable: str
-        :param x_variables: independent variables
-        :type x_variables: list
-        :param include_patient_info: If True, return mrn, uid, dates with X and y
-        :type include_patient_info: bool
-        :return: X, y or X, y, mrn, uid, dates
+        """Collect data for input into multi-variable regression
+
+        Parameters
+        ----------
+        y_variable : str
+            dependent variable
+        x_variables : list
+            independent variables
+        include_patient_info : bool
+            If True, return mrn, uid, dates with X and y (Default value = False)
+
+        Returns
+        -------
+        type
+            X, y or X, y, mrn, uid, dates
+
         """
         data, mrn, uid, dates = [], [], [], []
         y_var_data = []
@@ -253,6 +331,21 @@ class StatsData:
         return X, y, mrn, uid, dates
 
     def add_variable(self, variable, values, units=''):
+        """
+
+        Parameters
+        ----------
+        variable :
+            
+        values :
+            
+        units :
+             (Default value = '')
+
+        Returns
+        -------
+
+        """
         if variable not in list(self.data):
             self.data[variable] = {'units': units, 'values': values}
         if variable not in self.correlation_variables:
@@ -260,6 +353,17 @@ class StatsData:
             self.correlation_variables.sort()
 
     def del_variable(self, variable):
+        """
+
+        Parameters
+        ----------
+        variable :
+            
+
+        Returns
+        -------
+
+        """
         if variable in list(self.data):
             self.data.pop(variable)
         if variable in self.correlation_variables:
@@ -267,14 +371,57 @@ class StatsData:
             self.correlation_variables.pop(index)
 
     def set_variable_data(self, variable, data, units=None):
+        """
+
+        Parameters
+        ----------
+        variable :
+            
+        data :
+            
+        units :
+             (Default value = None)
+
+        Returns
+        -------
+
+        """
         self.data[variable]['values'] = data
         if units is not None:
             self.data[variable]['units'] = units
 
     def set_variable_units(self, variable, units):
+        """
+
+        Parameters
+        ----------
+        variable :
+            
+        units :
+            
+
+        Returns
+        -------
+
+        """
         self.data[variable]['units'] = units
 
     def get_corr_matrix_data(self, options, included_vars=None, extra_vars=None):
+        """
+
+        Parameters
+        ----------
+        options :
+            
+        included_vars :
+             (Default value = None)
+        extra_vars :
+             (Default value = None)
+
+        Returns
+        -------
+
+        """
         if included_vars is None:
             included_vars = list(self.data)
         if extra_vars is not None:
@@ -356,6 +503,17 @@ class StatsData:
 
 
 def get_index_of_nan(numpy_array):
+    """
+
+    Parameters
+    ----------
+    numpy_array :
+        
+
+    Returns
+    -------
+
+    """
     bad_indices = []
     nan_data = np.isnan(numpy_array)
     for var_data in nan_data:
@@ -368,8 +526,18 @@ def get_index_of_nan(numpy_array):
 
 
 def str_starts_with_any_in_list(string_a, string_list):
-    """
-    Check if string_a starts with any string the provided list of strings
+    """Check if string_a starts with any string the provided list of strings
+
+    Parameters
+    ----------
+    string_a :
+        
+    string_list :
+        
+
+    Returns
+    -------
+
     """
     for string_b in string_list:
         if string_a.startswith(string_b):
@@ -378,17 +546,25 @@ def str_starts_with_any_in_list(string_a, string_list):
 
 
 def get_p_values(X, y, predictions, params):
-    """
-    Get p-values using sklearn
+    """Get p-values using sklearn
     based on https://stackoverflow.com/questions/27928275/find-p-value-significance-in-scikit-learn-linearregression
-    :param X: independent data
-    :type X: np.array
-    :param y: dependent data
-    :type y: np.array
-    :param predictions: output from linear_model.LinearRegression.predict
-    :param params: np.array([y_incercept, slope])
-    :return: p-values
-    :rtype: list
+
+    Parameters
+    ----------
+    X : np.array
+        independent data
+    y : np.array
+        dependent data
+    predictions :
+        output from linear_model.LinearRegression.predict
+    params :
+        np.array([y_incercept, slope])
+
+    Returns
+    -------
+    list
+        p-values
+
     """
 
     newX = np.append(np.ones((len(X), 1)), X, axis=1)
@@ -402,16 +578,21 @@ def get_p_values(X, y, predictions, params):
 
 
 class MultiVariableRegression:
-    """
-    Perform a multi-variable regression using sklearn
+    """Perform a multi-variable regression using sklearn
+
+    Parameters
+    ----------
+    X : np.array
+        independent data
+    y : list
+        dependent data
+
+    Returns
+    -------
+
     """
     def __init__(self, X, y, saved_reg=None):
-        """
-        :param X: independent data
-        :type X: np.array
-        :param y: dependent data
-        :type y: list
-        """
+
 
         if saved_reg is None:
             self.reg = linear_model.LinearRegression()
@@ -450,13 +631,20 @@ class MultiVariableRegression:
 
 
 def get_control_limits(y, std_devs=3):
-    """
-    Calculate control limits for Control Chart
-    :param y: data
-    :type y: list
-    :param std_devs: values greater than std_devs away are out-of-control
-    :type std_devs: int or float
-    :return: center line, upper control limit, and lower control limit
+    """Calculate control limits for Control Chart
+
+    Parameters
+    ----------
+    y : list
+        data
+    std_devs : int or float
+        values greater than std_devs away are out-of-control (Default value = 3)
+
+    Returns
+    -------
+    type
+        center line, upper control limit, and lower control limit
+
     """
     y = np.array(y)
 
@@ -472,10 +660,18 @@ def get_control_limits(y, std_devs=3):
 
 
 def sync_variables_in_stats_data_objects(stats_data_1, stats_data_2):
-    """
-    Ensure both stats_data objects have the same variables
-    :type stats_data_1: StatsData
-    :type stats_data_2: StatsData
+    """Ensure both stats_data objects have the same variables
+
+    Parameters
+    ----------
+    stats_data_1 :
+        
+    stats_data_2 :
+        
+
+    Returns
+    -------
+
     """
 
     stats_data = {1: stats_data_1, 2: stats_data_2}

@@ -74,19 +74,47 @@ class ProgressFrame(wx.Dialog):
         self.Center()
 
     def set_title(self, msg):
+        """
+
+        Parameters
+        ----------
+        msg :
+            
+
+        Returns
+        -------
+
+        """
         wx.CallAfter(self.SetTitle, msg)
 
     def update(self, msg):
-        """
-        Update the progress message and gauge
-        :param msg: a dictionary with keys of 'label' and 'gauge' text and progress fraction, respectively
-        :type msg: dict
+        """Update the progress message and gauge
+
+        Parameters
+        ----------
+        msg : dict
+            a dictionary with keys of 'label' and 'gauge' text and progress fraction, respectively
+
+        Returns
+        -------
+
         """
         label = msg['label']
         wx.CallAfter(self.label.SetLabelText, label)
         wx.CallAfter(self.gauge.SetValue, int(100 * msg['gauge']))
 
     def sub_update(self, msg):
+        """
+
+        Parameters
+        ----------
+        msg :
+            
+
+        Returns
+        -------
+
+        """
         label = msg['label']
         wx.CallAfter(self.sub_label.SetLabelText, label)
         wx.CallAfter(self.sub_gauge.SetValue, int(100 * msg['gauge']))
@@ -117,6 +145,7 @@ class ProgressFrameWorker(Thread):
         self.start()
 
     def run(self):
+        """ """
         queue = self.get_queue()
         worker = Thread(target=self.target, args=[queue])
         worker.setDaemon(True)
@@ -126,6 +155,7 @@ class ProgressFrameWorker(Thread):
         pub.sendMessage('progress_close')
 
     def get_queue(self):
+        """ """
         queue = Queue()
         for i, obj in enumerate(self.obj_list):
             msg = {'label': "%s (%s of %s)" % (self.action_msg, i+1, len(self.obj_list)),
@@ -134,6 +164,17 @@ class ProgressFrameWorker(Thread):
         return queue
 
     def target(self, queue):
+        """
+
+        Parameters
+        ----------
+        queue :
+            
+
+        Returns
+        -------
+
+        """
         while queue.qsize():
             parameters = queue.get()
             self.do_action(*parameters)
@@ -144,6 +185,19 @@ class ProgressFrameWorker(Thread):
         wx.CallAfter(pub.sendMessage, "progress_update", msg=msg)
 
     def do_action(self, obj, msg):
+        """
+
+        Parameters
+        ----------
+        obj :
+            
+        msg :
+            
+
+        Returns
+        -------
+
+        """
         wx.CallAfter(pub.sendMessage, "progress_update", msg=msg)
 
         if self.kwargs:

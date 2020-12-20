@@ -25,12 +25,18 @@ from dvha.tools.roi_formatter import points_to_shapely_polygon, dicompyler_roi_t
 
 
 def union(rois):
-    """
-    Calculate the geometric union of the provided rois
-    :param rois: rois formatted as "sets of points" dictionaries
-    :type rois: list
-    :return: a "sets of points" dictionary representing the union of the rois
-    :rtype: dict
+    """Calculate the geometric union of the provided rois
+
+    Parameters
+    ----------
+    rois : list
+        rois formatted as "sets of points" dictionaries
+
+    Returns
+    -------
+    dict
+        a "sets of points" dictionary representing the union of the rois
+
     """
 
     new_roi = {}
@@ -85,14 +91,22 @@ def union(rois):
 
 
 def min_distances_to_target(oar_coordinates, target_coordinates, factors=None):
-    """
-    Calculate all OAR-point-to-Target-point euclidean distances
-    :param oar_coordinates: numpy arrays of 3D points defining the surface of the OAR
-    :type oar_coordinates: list
-    :param target_coordinates: numpy arrays of 3D points defining the surface of the PTV
-    :type target_coordinates: list
-    :return: min_distances: all minimum distances (cm) of OAR-point-to-Target-point pairs
-    :rtype: list
+    """Calculate all OAR-point-to-Target-point euclidean distances
+
+    Parameters
+    ----------
+    oar_coordinates : list
+        numpy arrays of 3D points defining the surface of the OAR
+    target_coordinates : list
+        numpy arrays of 3D points defining the surface of the PTV
+    factors :
+         (Default value = None)
+
+    Returns
+    -------
+    list
+        min_distances: all minimum distances (cm) of OAR-point-to-Target-point pairs
+
     """
     # TODO: This very computationally expensive, needs a sampling method prior to calling cdist
     min_distances = []
@@ -106,14 +120,20 @@ def min_distances_to_target(oar_coordinates, target_coordinates, factors=None):
 
 
 def is_point_inside_roi(point, roi):
-    """
-    Check if a point is within an ROI
-    :param point: x, y, z
-    :type point: list
-    :param roi:roi: a "sets of points" formatted dictionary
-    :type roi: dict
-    :return: Whether or not the poin is within the roi
-    :rtype: bool
+    """Check if a point is within an ROI
+
+    Parameters
+    ----------
+    point : list
+        x, y, z
+    roi : dict
+        roi: a "sets of points" formatted dictionary
+
+    Returns
+    -------
+    bool
+        Whether or not the poin is within the roi
+
     """
     z_keys = list(roi.keys())
     roi_z = np.array([float(z) for z in z_keys])
@@ -129,12 +149,18 @@ def is_point_inside_roi(point, roi):
 
 
 def cross_section(roi):
-    """
-    Calculate the cross section of a given roi
-    :param roi: a "sets of points" formatted dictionary
-    :type roi: dict
-    :return: max and median cross-sectional area of all slices in cm^2
-    :rtype: dict
+    """Calculate the cross section of a given roi
+
+    Parameters
+    ----------
+    roi : dict
+        a "sets of points" formatted dictionary
+
+    Returns
+    -------
+    dict
+        max and median cross-sectional area of all slices in cm^2
+
     """
     areas = []
 
@@ -158,12 +184,20 @@ def cross_section(roi):
 
 
 def surface_area(coord, coord_type='dicompyler'):
-    """
-    Calculate the surface of a given roi
-    :param coord: dicompyler structure coordinates from GetStructureCoordinates() or a sets_of_points dictionary
-    :param coord_type: either 'dicompyler' or 'sets_of_points'
-    :return: surface_area in cm^2
-    :rtype: float
+    """Calculate the surface of a given roi
+
+    Parameters
+    ----------
+    coord :
+        dicompyler structure coordinates from GetStructureCoordinates() or a sets_of_points dictionary
+    coord_type :
+        either 'dicompyler' or 'sets_of_points' (Default value = 'dicompyler')
+
+    Returns
+    -------
+    float
+        surface_area in cm^2
+
     """
     # TODO: This surface area method needs validation, but likely needs to be corrected
 
@@ -196,13 +230,18 @@ def surface_area(coord, coord_type='dicompyler'):
 
 
 def overlap_volume(oar, tv):
-    """
-    Calculate the overlap volume of two rois
-    :param oar: organ-at-risk as a "sets of points" formatted dictionary
-    :type oar: dict
-    :param tv: treatment volume as a "sets of points" formatted dictionary
-    :type tv: dict
-    :rtype: float
+    """Calculate the overlap volume of two rois
+
+    Parameters
+    ----------
+    oar : dict
+        organ-at-risk as a "sets of points" formatted dictionary
+    tv : dict
+        treatment volume as a "sets of points" formatted dictionary
+
+    Returns
+    -------
+
     """
 
     intersection_volume = 0.
@@ -230,9 +269,17 @@ def overlap_volume(oar, tv):
 
 def volume(roi):
     """
-    :param roi: a "sets of points" formatted dictionary
-    :return: volume in cm^3 of roi
-    :rtype: float
+
+    Parameters
+    ----------
+    roi :
+        a "sets of points" formatted dictionary
+
+    Returns
+    -------
+    float
+        volume in cm^3 of roi
+
     """
 
     # oar and ptv are lists using str(z) as keys
@@ -262,9 +309,17 @@ def volume(roi):
 
 def centroid(roi):
     """
-    :param roi: a "sets of points" formatted dictionary
-    :return: centroid or the roi in x, y, z dicom coordinates (mm)
-    :rtype: list
+
+    Parameters
+    ----------
+    roi :
+        a "sets of points" formatted dictionary
+
+    Returns
+    -------
+    list
+        centroid or the roi in x, y, z dicom coordinates (mm)
+
     """
     centroids = {'x': [], 'y': [], 'z': [], 'area': []}
 
@@ -297,9 +352,17 @@ def centroid(roi):
 
 def spread(roi):
     """
-    :param roi: a "sets of points" formatted dictionary
-    :return: x, y, z dimensions of a rectangular prism encompassing roi
-    :rtype: list
+
+    Parameters
+    ----------
+    roi :
+        a "sets of points" formatted dictionary
+
+    Returns
+    -------
+    list
+        x, y, z dimensions of a rectangular prism encompassing roi
+
     """
     all_points = {'x': [], 'y': [], 'z': []}
 
@@ -324,9 +387,17 @@ def spread(roi):
 
 def dth(min_distances):
     """
-    :param min_distances: the output from min_distances_to_target
-    :return: histogram of distances in 1mm bin widths
-    :rtype: numpy.array
+
+    Parameters
+    ----------
+    min_distances :
+        the output from min_distances_to_target
+
+    Returns
+    -------
+    numpy.array
+        histogram of distances in 1mm bin widths
+
     """
     min_distances = 10. * np.array(min_distances)
     max_abs_value = int(ceil(np.max(np.abs(min_distances))))
@@ -339,8 +410,16 @@ def process_dth_string(dth_string):
     """Convert a dth_string from the database into data and bins
     DVHA stores 1-mm binned surface DTHs with an odd number of bins, middle bin is 0.
 
-    :param dth_string: a value from the dth_string column
-    :return: counts, bin positions (mm)
+    Parameters
+    ----------
+    dth_string :
+        a value from the dth_string column
+
+    Returns
+    -------
+    type
+        counts, bin positions (mm)
+
     """
     counts = np.array(dth_string.split(','), dtype=np.float)
     max_bin = (len(counts)-1)/2

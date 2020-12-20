@@ -24,17 +24,19 @@ import json
 
 
 class DVH_SQL:
-    """
-    This class is used to communicate to the SQL database to limit the need for syntax in other files
+    """This class is used to communicate to the SQL database
+
+    Parameters
+    ----------
+    config : dict
+        optional SQL login credentials, stored values used if nothing provided.
+        Allowed keys are 'host', 'port', 'dbname', 'user', 'password'
+    db_type : str, optional
+        either 'pgsql' or 'sqlite'
+    group : int, optional
+        use a group-specific connection, either 1 or 2
     """
     def __init__(self, *config, db_type=None, group=1):
-        """
-        :param config: optional SQL login credentials, stored values used if nothing provided
-        :param db_type: either 'pgsql' or 'sqlite'
-        :type db_type: str or None
-        :param group: use a group-specific connection, either 1 or 2
-        :type group: int
-        """
 
         stored_options = Options()
 
@@ -68,16 +70,17 @@ class DVH_SQL:
         self.close()
 
     def close(self):
-        """
-        Close the SQL DB connection
-        """
+        """Close the SQL DB connection"""
         self.cnx.close()
 
     def execute_file(self, sql_file_name):
-        """
-        Executes lines within provided text file to SQL
-        :param sql_file_name: absolute file path of a text file containing SQL commands
-        :type sql_file_name: str
+        """Executes lines within provided text file to SQL
+
+        Parameters
+        ----------
+        sql_file_name : str
+            absolute file path of a text file containing SQL commands
+
         """
 
         for line in open(sql_file_name):
@@ -86,10 +89,13 @@ class DVH_SQL:
         self.cnx.commit()
 
     def execute_str(self, command_str):
-        """
-        Execute and commit a string in proper SQL syntax, can handle multiple lines split by \n
-        :param command_str: command or commands to be executed and committed
-        :type command_str: str
+        """Execute and commit a string in proper SQL syntax, can handle multiple lines split by \n
+
+        Parameters
+        ----------
+        command_str : str
+            command or commands to be executed and committed
+
         """
         for line in command_str.split('\n'):
             if line:
@@ -97,10 +103,18 @@ class DVH_SQL:
         self.cnx.commit()
 
     def check_table_exists(self, table_name):
-        """
-        :param table_name: the SQL table to check
-        :return: existence of specified table
-        :rtype: bool
+        """Check if a table exists
+
+        Parameters
+        ----------
+        table_name : st
+            the SQL table to check
+
+        Returns
+        -------
+        bool
+            True if ``table_name`` exists
+
         """
 
         self.cursor.execute("""
@@ -111,21 +125,24 @@ class DVH_SQL:
         return self.cursor.fetchone()[0] == 1
 
     def query(self, table_name, return_col_str, *condition_str, **kwargs):
-        """
-        A generalized query function for DVHA
-        :param table_name: 'DVHs', 'Plans', 'Rxs', 'Beams', or 'DICOM_Files'
-        :type table_name: str
-        :param return_col_str: a csv of SQL columns to be returned
-        :type return_col_str: str
-        :param condition_str: a condition in SQL syntax
-        :type condition_str: str
-        :param kwargs: optional parameters order, order_by, and bokeh_cds
-        :return: results of the query
+        """A generalized query function for DVHA
 
-        kwargs:
-            order: specify order direction (ASC or DESC)
-            order_by: the column order is applied to
-            bokeh_cds: structure data into a format readily accepted by bokeh's ColumnDataSource.data
+        Parameters
+        ----------
+        table_name : str
+            DVHs', 'Plans', 'Rxs', 'Beams', or 'DICOM_Files'
+        return_col_str : str: str
+            a csv of SQL columns to be returned
+        condition_str : str: str
+            a condition in SQL syntax
+        kwargs :
+            optional parameters order, order_by, and bokeh_cds
+
+        Returns
+        -------
+        list, dict
+            Returns a list of lists by default, or a dict of lists if
+            bokeh_cds in kwargs and is true
         """
         order, order_by = None, None
         if kwargs:
@@ -158,27 +175,43 @@ class DVH_SQL:
         return results
 
     def query_generic(self, query_str):
-        """
-        A generic query function that executes the provided string
-        :param query_str: SQL command
-        :type query_str: str
-        :return: query results
+        """A generic query function that executes the provided string
+
+        Parameters
+        ----------
+        query_str : str
+            SQL command
+
+        Returns
+        -------
+        list
+            Results of ``cursor.fetchall()``
+        
         """
         self.cursor.execute(query_str)
         return self.cursor.fetchall()
 
     @property
     def now(self):
-        """
-        This function is useful for store a timestamp to be used for deleting all data since this return
-        For example, a user canceling an import
-        :return: The current time as seen by the SQL database
-        :rtype: datetime
+        """Get a datetime object for now
+
+        Returns
+        -------
+        datetime
+            The current time reported by the database
+        
         """
         return self.query_generic("SELECT %s" % self.sql_cmd_now)[0][0]
 
     @property
     def sql_cmd_now(self):
+        """Get the SQL command for now, based on database type
+
+        Returns
+        -------
+        str
+            SQL command for now
+        """
         if self.db_type == 'sqlite':
             sql_cmd = "strftime('%Y-%m-%d %H:%M:%f', 'now', 'localtime')"
         else:
@@ -186,16 +219,19 @@ class DVH_SQL:
         return sql_cmd
 
     def update(self, table_name, column, value, condition_str):
-        """
-        Change the data in the database.
-        :param table_name: 'DVHs', 'Plans', 'Rxs', 'Beams', or 'DICOM_Files'
-        :type table_name: str
-        :param column: SQL column to be updated
-        :type column: str
-        :param value: value to be set
-        :type value: str or float or int
-        :param condition_str: a condition in SQL syntax
-        :type condition_str: str
+        """Change the data in the database
+
+        Parameters
+        ----------
+        table_name : str
+            DVHs', 'Plans', 'Rxs', 'Beams', or 'DICOM_Files'
+        column : str
+            SQL column to be updated
+        value : str, float, int
+            value to be set
+        condition_str : str
+            a condition in SQL syntax
+
         """
 
         try:
@@ -223,6 +259,21 @@ class DVH_SQL:
             push_to_log(e, msg="Database update failure!")
 
     def is_study_instance_uid_in_table(self, table_name, study_instance_uid):
+        """Check if a study instance uid exists in the provided table
+
+        Parameters
+        ----------
+        table_name : str
+            SQL table name
+        study_instance_uid : str
+            study instance uid
+
+        Returns
+        -------
+        bool
+            True if ``study_instance_uid`` exists in the study_instance_uid
+            column of ``table_name``
+        """
         # As of DVH v0.7.5, study_instance_uid may end with _N where N is the nth plan of a file set
         query = "SELECT DISTINCT study_instance_uid FROM %s WHERE study_instance_uid LIKE '%s%%';" % \
                 (table_name, study_instance_uid)
@@ -231,20 +282,55 @@ class DVH_SQL:
         return bool(results)
 
     def is_mrn_in_table(self, table_name, mrn):
+        """
+
+        Parameters
+        ----------
+        table_name : str
+            SQL table name
+        mrn : str
+            medical record number
+
+        Returns
+        -------
+        bool
+            True if ``mrn`` exists in the mrn column of ``table_name``
+        """
         return self.is_value_in_table(table_name, mrn, 'mrn')
 
     def is_value_in_table(self, table_name, value, column):
+        """Check if a str value exists in a SQL table
+
+        Parameters
+        ----------
+        table_name : sr
+            SQL table name
+        value : str
+            value of interest (str only)
+        column :
+            SQL table column
+
+        Returns
+        -------
+        bool
+            True if ``value`` exists in ``table_name.column``
+        
+        """
         query = "Select Distinct %s from %s where %s = '%s';" % (column, table_name, column, value)
         self.cursor.execute(query)
         results = self.cursor.fetchall()
         return bool(results)
 
     def insert_row(self, table, row):
-        """
-        Generic function to import data to the database
-        :param table: SQL table name
-        :type table: str
-        :param row: data returned from DICOM_Parser.get_<table>_row()
+        """Generic function to import data to the database
+
+        Parameters
+        ----------
+        table : str
+            SQL table name
+        row : dict
+            data returned from DICOM_Parser.get_<table>_row()
+        
         """
         columns = list(row)
         allowed_columns = self.get_column_names(table)
@@ -288,23 +374,33 @@ class DVH_SQL:
         self.execute_str(cmd)
 
     def insert_data_set(self, data_set):
-        """
-        Insert an entire data set for a plan
-        :param data_set: a dictionary of data with table names for keys, and a list of row data for values
-        :type data_set: dict
+        """Insert an entire data set for a plan
+
+        Parameters
+        ----------
+        data_set : dict
+            a dictionary of data with table names for keys, and a list of row data for values
+        
         """
         for key in list(data_set):
             for row in data_set[key]:
                 self.insert_row(key, row)
 
     def get_dicom_file_paths(self, mrn=None, uid=None):
-        """
-        Lookup the dicom file paths of imported data
-        :param mrn: MRN
-        :type mrn: str
-        :param uid: study instance uid
-        :type uid: str
-        :return: dicom_file_paths as returned from self.query()
+        """Lookup the dicom file paths of imported data
+
+        Parameters
+        ----------
+        mrn : str, optional
+            medical record number
+        uid : str, optional
+            study instance uid
+
+        Returns
+        -------
+        list
+            Query return from DICOM_Files table
+        
         """
         condition = None
         if uid:
@@ -317,12 +413,16 @@ class DVH_SQL:
             return self.query('DICOM_Files', columns, condition, bokeh_cds=True)
 
     def delete_rows(self, condition_str, ignore_tables=None):
-        """
-        Delete all rows from all tables not in ignore_table for a given condition. Useful when deleting a plan/patient
-        :param condition_str: a condition in SQL syntax
-        :type condition_str: str
-        :param ignore_tables: tables to be excluded from row deletions
-        :type ignore_tables: list
+        """Delete all rows from all tables not in ignore_table for a given
+        condition. Useful when deleting a plan/patient
+
+        Parameters
+        ----------
+        condition_str : str: str
+            a condition in SQL syntax
+        ignore_tables : list, optional
+            tables to be excluded from row deletions
+
         """
 
         tables = set(self.tables)
@@ -334,51 +434,65 @@ class DVH_SQL:
             self.cnx.commit()
 
     def change_mrn(self, old, new):
-        """
-        Edit all mrns in database
-        :param old: current mrn
-        :type old: str
-        :param new: new mrn
-        :type new: str
+        """Edit all mrns in database
+
+        Parameters
+        ----------
+        old : str
+            current mrn
+        new : str
+            new mrn
+        
         """
         condition = "mrn = '%s'" % old
         for table in self.tables:
             self.update(table, 'mrn', new, condition)
 
     def change_uid(self, old, new):
-        """
-        Edit study instance uids in database
-        :param old: current study instance uid
-        :type old: str
-        :param new: new study instance uid
-        :type new: str
+        """Edit study instance uids in database
+
+        Parameters
+        ----------
+        old : str
+            current study instance uid
+        new : str
+            new study instance uid
+        
         """
         condition = "study_instance_uid = '%s'" % old
         for table in self.tables:
             self.update(table, 'study_instance_uid', new, condition)
 
     def delete_dvh(self, roi_name, study_instance_uid):
-        """
-        Delete a specified DVHs table row
-        :param roi_name: the roi name for the row to be deleted
-        :type roi_name: str
-        :param study_instance_uid: the associated study instance uid
-        :type study_instance_uid: str
+        """Delete a specified DVHs table row
+
+        Parameters
+        ----------
+        roi_name : str
+            the roi name for the row to be deleted
+        study_instance_uid : str
+            the associated study instance uid
+        
         """
         self.cursor.execute("DELETE FROM DVHs WHERE roi_name = '%s' and study_instance_uid = '%s';"
                             % (roi_name, study_instance_uid))
         self.cnx.commit()
 
     def ignore_dvh(self, variation, study_instance_uid, unignore=False):
-        """
-        Change an uncategorized roi name to ignored so that it won't show up in the list of uncategorized rois, so that
-        the user doesn't have to evaluate its need everytime they cleanup the misc rois imported
-        :param variation: roi name
-        :type variation: str
-        :param study_instance_uid: the associated study instance uid
-        :type study_instance_uid: str
-        :param unignore: if set to True, sets the variation to 'uncategorized'
-        :type unignore: bool
+        """Change an uncategorized roi name to ignored so that it won't show
+        up in the list of uncategorized rois, so that
+        the user doesn't have to evaluate its need everytime they cleanup the
+        misc rois imported
+
+        Parameters
+        ----------
+        variation : str
+            roi name
+        study_instance_uid : str
+            the associated study instance uid
+        unignore : bool, optional
+            if set to True, sets the variation to 'uncategorized'
+        
         """
         physician_roi = ['ignored', 'uncategorized'][unignore]
         self.update('dvhs', 'physician_roi', physician_roi,
@@ -391,10 +505,13 @@ class DVH_SQL:
             self.cnx.commit()
 
     def drop_table(self, table):
-        """
-        Delete a table in the database if it exists
-        :param table: SQL table
-        :type table: str
+        """Delete a table in the database if it exists
+
+        Parameters
+        ----------
+        table : str
+            SQL table
+        
         """
         self.cursor.execute("DROP TABLE IF EXISTS %s;" % table)
         self.cnx.commit()
@@ -422,10 +539,13 @@ class DVH_SQL:
             pass
 
     def does_db_exist(self):
-        """
-        Check if database exists
-        :return: existence of database
-        :rtype: bool
+        """Check if database exists
+
+        Returns
+        -------
+        bool
+            True if the database exists
+
         """
         if self.db_name:
             line = "SELECT datname FROM pg_catalog.pg_database WHERE lower(datname) = lower('%s');" % self.db_name
@@ -436,12 +556,18 @@ class DVH_SQL:
             return True
 
     def is_sql_table_empty(self, table):
-        """
-        Check if specified SQL table is empty
-        :param table: SQL table
-        :type table: str
-        :return: True if specified table has no data
-        :rtype: bool
+        """Check if specified SQL table is empty
+
+        Parameters
+        ----------
+        table : str
+            SQL table
+
+        Returns
+        -------
+        bool
+            True if ``table`` is empty
+        
         """
         line = "SELECT COUNT(*) FROM %s;" % table
         self.cursor.execute(line)
@@ -449,17 +575,25 @@ class DVH_SQL:
         return not(bool(count))
 
     def get_unique_values(self, table, column, *condition, **kwargs):
-        """
-        Uses SELECT DISTINCT to get distinct values in database
-        :param table: SQL table
-        :type table: str
-        :param column: SQL column
-        :type column: str
-        :param condition: optional condition in SQL syntax
-        :type condition: str
-        :param kwargs: option to ignore null values in return
-        :return: unique values from database, sorted alphabetically
-        :rtype: list
+        """Uses SELECT DISTINCT to get distinct values in database
+
+        Parameters
+        ----------
+        table : str
+            SQL table
+        column : str
+            SQL column
+        condition : str, optional
+            Condition in SQL syntax
+        kwargs :
+            option to ignore null values in return
+            
+
+        Returns
+        -------
+        list
+            Unique values in table.column
+        
         """
         if condition and condition[0]:
             query = "select distinct %s from %s where %s;" % (column, table, str(condition[0]))
@@ -476,12 +610,18 @@ class DVH_SQL:
         return unique_values
 
     def get_column_names(self, table_name):
-        """
-        Get all of the column names for a specified table
-        :param table_name: SQL table
-        :type table_name: str
-        :return: column names of specified table, sorted alphabetically
-        :rtype: list
+        """Get all of the column names for a specified table
+
+        Parameters
+        ----------
+        table_name : str
+            SQL table
+
+        Returns
+        -------
+        list
+            All columns names in ``table_name``
+        
         """
         if self.db_type == 'sqlite':
             query = "PRAGMA table_info(%s);" % table_name.lower()
@@ -496,6 +636,21 @@ class DVH_SQL:
         return columns
 
     def is_sqlite_column_datetime(self, table_name, column):
+        """Check if a sqlite column is a datetime data type
+
+        Parameters
+        ----------
+        table_name : str
+            SQL table
+        column : str
+            SQL column
+
+        Returns
+        -------
+        bool
+            True if the ``table_name.column`` store datetime data
+        
+        """
         if self.db_type == 'sqlite':
             query = "PRAGMA table_info(%s);" % table_name.lower()
             self.cursor.execute(query)
@@ -507,44 +662,67 @@ class DVH_SQL:
         return False
 
     def get_min_value(self, table, column, condition=None):
-        """
-        Get the minimum value in the database for a given table and column
-        :param table: SQL table
-        :type table: str
-        :param column: SQL column
-        :type column: str
-        :param condition: optional condition in SQL syntax
-        :type condition: str
-        :return: single minimum value in database
+        """Get the minimum value in the database for a given table and column
+
+        Parameters
+        ----------
+        table : str
+            SQL table
+        column : str
+            SQL column
+        condition : str, optional
+            Condition in SQL syntax
+
+        Returns
+        -------
+        any
+            The minimum value for table.column
+        
         """
         return self.get_sql_function_value('MIN', table, column, condition=condition)
 
     def get_max_value(self, table, column, condition=None):
-        """
-        Get the maximum value in the database for a given table and column
-        :param table: SQL table
-        :type table: str
-        :param column: SQL column
-        :type column: str
-        :param condition: optional condition in SQL syntax
-        :type condition: str
-        :return: single maximum value in database
+        """Get the maximum value in the database for a given table and column
+
+        Parameters
+        ----------
+        table : str
+            SQL table
+        column : str
+            SQL column
+        condition : str, optional
+            Condition in SQL syntax
+
+        Returns
+        -------
+        any
+            The maximum value for table.column
+        
         """
         return self.get_sql_function_value('MAX', table, column, condition=condition)
 
     def get_sql_function_value(self, func, table, column, condition=None, first_value_only=True):
-        """
-        Used by get_min_values and get_max_values
-        :param func: SQL compatible function
-        :param table: SQL table
-        :type table: str
-        :param column: SQL column
-        :type column: str
-        :param condition: optional condition in SQL syntax
-        :type condition: str
-        :param first_value_only: if true, only return the first value, otherwise all values returned
-        :type first_value_only: bool
-        :return: value returned by specified function
+        """Helper function used by get_min_values and get_max_values
+
+        Parameters
+        ----------
+        func :
+            SQL compatible function
+        table : str
+            SQL table
+        column : str
+            SQL column
+        condition : str, optional
+            Condition in SQL syntax (Default value = None)
+        first_value_only : bool, optional
+            if true, only return the first value, otherwise all values returned
+
+        Returns
+        -------
+        list, any
+            Results of ``cursor.fetchone()`` or ``cursor.fetchone()[0]`` if
+            ``first_value_only`` is True
+        
         """
         if condition:
             query = "SELECT %s(%s) FROM %s WHERE %s;" % (func, column, table, condition)
@@ -557,14 +735,20 @@ class DVH_SQL:
         return cursor_return
 
     def get_roi_count_from_query(self, uid=None, dvh_condition=None):
-        """
-        Counts the DVH rows that match the provided conditions
-        :param uid: study instance uid
-        :type uid: str
-        :param dvh_condition: condition in SQL syntax for the DVHs table
-        :type dvh_condition: str
-        :return: number of DVH rows
-        :rtype: int
+        """Counts the DVH rows that match the provided conditions
+
+        Parameters
+        ----------
+        uid : str, optional
+            study instance uid
+        dvh_condition : str, optional
+            condition in SQL syntax for the DVHs table
+
+        Returns
+        -------
+        int
+            Number of rows in the DVHs table matching the provided parameters
+        
         """
         if uid:
             condition = "study_instance_uid in ('%s')" % "', '".join(dvh_condition)
@@ -579,12 +763,18 @@ class DVH_SQL:
         return len(self.query('DVHs', 'mrn', condition))
 
     def is_uid_imported(self, uid):
-        """
-        Check all tables to see if study instance uid is used
-        :param uid: study instance uid
-        :type uid: str
-        :return: True if study instance uid exists in any table
-        :rtype: bool
+        """Check all tables to see if study instance uid is used
+
+        Parameters
+        ----------
+        uid : str
+            study instance uid
+
+        Returns
+        -------
+        bool
+            True if ``uid`` exists in any table
+        
         """
         for table in self.tables:
             if self.is_study_instance_uid_in_table(table, uid):
@@ -592,12 +782,18 @@ class DVH_SQL:
         return False
 
     def is_mrn_imported(self, mrn):
-        """
-        Check all tables to see if MRN is used
-        :param mrn: MRN
-        :type mrn: str
-        :return: True if MRN exists in any table
-        :rtype: bool
+        """Check all tables to see if MRN is used
+
+        Parameters
+        ----------
+        mrn : str
+            medical record number
+
+        Returns
+        -------
+        bool
+            True if ``mrn`` exists in any table
+        
         """
         for table in self.tables:
             if self.is_mrn_in_table(table, mrn):
@@ -605,26 +801,61 @@ class DVH_SQL:
         return False
 
     def is_roi_imported(self, roi_name, study_instance_uid):
-        """
-        Check if a study is already using a specified roi name
-        :param roi_name: roi name to check
-        :type roi_name: str
-        :param study_instance_uid: restrict search to this study_instance_uid
-        :type study_instance_uid: str
-        :return: True if the roi name provided has been used in the specified study
-        :rtype: bool
+        """Check if a study is already using a specified roi name
+
+        Parameters
+        ----------
+        roi_name : str
+            roi name to check
+        study_instance_uid : str
+            restrict search to this study_instance_uid
+
+        Returns
+        -------
+        bool
+            True if ``roi_name`` is used in the DVHs table for the given
+            ``study_instance_uid``
+        
         """
         condition = "roi_name = '%s' and study_instance_uid = '%s'" % (roi_name, study_instance_uid)
         roi_names = self.get_unique_values('DVHs', 'roi_name', condition)
         return bool(roi_names)
 
     def get_row_count(self, table, condition=None):
+        """
+
+        Parameters
+        ----------
+        table : str
+            SQL table
+        condition : str
+            SQL condition
+
+        Returns
+        -------
+        int
+            Number of rows in ``table`` meeting ``condition``
+        
+        """
         ans = self.query(table, 'COUNT(mrn)', condition)
         if ans:
             return ans[0][0]
         return 0
 
     def export_to_sqlite(self, file_path, callback=None, force=False):
+        """Create a new SQLite database and import this database's data
+
+        Parameters
+        ----------
+        file_path : str
+            Path where the new SQLite database will be created
+        callback : callable, optional
+            optional function to be called on each row insertion. Should accept
+            table (str), current row (int), total_row_count (int) as parameters
+        force : bool, optional
+            ignore duplicate StudyInstanceUIDs if False
+        
+        """
         config = {'host': file_path}
         new_cnx = DVH_SQL(config, db_type='sqlite')
         new_cnx.initialize_database()
@@ -633,13 +864,19 @@ class DVH_SQL:
     @staticmethod
     def import_db(cnx_src, cnx_dst, callback=None, force=False):
         """
-        :param cnx_src: the source DVHA DB connection
-        :type cnx_src: DVH_SQL
-        :param cnx_dst: the destination DVHA DB connection
-        :type cnx_dst: DVH_SQL
-        :param callback: optional function to be called on each row insertion
-        :param force: ignore duplicate StudyInstanceUIDs if False
-        :type force: bool
+
+        Parameters
+        ----------
+        cnx_src : DVH_SQL
+            the source DVHA DB connection
+        cnx_dst : DVH_SQL
+            the destination DVHA DB connection
+        callback : callable, optional
+            optional function to be called on each row insertion. Should accept
+            table (str), current row (int), total_row_count (int) as parameters
+        force : bool, optional
+            ignore duplicate StudyInstanceUIDs if False
+        
         """
         for table in cnx_src.tables:
             columns = cnx_src.get_column_names(table)
@@ -666,10 +903,17 @@ class DVH_SQL:
                     cnx_dst.execute_str(cmd)
 
     def save_to_json(self, file_path, callback=None):
-        """
-        :param file_path: file_path to new JSON file
-        :type file_path: str
-        :param callback: optional function to be called on each table insertion
+        """Export SQL database to a JSON file
+
+        Parameters
+        ----------
+        file_path : str
+            file_path to new JSON file
+        callback : callable, optional
+            optional function to be called on each table insertion. Should
+            accept table_name (str), table (int), table_count (int) as
+            parameters
+
         """
         json_data = {'columns': {'categorical': categorical,
                                  'numerical': numerical}}
@@ -683,20 +927,34 @@ class DVH_SQL:
             json.dump(json_data, fp)
 
     def get_ptv_counts(self):
+        """Get number of PTVs for each study instance uid
+
+        Returns
+        -------
+        dict
+            PTV counts stored by ``study_instance_uid``
+
+        """
         results = self.query("DVHs", "study_instance_uid", "roi_type like 'PTV%'")
         uids = [uid[0] for uid in results]
         return {uid: uids.count(uid) for uid in list(set(uids))}
 
 
 def truncate_string(input_string, character_limit):
-    """
-    Used to truncate a string to ensure it may be imported into database
-    :param input_string: string to be truncated
-    :type input_string: str
-    :param character_limit: the maximum number of allowed characters
-    :type character_limit: int
-    :return: truncated string (removing the trailing characters)
-    :rtype: str
+    """Used to truncate a string to ensure it may be imported into database
+
+    Parameters
+    ----------
+    input_string : str
+        string to be truncated
+    character_limit : int
+        the maximum number of allowed characters
+
+    Returns
+    -------
+    str
+        truncated string
+
     """
     if len(input_string) > character_limit:
         return input_string[0:(character_limit-1)]
@@ -704,16 +962,22 @@ def truncate_string(input_string, character_limit):
 
 
 def echo_sql_db(config=None, db_type='pgsql', group=1):
-    """
-    Echo the database using stored or provided credentials
-    :param config: database login credentials
-    :type config: dict
-    :param db_type: either 'pgsql' or 'sqlite'
-    :type db_type: str
-    :param group: either group 1 or 2
-    :type group: int
-    :return: True if connection could be established
-    :rtype: bool
+    """Echo the database using stored or provided credentials
+
+    Parameters
+    ----------
+    config : dict, optional
+        database login credentials
+    db_type : str, optional
+        either 'pgsql' or 'sqlite'
+    group : int, optional
+        either group 1 or 2
+
+    Returns
+    -------
+    bool
+        True if echo is successful
+    
     """
     try:
         if config:
@@ -731,6 +995,29 @@ def echo_sql_db(config=None, db_type='pgsql', group=1):
 
 
 def write_test(config=None, db_type='pgsql', group=1, table=None, column=None, value=None):
+    """Write test data to database, verify with a query
+
+    Parameters
+    ----------
+    config : dict, optional
+        database login credentials
+    db_type : str, optional
+        either 'pgsql' or 'sqlite'
+    group : int, optional
+        either group 1 or 2
+    table : str, optional
+        SQL table
+    column : str, optional
+        SQL column
+    value : str, optional
+        test value
+
+    Returns
+    -------
+    dict
+        Write and Read test statuses
+    
+    """
 
     try:
         if config:
@@ -800,11 +1087,26 @@ def write_test(config=None, db_type='pgsql', group=1, table=None, column=None, v
 
 
 def initialize_db():
+    """Initialize the database"""
     with DVH_SQL() as cnx:
         cnx.initialize_database()
 
 
 def is_file_sqlite_db(sqlite_db_file):
+    """Check if file is a sqlite database
+
+    Parameters
+    ----------
+    sqlite_db_file : str
+        path to file to be checked
+        
+
+    Returns
+    -------
+    bool
+        True if ``sqlite_db_file`` is a sqlite database
+    
+    """
     if isfile(sqlite_db_file):
         try:
             cnx = sqlite3.connect(sqlite_db_file)
@@ -814,57 +1116,3 @@ def is_file_sqlite_db(sqlite_db_file):
             pass
 
     return False
-
-
-def csv_to_list(csv_str, delimiter=","):
-    """Split a CSV into a list
-
-    Parameters
-    ----------
-    csv_str : str
-        A comma-separated value string (with double quotes around values
-        containing the delimiter)
-    delimiter : str
-        The str separator between values
-
-    Returns
-    ----------
-    list
-       csv_str split by the delimiter
-    """
-    if '"' not in csv_str:
-        return csv_str.split(delimiter)
-
-    # add an empty value with another ",", but ignore it
-    # ensures next_csv_element always finds a ","
-    next_value, csv_str = next_csv_element(csv_str + ",", delimiter)
-    ans = [next_value.replace("<>", "\n")]
-    while csv_str:
-        next_value, csv_str = next_csv_element(csv_str, delimiter)
-        ans.append(next_value.replace("<>", "\n"))
-
-    return ans
-
-
-def next_csv_element(csv_str, delimiter=","):
-    """Helper function for csv_to_list
-
-    Parameters
-    ----------
-    csv_str : str
-        A comma-separated value string (with double quotes around values
-        containing the delimiter)
-    delimiter : str
-        The str separator between values
-
-    Returns
-    ----------
-    str, str
-        Return a tuple, the next value and remainder of csv_str
-    """
-    if csv_str.startswith('"'):
-        split = csv_str[1:].find('"') + 1
-        return csv_str[1:split], csv_str[split + 2 :]
-
-    next_delimiter = csv_str.find(delimiter)
-    return csv_str[:next_delimiter], csv_str[next_delimiter + 1 :]
