@@ -15,7 +15,7 @@ regressions.
 Documentation
 -------------
 Be sure to check out the `latest release <https://github.com/cutright/DVH-Analytics/releases>`__
-for the a PDF manual, which is geared towards the user interface. For
+for the user manual PDF, which is geared towards the user interface. For
 power-users, `dvha.readthedocs.io <http://dvha.readthedocs.io>`__
 contains detailed documentation for backend tools (*e.g.*, if you want to
 perform queries with python commands).
