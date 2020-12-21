@@ -5,15 +5,23 @@ DVH Analytics
 
 
 DVH Analytics (DVHA) is a software application for building a local database of radiation oncology 
-treatment planning data. It imports data from DICOM-RT files (i.e., plan, dose, and structure), creates a SQL database, 
+treatment planning data. It imports data from DICOM-RT files (*i.e.*, plan, dose, and structure), creates a SQL database,
 provides customizable plots, and provides tools for generating linear, multi-variable, and machine learning 
 regressions.
 
-|pypi| |lgtm|
+|pypi| |Docs| |lgtm-cq| |lgtm| |lines| |repo-size|
 
 
-DVHA Executables
-----------------
+Documentation
+-------------
+Be sure to check out the `latest release <https://github.com/cutright/DVH-Analytics/releases>`__
+for the a PDF manual, which is geared towards the user interface. For
+power-users, `dvha.readthedocs.io <http://dvha.readthedocs.io>`__
+contains detailed documentation for backend tools (*e.g.*, if you want to
+perform queries with python commands).
+
+Executables
+-----------
 Executable versions of DVHA can be found `here <https://github.com/cutright/DVH-Analytics/releases>`__.
 Please keep in mind this software is still in beta. If you have issues, compiling from source may be more informative. 
 
@@ -122,9 +130,25 @@ breast cancer." International Journal of Radiation Oncology* Biology* Physics 10
    :target: https://pypi.org/project/dvha/
    :alt: pypi
 
-.. |lgtm| image:: https://img.shields.io/lgtm/grade/python/g/cutright/DVH-Analytics.svg?logo=lgtm&label=code%20quality
+.. |lgtm-cq| image:: https://img.shields.io/lgtm/grade/python/g/cutright/DVH-Analytics.svg?logo=lgtm&label=code%20quality
    :target: https://lgtm.com/projects/g/cutright/DVH-Analytics/context:python
+   :alt: lgtm code quality
+
+.. |lgtm| image:: https://img.shields.io/lgtm/alerts/g/cutright/DVH-Analytics.svg?logo=lgtm
+   :target: https://lgtm.com/projects/g/cutright/DVH-Analytics/alerts
    :alt: lgtm
+
+.. |Docs| image:: https://readthedocs.org/projects/dvha/badge/?version=latest
+   :target: https://dvha.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
+
+.. |lines| image:: https://img.shields.io/tokei/lines/github/cutright/dvh-analytics
+   :target: https://img.shields.io/tokei/lines/github/cutright/dvh-analytics
+   :alt: Lines of code
+
+.. |repo-size| image:: https://img.shields.io/github/languages/code-size/cutright/dvh-analytics
+   :target: https://img.shields.io/github/languages/code-size/cutright/dvh-analytics
+   :alt: Repo Size
 
 .. |logo| raw:: html
 
