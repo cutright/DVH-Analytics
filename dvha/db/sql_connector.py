@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # db.sql_connector.py
-"""
-Tools used to communicate with the SQL database
-"""
+"""Tools used to communicate with the SQL database"""
 # Copyright (c) 2016-2019 Dan Cutright
 # This file is part of DVH Analytics, released under a BSD license.
 #    See the file LICENSE included with this distribution, also
@@ -36,32 +34,39 @@ class DVH_SQL:
     group : int, optional
         use a group-specific connection, either 1 or 2
     """
+
     def __init__(self, *config, db_type=None, group=1):
 
         stored_options = Options()
 
         if config:
-            self.db_type = db_type if db_type is not None else 'pgsql'
+            self.db_type = db_type if db_type is not None else "pgsql"
             config = config[0]
         else:
             # Read SQL configuration file
             if group == 2 and stored_options.SYNC_SQL_CNX:
                 group = 1
-            self.db_type = stored_options.DB_TYPE_GRPS[group] if db_type is None else db_type
+            self.db_type = (
+                stored_options.DB_TYPE_GRPS[group]
+                if db_type is None
+                else db_type
+            )
             config = stored_options.SQL_LAST_CNX_GRPS[group][self.db_type]
 
-        if self.db_type == 'sqlite':
-            db_file_path = config['host']
-            if not dirname(db_file_path):  # file_path has not directory, assume it lives in DATA_DIR
+        if self.db_type == "sqlite":
+            db_file_path = config["host"]
+            if not dirname(
+                db_file_path
+            ):  # file_path has not directory, assume it lives in DATA_DIR
                 db_file_path = join(DATA_DIR, db_file_path)
             self.db_name = None
             self.cnx = sqlite3.connect(db_file_path)
         else:
-            self.db_name = config['dbname']
+            self.db_name = config["dbname"]
             self.cnx = psycopg2.connect(**config)
 
         self.cursor = self.cnx.cursor()
-        self.tables = ['DVHs', 'Plans', 'Rxs', 'Beams', 'DICOM_Files']
+        self.tables = ["DVHs", "Plans", "Rxs", "Beams", "DICOM_Files"]
 
     def __enter__(self):
         return self
@@ -84,12 +89,13 @@ class DVH_SQL:
         """
 
         for line in open(sql_file_name):
-            if not line.startswith('--'):  # ignore commented lines
+            if not line.startswith("--"):  # ignore commented lines
                 self.cursor.execute(line)
         self.cnx.commit()
 
     def execute_str(self, command_str):
-        """Execute and commit a string in proper SQL syntax, can handle multiple lines split by \n
+        """Execute and commit a string in proper SQL syntax, can handle
+        multiple lines split by \n
 
         Parameters
         ----------
@@ -97,7 +103,7 @@ class DVH_SQL:
             command or commands to be executed and committed
 
         """
-        for line in command_str.split('\n'):
+        for line in command_str.split("\n"):
             if line:
                 self.cursor.execute(line)
         self.cnx.commit()
@@ -117,11 +123,15 @@ class DVH_SQL:
 
         """
 
-        self.cursor.execute("""
+        self.cursor.execute(
+            """
             SELECT COUNT(*)
             FROM information_schema.tables
             WHERE table_name = '{0}'
-            """.format(table_name.replace('\'', '\'\'')))
+            """.format(
+                table_name.replace("'", "''")
+            )
+        )
         return self.cursor.fetchone()[0] == 1
 
     def query(self, table_name, return_col_str, *condition_str, **kwargs):
@@ -146,16 +156,20 @@ class DVH_SQL:
         """
         order, order_by = None, None
         if kwargs:
-            if 'order' in kwargs:
-                order = kwargs['order']
-            if 'order_by' in kwargs:
-                order_by = kwargs['order_by']
+            if "order" in kwargs:
+                order = kwargs["order"]
+            if "order_by" in kwargs:
+                order_by = kwargs["order_by"]
                 if not order:
-                    order = 'ASC'
+                    order = "ASC"
 
         query = "Select %s from %s;" % (return_col_str, table_name)
         if condition_str and condition_str[0]:
-            query = "Select %s from %s where %s;" % (return_col_str, table_name, condition_str[0])
+            query = "Select %s from %s where %s;" % (
+                return_col_str,
+                table_name,
+                condition_str[0],
+            )
         if order and order_by:
             query = "%s Order By %s %s;" % (query[:-1], order_by, order)
 
@@ -165,11 +179,14 @@ class DVH_SQL:
         except Exception as e:
             raise SQLError(str(e), query)
 
-        if 'bokeh_cds' in kwargs and kwargs['bokeh_cds']:
-            keys = [c.strip() for c in return_col_str.split(',')]
-            results = {key: [results[r][i] for r in range(len(results))] for i, key in enumerate(keys)}
+        if "bokeh_cds" in kwargs and kwargs["bokeh_cds"]:
+            keys = [c.strip() for c in return_col_str.split(",")]
+            results = {
+                key: [results[r][i] for r in range(len(results))]
+                for i, key in enumerate(keys)
+            }
             for key in list(results):
-                if 'time' in key or 'date' in key:
+                if "time" in key or "date" in key:
                     results[key] = [str(value) for value in results[key]]
 
         return results
@@ -186,7 +203,7 @@ class DVH_SQL:
         -------
         list
             Results of ``cursor.fetchall()``
-        
+
         """
         self.cursor.execute(query_str)
         return self.cursor.fetchall()
@@ -199,7 +216,7 @@ class DVH_SQL:
         -------
         datetime
             The current time reported by the database
-        
+
         """
         return self.query_generic("SELECT %s" % self.sql_cmd_now)[0][0]
 
@@ -212,7 +229,7 @@ class DVH_SQL:
         str
             SQL command for now
         """
-        if self.db_type == 'sqlite':
+        if self.db_type == "sqlite":
             sql_cmd = "strftime('%Y-%m-%d %H:%M:%f', 'now', 'localtime')"
         else:
             sql_cmd = "NOW()"
@@ -240,17 +257,27 @@ class DVH_SQL:
         except ValueError:
             value_is_numeric = False
 
-        if '::date' in str(value):
-            amend_type = ['', '::date'][self.db_type == 'pgsql']  # sqlite3 does not support ::date
-            value = "'%s'%s" % (value.strip('::date'), amend_type)  # augment value for postgresql date formatting
+        if "::date" in str(value):
+            amend_type = ["", "::date"][
+                self.db_type == "pgsql"
+            ]  # sqlite3 does not support ::date
+            value = "'%s'%s" % (
+                value.strip("::date"),
+                amend_type,
+            )  # augment value for postgresql date formatting
         elif value_is_numeric:
             value = str(value)
-        elif 'null' == str(value.lower()):
+        elif "null" == str(value.lower()):
             value = "NULL"
         else:
             value = "'%s'" % str(value)  # need quotes to input a string
 
-        update = "Update %s SET %s = %s WHERE %s" % (table_name, column, value, condition_str)
+        update = "Update %s SET %s = %s WHERE %s" % (
+            table_name,
+            column,
+            value,
+            condition_str,
+        )
 
         try:
             self.cursor.execute(update)
@@ -274,9 +301,13 @@ class DVH_SQL:
             True if ``study_instance_uid`` exists in the study_instance_uid
             column of ``table_name``
         """
-        # As of DVH v0.7.5, study_instance_uid may end with _N where N is the nth plan of a file set
-        query = "SELECT DISTINCT study_instance_uid FROM %s WHERE study_instance_uid LIKE '%s%%';" % \
-                (table_name, study_instance_uid)
+        # As of DVH v0.7.5, study_instance_uid may end with _N where N is the
+        # nth plan of a file set
+        query = (
+            "SELECT DISTINCT study_instance_uid FROM %s WHERE "
+            "study_instance_uid LIKE '%s%%';"
+            % (table_name, study_instance_uid)
+        )
         self.cursor.execute(query)
         results = self.cursor.fetchall()
         return bool(results)
@@ -296,7 +327,7 @@ class DVH_SQL:
         bool
             True if ``mrn`` exists in the mrn column of ``table_name``
         """
-        return self.is_value_in_table(table_name, mrn, 'mrn')
+        return self.is_value_in_table(table_name, mrn, "mrn")
 
     def is_value_in_table(self, table_name, value, column):
         """Check if a str value exists in a SQL table
@@ -314,9 +345,14 @@ class DVH_SQL:
         -------
         bool
             True if ``value`` exists in ``table_name.column``
-        
+
         """
-        query = "Select Distinct %s from %s where %s = '%s';" % (column, table_name, column, value)
+        query = "Select Distinct %s from %s where %s = '%s';" % (
+            column,
+            table_name,
+            column,
+            value,
+        )
         self.cursor.execute(query)
         results = self.cursor.fetchall()
         return bool(results)
@@ -330,7 +366,7 @@ class DVH_SQL:
             SQL table name
         row : dict
             data returned from DICOM_Parser.get_<table>_row()
-        
+
         """
         columns = list(row)
         allowed_columns = self.get_column_names(table)
@@ -340,8 +376,12 @@ class DVH_SQL:
         for column in columns:
             if column in allowed_columns:
                 used_columns.append(column)
-                if row[column] is None or row[column][0] is None or row[column][0] == '':
-                    if column == 'import_time_stamp':
+                if (
+                    row[column] is None
+                    or row[column][0] is None
+                    or row[column][0] == ""
+                ):
+                    if column == "import_time_stamp":
                         values.append(self.sql_cmd_now)
                     else:
                         values.append("NULL")
@@ -349,16 +389,22 @@ class DVH_SQL:
                     value = row[column][0]
                     value_type = row[column][1]
 
-                    if 'varchar' in value_type:
-                        max_length = int(value_type.replace('varchar(', '').replace(')', ''))
-                        values.append("'%s'" % truncate_string(value, max_length))
+                    if "varchar" in value_type:
+                        max_length = int(
+                            value_type.replace("varchar(", "").replace(")", "")
+                        )
+                        values.append(
+                            "'%s'" % truncate_string(value, max_length)
+                        )
 
-                    elif value_type in {'time_stamp', 'date'}:
+                    elif value_type in {"time_stamp", "date"}:
                         date = date_parser(value)
                         value = date.date()
-                        if value_type == 'time_stamp':
+                        if value_type == "time_stamp":
                             value = "%s %s" % (value, date.time())
-                        if self.db_type == 'pgsql':  # sqlite3 does not support ::date
+                        if (
+                            self.db_type == "pgsql"
+                        ):  # sqlite3 does not support ::date
                             values.append("'%s'::date" % value)
                         else:
                             values.append("'%s'" % value)
@@ -366,11 +412,17 @@ class DVH_SQL:
                     else:
                         values.append("'%s'" % value)
             else:
-                msg = "Failed to update SQL column %s in table %s, " \
-                      "it does not exist" % (column, table)
+                msg = (
+                    "Failed to update SQL column %s in table %s, "
+                    "it does not exist" % (column, table)
+                )
                 push_to_log(msg=msg)
 
-        cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (table, ','.join(used_columns), ",".join(values))
+        cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (
+            table,
+            ",".join(used_columns),
+            ",".join(values),
+        )
         self.execute_str(cmd)
 
     def insert_data_set(self, data_set):
@@ -379,8 +431,9 @@ class DVH_SQL:
         Parameters
         ----------
         data_set : dict
-            a dictionary of data with table names for keys, and a list of row data for values
-        
+            a dictionary of data with table names for keys, and a list of row
+            data for values
+
         """
         for key in list(data_set):
             for row in data_set[key]:
@@ -400,7 +453,7 @@ class DVH_SQL:
         -------
         list
             Query return from DICOM_Files table
-        
+
         """
         condition = None
         if uid:
@@ -409,8 +462,13 @@ class DVH_SQL:
             condition = "mrn = '%s'" % mrn
 
         if condition is not None:
-            columns = 'mrn, study_instance_uid, folder_path, plan_file, structure_file, dose_file'
-            return self.query('DICOM_Files', columns, condition, bokeh_cds=True)
+            columns = (
+                "mrn, study_instance_uid, folder_path, plan_file, "
+                "structure_file, dose_file"
+            )
+            return self.query(
+                "DICOM_Files", columns, condition, bokeh_cds=True
+            )
 
     def delete_rows(self, condition_str, ignore_tables=None):
         """Delete all rows from all tables not in ignore_table for a given
@@ -430,7 +488,9 @@ class DVH_SQL:
             tables = tables - set(ignore_tables)
 
         for table in tables:
-            self.cursor.execute("DELETE FROM %s WHERE %s;" % (table, condition_str))
+            self.cursor.execute(
+                "DELETE FROM %s WHERE %s;" % (table, condition_str)
+            )
             self.cnx.commit()
 
     def change_mrn(self, old, new):
@@ -442,11 +502,11 @@ class DVH_SQL:
             current mrn
         new : str
             new mrn
-        
+
         """
         condition = "mrn = '%s'" % old
         for table in self.tables:
-            self.update(table, 'mrn', new, condition)
+            self.update(table, "mrn", new, condition)
 
     def change_uid(self, old, new):
         """Edit study instance uids in database
@@ -457,11 +517,11 @@ class DVH_SQL:
             current study instance uid
         new : str
             new study instance uid
-        
+
         """
         condition = "study_instance_uid = '%s'" % old
         for table in self.tables:
-            self.update(table, 'study_instance_uid', new, condition)
+            self.update(table, "study_instance_uid", new, condition)
 
     def delete_dvh(self, roi_name, study_instance_uid):
         """Delete a specified DVHs table row
@@ -472,10 +532,12 @@ class DVH_SQL:
             the roi name for the row to be deleted
         study_instance_uid : str
             the associated study instance uid
-        
+
         """
-        self.cursor.execute("DELETE FROM DVHs WHERE roi_name = '%s' and study_instance_uid = '%s';"
-                            % (roi_name, study_instance_uid))
+        self.cursor.execute(
+            "DELETE FROM DVHs WHERE roi_name = '%s' and "
+            "study_instance_uid = '%s';" % (roi_name, study_instance_uid)
+        )
         self.cnx.commit()
 
     def ignore_dvh(self, variation, study_instance_uid, unignore=False):
@@ -492,11 +554,16 @@ class DVH_SQL:
             the associated study instance uid
         unignore : bool, optional
             if set to True, sets the variation to 'uncategorized'
-        
+
         """
-        physician_roi = ['ignored', 'uncategorized'][unignore]
-        self.update('dvhs', 'physician_roi', physician_roi,
-                    "roi_name = '%s' and study_instance_uid = '%s'" % (variation, study_instance_uid))
+        physician_roi = ["ignored", "uncategorized"][unignore]
+        self.update(
+            "dvhs",
+            "physician_roi",
+            physician_roi,
+            "roi_name = '%s' and study_instance_uid = '%s'"
+            % (variation, study_instance_uid),
+        )
 
     def drop_tables(self):
         """Delete all tables in the database if they exist"""
@@ -511,14 +578,16 @@ class DVH_SQL:
         ----------
         table : str
             SQL table
-        
+
         """
         self.cursor.execute("DROP TABLE IF EXISTS %s;" % table)
         self.cnx.commit()
 
     def initialize_database(self):
-        """Ensure that all of the latest SQL columns exist in the user's database"""
-        create_tables_file = [CREATE_PGSQL_TABLES, CREATE_SQLITE_TABLES][self.db_type == 'sqlite']
+        """Ensure that all of the latest SQL columns exist in the database"""
+        create_tables_file = [CREATE_PGSQL_TABLES, CREATE_SQLITE_TABLES][
+            self.db_type == "sqlite"
+        ]
         self.execute_file(create_tables_file)
 
     def reinitialize_database(self):
@@ -529,10 +598,10 @@ class DVH_SQL:
 
     def vacuum(self):
         """Call to reclaim space in the database"""
-        if self.db_type == 'sqlite':
+        if self.db_type == "sqlite":
             self.cnx.isolation_level = None
-            self.cnx.execute('VACUUM')
-            self.cnx.isolation_level = ''
+            self.cnx.execute("VACUUM")
+            self.cnx.isolation_level = ""
         else:
             # TODO: PGSQL VACUUM needs testing
             # self.cnx.execute('VACUUM')
@@ -548,7 +617,10 @@ class DVH_SQL:
 
         """
         if self.db_name:
-            line = "SELECT datname FROM pg_catalog.pg_database WHERE lower(datname) = lower('%s');" % self.db_name
+            line = (
+                "SELECT datname FROM pg_catalog.pg_database WHERE "
+                "lower(datname) = lower('%s');" % self.db_name
+            )
             self.cursor.execute(line)
 
             return bool(len(self.cursor.fetchone()))
@@ -567,12 +639,12 @@ class DVH_SQL:
         -------
         bool
             True if ``table`` is empty
-        
+
         """
         line = "SELECT COUNT(*) FROM %s;" % table
         self.cursor.execute(line)
         count = self.cursor.fetchone()[0]
-        return not(bool(count))
+        return not (bool(count))
 
     def get_unique_values(self, table, column, *condition, **kwargs):
         """Uses SELECT DISTINCT to get distinct values in database
@@ -587,21 +659,25 @@ class DVH_SQL:
             Condition in SQL syntax
         kwargs :
             option to ignore null values in return
-            
+
 
         Returns
         -------
         list
             Unique values in table.column
-        
+
         """
         if condition and condition[0]:
-            query = "select distinct %s from %s where %s;" % (column, table, str(condition[0]))
+            query = "select distinct %s from %s where %s;" % (
+                column,
+                table,
+                str(condition[0]),
+            )
         else:
             query = "select distinct %s from %s;" % (column, table)
         self.cursor.execute(query)
         cursor_return = self.cursor.fetchall()
-        if 'ignore_null' in kwargs and kwargs['ignore_null']:
+        if "ignore_null" in kwargs and kwargs["ignore_null"]:
             unique_values = [str(uv[0]) for uv in cursor_return if str(uv[0])]
         else:
             unique_values = [str(uv[0]) for uv in cursor_return]
@@ -621,13 +697,16 @@ class DVH_SQL:
         -------
         list
             All columns names in ``table_name``
-        
+
         """
-        if self.db_type == 'sqlite':
+        if self.db_type == "sqlite":
             query = "PRAGMA table_info(%s);" % table_name.lower()
             index = 1
         else:
-            query = "select column_name from information_schema.columns where table_name = '%s';" % table_name.lower()
+            query = (
+                "select column_name from information_schema.columns where "
+                "table_name = '%s';" % table_name.lower()
+            )
             index = 0
         self.cursor.execute(query)
         cursor_return = self.cursor.fetchall()
@@ -649,16 +728,19 @@ class DVH_SQL:
         -------
         bool
             True if the ``table_name.column`` store datetime data
-        
+
         """
-        if self.db_type == 'sqlite':
+        if self.db_type == "sqlite":
             query = "PRAGMA table_info(%s);" % table_name.lower()
             self.cursor.execute(query)
             cursor_return = self.cursor.fetchall()
             columns = {str(c[1]): str(c[2]) for c in cursor_return}
             if column in list(columns):
                 column_type = columns[column]
-                return 'time' in column_type.lower() or 'date' in column_type.lower()
+                return (
+                    "time" in column_type.lower()
+                    or "date" in column_type.lower()
+                )
         return False
 
     def get_min_value(self, table, column, condition=None):
@@ -677,9 +759,11 @@ class DVH_SQL:
         -------
         any
             The minimum value for table.column
-        
+
         """
-        return self.get_sql_function_value('MIN', table, column, condition=condition)
+        return self.get_sql_function_value(
+            "MIN", table, column, condition=condition
+        )
 
     def get_max_value(self, table, column, condition=None):
         """Get the maximum value in the database for a given table and column
@@ -697,11 +781,15 @@ class DVH_SQL:
         -------
         any
             The maximum value for table.column
-        
-        """
-        return self.get_sql_function_value('MAX', table, column, condition=condition)
 
-    def get_sql_function_value(self, func, table, column, condition=None, first_value_only=True):
+        """
+        return self.get_sql_function_value(
+            "MAX", table, column, condition=condition
+        )
+
+    def get_sql_function_value(
+        self, func, table, column, condition=None, first_value_only=True
+    ):
         """Helper function used by get_min_values and get_max_values
 
         Parameters
@@ -722,10 +810,15 @@ class DVH_SQL:
         list, any
             Results of ``cursor.fetchone()`` or ``cursor.fetchone()[0]`` if
             ``first_value_only`` is True
-        
+
         """
         if condition:
-            query = "SELECT %s(%s) FROM %s WHERE %s;" % (func, column, table, condition)
+            query = "SELECT %s(%s) FROM %s WHERE %s;" % (
+                func,
+                column,
+                table,
+                condition,
+            )
         else:
             query = "SELECT %s(%s) FROM %s;" % (func, column, table)
         self.cursor.execute(query)
@@ -748,19 +841,21 @@ class DVH_SQL:
         -------
         int
             Number of rows in the DVHs table matching the provided parameters
-        
+
         """
         if uid:
-            condition = "study_instance_uid in ('%s')" % "', '".join(dvh_condition)
+            condition = "study_instance_uid in ('%s')" % "', '".join(
+                dvh_condition
+            )
             if dvh_condition:
                 condition = " and " + condition
         else:
-            condition = ''
+            condition = ""
 
         if dvh_condition:
             condition = dvh_condition + condition
 
-        return len(self.query('DVHs', 'mrn', condition))
+        return len(self.query("DVHs", "mrn", condition))
 
     def is_uid_imported(self, uid):
         """Check all tables to see if study instance uid is used
@@ -774,7 +869,7 @@ class DVH_SQL:
         -------
         bool
             True if ``uid`` exists in any table
-        
+
         """
         for table in self.tables:
             if self.is_study_instance_uid_in_table(table, uid):
@@ -793,7 +888,7 @@ class DVH_SQL:
         -------
         bool
             True if ``mrn`` exists in any table
-        
+
         """
         for table in self.tables:
             if self.is_mrn_in_table(table, mrn):
@@ -815,10 +910,13 @@ class DVH_SQL:
         bool
             True if ``roi_name`` is used in the DVHs table for the given
             ``study_instance_uid``
-        
+
         """
-        condition = "roi_name = '%s' and study_instance_uid = '%s'" % (roi_name, study_instance_uid)
-        roi_names = self.get_unique_values('DVHs', 'roi_name', condition)
+        condition = "roi_name = '%s' and study_instance_uid = '%s'" % (
+            roi_name,
+            study_instance_uid,
+        )
+        roi_names = self.get_unique_values("DVHs", "roi_name", condition)
         return bool(roi_names)
 
     def get_row_count(self, table, condition=None):
@@ -835,9 +933,9 @@ class DVH_SQL:
         -------
         int
             Number of rows in ``table`` meeting ``condition``
-        
+
         """
-        ans = self.query(table, 'COUNT(mrn)', condition)
+        ans = self.query(table, "COUNT(mrn)", condition)
         if ans:
             return ans[0][0]
         return 0
@@ -854,10 +952,10 @@ class DVH_SQL:
             table (str), current row (int), total_row_count (int) as parameters
         force : bool, optional
             ignore duplicate StudyInstanceUIDs if False
-        
+
         """
-        config = {'host': file_path}
-        new_cnx = DVH_SQL(config, db_type='sqlite')
+        config = {"host": file_path}
+        new_cnx = DVH_SQL(config, db_type="sqlite")
         new_cnx.initialize_database()
         self.import_db(self, new_cnx, callback=callback, force=force)
 
@@ -876,30 +974,42 @@ class DVH_SQL:
             table (str), current row (int), total_row_count (int) as parameters
         force : bool, optional
             ignore duplicate StudyInstanceUIDs if False
-        
+
         """
         for table in cnx_src.tables:
             columns = cnx_src.get_column_names(table)
-            study_uids_1 = cnx_src.get_unique_values(table, 'study_instance_uid')
+            study_uids_1 = cnx_src.get_unique_values(
+                table, "study_instance_uid"
+            )
 
             condition = None
             if not force:
-                study_uids_2 = cnx_dst.get_unique_values(table, 'study_instance_uid')
+                study_uids_2 = cnx_dst.get_unique_values(
+                    table, "study_instance_uid"
+                )
                 study_uids_1 = list(set(study_uids_1) - set(study_uids_2))
-                condition = "study_instance_uid IN ('%s')" % "','".join(study_uids_1)
+                condition = "study_instance_uid IN ('%s')" % "','".join(
+                    study_uids_1
+                )
 
             total_row_count = cnx_src.get_row_count(table, condition)
 
             counter = 0
             for uid in study_uids_1:
-                study_data = cnx_src.query(table, ','.join(columns), "study_instance_uid = '%s'" % uid)
+                study_data = cnx_src.query(
+                    table, ",".join(columns), "study_instance_uid = '%s'" % uid
+                )
                 for row in study_data:
                     if callback is not None:
                         CallAfter(callback, table, counter, total_row_count)
                         counter += 1
                     row_str = "'" + "','".join([str(v) for v in row]) + "'"
                     row_str = row_str.replace("'None'", "NULL")
-                    cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (table, ','.join(columns), row_str)
+                    cmd = "INSERT INTO %s (%s) VALUES (%s);\n" % (
+                        table,
+                        ",".join(columns),
+                        row_str,
+                    )
                     cnx_dst.execute_str(cmd)
 
     def save_to_json(self, file_path, callback=None):
@@ -915,15 +1025,18 @@ class DVH_SQL:
             parameters
 
         """
-        json_data = {'columns': {'categorical': categorical,
-                                 'numerical': numerical}}
+        json_data = {
+            "columns": {"categorical": categorical, "numerical": numerical}
+        }
         for i, table in enumerate(self.tables):
             if callback is not None:
                 CallAfter(callback, table, i, len(self.tables))
             columns = self.get_column_names(table)
-            json_data[table] = self.query(table, ','.join(columns), bokeh_cds=True)
+            json_data[table] = self.query(
+                table, ",".join(columns), bokeh_cds=True
+            )
 
-        with open(file_path, 'w') as fp:
+        with open(file_path, "w") as fp:
             json.dump(json_data, fp)
 
     def get_ptv_counts(self):
@@ -935,7 +1048,9 @@ class DVH_SQL:
             PTV counts stored by ``study_instance_uid``
 
         """
-        results = self.query("DVHs", "study_instance_uid", "roi_type like 'PTV%'")
+        results = self.query(
+            "DVHs", "study_instance_uid", "roi_type like 'PTV%'"
+        )
         uids = [uid[0] for uid in results]
         return {uid: uids.count(uid) for uid in list(set(uids))}
 
@@ -957,11 +1072,11 @@ def truncate_string(input_string, character_limit):
 
     """
     if len(input_string) > character_limit:
-        return input_string[0:(character_limit-1)]
+        return input_string[0 : (character_limit - 1)]
     return input_string
 
 
-def echo_sql_db(config=None, db_type='pgsql', group=1):
+def echo_sql_db(config=None, db_type="pgsql", group=1):
     """Echo the database using stored or provided credentials
 
     Parameters
@@ -977,11 +1092,13 @@ def echo_sql_db(config=None, db_type='pgsql', group=1):
     -------
     bool
         True if echo is successful
-    
+
     """
     try:
         if config:
-            if db_type == 'pgsql' and ('dbname' not in list(config) or 'port' not in list(config)):
+            if db_type == "pgsql" and (
+                "dbname" not in list(config) or "port" not in list(config)
+            ):
                 return False
             cnx = DVH_SQL(config, db_type=db_type, group=group)
         else:
@@ -989,12 +1106,17 @@ def echo_sql_db(config=None, db_type='pgsql', group=1):
         cnx.close()
         return True
     except Exception as e:
-        if type(e) not in [psycopg2.OperationalError, sqlite3.OperationalError]:
-            push_to_log(e, msg='Unknown Error during SQL Echo')
+        if type(e) not in [
+            psycopg2.OperationalError,
+            sqlite3.OperationalError,
+        ]:
+            push_to_log(e, msg="Unknown Error during SQL Echo")
         return False
 
 
-def write_test(config=None, db_type='pgsql', group=1, table=None, column=None, value=None):
+def write_test(
+    config=None, db_type="pgsql", group=1, table=None, column=None, value=None
+):
     """Write test data to database, verify with a query
 
     Parameters
@@ -1016,19 +1138,23 @@ def write_test(config=None, db_type='pgsql', group=1, table=None, column=None, v
     -------
     dict
         Write and Read test statuses
-    
+
     """
 
     try:
         if config:
-            if db_type == 'pgsql' and ('dbname' not in list(config) or 'port' not in list(config)):
+            if db_type == "pgsql" and (
+                "dbname" not in list(config) or "port" not in list(config)
+            ):
                 return None
             cnx = DVH_SQL(config, db_type=db_type, group=group)
         else:
             cnx = DVH_SQL(group=group)
     except Exception as e:
-        push_to_log(e, msg="Write Test: Connection to SQL could not be established")
-        return {'write': False, 'delete': False}
+        push_to_log(
+            e, msg="Write Test: Connection to SQL could not be established"
+        )
+        return {"write": False, "delete": False}
 
     try:
         cnx.initialize_database()
@@ -1039,11 +1165,11 @@ def write_test(config=None, db_type='pgsql', group=1, table=None, column=None, v
         table = cnx.tables[-1]
 
     if column is None:
-        column = 'mrn'
+        column = "mrn"
 
     if value is None:
         # Find a test value that does not exist in the database
-        value_init = 'SqlTest_'
+        value_init = "SqlTest_"
         i = 0
         value = value_init + str(i)
         current_values = cnx.get_unique_values(table, column)
@@ -1076,14 +1202,16 @@ def write_test(config=None, db_type='pgsql', group=1, table=None, column=None, v
             delete_test_success = len(test_return) == 0
         except Exception as e:
             delete_test_success = False
-            push_to_log(e, msg="Write Test: SQL delete command of test insert failed")
+            push_to_log(
+                e, msg="Write Test: SQL delete command of test insert failed"
+            )
 
     try:
         cnx.close()
     except Exception as e:
-        push_to_log(e, msg='Write Test: Failed to close SQL connection')
+        push_to_log(e, msg="Write Test: Failed to close SQL connection")
 
-    return {'write': write_test_success, 'delete': delete_test_success}
+    return {"write": write_test_success, "delete": delete_test_success}
 
 
 def initialize_db():
@@ -1099,13 +1227,13 @@ def is_file_sqlite_db(sqlite_db_file):
     ----------
     sqlite_db_file : str
         path to file to be checked
-        
+
 
     Returns
     -------
     bool
         True if ``sqlite_db_file`` is a sqlite database
-    
+
     """
     if isfile(sqlite_db_file):
         try:

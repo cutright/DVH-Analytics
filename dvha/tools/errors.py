@@ -16,9 +16,9 @@ import logging
 from os import environ
 from sys import prefix
 
-logger = logging.getLogger('dvha')
+logger = logging.getLogger("dvha")
 
-if environ.get('READTHEDOCS') == 'True' or 'sphinx' in prefix:
+if environ.get("READTHEDOCS") == "True" or "sphinx" in prefix:
     ERR_DLG_FLAGS = None
 else:
     ERR_DLG_FLAGS = wx.ICON_ERROR | wx.OK | wx.OK_DEFAULT
@@ -34,7 +34,7 @@ class SQLError(Exception):
         :type failed_sql_command: str
         """
         try:
-            self.message = error_message.split('\n')[0]
+            self.message = error_message.split("\n")[0]
         except Exception as e:
             print(e)
             self.message = error_message
@@ -62,8 +62,11 @@ class PlottingMemoryError(Exception):
 
 class PhantomJSError(Exception):
     def __init__(self):
-        self.message = "PhantomJS could not be located. Download from https://phantomjs.org/download.html, then " \
-                       "place the executable file (phantomjs or phantomjs.exe) in %s" % APP_DIR
+        self.message = (
+            "PhantomJS could not be located. Download from https://phantomjs.org/download.html, then "
+            "place the executable file (phantomjs or phantomjs.exe) in %s"
+            % APP_DIR
+        )
 
     def __str__(self):
         return self.message
@@ -92,7 +95,9 @@ class SQLErrorDialog(ErrorDialog):
         :param dvh_sql_error: SQLError exception class
         :type dvh_sql_error: SQLError
         """
-        ErrorDialog.__init__(self, parent, str(dvh_sql_error), "SQL Syntax Error")
+        ErrorDialog.__init__(
+            self, parent, str(dvh_sql_error), "SQL Syntax Error"
+        )
 
 
 class ROIVariationErrorDialog(ErrorDialog):
@@ -103,7 +108,9 @@ class ROIVariationErrorDialog(ErrorDialog):
         :param roi_variation_error: ROIVariationError exception class
         :type roi_variation_error: ROIVariationError
         """
-        ErrorDialog.__init__(self, parent, str(roi_variation_error), "ROI Variation Error")
+        ErrorDialog.__init__(
+            self, parent, str(roi_variation_error), "ROI Variation Error"
+        )
 
 
 class MemoryErrorDialog(ErrorDialog):
@@ -115,10 +122,12 @@ class MemoryErrorDialog(ErrorDialog):
         ErrorDialog.__init__(self, parent, message, "Memory Error")
 
 
-def push_to_log(exception=None, msg=None, msg_type='warning'):
+def push_to_log(exception=None, msg=None, msg_type="warning"):
     if exception is None:
         text = str(msg)
     else:
-        text = "%s\n%s" % (msg, exception) if msg is not None else str(exception)
+        text = (
+            "%s\n%s" % (msg, exception) if msg is not None else str(exception)
+        )
     func = getattr(logger, msg_type)
     func(text)

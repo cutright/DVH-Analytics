@@ -35,6 +35,7 @@ class StatsData:
     -------
 
     """
+
     def __init__(self, dvhs, table_data, group=1):
 
         self.dvhs = dvhs
@@ -49,70 +50,107 @@ class StatsData:
 
     def __map_data(self):
         self.data = {}
-        stat_types = ['min', 'mean', 'median', 'max']
+        stat_types = ["min", "mean", "median", "max"]
         for var in self.correlation_variables:
             if var in self.column_info.keys():
-                var_name = self.column_info[var]['var_name']
-                table = self.column_info[var]['table']
+                var_name = self.column_info[var]["var_name"]
+                table = self.column_info[var]["table"]
 
-                if table == 'DVHs' and hasattr(self.dvhs, var_name):
-                    self.data[var] = {'units': self.column_info[var]['units'],
-                                      'values': getattr(self.dvhs, var_name)}
+                if table == "DVHs" and hasattr(self.dvhs, var_name):
+                    self.data[var] = {
+                        "units": self.column_info[var]["units"],
+                        "values": getattr(self.dvhs, var_name),
+                    }
 
                 # single value variables
-                elif table == 'Plans' and hasattr(self.table_data[table], var_name):
+                elif table == "Plans" and hasattr(
+                    self.table_data[table], var_name
+                ):
                     src = self.table_data[table]
-                    self.data[var] = {'units': self.column_info[var]['units'],
-                                      'values': [getattr(src, var_name)[self.get_plan_index(uid)] for uid in self.uids]}
+                    self.data[var] = {
+                        "units": self.column_info[var]["units"],
+                        "values": [
+                            getattr(src, var_name)[self.get_plan_index(uid)]
+                            for uid in self.uids
+                        ],
+                    }
 
                 # multi value variables
-                elif table == 'Beams' and hasattr(self.table_data[table], var_name):
+                elif table == "Beams" and hasattr(
+                    self.table_data[table], var_name
+                ):
                     src = self.table_data[table]
 
-                    if str_starts_with_any_in_list(var, ['Beam Complexity', 'Beam Area', 'Control Point MU',
-                                                         'Beam Perimeter', 'Beam Energy']):
+                    if str_starts_with_any_in_list(
+                        var,
+                        [
+                            "Beam Complexity",
+                            "Beam Area",
+                            "Control Point MU",
+                            "Beam Perimeter",
+                            "Beam Energy",
+                        ],
+                    ):
                         # stats of these four variable types have min, mean, median, and max types in DB
                         # The following will take min, mean, median, or max of all values for a UID based on var type
                         # Example, if var_name == Beam Complexity (Max), the following will return the Max of these
                         temp = []
                         for uid in self.uids:
                             indices = self.get_beam_indices(uid)
-                            beam_data = getattr(self.table_data['Beams'], var_name)
-                            values = [beam_data[i] for i in indices if beam_data[i] != 'None']
+                            beam_data = getattr(
+                                self.table_data["Beams"], var_name
+                            )
+                            values = [
+                                beam_data[i]
+                                for i in indices
+                                if beam_data[i] != "None"
+                            ]
                             for stat in stat_types:
                                 if stat in var.lower():
                                     if values:
                                         temp.append(getattr(np, stat)(values))
                                     else:
                                         temp.append(None)
-                        self.data[var] = {'units': self.column_info[var]['units'],
-                                          'values': temp}
+                        self.data[var] = {
+                            "units": self.column_info[var]["units"],
+                            "values": temp,
+                        }
                     else:
                         temp = {s: [] for s in stat_types}
                         for uid in self.uids:
                             for stat in stat_types:
-                                values = self.get_src_values(src, var_name, uid)
-                                values = [v for v in values if v != 'None']
+                                values = self.get_src_values(
+                                    src, var_name, uid
+                                )
+                                values = [v for v in values if v != "None"]
                                 if values:
-                                    temp[stat].append(getattr(np, stat)(values))
+                                    temp[stat].append(
+                                        getattr(np, stat)(values)
+                                    )
                                 else:
                                     temp[stat].append(None)
 
                         for stat in stat_types:
                             corr_key = "%s (%s)" % (var, stat.capitalize())
-                            self.data[corr_key] = {'units': self.column_info[var]['units'],
-                                                   'values': temp[stat]}
+                            self.data[corr_key] = {
+                                "units": self.column_info[var]["units"],
+                                "values": temp[stat],
+                            }
         self.validate_data()
 
     def validate_data(self):
         """Remove any variables that are constant to avoid crash on regression"""
         bad_vars = []
         for var_name, var_obj in self.data.items():
-            if 'Date' in var_name:
-                if var_name != 'Simulation Date':
+            if "Date" in var_name:
+                if var_name != "Simulation Date":
                     bad_vars.append(var_name)
             else:
-                values = [float(val) for val in var_obj['values'] if val != 'None' and val is not None]
+                values = [
+                    float(val)
+                    for val in var_obj["values"]
+                    if val != "None" and val is not None
+                ]
                 if not any(np.diff(values).tolist()):
                     bad_vars.append(var_name)
 
@@ -131,23 +169,26 @@ class StatsData:
 
         """
         if self.dvhs:
-            if self.dvhs.endpoints['defs']:
-                for var in self.dvhs.endpoints['defs']['label']:
+            if self.dvhs.endpoints["defs"]:
+                for var in self.dvhs.endpoints["defs"]["label"]:
                     if var not in self.variables:
-                        self.data[var] = {'units': '',
-                                          'values': self.dvhs.endpoints['data'][var]}
+                        self.data[var] = {
+                            "units": "",
+                            "values": self.dvhs.endpoints["data"][var],
+                        }
 
                 for var in self.variables:
-                    if var[0:2] in {'D_', 'V_'}:
-                        if var not in self.dvhs.endpoints['defs']['label']:
+                    if var[0:2] in {"D_", "V_"}:
+                        if var not in self.dvhs.endpoints["defs"]["label"]:
                             self.data.pop(var)
 
             if self.dvhs.eud:
-                self.data['EUD'] = {'units': 'Gy',
-                                    'values': self.dvhs.eud}
+                self.data["EUD"] = {"units": "Gy", "values": self.dvhs.eud}
             if self.dvhs.ntcp_or_tcp:
-                self.data['NTCP or TCP'] = {'units': '',
-                                            'values': self.dvhs.ntcp_or_tcp}
+                self.data["NTCP or TCP"] = {
+                    "units": "",
+                    "values": self.dvhs.ntcp_or_tcp,
+                }
             self.validate_data()
 
     @staticmethod
@@ -157,17 +198,19 @@ class StatsData:
         Parameters
         ----------
         src :
-            
+
         var_name :
-            
+
         uid :
-            
+
 
         Returns
         -------
 
         """
-        uid_indices = [i for i, x in enumerate(src.study_instance_uid) if x == uid]
+        uid_indices = [
+            i for i, x in enumerate(src.study_instance_uid) if x == uid
+        ]
         return [getattr(src, var_name)[i] for i in uid_indices]
 
     def get_plan_index(self, uid):
@@ -176,13 +219,13 @@ class StatsData:
         Parameters
         ----------
         uid :
-            
+
 
         Returns
         -------
 
         """
-        return self.table_data['Plans'].study_instance_uid.index(uid)
+        return self.table_data["Plans"].study_instance_uid.index(uid)
 
     def get_beam_indices(self, uid):
         """
@@ -190,13 +233,17 @@ class StatsData:
         Parameters
         ----------
         uid :
-            
+
 
         Returns
         -------
 
         """
-        return [i for i, x in enumerate(self.table_data['Beams'].study_instance_uid) if x == uid]
+        return [
+            i
+            for i, x in enumerate(self.table_data["Beams"].study_instance_uid)
+            if x == uid
+        ]
 
     def get_bokeh_data(self, x, y):
         """Get data in a format compatible with bokeh's ColumnDataSource.data
@@ -220,12 +267,14 @@ class StatsData:
             # BokehUserWarning: ColumnDataSource's columns must be of the same length. Current lengths:
             # ('date', 69), ('mrn', 69), ('uid', 70), ('x', 69), ('y', 69)
             # Appears to point to this function's return?
-            return {'uid': self.uids,
-                    'mrn': self.mrns,
-                    'date': self.sim_study_dates,
-                    'x': self.data[x]['values'],
-                    'y': self.data[y]['values']}
-        return {key: [] for key in ['uid', 'mrn', 'date', 'x', 'y']}
+            return {
+                "uid": self.uids,
+                "mrn": self.mrns,
+                "date": self.sim_study_dates,
+                "x": self.data[x]["values"],
+                "y": self.data[y]["values"],
+            }
+        return {key: [] for key in ["uid", "mrn", "date", "x", "y"]}
 
     @property
     def uids(self):
@@ -240,12 +289,12 @@ class StatsData:
     @property
     def sim_study_dates(self):
         """ """
-        return self.data['Simulation Date']['values']
+        return self.data["Simulation Date"]["values"]
 
     @property
     def variables(self):
         """ """
-        return [var for var in list(self.data) if var != 'Simulation Date']
+        return [var for var in list(self.data) if var != "Simulation Date"]
 
     @property
     def trending_variables(self):
@@ -257,7 +306,7 @@ class StatsData:
         """ """
         ans = []
         for var in self.variables:
-            for val in self.data[var]['values']:
+            for val in self.data[var]["values"]:
                 try:
                     float(val)
                 except Exception:
@@ -271,14 +320,14 @@ class StatsData:
         Parameters
         ----------
         variable :
-            
+
 
         Returns
         -------
 
         """
-        if self.data[variable]['units']:
-            return "%s (%s)" % (variable, self.data[variable]['units'])
+        if self.data[variable]["units"]:
+            return "%s (%s)" % (variable, self.data[variable]["units"])
         return variable
 
     def get_X_and_y(self, y_variable, x_variables, include_patient_info=False):
@@ -301,8 +350,8 @@ class StatsData:
         """
         data, mrn, uid, dates = [], [], [], []
         y_var_data = []
-        for i, value in enumerate(self.data[y_variable]['values']):
-            y_var_data.append([value, np.nan][value == 'None'])
+        for i, value in enumerate(self.data[y_variable]["values"]):
+            y_var_data.append([value, np.nan][value == "None"])
             mrn.append(self.mrns[i])
             uid.append(self.uids[i])
             dates.append(self.sim_study_dates[i])
@@ -310,8 +359,10 @@ class StatsData:
         data.append(y_var_data)
         for var in x_variables:
             x_var_data = []
-            for value in self.data[var]['values']:
-                x_var_data.append([value, np.nan][str(value).lower() == 'none'])
+            for value in self.data[var]["values"]:
+                x_var_data.append(
+                    [value, np.nan][str(value).lower() == "none"]
+                )
             data.append(x_var_data)
 
         data = np.array(data)
@@ -330,15 +381,15 @@ class StatsData:
             return X, y
         return X, y, mrn, uid, dates
 
-    def add_variable(self, variable, values, units=''):
+    def add_variable(self, variable, values, units=""):
         """
 
         Parameters
         ----------
         variable :
-            
+
         values :
-            
+
         units :
              (Default value = '')
 
@@ -347,7 +398,7 @@ class StatsData:
 
         """
         if variable not in list(self.data):
-            self.data[variable] = {'units': units, 'values': values}
+            self.data[variable] = {"units": units, "values": values}
         if variable not in self.correlation_variables:
             self.correlation_variables.append(variable)
             self.correlation_variables.sort()
@@ -358,7 +409,7 @@ class StatsData:
         Parameters
         ----------
         variable :
-            
+
 
         Returns
         -------
@@ -376,9 +427,9 @@ class StatsData:
         Parameters
         ----------
         variable :
-            
+
         data :
-            
+
         units :
              (Default value = None)
 
@@ -386,9 +437,9 @@ class StatsData:
         -------
 
         """
-        self.data[variable]['values'] = data
+        self.data[variable]["values"] = data
         if units is not None:
-            self.data[variable]['units'] = units
+            self.data[variable]["units"] = units
 
     def set_variable_units(self, variable, units):
         """
@@ -396,23 +447,25 @@ class StatsData:
         Parameters
         ----------
         variable :
-            
+
         units :
-            
+
 
         Returns
         -------
 
         """
-        self.data[variable]['units'] = units
+        self.data[variable]["units"] = units
 
-    def get_corr_matrix_data(self, options, included_vars=None, extra_vars=None):
+    def get_corr_matrix_data(
+        self, options, included_vars=None, extra_vars=None
+    ):
         """
 
         Parameters
         ----------
         options :
-            
+
         included_vars :
              (Default value = None)
         extra_vars :
@@ -429,43 +482,98 @@ class StatsData:
         else:
             extra_vars = []
 
-        categories = [c for c in list(self.data) if 'date' not in c.lower() and c in included_vars]
+        categories = [
+            c
+            for c in list(self.data)
+            if "date" not in c.lower() and c in included_vars
+        ]
         categories.extend(extra_vars)
         categories = list(set(categories))
         categories.sort()
         var_count = len(categories)
-        categories_for_label = [category.replace("Control Point", "CP") for category in categories]
-        categories_for_label = [category.replace("control point", "CP") for category in categories_for_label]
-        categories_for_label = [category.replace("Distance", "Dist") for category in categories_for_label]
+        categories_for_label = [
+            category.replace("Control Point", "CP") for category in categories
+        ]
+        categories_for_label = [
+            category.replace("control point", "CP")
+            for category in categories_for_label
+        ]
+        categories_for_label = [
+            category.replace("Distance", "Dist")
+            for category in categories_for_label
+        ]
 
         for i, category in enumerate(categories_for_label):
-            if category.startswith('DVH'):
+            if category.startswith("DVH"):
                 categories_for_label[i] = category.split("DVH Endpoint: ")[1]
 
         x_factors = categories_for_label
         y_factors = categories_for_label[::-1]
 
-        s_keys = ['x', 'y', 'x_name', 'y_name', 'color', 'alpha', 'r', 'p', 'size',
-                  'x_normality', 'y_normality', 'group']
-        source_data = {'corr': {sk: [] for sk in s_keys},
-                       'line': {'x': [0.5, var_count - 0.5], 'y': [var_count - 0.5, 0.5]}}
+        s_keys = [
+            "x",
+            "y",
+            "x_name",
+            "y_name",
+            "color",
+            "alpha",
+            "r",
+            "p",
+            "size",
+            "x_normality",
+            "y_normality",
+            "group",
+        ]
+        source_data = {
+            "corr": {sk: [] for sk in s_keys},
+            "line": {"x": [0.5, var_count - 0.5], "y": [var_count - 0.5, 0.5]},
+        }
 
         min_size, max_size = 3, 20
         removed_mrns = set()
         for x in range(var_count):
             for y in range(var_count):
                 if x > y and self.group == 1 or x < y and self.group == 2:
-                    if categories[x] not in extra_vars and categories[y] not in extra_vars:
+                    if (
+                        categories[x] not in extra_vars
+                        and categories[y] not in extra_vars
+                    ):
 
-                        bad_indices = [i for i, v in enumerate(self.data[categories[x]]['values'])
-                                       if type(v) in [str, type(None)]]
-                        bad_indices.extend([i for i, v in enumerate(self.data[categories[y]]['values'])
-                                            if type(v) in [str, type(None)]])
+                        bad_indices = [
+                            i
+                            for i, v in enumerate(
+                                self.data[categories[x]]["values"]
+                            )
+                            if type(v) in [str, type(None)]
+                        ]
+                        bad_indices.extend(
+                            [
+                                i
+                                for i, v in enumerate(
+                                    self.data[categories[y]]["values"]
+                                )
+                                if type(v) in [str, type(None)]
+                            ]
+                        )
                         bad_indices = list(set(bad_indices))
-                        removed_mrns = removed_mrns.union(set(self.mrns[i] for i in bad_indices))
+                        removed_mrns = removed_mrns.union(
+                            set(self.mrns[i] for i in bad_indices)
+                        )
 
-                        x_data = [v for i, v in enumerate(self.data[categories[x]]['values']) if i not in bad_indices]
-                        y_data = [v for i, v in enumerate(self.data[categories[y]]['values']) if i not in bad_indices]
+                        x_data = [
+                            v
+                            for i, v in enumerate(
+                                self.data[categories[x]]["values"]
+                            )
+                            if i not in bad_indices
+                        ]
+                        y_data = [
+                            v
+                            for i, v in enumerate(
+                                self.data[categories[y]]["values"]
+                            )
+                            if i not in bad_indices
+                        ]
 
                         if x_data and len(x_data) == len(y_data):
                             r, p_value = scipy_stats.pearsonr(x_data, y_data)
@@ -474,32 +582,50 @@ class StatsData:
                         if np.isnan(r):
                             r = 0
 
-                        sign = ['neg', 'pos'][r >= 0]
-                        color = getattr(options, 'CORRELATION_%s_COLOR_%s' % (sign.upper(), self.group))
-                        source_data['corr']['color'].append(color)
-                        source_data['corr']['r'].append(r)
-                        source_data['corr']['p'].append(p_value)
-                        source_data['corr']['alpha'].append(abs(r))
-                        source_data['corr']['size'].append(((max_size - min_size) * abs(r)) + min_size)
-                        source_data['corr']['x'].append(x + 0.5)  # 0.5 offset due to bokeh 0.12.9 bug
-                        source_data['corr']['y'].append(var_count - y - 0.5)  # 0.5 offset due to bokeh 0.12.9 bug
-                        source_data['corr']['x_name'].append(categories_for_label[x])
-                        source_data['corr']['y_name'].append(categories_for_label[y])
-                        source_data['corr']['group'].append(self.group)
+                        sign = ["neg", "pos"][r >= 0]
+                        color = getattr(
+                            options,
+                            "CORRELATION_%s_COLOR_%s"
+                            % (sign.upper(), self.group),
+                        )
+                        source_data["corr"]["color"].append(color)
+                        source_data["corr"]["r"].append(r)
+                        source_data["corr"]["p"].append(p_value)
+                        source_data["corr"]["alpha"].append(abs(r))
+                        source_data["corr"]["size"].append(
+                            ((max_size - min_size) * abs(r)) + min_size
+                        )
+                        source_data["corr"]["x"].append(
+                            x + 0.5
+                        )  # 0.5 offset due to bokeh 0.12.9 bug
+                        source_data["corr"]["y"].append(
+                            var_count - y - 0.5
+                        )  # 0.5 offset due to bokeh 0.12.9 bug
+                        source_data["corr"]["x_name"].append(
+                            categories_for_label[x]
+                        )
+                        source_data["corr"]["y_name"].append(
+                            categories_for_label[y]
+                        )
+                        source_data["corr"]["group"].append(self.group)
 
                         try:
                             x_norm, x_p = scipy_stats.normaltest(x_data)
                         except ValueError:
-                            x_p = 'N/A'
+                            x_p = "N/A"
                         try:
                             y_norm, y_p = scipy_stats.normaltest(y_data)
                         except ValueError:
-                            y_p = 'N/A'
+                            y_p = "N/A"
 
-                        source_data['corr']['x_normality'].append(x_p)
-                        source_data['corr']['y_normality'].append(y_p)
+                        source_data["corr"]["x_normality"].append(x_p)
+                        source_data["corr"]["y_normality"].append(y_p)
 
-        return {'source_data': source_data, 'x_factors': x_factors, 'y_factors': y_factors}, removed_mrns
+        return {
+            "source_data": source_data,
+            "x_factors": x_factors,
+            "y_factors": y_factors,
+        }, removed_mrns
 
 
 def get_index_of_nan(numpy_array):
@@ -508,7 +634,7 @@ def get_index_of_nan(numpy_array):
     Parameters
     ----------
     numpy_array :
-        
+
 
     Returns
     -------
@@ -531,9 +657,9 @@ def str_starts_with_any_in_list(string_a, string_list):
     Parameters
     ----------
     string_a :
-        
+
     string_list :
-        
+
 
     Returns
     -------
@@ -574,7 +700,14 @@ def get_p_values(X, y, predictions, params):
     sd_b = np.sqrt(var_b)
     ts_b = params / sd_b
 
-    return [2 * (1 - scipy_stats.t.cdf(np.abs(i), (len(newX) - 1))) for i in ts_b], sd_b, ts_b
+    return (
+        [
+            2 * (1 - scipy_stats.t.cdf(np.abs(i), (len(newX) - 1)))
+            for i in ts_b
+        ],
+        sd_b,
+        ts_b,
+    )
 
 
 class MultiVariableRegression:
@@ -591,8 +724,8 @@ class MultiVariableRegression:
     -------
 
     """
-    def __init__(self, X, y, saved_reg=None):
 
+    def __init__(self, X, y, saved_reg=None):
 
         if saved_reg is None:
             self.reg = linear_model.LinearRegression()
@@ -606,28 +739,42 @@ class MultiVariableRegression:
         params = np.append(self.y_intercept, self.slope)
         self.predictions = self.reg.predict(X)
 
-        self.r_sq = r2_score(y,  self.predictions)
-        self.mse = mean_squared_error(y,  self.predictions)
+        self.r_sq = r2_score(y, self.predictions)
+        self.mse = mean_squared_error(y, self.predictions)
 
-        self.p_values, self.sd_b, self.ts_b = get_p_values(X, y,  self.predictions, params)
+        self.p_values, self.sd_b, self.ts_b = get_p_values(
+            X, y, self.predictions, params
+        )
 
         self.residuals = np.subtract(y, self.predictions)
 
-        self.norm_prob_plot = scipy_stats.probplot(self.residuals, dist='norm', fit=False, plot=None, rvalue=False)
+        self.norm_prob_plot = scipy_stats.probplot(
+            self.residuals, dist="norm", fit=False, plot=None, rvalue=False
+        )
 
         reg_prob = linear_model.LinearRegression()
-        reg_prob.fit([[val] for val in self.norm_prob_plot[0]], self.norm_prob_plot[1])
+        reg_prob.fit(
+            [[val] for val in self.norm_prob_plot[0]], self.norm_prob_plot[1]
+        )
 
         self.y_intercept_prob = reg_prob.intercept_
         self.slope_prob = reg_prob.coef_
-        self.x_trend_prob = [min(self.norm_prob_plot[0]), max(self.norm_prob_plot[0])]
-        self.y_trend_prob = np.add(np.multiply(self.x_trend_prob, self.slope_prob), self.y_intercept_prob)
+        self.x_trend_prob = [
+            min(self.norm_prob_plot[0]),
+            max(self.norm_prob_plot[0]),
+        ]
+        self.y_trend_prob = np.add(
+            np.multiply(self.x_trend_prob, self.slope_prob),
+            self.y_intercept_prob,
+        )
 
         self.f_stat = regressors_stats.f_stat(self.ols, X, y)
         self.df_error = len(X[:, 0]) - len(X[0, :]) - 1
         self.df_model = len(X[0, :])
 
-        self.f_p_value = scipy_stats.f.cdf(self.f_stat, self.df_model, self.df_error)
+        self.f_p_value = scipy_stats.f.cdf(
+            self.f_stat, self.df_model, self.df_error
+        )
 
 
 def get_control_limits(y, std_devs=3):
@@ -651,7 +798,9 @@ def get_control_limits(y, std_devs=3):
     center_line = np.mean(y)
     avg_moving_range = np.mean(np.absolute(np.diff(y)))
 
-    scalar_d = 1.128  # since moving range is calculated based on 2 consecutive points
+    scalar_d = (
+        1.128  # since moving range is calculated based on 2 consecutive points
+    )
 
     ucl = center_line + std_devs * avg_moving_range / scalar_d
     lcl = center_line - std_devs * avg_moving_range / scalar_d
@@ -665,9 +814,9 @@ def sync_variables_in_stats_data_objects(stats_data_1, stats_data_2):
     Parameters
     ----------
     stats_data_1 :
-        
+
     stats_data_2 :
-        
+
 
     Returns
     -------
@@ -679,7 +828,7 @@ def sync_variables_in_stats_data_objects(stats_data_1, stats_data_2):
 
     for grp, sd in stats_data.items():
         for var in variables[grp]:
-            if var not in variables[3-grp]:
-                values = ['None'] * len(stats_data[3-grp].mrns)
-                units = stats_data[grp].data[var]['units']
-                stats_data[3-grp].add_variable(var, values, units)
+            if var not in variables[3 - grp]:
+                values = ["None"] * len(stats_data[3 - grp].mrns)
+                units = stats_data[grp].data[var]["units"]
+                stats_data[3 - grp].add_variable(var, values, units)

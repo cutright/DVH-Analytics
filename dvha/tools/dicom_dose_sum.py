@@ -19,7 +19,8 @@ from dvha.tools.errors import push_to_log
 
 class DoseGrid:
     """
-    Class to easily access commonly used attributes of a DICOM dose grid and perform summations
+    Class to easily access commonly used attributes of a DICOM dose grid and
+    perform summations
 
     Example: Add two dose grids
         grid_1 = DoseGrid(dose_file_1)
@@ -28,7 +29,10 @@ class DoseGrid:
         grid_sum.save_dcm(some_file_path)
 
     """
-    def __init__(self, rt_dose, order=1, try_full_interp=True, interp_block_size=50000):
+
+    def __init__(
+        self, rt_dose, order=1, try_full_interp=True, interp_block_size=50000
+    ):
         """
         :param rt_dose: an RT Dose DICOM dataset or file_path
         :type rt_dose: pydicom.FileDataset
@@ -50,18 +54,29 @@ class DoseGrid:
             self.__set_axes()
 
     def __set_axes(self):
-        self.x_axis = np.arange(self.ds.Columns) * self.ds.PixelSpacing[0] + self.ds.ImagePositionPatient[0]
-        self.y_axis = np.arange(self.ds.Rows) * self.ds.PixelSpacing[1] + self.ds.ImagePositionPatient[1]
-        self.z_axis = np.array(self.ds.GridFrameOffsetVector) + self.ds.ImagePositionPatient[2]
+        self.x_axis = (
+            np.arange(self.ds.Columns) * self.ds.PixelSpacing[0]
+            + self.ds.ImagePositionPatient[0]
+        )
+        self.y_axis = (
+            np.arange(self.ds.Rows) * self.ds.PixelSpacing[1]
+            + self.ds.ImagePositionPatient[1]
+        )
+        self.z_axis = (
+            np.array(self.ds.GridFrameOffsetVector)
+            + self.ds.ImagePositionPatient[2]
+        )
 
         # x and z are swapped in the pixel_array
-        self.dose_grid = np.swapaxes(self.ds.pixel_array * self.ds.DoseGridScaling, 0, 2)
+        self.dose_grid = np.swapaxes(
+            self.ds.pixel_array * self.ds.DoseGridScaling, 0, 2
+        )
 
     @staticmethod
     def __validate_input(rt_dose):
         """Ensure provided input is either an RT Dose pydicom.FileDataset or a file_path to one"""
         if type(rt_dose) is pydicom.FileDataset:
-            if rt_dose.Modality.lower() == 'rtdose':
+            if rt_dose.Modality.lower() == "rtdose":
                 return rt_dose
             msg = "DoseGrid.__validate_input: The provided pydicom.FileDataset is not RTDOSE"
             push_to_log(msg=msg)
@@ -69,14 +84,18 @@ class DoseGrid:
         elif isfile(rt_dose):
             try:
                 rt_dose_ds = pydicom.read_file(rt_dose)
-                if rt_dose_ds.Modality.lower() == 'rtdose':
+                if rt_dose_ds.Modality.lower() == "rtdose":
                     return rt_dose_ds
-                msg = 'DoseGrid.__validate_input: ' \
-                      'The provided file_path points to a DICOM file, but it is not an RT Dose file.'
+                msg = (
+                    "DoseGrid.__validate_input: "
+                    "The provided file_path points to a DICOM file, but it is not an RT Dose file."
+                )
                 push_to_log(msg=msg)
             except Exception as e:
-                msg = 'DoseGrid.__validate_input: ' \
-                      'The provided input is neither a pydicom.FileDataset nor could it be read by pydicom.'
+                msg = (
+                    "DoseGrid.__validate_input: "
+                    "The provided input is neither a pydicom.FileDataset nor could it be read by pydicom."
+                )
                 push_to_log(e, msg=msg)
         return
 
@@ -86,7 +105,9 @@ class DoseGrid:
     @property
     def shape(self):
         """Get the x, y, z dimensions of the dose grid"""
-        return tuple([self.ds.Columns, self.ds.Rows, len(self.ds.GridFrameOffsetVector)])
+        return tuple(
+            [self.ds.Columns, self.ds.Rows, len(self.ds.GridFrameOffsetVector)]
+        )
 
     @property
     def axes(self):
@@ -96,14 +117,19 @@ class DoseGrid:
     @property
     def scale(self):
         """Get the dose grid resolution (xyz)"""
-        return np.array([self.ds.PixelSpacing[0],
-                         self.ds.PixelSpacing[1],
-                         self.ds.GridFrameOffsetVector[1] - self.ds.GridFrameOffsetVector[0]])
+        return np.array(
+            [
+                self.ds.PixelSpacing[0],
+                self.ds.PixelSpacing[1],
+                self.ds.GridFrameOffsetVector[1]
+                - self.ds.GridFrameOffsetVector[0],
+            ]
+        )
 
     @property
     def offset(self):
         """Get the coordinates of the dose grid origin (mm)"""
-        return np.array(self.ds.ImagePositionPatient, dtype='float')
+        return np.array(self.ds.ImagePositionPatient, dtype="float")
 
     @property
     def points(self):
@@ -123,10 +149,12 @@ class DoseGrid:
 
     def is_coincident(self, other):
         """Check dose grid coincidence, if True a direct summation is appropriate"""
-        return self.ds.ImagePositionPatient == other.ds.ImagePositionPatient and \
-               self.ds.pixel_array.shape == other.ds.pixel_array.shape and \
-               self.ds.PixelSpacing == other.ds.PixelSpacing and \
-               self.ds.GridFrameOffsetVector == other.ds.GridFrameOffsetVector
+        return (
+            self.ds.ImagePositionPatient == other.ds.ImagePositionPatient
+            and self.ds.pixel_array.shape == other.ds.pixel_array.shape
+            and self.ds.PixelSpacing == other.ds.PixelSpacing
+            and self.ds.GridFrameOffsetVector == other.ds.GridFrameOffsetVector
+        )
 
     def set_pixel_data(self):
         """
@@ -135,8 +163,12 @@ class DoseGrid:
         self.ds.BitsAllocated = 32
         self.ds.BitsStored = 32
         self.ds.HighBit = 31
-        self.ds.DoseGridScaling = np.max(self.dose_grid) / np.iinfo(np.uint32).max
-        pixel_data = np.swapaxes(self.dose_grid, 0, 2) / self.ds.DoseGridScaling
+        self.ds.DoseGridScaling = (
+            np.max(self.dose_grid) / np.iinfo(np.uint32).max
+        )
+        pixel_data = (
+            np.swapaxes(self.dose_grid, 0, 2) / self.ds.DoseGridScaling
+        )
         self.ds.PixelData = np.uint32(pixel_data).tostring()
 
     def save_dcm(self, file_path):
@@ -150,7 +182,10 @@ class DoseGrid:
         :type other_axes: list
         :return: np.vstack of other_axes in this ijk space
         """
-        ijk_axes = [(np.array(axis) - self.offset[a]) / self.scale[a] for a, axis in enumerate(other_axes)]
+        ijk_axes = [
+            (np.array(axis) - self.offset[a]) / self.scale[a]
+            for a, axis in enumerate(other_axes)
+        ]
         j, i, k = np.meshgrid(ijk_axes[1], ijk_axes[0], ijk_axes[2])
         return np.vstack((i.ravel(), j.ravel(), k.ravel()))
 
@@ -198,7 +233,9 @@ class DoseGrid:
         :type other: DoseGrid
         """
         points = other.get_ijk_points(self.axes)
-        return map_coordinates(input=other.dose_grid, coordinates=points, order=self.order).reshape(self.shape)
+        return map_coordinates(
+            input=other.dose_grid, coordinates=points, order=self.order
+        ).reshape(self.shape)
 
     def interp_by_block(self, other):
         """
@@ -215,8 +252,13 @@ class DoseGrid:
 
         for i in range(block_count):
             start = i * self.interp_block_size
-            end = (i+1) * self.interp_block_size if i + 1 < block_count else -1
-            other_grid[start:end] = map_coordinates(input=other.dose_grid, coordinates=points[start:end],
-                                                    order=self.order)
+            end = (
+                (i + 1) * self.interp_block_size if i + 1 < block_count else -1
+            )
+            other_grid[start:end] = map_coordinates(
+                input=other.dose_grid,
+                coordinates=points[start:end],
+                order=self.order,
+            )
 
         return other_grid.reshape(self.shape)

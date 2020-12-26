@@ -9,7 +9,7 @@ treatment planning data. It imports data from DICOM-RT files (*i.e.*, plan, dose
 provides customizable plots, and provides tools for generating linear, multi-variable, and machine learning 
 regressions.
 
-|pypi| |Docs| |lgtm-cq| |lgtm| |lines| |repo-size|
+|pypi| |Docs| |lgtm-cq| |lgtm| |lines| |repo-size| |code-style|
 
 
 Documentation
@@ -149,6 +149,10 @@ breast cancer." International Journal of Radiation Oncology* Biology* Physics 10
 .. |repo-size| image:: https://img.shields.io/github/languages/code-size/cutright/dvh-analytics
    :target: https://img.shields.io/github/languages/code-size/cutright/dvh-analytics
    :alt: Repo Size
+
+.. |code-style| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+   :target: https://github.com/psf/black
+   :alt: Code style: black
 
 .. |logo| raw:: html
 

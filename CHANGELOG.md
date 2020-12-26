@@ -2,7 +2,9 @@
 
 v0.9.2 (TBD)
 --------------------
- - [Database] Added centroid_dist_to_iso_min and centroid_dist_to_iso_max columns to DVHs table 
+ - [Database] Added centroid_dist_to_iso_min and centroid_dist_to_iso_max columns to DVHs table
+ - [Linting] Applied Black code style
+ - [Docs] Backend documentation at [dvha.readthedocs.io](http://dvha.readthedocs.io)
  
 
 v0.9.1 (2020.12.13)

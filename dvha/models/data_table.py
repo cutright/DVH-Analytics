@@ -13,7 +13,10 @@ A class to sync a data object and list_ctrl
 from copy import deepcopy
 import wx
 from dvha.tools.errors import push_to_log
-from dvha.tools.utilities import get_selected_listctrl_items, get_sorted_indices
+from dvha.tools.utilities import (
+    get_selected_listctrl_items,
+    get_sorted_indices,
+)
 
 
 class DataTable:
@@ -21,7 +24,10 @@ class DataTable:
     This is a helper class containing the UI elements of the list_ctrl.  Adding / Changing data with this class
     will automatically update UI elements.
     """
-    def __init__(self, list_ctrl, data=None, columns=None, widths=None, formats=None):
+
+    def __init__(
+        self, list_ctrl, data=None, columns=None, widths=None, formats=None
+    ):
         """
         :param list_ctrl: the list_ctrl in the GUI to be updated with data in this class
         :type list_ctrl: ListCtrl
@@ -61,10 +67,14 @@ class DataTable:
         :return: a copy of the data, columns, widths, and formats
         :rtype: dict
         """
-        return deepcopy({'data': self.data,
-                         'columns': self.columns,
-                         'widths': self.widths,
-                         'formats': self.formats})
+        return deepcopy(
+            {
+                "data": self.data,
+                "columns": self.columns,
+                "widths": self.widths,
+                "formats": self.formats,
+            }
+        )
 
     def load_save_data(self, save_data, ignore_layout=False):
         """
@@ -74,9 +84,13 @@ class DataTable:
         :param ignore_layout: If true, do not update layout
         :type ignore_layout: bool
         """
-        self.widths = deepcopy(save_data['widths'])
+        self.widths = deepcopy(save_data["widths"])
         self.set_column_widths()
-        self.set_data(save_data['data'], save_data['columns'], ignore_layout=ignore_layout)
+        self.set_data(
+            save_data["data"],
+            save_data["columns"],
+            ignore_layout=ignore_layout,
+        )
 
     def set_data(self, data, columns, formats=None, ignore_layout=False):
         """
@@ -139,7 +153,10 @@ class DataTable:
         :rtype: list
         """
         if self.data and self.keys:
-            return [[self.data[col][row] for col in self.columns] for row in range(self.row_count)]
+            return [
+                [self.data[col][row] for col in self.columns]
+                for row in range(self.row_count)
+            ]
         else:
             return []
 
@@ -153,7 +170,7 @@ class DataTable:
         if self.layout:
             self.layout.AppendColumn(column, format=format)
         self.columns.append(column)
-        self.data[column] = [''] * self.row_count
+        self.data[column] = [""] * self.row_count
 
     def delete_column(self, column):
         """
@@ -167,7 +184,7 @@ class DataTable:
                 try:
                     self.layout.DeleteColumn(index)
                 except Exception as e:
-                    msg = 'DataTable.delete_column: Could not delete column in layout'
+                    msg = "DataTable.delete_column: Could not delete column in layout"
                     push_to_log(e, msg=msg)
             self.data.pop(column)
             self.columns.pop(index)
@@ -194,7 +211,11 @@ class DataTable:
         if self.layout:
             index = self.layout.InsertItem(50000, str(row[0]))
             for i in range(len(row))[1:]:
-                if isinstance(row[i], float) or isinstance(row[i], int) and str(row[i]) not in {'True', 'False'}:
+                if (
+                    isinstance(row[i], float)
+                    or isinstance(row[i], int)
+                    and str(row[i]) not in {"True", "False"}
+                ):
                     value = "%0.2f" % row[i]
                 else:
                     value = str(row[i])
@@ -331,9 +352,9 @@ class DataTable:
             self.insert_columns_into_data_for_csv(data, extra_column_data)
         csv_data = []
         for row in data:
-            csv_data.append(','.join(str(i) for i in row))
+            csv_data.append(",".join(str(i) for i in row))
 
-        return '\n'.join(csv_data)
+        return "\n".join(csv_data)
 
     @property
     def data_for_csv(self):
@@ -350,13 +371,15 @@ class DataTable:
                 if isinstance(raw_value, float):
                     value = "%0.2f" % raw_value
                 else:
-                    value = str(raw_value).replace(',', ';')
+                    value = str(raw_value).replace(",", ";")
                 row.append(value)
             data.append(row)
         return data
 
     @staticmethod
-    def insert_column_into_data_for_csv(data_for_csv, columns_dict_value, index):
+    def insert_column_into_data_for_csv(
+        data_for_csv, columns_dict_value, index
+    ):
         """
         Insert a column of data into the data returned from data_for_csv
         :param data_for_csv: rows of csv data
@@ -366,9 +389,11 @@ class DataTable:
         :param index: index of column to be inserted
         :type index: int
         """
-        columns_dict_value['data'].insert(0, columns_dict_value['title'])
+        columns_dict_value["data"].insert(0, columns_dict_value["title"])
         for i, row in enumerate(data_for_csv):
-            row.insert(index, str(columns_dict_value['data'][i]).replace(',', ';'))
+            row.insert(
+                index, str(columns_dict_value["data"][i]).replace(",", ";")
+            )
 
     def insert_columns_into_data_for_csv(self, data_for_csv, columns_dict):
         """
@@ -381,7 +406,9 @@ class DataTable:
         indices = list(columns_dict)
         indices.sort()
         for index in indices:
-            self.insert_column_into_data_for_csv(data_for_csv, columns_dict[index], index)
+            self.insert_column_into_data_for_csv(
+                data_for_csv, columns_dict[index], index
+            )
 
     @property
     def selected_row_data(self):
@@ -389,11 +416,17 @@ class DataTable:
         :return: row data of the currently selected row in the GUI
         :rtype: list
         """
-        return [self.get_row(index) for index in get_selected_listctrl_items(self.layout)]
+        return [
+            self.get_row(index)
+            for index in get_selected_listctrl_items(self.layout)
+        ]
 
     @property
     def selected_row_data_with_index(self):
-        return [[index, self.get_row(index)] for index in get_selected_listctrl_items(self.layout)]
+        return [
+            [index, self.get_row(index)]
+            for index in get_selected_listctrl_items(self.layout)
+        ]
 
     def apply_selection_to_all(self, state):
         """
@@ -411,8 +444,12 @@ class DataTable:
     def sort_table(self, evt):
 
         if self.data:
-            key = self.columns[evt.Column]  # get the column name from the column index (evt.Column)
-            sort_indices = get_sorted_indices(self.data[key])  # handles str and float mixtures
+            key = self.columns[
+                evt.Column
+            ]  # get the column name from the column index (evt.Column)
+            sort_indices = get_sorted_indices(
+                self.data[key]
+            )  # handles str and float mixtures
 
             if self.sort_indices is None:
                 self.sort_indices = list(range(len(self.data[key])))
@@ -421,16 +458,24 @@ class DataTable:
             if sort_indices == list(range(len(sort_indices))):
                 sort_indices = sort_indices[::-1]
 
-            self.sort_indices = [self.sort_indices[i] for i in sort_indices]  # keep original order
+            self.sort_indices = [
+                self.sort_indices[i] for i in sort_indices
+            ]  # keep original order
 
             # reorder data and reinitialize table view
-            self.data = {column: [self.data[column][i] for i in sort_indices] for column in self.columns}
+            self.data = {
+                column: [self.data[column][i] for i in sort_indices]
+                for column in self.columns
+            }
             self.set_data(self.data, self.columns, self.formats)
 
     def get_data_in_original_order(self):
         if self.sort_indices is None:
             return self.data
-        return {column: [self.data[column][i] for i in self.sort_indices] for column in self.columns}
+        return {
+            column: [self.data[column][i] for i in self.sort_indices]
+            for column in self.columns
+        }
 
     def get_unique_values(self, column):
         return sorted(set(self.data[column]))

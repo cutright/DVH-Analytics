@@ -17,7 +17,16 @@ from dateutil.parser import parse as parse_date
 import linecache
 import numpy as np
 from os import walk, listdir, unlink, mkdir, rmdir, chdir, sep, environ
-from os.path import join, isfile, isdir, splitext, basename, dirname, realpath, pathsep
+from os.path import (
+    join,
+    isfile,
+    isdir,
+    splitext,
+    basename,
+    dirname,
+    realpath,
+    pathsep,
+)
 import pickle
 import pydicom
 from pydicom.uid import ImplicitVRLittleEndian
@@ -26,13 +35,21 @@ from subprocess import check_output
 import sys
 import tracemalloc
 from dvha.db.sql_connector import DVH_SQL
-from dvha.paths import SQL_CNF_PATH, WIN_APP_ICON, PIP_LIST_PATH, DIRECTORIES, APP_DIR, BACKUP_DIR, DATA_DIR
+from dvha.paths import (
+    SQL_CNF_PATH,
+    WIN_APP_ICON,
+    PIP_LIST_PATH,
+    DIRECTORIES,
+    APP_DIR,
+    BACKUP_DIR,
+    DATA_DIR,
+)
 from dvha.tools.errors import push_to_log
 
 
-IGNORED_FILES = ['.ds_store']
+IGNORED_FILES = [".ds_store"]
 
-if environ.get('READTHEDOCS') == 'True' or 'sphinx' in sys.prefix:
+if environ.get("READTHEDOCS") == "True" or "sphinx" in sys.prefix:
     MSG_DLG_FLAGS = None
 else:
     MSG_DLG_FLAGS = wx.ICON_WARNING | wx.YES | wx.NO | wx.NO_DEFAULT
@@ -40,16 +57,16 @@ else:
 
 def is_windows():
     """ """
-    return wx.Platform == '__WXMSW__'
+    return wx.Platform == "__WXMSW__"
 
 
-def set_msw_background_color(window_obj, color='lightgrey'):
+def set_msw_background_color(window_obj, color="lightgrey"):
     """
 
     Parameters
     ----------
     window_obj :
-        
+
     color :
          (Default value = 'lightgrey')
 
@@ -63,12 +80,12 @@ def set_msw_background_color(window_obj, color='lightgrey'):
 
 def is_linux():
     """ """
-    return wx.Platform == '__WXGTK__'
+    return wx.Platform == "__WXGTK__"
 
 
 def is_mac():
     """ """
-    return wx.Platform == '__WXMAC__'
+    return wx.Platform == "__WXMAC__"
 
 
 def initialize_directories():
@@ -93,7 +110,7 @@ def write_sql_connection_settings(config):
     # TODO: Make this more secure
 
     text = ["%s %s" % (key, value) for key, value in config.items() if value]
-    text = '\n'.join(text)
+    text = "\n".join(text)
 
     with open(SQL_CNF_PATH, "w") as text_file:
         text_file.write(text)
@@ -123,7 +140,9 @@ def scale_bitmap(bitmap, width, height):
     return wx.Bitmap(image)
 
 
-def get_tree_ctrl_image(file_path, file_type=wx.BITMAP_TYPE_PNG, width=16, height=16):
+def get_tree_ctrl_image(
+    file_path, file_type=wx.BITMAP_TYPE_PNG, width=16, height=16
+):
     """Create an image top be used in the TreeCtrl from the provided file_path
 
     Parameters
@@ -143,10 +162,14 @@ def get_tree_ctrl_image(file_path, file_type=wx.BITMAP_TYPE_PNG, width=16, heigh
         scaled image for TreeCtrl
 
     """
-    return wx.Image(file_path, file_type).Scale(width, height).ConvertToBitmap()
+    return (
+        wx.Image(file_path, file_type).Scale(width, height).ConvertToBitmap()
+    )
 
 
-def get_file_paths(start_path, search_subfolders=False, extension=None, return_dict=False):
+def get_file_paths(
+    start_path, search_subfolders=False, extension=None, return_dict=False
+):
     """Get a list of absolute file paths for a given directory
 
     Parameters
@@ -172,7 +195,10 @@ def get_file_paths(start_path, search_subfolders=False, extension=None, return_d
         if search_subfolders:
             for root, dirs, files in walk(start_path, topdown=False):
                 for name in files:
-                    if extension is None or splitext(name)[1].lower() == extension.lower():
+                    if (
+                        extension is None
+                        or splitext(name)[1].lower() == extension.lower()
+                    ):
                         if name.lower() not in IGNORED_FILES:
                             file_paths.append(join(root, name))
                             if return_dict:
@@ -185,7 +211,10 @@ def get_file_paths(start_path, search_subfolders=False, extension=None, return_d
 
         for f in listdir(start_path):
             if isfile(join(start_path, f)):
-                if extension is None or splitext(f)[1].lower() == extension.lower():
+                if (
+                    extension is None
+                    or splitext(f)[1].lower() == extension.lower()
+                ):
                     if f.lower() not in IGNORED_FILES:
                         file_paths.append(join(start_path, f))
         return file_paths
@@ -201,7 +230,7 @@ def get_study_instance_uids(**kwargs):
     kwargs :
         keys are SQL table names and the values are conditions in SQL syntax
     **kwargs :
-        
+
 
     Returns
     -------
@@ -210,13 +239,21 @@ def get_study_instance_uids(**kwargs):
 
     """
     with DVH_SQL() as cnx:
-        uids = {table: cnx.get_unique_values(table, 'study_instance_uid', condition)
-                for table, condition in kwargs.items()}
+        uids = {
+            table: cnx.get_unique_values(
+                table, "study_instance_uid", condition
+            )
+            for table, condition in kwargs.items()
+        }
 
-    complete_list = flatten_list_of_lists(list(uids.values()), remove_duplicates=True)
+    complete_list = flatten_list_of_lists(
+        list(uids.values()), remove_duplicates=True
+    )
 
-    uids['common'] = [uid for uid in complete_list if is_uid_in_all_keys(uid, uids)]
-    uids['unique'] = complete_list
+    uids["common"] = [
+        uid for uid in complete_list if is_uid_in_all_keys(uid, uids)
+    ]
+    uids["unique"] = complete_list
 
     return uids
 
@@ -250,7 +287,7 @@ def is_uid_in_all_keys(uid, uids):
     final_answer = True
     # Product of all answer[key] values (except 'unique')
     for table, value in table_answer.items():
-        if table not in 'unique':
+        if table not in "unique":
             final_answer *= value
     return final_answer
 
@@ -314,14 +351,14 @@ def collapse_into_single_dates(x, y):
     w_collapsed = [1]
     for n in range(1, len(x)):
         if x[n] == x_collapsed[-1]:
-            y_collapsed[-1] = (y_collapsed[-1] + y[n])
+            y_collapsed[-1] = y_collapsed[-1] + y[n]
             w_collapsed[-1] += 1
         else:
             x_collapsed.append(x[n])
             y_collapsed.append(y[n])
             w_collapsed.append(1)
 
-    return {'x': x_collapsed, 'y': y_collapsed, 'w': w_collapsed}
+    return {"x": x_collapsed, "y": y_collapsed, "w": w_collapsed}
 
 
 def moving_avg(xyw, avg_len):
@@ -342,12 +379,12 @@ def moving_avg(xyw, avg_len):
     """
     cumsum, moving_aves, x_final = [0], [], []
 
-    for i, y in enumerate(xyw['y'], 1):
-        cumsum.append(cumsum[i - 1] + y / xyw['w'][i - 1])
+    for i, y in enumerate(xyw["y"], 1):
+        cumsum.append(cumsum[i - 1] + y / xyw["w"][i - 1])
         if i >= avg_len:
             moving_ave = (cumsum[i] - cumsum[i - avg_len]) / avg_len
             moving_aves.append(moving_ave)
-    x_final = [xyw['x'][i] for i in range(avg_len - 1, len(xyw['x']))]
+    x_final = [xyw["x"][i] for i in range(avg_len - 1, len(xyw["x"]))]
 
     return x_final, moving_aves
 
@@ -358,7 +395,7 @@ def convert_value_to_str(value, rounding_digits=2):
     Parameters
     ----------
     value :
-        
+
     rounding_digits :
          (Default value = 2)
 
@@ -391,7 +428,9 @@ def get_selected_listctrl_items(list_control):
 
     index_current = -1
     while True:
-        index_next = list_control.GetNextItem(index_current, wx.LIST_NEXT_ALL, wx.LIST_STATE_SELECTED)
+        index_next = list_control.GetNextItem(
+            index_current, wx.LIST_NEXT_ALL, wx.LIST_STATE_SELECTED
+        )
         if index_next == -1:
             return selection
 
@@ -420,7 +459,10 @@ def print_run_time(start_time, end_time, calc_title):
     m, s = divmod(seconds, 60)
     h, m = divmod(m, 60)
     if h:
-        print("%s. This took %dhrs %02dmin %02dsec to complete" % (calc_title, h, m, s))
+        print(
+            "%s. This took %dhrs %02dmin %02dsec to complete"
+            % (calc_title, h, m, s)
+        )
     elif m:
         print("%s. This took %02dmin %02dsec to complete" % (calc_title, m, s))
     else:
@@ -433,7 +475,7 @@ def datetime_to_date_string(datetime_obj):
     Parameters
     ----------
     datetime_obj :
-        
+
 
     Returns
     -------
@@ -441,7 +483,11 @@ def datetime_to_date_string(datetime_obj):
     """
     if isinstance(datetime_obj, str):
         datetime_obj = parse_date(datetime_obj)
-    return "%s/%s/%s" % (datetime_obj.month, datetime_obj.day, datetime_obj.year)
+    return "%s/%s/%s" % (
+        datetime_obj.month,
+        datetime_obj.day,
+        datetime_obj.year,
+    )
 
 
 def change_angle_origin(angles, max_positive_angle):
@@ -495,15 +541,17 @@ def calc_stats(data):
         max, 75%, median, mean, 25%, and min of data
 
     """
-    data = [x for x in data if x != 'None']
+    data = [x for x in data if x != "None"]
     try:
         data_np = np.array(data)
-        rtn_data = [np.max(data_np),
-                    np.percentile(data_np, 75),
-                    np.median(data_np),
-                    np.mean(data_np),
-                    np.percentile(data_np, 25),
-                    np.min(data_np)]
+        rtn_data = [
+            np.max(data_np),
+            np.percentile(data_np, 75),
+            np.median(data_np),
+            np.mean(data_np),
+            np.percentile(data_np, 25),
+            np.min(data_np),
+        ]
     except Exception as e:
         rtn_data = [0, 0, 0, 0, 0, 0]
         msg = "tools.utilities.calc_stats: received non-numerical data"
@@ -511,7 +559,9 @@ def calc_stats(data):
     return rtn_data
 
 
-def move_files_to_new_path(files, new_dir, copy_files=False, new_file_names=None, callback=None):
+def move_files_to_new_path(
+    files, new_dir, copy_files=False, new_file_names=None, callback=None
+):
     """Move all files provided to the new directory
 
     Parameters
@@ -537,7 +587,9 @@ def move_files_to_new_path(files, new_dir, copy_files=False, new_file_names=None
         if isfile(file_path):
             file_name = basename(file_path)
             old_dir = dirname(file_path)
-            new_file_name = file_name if new_file_names is None else new_file_names[i]
+            new_file_name = (
+                file_name if new_file_names is None else new_file_names[i]
+            )
             new = join(new_dir, new_file_name)
             if not isdir(new_dir):
                 mkdir(new_dir)
@@ -555,7 +607,7 @@ def delete_directory_contents(dir_to_delete):
     Parameters
     ----------
     dir_to_delete :
-        
+
 
     Returns
     -------
@@ -572,7 +624,7 @@ def delete_file(file_path):
     Parameters
     ----------
     file_path :
-        
+
 
     Returns
     -------
@@ -584,7 +636,7 @@ def delete_file(file_path):
         elif isdir(file_path):
             shutil.rmtree(file_path)
     except Exception as e:
-        push_to_log(e, msg='tools.utilities.delete_file: %s' % file_path)
+        push_to_log(e, msg="tools.utilities.delete_file: %s" % file_path)
 
 
 def delete_imported_dicom_files(dicom_files):
@@ -599,17 +651,19 @@ def delete_imported_dicom_files(dicom_files):
     -------
 
     """
-    for i, directory in enumerate(dicom_files['folder_path']):
+    for i, directory in enumerate(dicom_files["folder_path"]):
         # Delete associated plan, structure, and dose files
-        for key in ['plan_file', 'structure_file', 'dose_file']:
+        for key in ["plan_file", "structure_file", "dose_file"]:
             delete_file(join(directory, dicom_files[key][i]))
 
         # Delete misc dicom files for given study instance uid
         remaining_files = listdir(directory)
         for f in remaining_files:
             try:
-                uid = str(pydicom.read_file(join(directory, f)).StudyInstanceUID)
-                if uid == str(dicom_files['study_instance_uid'][i]):
+                uid = str(
+                    pydicom.read_file(join(directory, f)).StudyInstanceUID
+                )
+                if uid == str(dicom_files["study_instance_uid"][i]):
                     delete_file(f)
             except Exception:
                 pass
@@ -631,15 +685,18 @@ def move_imported_dicom_files(dicom_files, new_dir):
     dicom_files : dict
         the return from DVH_SQL().get_dicom_file_paths
     new_dir :
-        
+
 
     Returns
     -------
 
     """
-    for i, directory in enumerate(dicom_files['folder_path']):
-        files = [join(directory, dicom_files[key][i]) for key in ['plan_file', 'structure_file', 'dose_file']]
-        new_patient_dir = join(new_dir, dicom_files['mrn'][i])
+    for i, directory in enumerate(dicom_files["folder_path"]):
+        files = [
+            join(directory, dicom_files[key][i])
+            for key in ["plan_file", "structure_file", "dose_file"]
+        ]
+        new_patient_dir = join(new_dir, dicom_files["mrn"][i])
         move_files_to_new_path(files, new_patient_dir)
 
         # Move misc dicom files for given study instance uid
@@ -647,8 +704,10 @@ def move_imported_dicom_files(dicom_files, new_dir):
         files = []
         for f in remaining_files:
             try:
-                uid = str(pydicom.read_file(join(directory, f)).StudyInstanceUID)
-                if uid == str(dicom_files['study_instance_uid'][i]):
+                uid = str(
+                    pydicom.read_file(join(directory, f)).StudyInstanceUID
+                )
+                if uid == str(dicom_files["study_instance_uid"][i]):
                     files.append(f)
             except Exception:
                 pass
@@ -669,7 +728,7 @@ def remove_empty_sub_folders(start_path):
     Parameters
     ----------
     start_path :
-        
+
 
     Returns
     -------
@@ -705,7 +764,7 @@ def move_all_files(new_dir, old_dir):
 
     file_paths = [f for f in listdir(old_dir) if isfile(join(old_dir, f))]
 
-    misc_path = join(new_dir, 'misc')
+    misc_path = join(new_dir, "misc")
     if not isdir(misc_path):
         mkdir(misc_path)
 
@@ -723,9 +782,9 @@ def get_elapsed_time(start_time, end_time):
     Parameters
     ----------
     start_time :
-        
+
     end_time :
-        
+
 
     Returns
     -------
@@ -748,7 +807,7 @@ def is_date(date):
     Parameters
     ----------
     date :
-        
+
 
     Returns
     -------
@@ -781,8 +840,8 @@ def rank_ptvs_by_D95(ptvs):
         ptv numbers in order of D_95%
 
     """
-    doses_to_rank = get_dose_to_volume(ptvs['dvh'], ptvs['volume'], 0.95)
-    return sorted(range(len(ptvs['dvh'])), key=lambda k: doses_to_rank[k])
+    doses_to_rank = get_dose_to_volume(ptvs["dvh"], ptvs["volume"], 0.95)
+    return sorted(range(len(ptvs["dvh"])), key=lambda k: doses_to_rank[k])
 
 
 def get_dose_to_volume(dvhs, volumes, roi_fraction):
@@ -791,11 +850,11 @@ def get_dose_to_volume(dvhs, volumes, roi_fraction):
     Parameters
     ----------
     dvhs :
-        
+
     volumes :
-        
+
     roi_fraction :
-        
+
 
     Returns
     -------
@@ -805,7 +864,7 @@ def get_dose_to_volume(dvhs, volumes, roi_fraction):
     doses = []
     for i, dvh in enumerate(dvhs):
         abs_volume = volumes[i] * roi_fraction
-        dvh_np = np.array(dvh.split(','), dtype=np.float)
+        dvh_np = np.array(dvh.split(","), dtype=np.float)
         try:
             dose = next(x[0] for x in enumerate(dvh_np) if x[1] < abs_volume)
         except StopIteration:
@@ -821,7 +880,7 @@ def float_or_none(value):
     Parameters
     ----------
     value :
-        
+
 
     Returns
     -------
@@ -830,7 +889,7 @@ def float_or_none(value):
     try:
         return float(value)
     except ValueError:
-        return 'None'
+        return "None"
 
 
 class MessageDialog:
@@ -844,11 +903,19 @@ class MessageDialog:
     -------
 
     """
-    def __init__(self, parent, caption, message="Are you sure?", action_yes_func=None, action_no_func=None,
-                 flags=MSG_DLG_FLAGS):
+
+    def __init__(
+        self,
+        parent,
+        caption,
+        message="Are you sure?",
+        action_yes_func=None,
+        action_no_func=None,
+        flags=MSG_DLG_FLAGS,
+    ):
         if is_windows():
-            message = '\n'.join([caption, message])
-            caption = ' '
+            message = "\n".join([caption, message])
+            caption = " "
         self.dlg = wx.MessageDialog(parent, message, caption, flags)
         self.parent = parent
         self.action_yes_func = action_yes_func
@@ -878,15 +945,15 @@ def save_object_to_file(obj, abs_file_path):
     Parameters
     ----------
     obj :
-        
+
     abs_file_path :
-        
+
 
     Returns
     -------
 
     """
-    with open(abs_file_path, 'wb') as outfile:
+    with open(abs_file_path, "wb") as outfile:
         pickle.dump(obj, outfile)
 
 
@@ -896,14 +963,14 @@ def load_object_from_file(abs_file_path):
     Parameters
     ----------
     abs_file_path :
-        
+
 
     Returns
     -------
 
     """
     if isfile(abs_file_path):
-        with open(abs_file_path, 'rb') as infile:
+        with open(abs_file_path, "rb") as infile:
             obj = pickle.load(infile)
         return obj
 
@@ -937,9 +1004,9 @@ def remove_every_nth_element(some_list, n):
     Parameters
     ----------
     some_list :
-        
+
     n :
-        
+
 
     Returns
     -------
@@ -969,7 +1036,9 @@ def sample_roi(roi_coord, max_point_count=5000, iterative_reduction=0.1):
         sampled roi
 
     """
-    return sample_list(roi_coord, max_point_count, int(1 / iterative_reduction))
+    return sample_list(
+        roi_coord, max_point_count, int(1 / iterative_reduction)
+    )
 
 
 def get_sorted_indices(some_list):
@@ -978,7 +1047,7 @@ def get_sorted_indices(some_list):
     Parameters
     ----------
     some_list :
-        
+
 
     Returns
     -------
@@ -988,11 +1057,17 @@ def get_sorted_indices(some_list):
         return [i[0] for i in sorted(enumerate(some_list), key=lambda x: x[1])]
     except TypeError:  # can't sort if a mix of str and float
         try:
-            temp_data = [[value, -float('inf')][value == 'None'] for value in some_list]
-            return [i[0] for i in sorted(enumerate(temp_data), key=lambda x: x[1])]
+            temp_data = [
+                [value, -float("inf")][value == "None"] for value in some_list
+            ]
+            return [
+                i[0] for i in sorted(enumerate(temp_data), key=lambda x: x[1])
+            ]
         except TypeError:
             temp_data = [str(value) for value in some_list]
-            return [i[0] for i in sorted(enumerate(temp_data), key=lambda x: x[1])]
+            return [
+                i[0] for i in sorted(enumerate(temp_data), key=lambda x: x[1])
+            ]
 
 
 def get_window_size(width, height):
@@ -1023,7 +1098,7 @@ def set_frame_icon(frame):
     Parameters
     ----------
     frame :
-        
+
 
     Returns
     -------
@@ -1033,13 +1108,13 @@ def set_frame_icon(frame):
         frame.SetIcon(wx.Icon(WIN_APP_ICON))
 
 
-def trace_memory_alloc_pretty_top(snapshot, key_type='lineno', limit=10):
+def trace_memory_alloc_pretty_top(snapshot, key_type="lineno", limit=10):
     """From https://docs.python.org/3/library/tracemalloc.html
 
     Parameters
     ----------
     snapshot :
-        
+
     key_type :
          (Default value = 'lineno')
     limit :
@@ -1049,11 +1124,13 @@ def trace_memory_alloc_pretty_top(snapshot, key_type='lineno', limit=10):
     -------
 
     """
-    print('-----------------------------------------------------------------')
-    snapshot = snapshot.filter_traces((
-        tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
-        tracemalloc.Filter(False, "<unknown>"),
-    ))
+    print("-----------------------------------------------------------------")
+    snapshot = snapshot.filter_traces(
+        (
+            tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
+            tracemalloc.Filter(False, "<unknown>"),
+        )
+    )
     top_stats = snapshot.statistics(key_type)
 
     print("Top %s lines" % limit)
@@ -1061,11 +1138,13 @@ def trace_memory_alloc_pretty_top(snapshot, key_type='lineno', limit=10):
         frame = stat.traceback[0]
         # replace "/path/to/module/file.py" with "module/file.py"
         filename = sep.join(frame.filename.split(sep)[-2:])
-        print("#%s: %s:%s: %.1f KiB"
-              % (index, filename, frame.lineno, stat.size / 1024))
+        print(
+            "#%s: %s:%s: %.1f KiB"
+            % (index, filename, frame.lineno, stat.size / 1024)
+        )
         line = linecache.getline(frame.filename, frame.lineno).strip()
         if line:
-            print('    %s' % line)
+            print("    %s" % line)
 
     other = top_stats[limit:]
     if other:
@@ -1075,13 +1154,13 @@ def trace_memory_alloc_pretty_top(snapshot, key_type='lineno', limit=10):
     print("Total allocated size: %.1f KiB" % (total / 1024))
 
 
-def trace_memory_alloc_simple_stats(snapshot, key_type='lineno'):
+def trace_memory_alloc_simple_stats(snapshot, key_type="lineno"):
     """From https://docs.python.org/3/library/tracemalloc.html
 
     Parameters
     ----------
     snapshot :
-        
+
     key_type :
          (Default value = 'lineno')
 
@@ -1089,7 +1168,7 @@ def trace_memory_alloc_simple_stats(snapshot, key_type='lineno'):
     -------
 
     """
-    print('-----------------------------------------------------------------')
+    print("-----------------------------------------------------------------")
     print("[ Top 10 ]")
     top_stats = snapshot.statistics(key_type)
     for stat in top_stats[:10]:
@@ -1098,6 +1177,7 @@ def trace_memory_alloc_simple_stats(snapshot, key_type='lineno'):
 
 class PopupMenu:
     """ """
+
     def __init__(self, parent):
         self.parent = parent
         self.menus = []
@@ -1108,22 +1188,22 @@ class PopupMenu:
         Parameters
         ----------
         label :
-            
+
         action :
-            
+
 
         Returns
         -------
 
         """
-        self.menus.append({'id': wx.NewId(), 'label': label, 'action': action})
+        self.menus.append({"id": wx.NewId(), "label": label, "action": action})
 
     def run(self):
         """ """
         popup_menu = wx.Menu()
         for menu in self.menus:
-            popup_menu.Append(menu['id'], menu['label'])
-            self.parent.Bind(wx.EVT_MENU, menu['action'], id=menu['id'])
+            popup_menu.Append(menu["id"], menu["label"])
+            self.parent.Bind(wx.EVT_MENU, menu["action"], id=menu["id"])
 
         self.parent.PopupMenu(popup_menu)
         popup_menu.Destroy()
@@ -1135,7 +1215,7 @@ def validate_transfer_syntax_uid(data_set):
     Parameters
     ----------
     data_set :
-        
+
 
     Returns
     -------
@@ -1144,8 +1224,12 @@ def validate_transfer_syntax_uid(data_set):
     meta = pydicom.Dataset()
     meta.ImplementationClassUID = pydicom.uid.generate_uid()
     meta.TransferSyntaxUID = ImplicitVRLittleEndian
-    new_data_set = pydicom.FileDataset(filename_or_obj=None, dataset=data_set, is_little_endian=True,
-                                       file_meta=meta)
+    new_data_set = pydicom.FileDataset(
+        filename_or_obj=None,
+        dataset=data_set,
+        is_little_endian=True,
+        file_meta=meta,
+    )
     new_data_set.is_little_endian = True
     new_data_set.is_implicit_VR = True
 
@@ -1158,17 +1242,21 @@ def get_installed_python_libraries():
     if isfile(PIP_LIST_PATH):  # Load a frozen list of packages if stored
         return load_object_from_file(PIP_LIST_PATH)
     try:  # If running from PyInstaller, this may fail, pickle a file prior to freezing with save_pip_list
-        output = str(check_output(['pip', 'list', '--local']), 'utf-8').split('\n')
+        output = str(check_output(["pip", "list", "--local"]), "utf-8").split(
+            "\n"
+        )
     except Exception:
         return load_object_from_file(PIP_LIST_PATH)
 
-    python_version = '.'.join(str(i) for i in sys.version_info[:3])
-    libraries = {'Library': ['python'], 'Version': [python_version]}
-    for row in output[2:]:  # ignore first two rows which are column headers and a separator
-        data = [v for v in row.strip().split(' ') if v]
+    python_version = ".".join(str(i) for i in sys.version_info[:3])
+    libraries = {"Library": ["python"], "Version": [python_version]}
+    for row in output[
+        2:
+    ]:  # ignore first two rows which are column headers and a separator
+        data = [v for v in row.strip().split(" ") if v]
         if data:
-            libraries['Library'].append(data[0])
-            libraries['Version'].append(data[1])
+            libraries["Library"].append(data[0])
+            libraries["Version"].append(data[1])
     return libraries
 
 
@@ -1183,7 +1271,7 @@ def get_wildcards(extensions):
     Parameters
     ----------
     extensions :
-        
+
 
     Returns
     -------
@@ -1191,15 +1279,17 @@ def get_wildcards(extensions):
     """
     if type(extensions) is not list:
         extensions = [extensions]
-    return '|'.join(["%s (*.%s)|*.%s" % (ext.upper(), ext, ext) for ext in extensions])
+    return "|".join(
+        ["%s (*.%s)|*.%s" % (ext.upper(), ext, ext) for ext in extensions]
+    )
 
 
-FIG_WILDCARDS = get_wildcards(['svg', 'html', 'png'])
+FIG_WILDCARDS = get_wildcards(["svg", "html", "png"])
 
 
 def set_phantom_js_in_path():
     """ """
-    bundle_dir = getattr(sys, '_MEIPASS', None)
+    bundle_dir = getattr(sys, "_MEIPASS", None)
     phantom_js_path = APP_DIR if bundle_dir is None else bundle_dir
 
     if phantom_js_path not in environ["PATH"]:
@@ -1212,26 +1302,31 @@ def backup_sqlite_db(options):
     Parameters
     ----------
     options :
-        
+
 
     Returns
     -------
 
     """
-    if options.DB_TYPE == 'sqlite':
-        db_file_name = basename(options.DEFAULT_CNF['sqlite']['host'])
+    if options.DB_TYPE == "sqlite":
+        db_file_name = basename(options.DEFAULT_CNF["sqlite"]["host"])
         file_append = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        new_file_name = splitext(db_file_name)[0] + '_' + file_append + '.db'
+        new_file_name = splitext(db_file_name)[0] + "_" + file_append + ".db"
         db_file_path = join(DATA_DIR, db_file_name)
 
         # check if stored file_path is an absolute path
         if not isfile(db_file_path):
-            db_file_path = options.DEFAULT_CNF['sqlite']['host']
+            db_file_path = options.DEFAULT_CNF["sqlite"]["host"]
             if not isfile(db_file_path):
                 db_file_path = None
 
         if db_file_path is not None:
-            move_files_to_new_path([db_file_path], BACKUP_DIR, copy_files=True, new_file_names=[new_file_name])
+            move_files_to_new_path(
+                [db_file_path],
+                BACKUP_DIR,
+                copy_files=True,
+                new_file_names=[new_file_name],
+            )
 
             return [db_file_path, join(BACKUP_DIR, new_file_name)]
 
@@ -1239,7 +1334,7 @@ def backup_sqlite_db(options):
 def main_is_frozen():
     """ """
     # https://pyinstaller.readthedocs.io/en/stable/runtime-information.html
-    return getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')
+    return getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
 
 
 def get_xy_path_lengths(shapely_object):
@@ -1256,17 +1351,21 @@ def get_xy_path_lengths(shapely_object):
         path lengths in the x and y directions
 
     """
-    path = np.array([0., 0.])
-    if shapely_object.type == 'GeometryCollection':
+    path = np.array([0.0, 0.0])
+    if shapely_object.type == "GeometryCollection":
         for geometry in shapely_object.geoms:
-            if geometry.type in {'MultiPolygon', 'Polygon'}:
+            if geometry.type in {"MultiPolygon", "Polygon"}:
                 path = np.add(path, get_xy_path_lengths(geometry))
-    elif shapely_object.type == 'MultiPolygon':
+    elif shapely_object.type == "MultiPolygon":
         for shape in shapely_object:
             path = np.add(path, get_xy_path_lengths(shape))
-    elif shapely_object.type == 'Polygon':
-        x, y = np.array(shapely_object.exterior.xy[0]), np.array(shapely_object.exterior.xy[1])
-        path = np.array([np.sum(np.abs(np.diff(x))), np.sum(np.abs(np.diff(y)))])
+    elif shapely_object.type == "Polygon":
+        x, y = np.array(shapely_object.exterior.xy[0]), np.array(
+            shapely_object.exterior.xy[1]
+        )
+        path = np.array(
+            [np.sum(np.abs(np.diff(x))), np.sum(np.abs(np.diff(y)))]
+        )
 
     return path.tolist()
 
@@ -1274,12 +1373,14 @@ def get_xy_path_lengths(shapely_object):
 def recalculate_plan_complexities_from_beams():
     """ """
     with DVH_SQL() as cnx:
-        uids = cnx.get_unique_values('Plans', 'study_instance_uid')
+        uids = cnx.get_unique_values("Plans", "study_instance_uid")
 
         for uid in uids:
             try:
                 condition = "study_instance_uid = '%s'" % uid
-                beam_complexities = cnx.query('Beams', 'fx_count, complexity, fx_grp_number', condition)
+                beam_complexities = cnx.query(
+                    "Beams", "fx_count, complexity, fx_grp_number", condition
+                )
                 complexity = {}
                 fx_counts = {}
                 for row in beam_complexities:
@@ -1290,14 +1391,25 @@ def recalculate_plan_complexities_from_beams():
                     complexity[fx_group_number] += beam_complexity
 
                 total_fx = float(sum([fx for fx in fx_counts.values()]))
-                plan_complexity = sum([c * fx_counts[fx_grp] for fx_grp, c in complexity.items()]) / total_fx
+                plan_complexity = (
+                    sum(
+                        [
+                            c * fx_counts[fx_grp]
+                            for fx_grp, c in complexity.items()
+                        ]
+                    )
+                    / total_fx
+                )
             except Exception as e:
-                msg = "tools.utilities.recalculate_plan_complexities_from_beams: failed on uid = %s" % uid
+                msg = (
+                    "tools.utilities.recalculate_plan_complexities_from_beams: failed on uid = %s"
+                    % uid
+                )
                 push_to_log(e, msg=msg)
                 plan_complexity = None
 
             if plan_complexity is not None:
-                cnx.update('Plans', 'complexity', plan_complexity, condition)
+                cnx.update("Plans", "complexity", plan_complexity, condition)
 
 
 def get_new_uid(used_uids=None):
@@ -1337,15 +1449,18 @@ def get_new_uids_by_directory(start_path):
         New UIDs by directory, queue
 
     """
-    file_paths = get_file_paths(start_path, search_subfolders=True, return_dict=True)
+    file_paths = get_file_paths(
+        start_path, search_subfolders=True, return_dict=True
+    )
     study_uids = {}
     queue = []
     for directory, files in file_paths.items():
         uid = get_new_uid(used_uids=list(study_uids.values()))
         study_uids[directory] = uid
         for file in files:
-            queue.append({'abs_file_path': join(directory, file),
-                          'study_uid': uid})
+            queue.append(
+                {"abs_file_path": join(directory, file), "study_uid": uid}
+            )
 
     return study_uids, queue
 
@@ -1384,12 +1499,12 @@ def get_csv_row(data, columns, delimiter=","):
     delimiter : str
         Optionally use the provided delimiter rather than a comma (Default value = ")
     " :
-        
+
 
     Returns
     -------
 
-    
+
     """
     str_data = [str(data[c]) for c in columns]
     clean_str_data = ['"%s"' % s if delimiter in s else s for s in str_data]
@@ -1408,12 +1523,12 @@ def csv_to_list(csv_str, delimiter=","):
     delimiter : str
         The str separator between values (Default value = ")
     " :
-        
+
 
     Returns
     -------
 
-    
+
     """
     if '"' not in csv_str:
         return csv_str.split(delimiter)
@@ -1440,12 +1555,12 @@ def next_csv_element(csv_str, delimiter=","):
     delimiter : str
         The str separator between values (Default value = ")
     " :
-        
+
 
     Returns
     -------
 
-    
+
     """
     if csv_str.startswith('"'):
         split = csv_str[1:].find('"') + 1
