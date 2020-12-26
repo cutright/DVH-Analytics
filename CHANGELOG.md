@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.9.1.post1 (2020.12.25)
+-------------------------
+ - [Import] Check for dicompyler-core version before using 'memmap_rtdose' [Issue #128](https://github.com/cutright/DVH-Analytics/issues/128)
+
 v0.9.1 (2020.12.13)
 --------------------
  - [Options] Clicking 'Cancel' in user options properly reloads options from file now
