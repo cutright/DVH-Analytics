@@ -10,33 +10,49 @@ A setuptools setup file for DVH Analytics
 #    See the file LICENSE included with this distribution, also
 #    available at https://github.com/cutright/DVH-Analytics
 
+import os
 from setuptools import setup, find_packages
 from dvha._version import __version__
 
 
-with open('requirements.txt', 'r') as doc:
+if os.environ.get("READTHEDOCS") == "True":
+    requirements_path = "docs/requirements.txt"
+else:
+    requirements_path = "requirements.txt"
+
+with open(requirements_path, "r") as doc:
     requires = [line.strip() for line in doc]
 
-with open('README.md', 'r') as doc:
+with open("README.rst", "r") as doc:
     long_description = doc.read()
 
 
 setup(
-    name='dvha',
+    name="dvha",
     include_package_data=True,
-    python_requires='>3.5',
+    python_requires=">3.5",
     packages=find_packages(),
     version=__version__,
-    description='Create a database of DVHs, GUI with wxPython, plots with Bokeh',
-    author='Dan Cutright',
-    author_email='dan.cutright@gmail.com',
-    url='https://github.com/cutright/DVH-Analytics-Desktop',
-    download_url='https://github.com/cutright/DVH-Analytics-Desktop/archive/master.zip',
+    description="Create a database of DVHs, GUI with wxPython, "
+                "plots with Bokeh",
+    author="Dan Cutright",
+    author_email="dan.cutright@gmail.com",
+    url="https://github.com/cutright/DVH-Analytics-Desktop",
+    download_url="https://github.com/cutright/DVH-Analytics-Desktop/archive/master.zip",
     license="BSD License",
-    keywords=['dvh', 'radiation therapy', 'research', 'dicom', 'dicom-rt', 'bokeh', 'analytics', 'wxpython'],
+    keywords=[
+        "dvh",
+        "radiation therapy",
+        "research",
+        "dicom",
+        "dicom-rt",
+        "bokeh",
+        "analytics",
+        "wxpython",
+    ],
     classifiers=[],
     install_requires=requires,
-    entry_points={'console_scripts': ['dvha = dvha.main:start']},
+    entry_points={"console_scripts": ["dvha = dvha.main:start"]},
     long_description=long_description,
-    long_description_content_type="text/markdown"
+    long_description_content_type="text/x-rst",
 )

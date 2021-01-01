@@ -1,0 +1,13 @@
+dicompyler-core
+pypubsub
+pydicom
+bokeh<2.0.0
+psycopg2-binary
+shapely[vectorized]
+python-dateutil
+statsmodels
+scikit-learn
+regressors
+rapidfuzz
+selenium
+scikit-image

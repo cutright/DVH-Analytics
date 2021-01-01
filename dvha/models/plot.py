@@ -14,8 +14,17 @@ import wx.html2
 from functools import partial
 from bokeh.plotting import figure
 from bokeh.io.export import get_layout_html, export_svgs, export_png
-from bokeh.models import Legend, HoverTool, ColumnDataSource, DataTable, TableColumn,\
-    NumberFormatter, Div, Range1d, LabelSet
+from bokeh.models import (
+    Legend,
+    HoverTool,
+    ColumnDataSource,
+    DataTable,
+    TableColumn,
+    NumberFormatter,
+    Div,
+    Range1d,
+    LabelSet,
+)
 from bokeh.layouts import column, row
 from bokeh.palettes import Colorblind8 as palette
 import itertools
@@ -26,7 +35,12 @@ from os import mkdir
 from scipy.stats import ttest_ind, ranksums, normaltest
 from dvha.dialogs.export import save_data_to_file
 from dvha.tools.errors import PlottingMemoryError, ErrorDialog, push_to_log
-from dvha.tools.utilities import collapse_into_single_dates, moving_avg, is_windows, FIG_WILDCARDS
+from dvha.tools.utilities import (
+    collapse_into_single_dates,
+    moving_avg,
+    is_windows,
+    FIG_WILDCARDS,
+)
 from dvha.tools.stats import MultiVariableRegression, get_control_limits
 from dvha.paths import TEMP_DIR
 from math import pi
@@ -42,8 +56,17 @@ class Plot:
     Base class for all other plots
     Pass the layout property into a wx sizer
     """
-    def __init__(self, parent, options, x_axis_label='X Axis', y_axis_label='Y Axis', x_axis_type='linear',
-                 tools=DEFAULT_TOOLS, apply_grid_options=True):
+
+    def __init__(
+        self,
+        parent,
+        options,
+        x_axis_label="X Axis",
+        y_axis_label="Y Axis",
+        x_axis_type="linear",
+        tools=DEFAULT_TOOLS,
+        apply_grid_options=True,
+    ):
         """
         :param parent: the wx UI object where the plot will be displayed
         :param options: user options object for visual preferences
@@ -60,20 +83,26 @@ class Plot:
 
         self.layout = wx.html2.WebView.New(parent)
         self.bokeh_layout = None
-        self.html_str = ''
+        self.html_str = ""
 
         # For windows users, since wx.html2 requires a file to load rather than passing a string
         # The file name for each plot will be join(TEMP_DIR, "%s.html" % self.type)
         self.type = None
 
-        self.figure = figure(x_axis_type=x_axis_type, tools=tools, toolbar_sticky=True)
+        self.figure = figure(
+            x_axis_type=x_axis_type, tools=tools, toolbar_sticky=True
+        )
         self.figure.xaxis.axis_label = x_axis_label
         self.figure.yaxis.axis_label = y_axis_label
 
         self.figures = [self.figure]  # keep track of all figures
-        self.figures_attr = []  # temporary storage of figure dimensions/colors during export
+        self.figures_attr = (
+            []
+        )  # temporary storage of figure dimensions/colors during export
         self.legends = []
-        self.legends_attr = []  # temporary storage of legend dimensions/colors during export
+        self.legends_attr = (
+            []
+        )  # temporary storage of legend dimensions/colors during export
         self.figures_attr_include_sub_keys = True
         self.apply_grid_options = apply_grid_options
 
@@ -83,10 +112,18 @@ class Plot:
             self.__apply_default_figure_options()
 
     def __apply_default_figure_options(self):
-        self.figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.figure.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.figure.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.figure.xaxis.axis_label_text_font_size = (
+            self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        )
+        self.figure.yaxis.axis_label_text_font_size = (
+            self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        )
+        self.figure.xaxis.major_label_text_font_size = (
+            self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        )
+        self.figure.yaxis.major_label_text_font_size = (
+            self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        )
         self.figure.min_border = self.options.MIN_BORDER
         self.figure.yaxis.axis_label_text_baseline = "bottom"
 
@@ -99,12 +136,11 @@ class Plot:
     def add_legend(self, fig, legend_items=None):
         if legend_items is None:
             legend_items = self.legend_items
-        legend = Legend(items=legend_items,
-                        orientation='horizontal')
+        legend = Legend(items=legend_items, orientation="horizontal")
         self.legends.append(legend)
 
         # Add the layout outside the plot, clicking legend item hides the line
-        fig.add_layout(legend, 'above')
+        fig.add_layout(legend, "above")
         fig.legend.click_policy = "hide"
 
     @property
@@ -115,12 +151,14 @@ class Plot:
     def clear_plot(self):
         if self.bokeh_layout:
             self.clear_sources()
-            self.figure.xaxis.axis_label = ''
-            self.figure.yaxis.axis_label = ''
+            self.figure.xaxis.axis_label = ""
+            self.figure.yaxis.axis_label = ""
             self.update_bokeh_layout_in_wx_python()
 
     def clear_source(self, source_key):
-        data = {data_key: [] for data_key in list(self.source[source_key].data)}
+        data = {
+            data_key: [] for data_key in list(self.source[source_key].data)
+        }
         self.source[source_key].data = data
 
     def clear_sources(self):
@@ -131,22 +169,22 @@ class Plot:
         try:
             self.html_str = get_layout_html(self.bokeh_layout)
         except MemoryError as e:
-            msg = 'Plot.update_bokeh_layout_in_wx_python: bokeh.io.export.get_layout_html failed'
+            msg = "Plot.update_bokeh_layout_in_wx_python: bokeh.io.export.get_layout_html failed"
             push_to_log(e, msg=msg)
             raise PlottingMemoryError(self.type)
         if is_windows():  # Windows requires LoadURL()
             if not isdir(TEMP_DIR):
                 mkdir(TEMP_DIR)
             web_file = join(TEMP_DIR, "%s.html" % self.type)
-            with open(web_file, 'wb') as f:
+            with open(web_file, "wb") as f:
                 f.write(self.html_str.encode("utf-8"))
             self.layout.LoadURL(web_file)
         else:
             self.layout.SetPage(self.html_str, "")
 
-    def set_obj_attr(self, obj_attr_dict, obj_type='figure'):
+    def set_obj_attr(self, obj_attr_dict, obj_type="figure"):
         """During plot export, user can supply custom figure properties, apply these and store original values"""
-        if obj_type == 'legend':
+        if obj_type == "legend":
             self.legends_attr = []
             obj_attr = self.legends_attr
             objects = self.legends
@@ -156,38 +194,43 @@ class Plot:
             objects = self.figures
 
         for obj in objects:
-            top_keys = [key for key in obj_attr_dict.keys()
-                        if (not key.endswith('_start') and not key.endswith('_end'))]
+            top_keys = [
+                key
+                for key in obj_attr_dict.keys()
+                if (not key.endswith("_start") and not key.endswith("_end"))
+            ]
             sub_keys = set(obj_attr_dict.keys()) - set(top_keys)
             current_attr = {key: getattr(obj, key) for key in top_keys}
             if self.figures_attr_include_sub_keys:
                 for key in sub_keys:
-                    top_key = key[:key.rfind('_')]
-                    sub_key = key[key.rfind('_')+1:]
+                    top_key = key[: key.rfind("_")]
+                    sub_key = key[key.rfind("_") + 1 :]
                     current_attr[key] = getattr(getattr(obj, top_key), sub_key)
 
             obj_attr.append(current_attr)
             for key, value in obj_attr_dict.items():
                 if value is not None:
-                    value = None if value == 'none' else value
+                    value = None if value == "none" else value
                     if key in top_keys:
                         setattr(obj, key, value)
                     elif self.figures_attr_include_sub_keys:
-                        top_key = key[:key.rfind('_')]
-                        sub_key = key[key.rfind('_') + 1:]
+                        top_key = key[: key.rfind("_")]
+                        sub_key = key[key.rfind("_") + 1 :]
                         setattr(getattr(obj, top_key), sub_key, value)
 
-    def load_stored_obj_attr(self, obj_type='figure'):
+    def load_stored_obj_attr(self, obj_type="figure"):
         """Restore the figure properties before set_fig_attr was called"""
 
-        stored_attr = self.legends_attr if obj_type == 'legend' else self.figures_attr
-        objects = self.figures if obj_type == 'figure' else self.legends
+        stored_attr = (
+            self.legends_attr if obj_type == "legend" else self.figures_attr
+        )
+        objects = self.figures if obj_type == "figure" else self.legends
 
         for i, obj in enumerate(objects):
             for key, value in stored_attr[i].items():
-                if key.endswith('_start') or key.endswith('_end'):
-                    top_key = key[:key.rfind('_')]
-                    sub_key = key[key.rfind('_') + 1:]
+                if key.endswith("_start") or key.endswith("_end"):
+                    top_key = key[: key.rfind("_")]
+                    sub_key = key[key.rfind("_") + 1 :]
                     setattr(getattr(obj, top_key), sub_key, value)
                 else:
                     setattr(obj, key, value)
@@ -205,7 +248,7 @@ class Plot:
     def save_figure(self, attr_dicts, file_name):
         figure_format = splitext(file_name)[1][1:].lower()
         self.set_obj_attrs(attr_dicts)
-        getattr(self, 'export_%s' % figure_format)(file_name)
+        getattr(self, "export_%s" % figure_format)(file_name)
         self.load_obj_attrs(attr_dicts)
 
     def export_svg(self, file_name):
@@ -227,7 +270,7 @@ class Plot:
         export_png(self.bokeh_layout, filename=file_name, timeout=10)
 
     def export_html(self, file_name):
-        with open(file_name, 'w') as doc:
+        with open(file_name, "w") as doc:
             doc.write(get_layout_html(self.bokeh_layout))
 
     @staticmethod
@@ -245,14 +288,25 @@ class Plot:
         """
         bad_indices = []
         for var in data:
-            bad_indices.extend([i for i, value in enumerate(var) if value == 'None'])
+            bad_indices.extend(
+                [i for i, value in enumerate(var) if value == "None"]
+            )
         bad_indices = set(bad_indices)
 
-        ans = [[value for i, value in enumerate(var) if i not in bad_indices] for var in data]
+        ans = [
+            [value for i, value in enumerate(var) if i not in bad_indices]
+            for var in data
+        ]
 
         for var in [mrn, uid, dates]:
             if var is not None:
-                ans.append([value for i, value in enumerate(var) if i not in bad_indices])
+                ans.append(
+                    [
+                        value
+                        for i, value in enumerate(var)
+                        if i not in bad_indices
+                    ]
+                )
 
         return tuple(ans)
 
@@ -268,14 +322,27 @@ class Plot:
 
     def save_figure_dlg(self, parent, title, attr_dicts=None):
         try:
-            file_name = save_data_to_file(parent, title, partial(self.save_figure, attr_dicts),
-                                          initial_dir="", data_type='function', wildcard=FIG_WILDCARDS)
+            file_name = save_data_to_file(
+                parent,
+                title,
+                partial(self.save_figure, attr_dicts),
+                initial_dir="",
+                data_type="function",
+                wildcard=FIG_WILDCARDS,
+            )
             if file_name is not None:
-                ErrorDialog(parent, "Output saved to %s" % file_name, "Save Successful", flags=wx.OK | wx.OK_DEFAULT)
+                ErrorDialog(
+                    parent,
+                    "Output saved to %s" % file_name,
+                    "Save Successful",
+                    flags=wx.OK | wx.OK_DEFAULT,
+                )
         except Exception as e:
             if "phantomjs is not present" in str(e).lower():
-                msg = "Please download a phantomjs executable from https://phantomjs.org/download.html " \
-                      "and store in ~/Apps/dvh_analytics/ or try a phantomjs installation with conda or npm"
+                msg = (
+                    "Please download a phantomjs executable from https://phantomjs.org/download.html "
+                    "and store in ~/Apps/dvh_analytics/ or try a phantomjs installation with conda or npm"
+                )
             else:
                 msg = str(e)
             ErrorDialog(parent, msg, "Save Error")
@@ -285,6 +352,7 @@ class PlotStatDVH(Plot):
     """
     Generate plot for DVHs tab
     """
+
     def __init__(self, parent, group_data, options):
         """
         :param parent: the wx UI object where the plot will be displayed
@@ -292,26 +360,56 @@ class PlotStatDVH(Plot):
         :param options: user preferences
         :type options: Options
         """
-        Plot.__init__(self, parent, options, x_axis_label='Dose (cGy)', y_axis_label='Relative Volume')
+        Plot.__init__(
+            self,
+            parent,
+            options,
+            x_axis_label="Dose (cGy)",
+            y_axis_label="Relative Volume",
+        )
 
-        self.type = 'dvh'
+        self.type = "dvh"
         self.parent = parent
-        self.size_factor = {'plot': (0.885, 0.522),
-                            'table': (0.885, 0.359)}
+        self.size_factor = {"plot": (0.885, 0.522), "table": (0.885, 0.359)}
 
         self.options = options
-        self.dvh = group_data[1]['dvh']
-        self.dvh_2 = group_data[2]['dvh']
-        self.source = {'dvh': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], roi_name=[], roi_type=[], group=[],
-                                                         x_dose=[], volume=[], min_dose=[], mean_dose=[], max_dose=[])),
-                       'stats': ColumnDataSource(data=dict(x=[], min=[], mean=[], median=[], max=[], mrn=[])),
-                       'patch': ColumnDataSource(data=dict(x=[], y1=[], y2=[])),
-                       'stats_2': ColumnDataSource(data=dict(x=[], min=[], mean=[], median=[], max=[], mrn=[])),
-                       'patch_2': ColumnDataSource(data=dict(x=[], y1=[], y2=[]))
-                       }
+        self.dvh = group_data[1]["dvh"]
+        self.dvh_2 = group_data[2]["dvh"]
+        self.source = {
+            "dvh": ColumnDataSource(
+                data=dict(
+                    x=[],
+                    y=[],
+                    mrn=[],
+                    uid=[],
+                    roi_name=[],
+                    roi_type=[],
+                    group=[],
+                    x_dose=[],
+                    volume=[],
+                    min_dose=[],
+                    mean_dose=[],
+                    max_dose=[],
+                )
+            ),
+            "stats": ColumnDataSource(
+                data=dict(x=[], min=[], mean=[], median=[], max=[], mrn=[])
+            ),
+            "patch": ColumnDataSource(data=dict(x=[], y1=[], y2=[])),
+            "stats_2": ColumnDataSource(
+                data=dict(x=[], min=[], mean=[], median=[], max=[], mrn=[])
+            ),
+            "patch_2": ColumnDataSource(data=dict(x=[], y1=[], y2=[])),
+        }
         self.layout_done = False
-        self.stat_dvhs = {key: np.array(0) for key in ['min', 'q1', 'mean', 'median', 'q3', 'max']}
-        self.stat_dvhs_2 = {key: np.array(0) for key in ['min', 'q1', 'mean', 'median', 'q3', 'max']}
+        self.stat_dvhs = {
+            key: np.array(0)
+            for key in ["min", "q1", "mean", "median", "q3", "max"]
+        }
+        self.stat_dvhs_2 = {
+            key: np.array(0)
+            for key in ["min", "q1", "mean", "median", "q3", "max"]
+        }
         self.x = []
         self.x_2 = []
 
@@ -341,57 +439,122 @@ class PlotStatDVH(Plot):
         self.figure.add_tools(custom_hover)
 
     def __add_plot_data(self):
-        self.dvhs_renderer = self.figure.multi_line('x', 'y', source=self.source['dvh'], selection_color='color',
-                                                    alpha=0, nonselection_alpha=0, selection_alpha=1)
+        self.dvhs_renderer = self.figure.multi_line(
+            "x",
+            "y",
+            source=self.source["dvh"],
+            selection_color="color",
+            alpha=0,
+            nonselection_alpha=0,
+            selection_alpha=1,
+        )
 
         # Add statistical plots to figure
-        self.stats_max = self.figure.line('x', 'max', source=self.source['stats'])
-        self.stats_median = self.figure.line('x', 'median', source=self.source['stats'])
-        self.stats_mean = self.figure.line('x', 'mean', source=self.source['stats'])
-        self.stats_min = self.figure.line('x', 'min', source=self.source['stats'])
+        self.stats_max = self.figure.line(
+            "x", "max", source=self.source["stats"]
+        )
+        self.stats_median = self.figure.line(
+            "x", "median", source=self.source["stats"]
+        )
+        self.stats_mean = self.figure.line(
+            "x", "mean", source=self.source["stats"]
+        )
+        self.stats_min = self.figure.line(
+            "x", "min", source=self.source["stats"]
+        )
 
-        self.stats_max_2 = self.figure.line('x', 'max', source=self.source['stats_2'])
-        self.stats_median_2 = self.figure.line('x', 'median', source=self.source['stats_2'])
-        self.stats_mean_2 = self.figure.line('x', 'mean', source=self.source['stats_2'])
-        self.stats_min_2 = self.figure.line('x', 'min', source=self.source['stats_2'])
+        self.stats_max_2 = self.figure.line(
+            "x", "max", source=self.source["stats_2"]
+        )
+        self.stats_median_2 = self.figure.line(
+            "x", "median", source=self.source["stats_2"]
+        )
+        self.stats_mean_2 = self.figure.line(
+            "x", "mean", source=self.source["stats_2"]
+        )
+        self.stats_min_2 = self.figure.line(
+            "x", "min", source=self.source["stats_2"]
+        )
 
         # Shaded region between Q1 and Q3
-        self.iqr = self.figure.varea('x', 'y1', 'y2', source=self.source['patch'])
-        self.iqr_2 = self.figure.varea('x', 'y1', 'y2', source=self.source['patch_2'])
+        self.iqr = self.figure.varea(
+            "x", "y1", "y2", source=self.source["patch"]
+        )
+        self.iqr_2 = self.figure.varea(
+            "x", "y1", "y2", source=self.source["patch_2"]
+        )
 
     @property
     def legend_items(self):
-        return [("Max  ", [self.stats_max]),
-                ("Median  ", [self.stats_median]),
-                ("Mean  ", [self.stats_mean]),
-                ("Min  ", [self.stats_min]),
-                ("IQR  ", [self.iqr]),
-                ("Max 2 ", [self.stats_max_2]),
-                ("Median 2 ", [self.stats_median_2]),
-                ("Mean 2 ", [self.stats_mean_2]),
-                ("Min 2 ", [self.stats_min_2]),
-                ("IQR 2 ", [self.iqr_2]) ]
+        return [
+            ("Max  ", [self.stats_max]),
+            ("Median  ", [self.stats_median]),
+            ("Mean  ", [self.stats_mean]),
+            ("Min  ", [self.stats_min]),
+            ("IQR  ", [self.iqr]),
+            ("Max 2 ", [self.stats_max_2]),
+            ("Median 2 ", [self.stats_median_2]),
+            ("Mean 2 ", [self.stats_mean_2]),
+            ("Min 2 ", [self.stats_min_2]),
+            ("IQR 2 ", [self.iqr_2]),
+        ]
 
     def __create_table(self):
-        columns = [TableColumn(field="mrn", title="MRN", width=175),
-                   TableColumn(field="roi_name", title="ROI Name"),
-                   TableColumn(field="roi_type", title="ROI Type", width=80),
-                   TableColumn(field="rx_dose", title="Rx Dose", width=100, formatter=NumberFormatter(format="0.00")),
-                   TableColumn(field="volume", title="Volume", width=80, formatter=NumberFormatter(format="0.00")),
-                   TableColumn(field="min_dose", title="Min Dose", width=80, formatter=NumberFormatter(format="0.00")),
-                   TableColumn(field="mean_dose", title="Mean Dose", width=80,
-                               formatter=NumberFormatter(format="0.00")),
-                   TableColumn(field="max_dose", title="Max Dose", width=80,
-                               formatter=NumberFormatter(format="0.00")), ]
-        self.table = DataTable(source=self.source['dvh'], columns=columns,)
+        columns = [
+            TableColumn(field="mrn", title="MRN", width=175),
+            TableColumn(field="roi_name", title="ROI Name"),
+            TableColumn(field="roi_type", title="ROI Type", width=80),
+            TableColumn(
+                field="rx_dose",
+                title="Rx Dose",
+                width=100,
+                formatter=NumberFormatter(format="0.00"),
+            ),
+            TableColumn(
+                field="volume",
+                title="Volume",
+                width=80,
+                formatter=NumberFormatter(format="0.00"),
+            ),
+            TableColumn(
+                field="min_dose",
+                title="Min Dose",
+                width=80,
+                formatter=NumberFormatter(format="0.00"),
+            ),
+            TableColumn(
+                field="mean_dose",
+                title="Mean Dose",
+                width=80,
+                formatter=NumberFormatter(format="0.00"),
+            ),
+            TableColumn(
+                field="max_dose",
+                title="Max Dose",
+                width=80,
+                formatter=NumberFormatter(format="0.00"),
+            ),
+        ]
+        self.table = DataTable(
+            source=self.source["dvh"],
+            columns=columns,
+        )
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.GetSize()
 
-        self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
-        self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
-        self.table.width = int(self.size_factor['table'][0] * float(panel_width))
-        self.table.height = int(self.size_factor['table'][1] * float(panel_height))
+        self.figure.plot_width = int(
+            self.size_factor["plot"][0] * float(panel_width)
+        )
+        self.figure.plot_height = int(
+            self.size_factor["plot"][1] * float(panel_height)
+        )
+        self.table.width = int(
+            self.size_factor["table"][0] * float(panel_width)
+        )
+        self.table.height = int(
+            self.size_factor["table"][1] * float(panel_height)
+        )
 
     def update_plot(self, dvh, dvh_2=None):
 
@@ -402,27 +565,39 @@ class PlotStatDVH(Plot):
         self.x = dvh.x_data[0]
         self.stat_dvhs = dvh.get_standard_stat_dvh()
 
-        data = {'dvh': deepcopy(dvh.get_cds_data()),
-                'stats': {key: self.stat_dvhs[key] for key in ['max', 'median', 'mean', 'min']},
-                'patch': {'x': self.x, 'y1': self.stat_dvhs['q3'], 'y2': self.stat_dvhs['q1']}}
+        data = {
+            "dvh": deepcopy(dvh.get_cds_data()),
+            "stats": {
+                key: self.stat_dvhs[key]
+                for key in ["max", "median", "mean", "min"]
+            },
+            "patch": {
+                "x": self.x,
+                "y1": self.stat_dvhs["q3"],
+                "y2": self.stat_dvhs["q1"],
+            },
+        }
 
         # Add additional data to dvh data
-        data['dvh']['x'] = dvh.x_data
-        data['dvh']['y'] = dvh.y_data
+        data["dvh"]["x"] = dvh.x_data
+        data["dvh"]["y"] = dvh.y_data
         # data['dvh']['mrn'] = dvh.mrn
         # data['dvh']['roi_name'] = dvh.roi_name
-        data['dvh']['color'] = [color for j, color in zip(range(dvh.count), itertools.cycle(palette))]
-        data['dvh']['group'] = [1] * len(dvh.x_data)
+        data["dvh"]["color"] = [
+            color
+            for j, color in zip(range(dvh.count), itertools.cycle(palette))
+        ]
+        data["dvh"]["group"] = [1] * len(dvh.x_data)
 
         # Add x-axis to stats dvhs
-        data['stats']['x'] = self.x
+        data["stats"]["x"] = self.x
 
         # update bokeh CDS
         for key, obj in data.items():
             self.source[key].data = obj
 
-        self.figure.xaxis.axis_label = 'Dose (cGy)'
-        self.figure.yaxis.axis_label = 'Relative Volume'
+        self.figure.xaxis.axis_label = "Dose (cGy)"
+        self.figure.yaxis.axis_label = "Relative Volume"
 
         if dvh_2 is None:
             self.update_bokeh_layout_in_wx_python()
@@ -435,34 +610,50 @@ class PlotStatDVH(Plot):
         self.x_2 = dvh_2.x_data[0]
         self.stat_dvhs_2 = dvh_2.get_standard_stat_dvh()
 
-        dvh = self.source['dvh'].data
-        if 2 in dvh['group']:
-            for row in range(len(dvh['x']))[::-1]:
-                group = dvh['group'][row]
+        dvh = self.source["dvh"].data
+        if 2 in dvh["group"]:
+            for row in range(len(dvh["x"]))[::-1]:
+                group = dvh["group"][row]
                 if group == 2:
                     for key in list(dvh):
                         dvh[key].pop(row)
 
-        data = {'dvh': dvh,
-                'dvh_2': deepcopy(dvh_2.get_cds_data()),
-                'stats_2': {key: self.stat_dvhs_2[key] for key in ['max', 'median', 'mean', 'min']},
-                'patch_2': {'x': self.x_2, 'y1': self.stat_dvhs_2['q3'], 'y2': self.stat_dvhs_2['q1']}}
+        data = {
+            "dvh": dvh,
+            "dvh_2": deepcopy(dvh_2.get_cds_data()),
+            "stats_2": {
+                key: self.stat_dvhs_2[key]
+                for key in ["max", "median", "mean", "min"]
+            },
+            "patch_2": {
+                "x": self.x_2,
+                "y1": self.stat_dvhs_2["q3"],
+                "y2": self.stat_dvhs_2["q1"],
+            },
+        }
 
         # Add additional data to dvh data
-        for key, value in data['dvh_2'].items():
-            data['dvh'][key].extend(value)
+        for key, value in data["dvh_2"].items():
+            data["dvh"][key].extend(value)
 
-        data['dvh']['x'].extend(dvh_2.x_data)
-        data['dvh']['y'].extend(dvh_2.y_data)
-        data['dvh']['color'].extend([color for j, color in zip(range(dvh_2.count), itertools.cycle(palette))])
-        data['dvh']['group'].extend([2] * len(dvh_2.x_data))
+        data["dvh"]["x"].extend(dvh_2.x_data)
+        data["dvh"]["y"].extend(dvh_2.y_data)
+        data["dvh"]["color"].extend(
+            [
+                color
+                for j, color in zip(
+                    range(dvh_2.count), itertools.cycle(palette)
+                )
+            ]
+        )
+        data["dvh"]["group"].extend([2] * len(dvh_2.x_data))
 
         # Add x-axis to stats dvhs
-        data['stats_2']['x'] = self.x_2
+        data["stats_2"]["x"] = self.x_2
 
         # update bokeh CDS
         for key, obj in data.items():
-            if key != 'dvh_2':
+            if key != "dvh_2":
                 self.source[key].data = obj
 
         self.update_bokeh_layout_in_wx_python()
@@ -477,61 +668,116 @@ class PlotStatDVH(Plot):
         :return: data as a csv
         :rtype: str
         """
-        data = self.source['dvh'].data
+        data = self.source["dvh"].data
         summary, dvh_data = [], []
 
         if include_summary:
-            summary = ['MRN,Study Instance UID,ROI Name,ROI Type,Rx Dose,Volume,Min Dose,Mean Dose,Max Dose']
-            for i, mrn in enumerate(data['mrn']):
-                keys = ['mrn', 'study_instance_uid', 'roi_name', 'roi_type', 'rx_dose',
-                        'volume', 'min_dose', 'mean_dose', 'max_dose']
-                summary.append(','.join([str(data[key][i]).replace(',', '^') for key in keys]))
-            summary.append('')
+            summary = [
+                "MRN,Study Instance UID,ROI Name,ROI Type,Rx Dose,Volume,Min Dose,Mean Dose,Max Dose"
+            ]
+            for i, mrn in enumerate(data["mrn"]):
+                keys = [
+                    "mrn",
+                    "study_instance_uid",
+                    "roi_name",
+                    "roi_type",
+                    "rx_dose",
+                    "volume",
+                    "min_dose",
+                    "mean_dose",
+                    "max_dose",
+                ]
+                summary.append(
+                    ",".join(
+                        [str(data[key][i]).replace(",", "^") for key in keys]
+                    )
+                )
+            summary.append("")
 
         if include_dvhs:
             max_x = [self.x, self.x_2][len(self.x_2) > len(self.x)]
-            dose_bins = ','.join([str(x) for x in max_x])
+            dose_bins = ",".join([str(x) for x in max_x])
             dose_bin_count = len(max_x)
             bin_difference = abs(len(self.x) - len(self.x_2)) + 1
-            dvh_data = ['MRN,Study Instance UID,ROI Name,Dose bins (cGy) ->,%s' % dose_bins]
-            for i, mrn in enumerate(data['mrn']):
-                clean_mrn = mrn.replace(',', '^')
-                clean_uid = data['study_instance_uid'][i].replace(',', '^')
-                clean_roi = data['roi_name'][i].replace(',', '^')
-                dvh_data.append("%s,%s,%s,,%s" %
-                                (clean_mrn, clean_uid, clean_roi, ','.join(str(y) for y in data['y'][i])))
-                if len(data['y'][i]) < dose_bin_count:
-                    dvh_data[-1] = dvh_data[-1] + ','.join(['0'] * bin_difference)
+            dvh_data = [
+                "MRN,Study Instance UID,ROI Name,Dose bins (cGy) ->,%s"
+                % dose_bins
+            ]
+            for i, mrn in enumerate(data["mrn"]):
+                clean_mrn = mrn.replace(",", "^")
+                clean_uid = data["study_instance_uid"][i].replace(",", "^")
+                clean_roi = data["roi_name"][i].replace(",", "^")
+                dvh_data.append(
+                    "%s,%s,%s,,%s"
+                    % (
+                        clean_mrn,
+                        clean_uid,
+                        clean_roi,
+                        ",".join(str(y) for y in data["y"][i]),
+                    )
+                )
+                if len(data["y"][i]) < dose_bin_count:
+                    dvh_data[-1] = dvh_data[-1] + ",".join(
+                        ["0"] * bin_difference
+                    )
 
-        return '\n'.join(summary + dvh_data)
+        return "\n".join(summary + dvh_data)
 
     def apply_options(self):
         super().apply_options()
 
         # Treat default glyph state as nonselection
-        self.dvhs_renderer.glyph.line_width = self.options.DVH_LINE_WIDTH_NONSELECTION
-        self.dvhs_renderer.glyph.line_dash = self.options.DVH_LINE_DASH_NONSELECTION
-        self.dvhs_renderer.glyph.line_alpha = self.options.DVH_LINE_ALPHA_NONSELECTION
-        self.dvhs_renderer.glyph.line_color = self.options.DVH_LINE_COLOR_NONSELECTION
+        self.dvhs_renderer.glyph.line_width = (
+            self.options.DVH_LINE_WIDTH_NONSELECTION
+        )
+        self.dvhs_renderer.glyph.line_dash = (
+            self.options.DVH_LINE_DASH_NONSELECTION
+        )
+        self.dvhs_renderer.glyph.line_alpha = (
+            self.options.DVH_LINE_ALPHA_NONSELECTION
+        )
+        self.dvhs_renderer.glyph.line_color = (
+            self.options.DVH_LINE_COLOR_NONSELECTION
+        )
 
-        self.dvhs_renderer.selection_glyph.line_width = self.options.DVH_LINE_WIDTH_SELECTION
-        self.dvhs_renderer.selection_glyph.line_dash = self.options.DVH_LINE_DASH_SELECTION
-        self.dvhs_renderer.selection_glyph.line_alpha = self.options.DVH_LINE_ALPHA_SELECTION
+        self.dvhs_renderer.selection_glyph.line_width = (
+            self.options.DVH_LINE_WIDTH_SELECTION
+        )
+        self.dvhs_renderer.selection_glyph.line_dash = (
+            self.options.DVH_LINE_DASH_SELECTION
+        )
+        self.dvhs_renderer.selection_glyph.line_alpha = (
+            self.options.DVH_LINE_ALPHA_SELECTION
+        )
         # Selection color from Bokeh CDS
 
-        self.dvhs_renderer.nonselection_glyph.line_width = self.options.DVH_LINE_WIDTH_NONSELECTION
-        self.dvhs_renderer.nonselection_glyph.line_dash = self.options.DVH_LINE_DASH_NONSELECTION
-        self.dvhs_renderer.nonselection_glyph.line_alpha = self.options.DVH_LINE_ALPHA_NONSELECTION
-        self.dvhs_renderer.nonselection_glyph.line_color = self.options.DVH_LINE_COLOR_NONSELECTION
+        self.dvhs_renderer.nonselection_glyph.line_width = (
+            self.options.DVH_LINE_WIDTH_NONSELECTION
+        )
+        self.dvhs_renderer.nonselection_glyph.line_dash = (
+            self.options.DVH_LINE_DASH_NONSELECTION
+        )
+        self.dvhs_renderer.nonselection_glyph.line_alpha = (
+            self.options.DVH_LINE_ALPHA_NONSELECTION
+        )
+        self.dvhs_renderer.nonselection_glyph.line_color = (
+            self.options.DVH_LINE_COLOR_NONSELECTION
+        )
 
-        for group in ['', '_2']:
-            for stat in ['max', 'median', 'mean', 'min']:
-                renderer = getattr(self, 'stats_%s%s' % (stat, group))
-                glyph = getattr(renderer, 'glyph')
-                glyph.line_color = getattr(self.options, 'PLOT_COLOR' + group)
-                glyph.line_width = getattr(self.options, ('stats_%s_line_width' % stat).upper())
-                glyph.line_dash = getattr(self.options, ('stats_%s_line_dash' % stat).upper())
-                glyph.line_alpha = getattr(self.options, ('stats_%s_alpha' % stat).upper())
+        for group in ["", "_2"]:
+            for stat in ["max", "median", "mean", "min"]:
+                renderer = getattr(self, "stats_%s%s" % (stat, group))
+                glyph = getattr(renderer, "glyph")
+                glyph.line_color = getattr(self.options, "PLOT_COLOR" + group)
+                glyph.line_width = getattr(
+                    self.options, ("stats_%s_line_width" % stat).upper()
+                )
+                glyph.line_dash = getattr(
+                    self.options, ("stats_%s_line_dash" % stat).upper()
+                )
+                glyph.line_alpha = getattr(
+                    self.options, ("stats_%s_alpha" % stat).upper()
+                )
 
         self.iqr.glyph.fill_alpha = self.options.IQR_ALPHA
         self.iqr.glyph.fill_color = self.options.PLOT_COLOR
@@ -544,26 +790,43 @@ class PlotTimeSeries(Plot):
     """
     Generate plot for Time Series tab
     """
+
     def __init__(self, parent, options):
         """
         :param parent: the wx UI object where the plot will be displayed
         :param options: user preferences
         :type options: Options
         """
-        Plot.__init__(self, parent, options, x_axis_label='Simulation Date', x_axis_type='datetime')
+        Plot.__init__(
+            self,
+            parent,
+            options,
+            x_axis_label="Simulation Date",
+            x_axis_type="datetime",
+        )
 
-        self.type = 'time_series'
+        self.type = "time_series"
         self.parent = parent
-        self.size_factor = {'plot': (0.885, 0.38),
-                            'hist': (0.885, 0.32)}
+        self.size_factor = {"plot": (0.885, 0.38), "hist": (0.885, 0.32)}
 
         self.options = options
-        self.source = {key: {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], group=[])),
-                             'hist': ColumnDataSource(data=dict(x=[], top=[], width=[], group=[])),
-                             'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
-                             'bound': ColumnDataSource(data=dict(x=[], mrn=[], upper=[], avg=[], lower=[])),
-                             'patch': ColumnDataSource(data=dict(x=[], y=[]))} for key in [1, 2]}
-        self.y_axis_label = ''
+        self.source = {
+            key: {
+                "plot": ColumnDataSource(
+                    data=dict(x=[], y=[], mrn=[], uid=[], group=[])
+                ),
+                "hist": ColumnDataSource(
+                    data=dict(x=[], top=[], width=[], group=[])
+                ),
+                "trend": ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+                "bound": ColumnDataSource(
+                    data=dict(x=[], mrn=[], upper=[], avg=[], lower=[])
+                ),
+                "patch": ColumnDataSource(data=dict(x=[], y=[])),
+            }
+            for key in [1, 2]
+        }
+        self.y_axis_label = ""
 
         self.__add_plot_data()
         self.__add_histogram_data()
@@ -576,23 +839,51 @@ class PlotTimeSeries(Plot):
         self.apply_options()
 
     def __add_plot_data(self):
-        self.plot_data = self.figure.circle('x', 'y', source=self.source[1]['plot'])
+        self.plot_data = self.figure.circle(
+            "x", "y", source=self.source[1]["plot"]
+        )
 
-        self.plot_trend = self.figure.line('x', 'y', source=self.source[1]['trend'])
-        self.plot_avg = self.figure.line('x', 'avg', source=self.source[1]['bound'])
-        self.plot_patch = self.figure.patch('x', 'y', source=self.source[1]['patch'])
+        self.plot_trend = self.figure.line(
+            "x", "y", source=self.source[1]["trend"]
+        )
+        self.plot_avg = self.figure.line(
+            "x", "avg", source=self.source[1]["bound"]
+        )
+        self.plot_patch = self.figure.patch(
+            "x", "y", source=self.source[1]["patch"]
+        )
 
-        self.plot_data_2 = self.figure.circle('x', 'y', source=self.source[2]['plot'])
+        self.plot_data_2 = self.figure.circle(
+            "x", "y", source=self.source[2]["plot"]
+        )
 
-        self.plot_trend_2 = self.figure.line('x', 'y', source=self.source[2]['trend'])
-        self.plot_avg_2 = self.figure.line('x', 'avg', source=self.source[2]['bound'])
-        self.plot_patch_2 = self.figure.patch('x', 'y', source=self.source[2]['patch'])
+        self.plot_trend_2 = self.figure.line(
+            "x", "y", source=self.source[2]["trend"]
+        )
+        self.plot_avg_2 = self.figure.line(
+            "x", "avg", source=self.source[2]["bound"]
+        )
+        self.plot_patch_2 = self.figure.patch(
+            "x", "y", source=self.source[2]["patch"]
+        )
 
     def __add_histogram_data(self):
         self.histogram = figure(tools="")
         self.figures.append(self.histogram)
-        self.vbar = self.histogram.vbar(x='x', width='width', bottom=0, top='top', source=self.source[1]['hist'])
-        self.vbar_2 = self.histogram.vbar(x='x', width='width', bottom=0, top='top', source=self.source[2]['hist'])
+        self.vbar = self.histogram.vbar(
+            x="x",
+            width="width",
+            bottom=0,
+            top="top",
+            source=self.source[1]["hist"],
+        )
+        self.vbar_2 = self.histogram.vbar(
+            x="x",
+            width="width",
+            bottom=0,
+            top="top",
+            source=self.source[2]["hist"],
+        )
 
         self.histogram.xaxis.axis_label = ""
         self.histogram.yaxis.axis_label = "Frequency"
@@ -604,46 +895,66 @@ class PlotTimeSeries(Plot):
 
     @property
     def legend_items(self):
-        return [("Data 1 ", [self.plot_data]),
-                ("Avg 1 ", [self.plot_avg]),
-                ("Rolling Avg 1 ", [self.plot_trend]),
-                ("Perc. Region 1 ", [self.plot_patch]),
-                ("Data 2 ", [self.plot_data_2]),
-                ("Avg 2 ", [self.plot_avg_2]),
-                ("Rolling Avg 2 ", [self.plot_trend_2]),
-                ("Perc. Region 2 ", [self.plot_patch_2])]
+        return [
+            ("Data 1 ", [self.plot_data]),
+            ("Avg 1 ", [self.plot_avg]),
+            ("Rolling Avg 1 ", [self.plot_trend]),
+            ("Perc. Region 1 ", [self.plot_patch]),
+            ("Data 2 ", [self.plot_data_2]),
+            ("Avg 2 ", [self.plot_avg_2]),
+            ("Rolling Avg 2 ", [self.plot_trend_2]),
+            ("Perc. Region 2 ", [self.plot_patch_2]),
+        ]
 
     @property
     def legend_items_hist(self):
-        return [("Group 1 ", [self.vbar]),
-                ("Group 2 ", [self.vbar_2])]
+        return [("Group 1 ", [self.vbar]), ("Group 2 ", [self.vbar_2])]
 
     def __add_hover(self):
-        self.figure.add_tools(HoverTool(show_arrow=True,
-                                        tooltips=[('ID', '@mrn'),
-                                                  ('Date', '@x{%F}'),
-                                                  ('Value', '@y{0.2f}'),
-                                                  ('Group', '@group')],
-                                        formatters={'x': 'datetime'},
-                                        renderers=[self.plot_data, self.plot_data_2]))
+        self.figure.add_tools(
+            HoverTool(
+                show_arrow=True,
+                tooltips=[
+                    ("ID", "@mrn"),
+                    ("Date", "@x{%F}"),
+                    ("Value", "@y{0.2f}"),
+                    ("Group", "@group"),
+                ],
+                formatters={"x": "datetime"},
+                renderers=[self.plot_data, self.plot_data_2],
+            )
+        )
 
-        self.histogram.add_tools(HoverTool(show_arrow=True, line_policy='next', mode='vline',
-                                           tooltips=[('Bin Center', '@x{0.2f}'),
-                                                     ('Counts', '@top'),
-                                                     ('Group', '@group')],
-                                           renderers=[self.vbar, self.vbar_2]))
+        self.histogram.add_tools(
+            HoverTool(
+                show_arrow=True,
+                line_policy="next",
+                mode="vline",
+                tooltips=[
+                    ("Bin Center", "@x{0.2f}"),
+                    ("Counts", "@top"),
+                    ("Group", "@group"),
+                ],
+                renderers=[self.vbar, self.vbar_2],
+            )
+        )
 
     def __do_layout(self):
-        self.bokeh_layout = column(self.figure,
-                                   row(column(self.normal_test_div[1],
-                                              self.normal_test_div[2]),
-                                       column(self.t_test_div,
-                                              self.wilcoxon_div)),
-                                   self.histogram)
+        self.bokeh_layout = column(
+            self.figure,
+            row(
+                column(self.normal_test_div[1], self.normal_test_div[2]),
+                column(self.t_test_div, self.wilcoxon_div),
+            ),
+            self.histogram,
+        )
 
     def clear_source(self, source_key):
         for grp in [1, 2]:
-            data = {data_key: [] for data_key in list(self.source[grp][source_key].data)}
+            data = {
+                data_key: []
+                for data_key in list(self.source[grp][source_key].data)
+            }
             self.source[grp][source_key].data = data
 
     def clear_sources(self):
@@ -654,15 +965,15 @@ class PlotTimeSeries(Plot):
 
         self.set_figure_dimensions()
 
-        self.y_axis_label = data[1]['y_axis_label']
+        self.y_axis_label = data[1]["y_axis_label"]
         self.clear_sources()
-        self.figure.yaxis.axis_label = data[1]['y_axis_label']
-        self.figure.xaxis.axis_label = 'Simulation Date'
-        self.histogram.xaxis.axis_label = data[1]['y_axis_label']
+        self.figure.yaxis.axis_label = data[1]["y_axis_label"]
+        self.figure.xaxis.axis_label = "Simulation Date"
+        self.histogram.xaxis.axis_label = data[1]["y_axis_label"]
 
         self.update_plot_data(data)
-        self.update_histogram(data[1]['bin_size'])
-        self.update_trend(data[1]['avg_len'], data[1]['percentile'])
+        self.update_histogram(data[1]["bin_size"])
+        self.update_trend(data[1]["avg_len"], data[1]["percentile"])
 
         self.update_divs()
 
@@ -670,114 +981,167 @@ class PlotTimeSeries(Plot):
 
     def update_plot_data(self, data):
         for grp, grp_data in data.items():
-            valid_indices = [i for i, value in enumerate(grp_data['y']) if value != 'None']
-            new_data = {key: [value for i, value in enumerate(grp_data[key]) if i in valid_indices]
-                        for key in ['x', 'y', 'mrn', 'uid']}
-            new_data['group'] = [grp] * len(new_data['x'])
-            self.source[grp]['plot'].data = new_data
+            valid_indices = [
+                i for i, value in enumerate(grp_data["y"]) if value != "None"
+            ]
+            new_data = {
+                key: [
+                    value
+                    for i, value in enumerate(grp_data[key])
+                    if i in valid_indices
+                ]
+                for key in ["x", "y", "mrn", "uid"]
+            }
+            new_data["group"] = [grp] * len(new_data["x"])
+            self.source[grp]["plot"].data = new_data
 
     def update_histogram(self, bin_size=10):
         width_fraction = 0.9
         for grp in [1, 2]:
-            if self.source[grp]['plot'].data['y']:
-                hist, bins = np.histogram(self.source[grp]['plot'].data['y'], bins=bin_size)
+            if self.source[grp]["plot"].data["y"]:
+                hist, bins = np.histogram(
+                    self.source[grp]["plot"].data["y"], bins=bin_size
+                )
                 width = [width_fraction * (bins[1] - bins[0])] * bin_size
-                center = (bins[:-1] + bins[1:]) / 2.
-                self.source[grp]['hist'].data = {'x': center, 'top': hist, 'width': width, 'group': [grp] * len(hist)}
+                center = (bins[:-1] + bins[1:]) / 2.0
+                self.source[grp]["hist"].data = {
+                    "x": center,
+                    "top": hist,
+                    "width": width,
+                    "group": [grp] * len(hist),
+                }
             else:
-                self.source[grp]['hist'].data = {'x': [], 'top': [], 'width': [], 'group': []}
+                self.source[grp]["hist"].data = {
+                    "x": [],
+                    "top": [],
+                    "width": [],
+                    "group": [],
+                }
 
     def update_trend(self, avg_len, percentile):
 
         for grp in [1, 2]:
-            x = self.source[grp]['plot'].data['x']
-            y = self.source[grp]['plot'].data['y']
+            x = self.source[grp]["plot"].data["x"]
+            y = self.source[grp]["plot"].data["y"]
             if x and y:
 
                 data_collapsed = collapse_into_single_dates(x, y)
                 x_trend, y_trend = moving_avg(data_collapsed, avg_len)
 
-                y_np = np.array(self.source[grp]['plot'].data['y'])
-                upper_bound = float(np.percentile(y_np, 50. + percentile / 2.))
+                y_np = np.array(self.source[grp]["plot"].data["y"])
+                upper_bound = float(
+                    np.percentile(y_np, 50.0 + percentile / 2.0)
+                )
                 average = float(np.percentile(y_np, 50))
-                lower_bound = float(np.percentile(y_np, 50. - percentile / 2.))
+                lower_bound = float(
+                    np.percentile(y_np, 50.0 - percentile / 2.0)
+                )
 
-                self.source[grp]['trend'].data = {'x': x_trend,
-                                                  'y': y_trend}
-                self.source[grp]['bound'].data = {'x': [x[0], x[-1]],
-                                                  'mrn': ['Series Avg'] * 2,
-                                                  'upper': [upper_bound] * 2,
-                                                  'avg': [average] * 2,
-                                                  'lower': [lower_bound] * 2,
-                                                  'y': [average] * 2}
-                self.source[grp]['patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
-                                                  'y': [upper_bound, upper_bound, lower_bound, lower_bound]}
+                self.source[grp]["trend"].data = {"x": x_trend, "y": y_trend}
+                self.source[grp]["bound"].data = {
+                    "x": [x[0], x[-1]],
+                    "mrn": ["Series Avg"] * 2,
+                    "upper": [upper_bound] * 2,
+                    "avg": [average] * 2,
+                    "lower": [lower_bound] * 2,
+                    "y": [average] * 2,
+                }
+                self.source[grp]["patch"].data = {
+                    "x": [x[0], x[-1], x[-1], x[0]],
+                    "y": [upper_bound, upper_bound, lower_bound, lower_bound],
+                }
 
     def update_divs(self):
 
-        grp_data = {grp: self.source[grp]['plot'].data['y'] for grp in [1, 2]}
+        grp_data = {grp: self.source[grp]["plot"].data["y"] for grp in [1, 2]}
 
         # Normal Test
-        s, p = {1: '', 2: ''}, {1: '', 2: ''}
+        s, p = {1: "", 2: ""}, {1: "", 2: ""}
         for grp, data in grp_data.items():
             if data:
                 try:
                     s[grp], p[grp] = normaltest(data)
                     p[grp] = "%0.3f" % p[grp]
                 except Exception as e:
-                    msg = 'PlotTimeSeries.update_divs: Normal test failed'
+                    msg = "PlotTimeSeries.update_divs: Normal test failed"
                     push_to_log(e, msg=msg)
-                    p[grp] = 'ERROR'
+                    p[grp] = "ERROR"
 
         # t-Test and Rank Sums
-        pt, pr = '', ''
+        pt, pr = "", ""
         if grp_data[1] and grp_data[2]:
             try:
                 st, pt = ttest_ind(grp_data[1], grp_data[2])
                 pt = "%0.3f" % pt
             except Exception as e:
-                msg = 'PlotTimeSeries.update_divs: t-test failed'
+                msg = "PlotTimeSeries.update_divs: t-test failed"
                 push_to_log(e, msg=msg)
-                pt = 'ERROR'
+                pt = "ERROR"
             try:
                 sr, pr = ranksums(grp_data[1], grp_data[2])
                 pr = "%0.3f" % pr
             except Exception as e:
-                msg = 'PlotTimeSeries.update_divs: Wilcoxon ranksums failed'
+                msg = "PlotTimeSeries.update_divs: Wilcoxon ranksums failed"
                 push_to_log(e, msg=msg)
-                pr = 'ERROR'
+                pr = "ERROR"
 
-        self.normal_test_div[1].text = "<b>Group 1 Normal Test p-value</b>: %s" % p[1]
-        self.normal_test_div[2].text = "<b>Group 2 Normal Test p-value</b>: %s" % p[2]
-        self.t_test_div.text = "<b>Two Sample t-Test (Group 1 vs 2) p-value</b>: %s" % pt
-        self.wilcoxon_div.text = "<b>Wilcoxon rank-sum (Group 1 vs 2) p-value</b>: %s" % pr
+        self.normal_test_div[1].text = (
+            "<b>Group 1 Normal Test p-value</b>: %s" % p[1]
+        )
+        self.normal_test_div[2].text = (
+            "<b>Group 2 Normal Test p-value</b>: %s" % p[2]
+        )
+        self.t_test_div.text = (
+            "<b>Two Sample t-Test (Group 1 vs 2) p-value</b>: %s" % pt
+        )
+        self.wilcoxon_div.text = (
+            "<b>Wilcoxon rank-sum (Group 1 vs 2) p-value</b>: %s" % pr
+        )
 
     def get_csv(self):
-        data = self.source[1]['plot'].data
-        csv_data = ['MRN,Study Instance UID,Date,%s' % self.y_axis_label]
-        for i in range(len(data['mrn'])):
-            csv_data.append(','.join(str(data[key][i]).replace(',', '^') for key in ['mrn', 'uid', 'x', 'y']))
+        data = self.source[1]["plot"].data
+        csv_data = ["MRN,Study Instance UID,Date,%s" % self.y_axis_label]
+        for i in range(len(data["mrn"])):
+            csv_data.append(
+                ",".join(
+                    str(data[key][i]).replace(",", "^")
+                    for key in ["mrn", "uid", "x", "y"]
+                )
+            )
 
-        data2 = self.source[2]['plot'].data
-        if data2['mrn']:
-            csv_data2 = ['MRN,Study Instance UID,Date,%s' % self.y_axis_label]
-            for i in range(len(data['mrn'])):
-                csv_data2.append(','.join(str(data[key][i]).replace(',', '^') for key in ['mrn', 'uid', 'x', 'y']))
+        data2 = self.source[2]["plot"].data
+        if data2["mrn"]:
+            csv_data2 = ["MRN,Study Instance UID,Date,%s" % self.y_axis_label]
+            for i in range(len(data["mrn"])):
+                csv_data2.append(
+                    ",".join(
+                        str(data[key][i]).replace(",", "^")
+                        for key in ["mrn", "uid", "x", "y"]
+                    )
+                )
 
-            csv_data.insert(0, 'Group 1')
-            csv_data.append('\nGroup 2')
+            csv_data.insert(0, "Group 1")
+            csv_data.append("\nGroup 2")
             csv_data.extend(csv_data2)
 
-        return '\n'.join(csv_data)
+        return "\n".join(csv_data)
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.GetSize()
-        self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
-        self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
-        self.histogram.plot_width = int(self.size_factor['hist'][0] * float(panel_width))
-        self.histogram.plot_height = int(self.size_factor['hist'][1] * float(panel_height))
+        self.figure.plot_width = int(
+            self.size_factor["plot"][0] * float(panel_width)
+        )
+        self.figure.plot_height = int(
+            self.size_factor["plot"][1] * float(panel_height)
+        )
+        self.histogram.plot_width = int(
+            self.size_factor["hist"][0] * float(panel_width)
+        )
+        self.histogram.plot_height = int(
+            self.size_factor["hist"][1] * float(panel_height)
+        )
 
-        div_width = int(self.size_factor['plot'][0] * float(panel_width) / 2)
+        div_width = int(self.size_factor["plot"][0] * float(panel_width) / 2)
         self.normal_test_div[1].width = div_width
         self.normal_test_div[2].width = div_width
         self.t_test_div.width = div_width
@@ -786,49 +1150,76 @@ class PlotTimeSeries(Plot):
     def apply_options(self):
         super().apply_options()
 
-        for group in ['', '_2']:
-            glyph = getattr(self, 'plot_%s%s' % ('data', group)).glyph
-            glyph.line_color = getattr(self.options, 'PLOT_COLOR%s' % group)
-            glyph.fill_color = getattr(self.options, 'PLOT_COLOR%s' % group)
-            glyph.size = getattr(self.options, 'TIME_SERIES_%s' % 'CIRCLE_SIZE')
-            glyph.line_alpha = getattr(self.options, 'TIME_SERIES_%s' % 'CIRCLE_ALPHA')
-            glyph.fill_alpha = getattr(self.options, 'TIME_SERIES_%s' % 'CIRCLE_ALPHA')
+        for group in ["", "_2"]:
+            glyph = getattr(self, "plot_%s%s" % ("data", group)).glyph
+            glyph.line_color = getattr(self.options, "PLOT_COLOR%s" % group)
+            glyph.fill_color = getattr(self.options, "PLOT_COLOR%s" % group)
+            glyph.size = getattr(
+                self.options, "TIME_SERIES_%s" % "CIRCLE_SIZE"
+            )
+            glyph.line_alpha = getattr(
+                self.options, "TIME_SERIES_%s" % "CIRCLE_ALPHA"
+            )
+            glyph.fill_alpha = getattr(
+                self.options, "TIME_SERIES_%s" % "CIRCLE_ALPHA"
+            )
 
-            glyph = getattr(self, 'plot_%s%s' % ('trend', group)).glyph
-            glyph.line_color = getattr(self.options, 'PLOT_COLOR%s' % group)
-            glyph.line_width = getattr(self.options, 'TIME_SERIES_%s' % 'TREND_LINE_WIDTH')
-            glyph.line_dash = getattr(self.options, 'TIME_SERIES_%s' % 'TREND_LINE_DASH')
+            glyph = getattr(self, "plot_%s%s" % ("trend", group)).glyph
+            glyph.line_color = getattr(self.options, "PLOT_COLOR%s" % group)
+            glyph.line_width = getattr(
+                self.options, "TIME_SERIES_%s" % "TREND_LINE_WIDTH"
+            )
+            glyph.line_dash = getattr(
+                self.options, "TIME_SERIES_%s" % "TREND_LINE_DASH"
+            )
 
-            glyph = getattr(self, 'plot_%s%s' % ('avg', group)).glyph
-            glyph.line_color = getattr(self.options, 'PLOT_COLOR%s' % group)
-            glyph.line_width = getattr(self.options, 'TIME_SERIES_%s' % 'AVG_LINE_WIDTH')
-            glyph.line_dash = getattr(self.options, 'TIME_SERIES_%s' % 'AVG_LINE_DASH')
+            glyph = getattr(self, "plot_%s%s" % ("avg", group)).glyph
+            glyph.line_color = getattr(self.options, "PLOT_COLOR%s" % group)
+            glyph.line_width = getattr(
+                self.options, "TIME_SERIES_%s" % "AVG_LINE_WIDTH"
+            )
+            glyph.line_dash = getattr(
+                self.options, "TIME_SERIES_%s" % "AVG_LINE_DASH"
+            )
 
-            glyph = getattr(self, 'plot_%s%s' % ('patch', group)).glyph
-            glyph.fill_color = getattr(self.options, 'PLOT_COLOR%s' % group)
-            glyph.fill_alpha = getattr(self.options, 'TIME_SERIES_%s' % 'PATCH_ALPHA')
-            glyph.line_color = getattr(self.options, 'PLOT_COLOR%s' % group)
-            glyph.line_alpha = getattr(self.options, 'TIME_SERIES_%s' % 'PATCH_ALPHA')
+            glyph = getattr(self, "plot_%s%s" % ("patch", group)).glyph
+            glyph.fill_color = getattr(self.options, "PLOT_COLOR%s" % group)
+            glyph.fill_alpha = getattr(
+                self.options, "TIME_SERIES_%s" % "PATCH_ALPHA"
+            )
+            glyph.line_color = getattr(self.options, "PLOT_COLOR%s" % group)
+            glyph.line_alpha = getattr(
+                self.options, "TIME_SERIES_%s" % "PATCH_ALPHA"
+            )
 
-        self.histogram.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.histogram.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.histogram.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.histogram.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.histogram.xaxis.axis_label_text_font_size = (
+            self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        )
+        self.histogram.yaxis.axis_label_text_font_size = (
+            self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        )
+        self.histogram.xaxis.major_label_text_font_size = (
+            self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        )
+        self.histogram.yaxis.major_label_text_font_size = (
+            self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        )
         self.histogram.min_border_left = self.options.MIN_BORDER
         self.histogram.min_border_bottom = self.options.MIN_BORDER
 
-        for group in ['', '_2']:
-            glyph = getattr(self, 'vbar%s' % group).glyph
-            glyph.line_color = getattr(self.options, 'PLOT_COLOR%s' % group)
-            glyph.fill_color = getattr(self.options, 'PLOT_COLOR%s' % group)
-            glyph.line_alpha = getattr(self.options, 'HISTOGRAM_ALPHA')
-            glyph.fill_alpha = getattr(self.options, 'HISTOGRAM_ALPHA')
+        for group in ["", "_2"]:
+            glyph = getattr(self, "vbar%s" % group).glyph
+            glyph.line_color = getattr(self.options, "PLOT_COLOR%s" % group)
+            glyph.fill_color = getattr(self.options, "PLOT_COLOR%s" % group)
+            glyph.line_alpha = getattr(self.options, "HISTOGRAM_ALPHA")
+            glyph.fill_alpha = getattr(self.options, "HISTOGRAM_ALPHA")
 
 
 class PlotCorrelation(Plot):
     """
     Generate plot for Correlation tab
     """
+
     def __init__(self, parent, options):
         """
         :param parent: the wx UI object where the plot will be displayed
@@ -837,13 +1228,17 @@ class PlotCorrelation(Plot):
         """
         Plot.__init__(self, parent, options, apply_grid_options=False)
 
-        self.type = 'correlation'
+        self.type = "correlation"
         self.parent = parent
         self.options = options
         self.size_factor = (0.9, 0.8)
 
-        self.source = {'corr': ColumnDataSource(data=dict(x=[], y=[], color=[], alpha=[], size=[])),
-                       'line': ColumnDataSource(data=dict(x=[], y=[]))}
+        self.source = {
+            "corr": ColumnDataSource(
+                data=dict(x=[], y=[], color=[], alpha=[], size=[])
+            ),
+            "line": ColumnDataSource(data=dict(x=[], y=[])),
+        }
 
         self.__add_figure()
         self.__set_fig_attr()
@@ -852,8 +1247,14 @@ class PlotCorrelation(Plot):
         self.__do_layout()
 
     def __add_figure(self):
-        self.fig = figure(plot_width=900, plot_height=700, x_axis_location="above", x_range=[''], y_range=[''],
-                          tools="pan, crosshair, box_zoom, wheel_zoom, reset")
+        self.fig = figure(
+            plot_width=900,
+            plot_height=700,
+            x_axis_location="above",
+            x_range=[""],
+            y_range=[""],
+            tools="pan, crosshair, box_zoom, wheel_zoom, reset",
+        )
         self.figures = [self.fig]
 
     def __set_fig_attr(self):
@@ -861,7 +1262,7 @@ class PlotCorrelation(Plot):
         self.fig.min_border_top = 130
         self.fig.xaxis.major_label_orientation = pi / 4
         self.fig.toolbar.active_scroll = "auto"
-        self.fig.title.align = 'center'
+        self.fig.title.align = "center"
         self.fig.title.text_font_style = "italic"
         self.fig.xaxis.axis_line_color = None
         self.fig.xaxis.major_tick_line_color = None
@@ -874,51 +1275,88 @@ class PlotCorrelation(Plot):
         self.fig.outline_line_color = None
 
     def __add_plot_data(self):
-        self.corr = self.fig.circle(x='x', y='y', color='color', alpha='alpha', size='size', source=self.source['corr'])
-        self.line = self.fig.line(x='x', y='y', source=self.source['line'])
+        self.corr = self.fig.circle(
+            x="x",
+            y="y",
+            color="color",
+            alpha="alpha",
+            size="size",
+            source=self.source["corr"],
+        )
+        self.line = self.fig.line(x="x", y="y", source=self.source["line"])
 
     def __add_hover(self):
-        self.fig.add_tools(HoverTool(show_arrow=True, line_policy='next',
-                                     tooltips=[('x', '@x_name'),
-                                               ('y', '@y_name'),
-                                               ('r', '@r'),
-                                               ('p', '@p'),
-                                               ('Norm p-value x', '@x_normality{0.4f}'),
-                                               ('Norm p-value y', '@y_normality{0.4f}'),
-                                               ('Group', '@group')],
-                                     renderers=[self.corr]))
+        self.fig.add_tools(
+            HoverTool(
+                show_arrow=True,
+                line_policy="next",
+                tooltips=[
+                    ("x", "@x_name"),
+                    ("y", "@y_name"),
+                    ("r", "@r"),
+                    ("p", "@p"),
+                    ("Norm p-value x", "@x_normality{0.4f}"),
+                    ("Norm p-value y", "@y_normality{0.4f}"),
+                    ("Group", "@group"),
+                ],
+                renderers=[self.corr],
+            )
+        )
 
     def __do_layout(self):
         self.bokeh_layout = column(self.fig)
 
-    def update_plot_data(self, stats_data, stats_data_2=None, included_vars=None):
+    def update_plot_data(
+        self, stats_data, stats_data_2=None, included_vars=None
+    ):
         if stats_data_2 is not None:
             # TODO: Alert user when group is missing data, include which patient
             categories = {1: list(stats_data.data), 2: list(stats_data_2.data)}
-            extra_vars = {grp: [x for x in categories[3-grp]
-                                if x not in categories[grp] and (included_vars is None or x in included_vars)]
-                          for grp in [1, 2]}
+            extra_vars = {
+                grp: [
+                    x
+                    for x in categories[3 - grp]
+                    if x not in categories[grp]
+                    and (included_vars is None or x in included_vars)
+                ]
+                for grp in [1, 2]
+            }
         else:
             extra_vars = {grp: None for grp in [1, 2]}
 
-        data, removed_mrns = stats_data.get_corr_matrix_data(self.options,
-                                                             included_vars=included_vars, extra_vars=extra_vars[1])
+        data, removed_mrns = stats_data.get_corr_matrix_data(
+            self.options, included_vars=included_vars, extra_vars=extra_vars[1]
+        )
 
         if removed_mrns:
-            pub.sendMessage("correlation_patients_removed", msg={'mrns': removed_mrns})
+            pub.sendMessage(
+                "correlation_patients_removed", msg={"mrns": removed_mrns}
+            )
 
         if stats_data_2 is not None:
-            data_2, removed_mrns_2 = stats_data_2.get_corr_matrix_data(self.options,
-                                                       included_vars=included_vars, extra_vars=extra_vars[2])
+            data_2, removed_mrns_2 = stats_data_2.get_corr_matrix_data(
+                self.options,
+                included_vars=included_vars,
+                extra_vars=extra_vars[2],
+            )
 
             if removed_mrns_2:
-                pub.sendMessage("correlation_patients_removed", msg={'mrns': removed_mrns_2})
+                pub.sendMessage(
+                    "correlation_patients_removed",
+                    msg={"mrns": removed_mrns_2},
+                )
 
-            for key in list(data_2['source_data']['corr']):
-                data['source_data']['corr'][key].extend(data_2['source_data']['corr'][key])
+            for key in list(data_2["source_data"]["corr"]):
+                data["source_data"]["corr"][key].extend(
+                    data_2["source_data"]["corr"][key]
+                )
 
-        self.fig = figure(x_axis_location="above", x_range=data['x_factors'], y_range=data['y_factors'],
-                          tools="pan, crosshair, box_zoom, wheel_zoom, reset")
+        self.fig = figure(
+            x_axis_location="above",
+            x_range=data["x_factors"],
+            y_range=data["y_factors"],
+            tools="pan, crosshair, box_zoom, wheel_zoom, reset",
+        )
         self.figures = [self.fig]
         self.__set_fig_attr()
         self.__add_plot_data()
@@ -926,18 +1364,28 @@ class PlotCorrelation(Plot):
         self.__do_layout()
         self.set_figure_dimensions()
 
-        self.source['corr'].data = data['source_data']['corr']
-        self.source['line'].data = data['source_data']['line']
+        self.source["corr"].data = data["source_data"]["corr"]
+        self.source["line"].data = data["source_data"]["line"]
 
         self.update_bokeh_layout_in_wx_python()
 
     def get_csv(self):
-        data = self.source['corr'].data
-        keys = ['x_name', 'y_name', 'r', 'p', 'x_normality', 'y_normality', 'group']
-        csv_data = [','.join(keys)]
-        for i in range(len(data['x'])):
-            csv_data.append(','.join(str(data[key][i]).replace(',', '^') for key in keys))
-        return '\n'.join(csv_data)
+        data = self.source["corr"].data
+        keys = [
+            "x_name",
+            "y_name",
+            "r",
+            "p",
+            "x_normality",
+            "y_normality",
+            "group",
+        ]
+        csv_data = [",".join(keys)]
+        for i in range(len(data["x"])):
+            csv_data.append(
+                ",".join(str(data[key][i]).replace(",", "^") for key in keys)
+            )
+        return "\n".join(csv_data)
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.GetSize()
@@ -948,16 +1396,25 @@ class PlotCorrelation(Plot):
         # TODO: options are applied in update_plot_data
         super().apply_options()
 
-        self.fig.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.fig.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.fig.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.fig.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.fig.xaxis.axis_label_text_font_size = (
+            self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        )
+        self.fig.yaxis.axis_label_text_font_size = (
+            self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        )
+        self.fig.xaxis.major_label_text_font_size = (
+            self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        )
+        self.fig.yaxis.major_label_text_font_size = (
+            self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        )
 
 
 class PlotRegression(Plot):
     """
     Generate plot for Regression tab
     """
+
     def __init__(self, parent, options):
         """
         :param parent: the wx UI object where the plot will be displayed
@@ -966,26 +1423,49 @@ class PlotRegression(Plot):
         """
         Plot.__init__(self, parent, options)
 
-        self.type = 'regression'
+        self.type = "regression"
         self.parent = parent
-        self.size_factor = {'plot': (0.927, 0.421),
-                            'table': (0.927, 0.140),
-                            'resid': (0.464, 0.281),
-                            'prob': (0.464, 0.281)}
+        self.size_factor = {
+            "plot": (0.927, 0.421),
+            "table": (0.927, 0.140),
+            "resid": (0.464, 0.281),
+            "prob": (0.464, 0.281),
+        }
         self.group = 1
         self.color = {1: self.options.PLOT_COLOR, 2: self.options.PLOT_COLOR_2}
 
-        self.x_axis_title, self.y_axis_title = '', ''
+        self.x_axis_title, self.y_axis_title = "", ""
         self.reg = {grp: None for grp in [1, 2]}
         self.options = options
-        self.source = {'plot': {grp: ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], dates=[])) for grp in [1, 2]},
-                       'trend': {grp: ColumnDataSource(data=dict(x=[], y=[], mrn=[])) for grp in [1, 2]},
-                       'residuals': ColumnDataSource(data=dict(x=[], y=[], mrn=[], date=[], color=[])),
-                       'residuals_zero': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
-                       'prob': ColumnDataSource(data=dict(x=[], y=[], mrn=[], color=[])),
-                       'prob_45': ColumnDataSource(data=dict(x=[], y=[])),
-                       'table': ColumnDataSource(data=dict(var=[], coef=[], std_err=[], t_value=[], p_value=[],
-                                                           spacer=[], fit_param=[]))}
+        self.source = {
+            "plot": {
+                grp: ColumnDataSource(
+                    data=dict(x=[], y=[], mrn=[], uid=[], dates=[])
+                )
+                for grp in [1, 2]
+            },
+            "trend": {
+                grp: ColumnDataSource(data=dict(x=[], y=[], mrn=[]))
+                for grp in [1, 2]
+            },
+            "residuals": ColumnDataSource(
+                data=dict(x=[], y=[], mrn=[], date=[], color=[])
+            ),
+            "residuals_zero": ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+            "prob": ColumnDataSource(data=dict(x=[], y=[], mrn=[], color=[])),
+            "prob_45": ColumnDataSource(data=dict(x=[], y=[])),
+            "table": ColumnDataSource(
+                data=dict(
+                    var=[],
+                    coef=[],
+                    std_err=[],
+                    t_value=[],
+                    p_value=[],
+                    spacer=[],
+                    fit_param=[],
+                )
+            ),
+        }
 
         self.__create_additional_figures()
         self.__create_table()
@@ -996,62 +1476,119 @@ class PlotRegression(Plot):
         self.apply_options()
 
     def __create_additional_figures(self):
-        self.figure_residual_fits = figure(tools="pan,box_zoom,crosshair,reset")
+        self.figure_residual_fits = figure(
+            tools="pan,box_zoom,crosshair,reset"
+        )
         self.figures.append(self.figure_residual_fits)
-        self.figure_residual_fits.xaxis.axis_label = 'Fitted Values'
-        self.figure_residual_fits.yaxis.axis_label = 'Residuals'
+        self.figure_residual_fits.xaxis.axis_label = "Fitted Values"
+        self.figure_residual_fits.yaxis.axis_label = "Residuals"
         self.figure_prob_plot = figure(tools="pan,box_zoom,crosshair,reset")
-        self.figure_prob_plot.xaxis.axis_label = 'Quantiles'
-        self.figure_prob_plot.yaxis.axis_label = 'Ordered Values'
+        self.figure_prob_plot.xaxis.axis_label = "Quantiles"
+        self.figure_prob_plot.yaxis.axis_label = "Ordered Values"
         self.figures.append(self.figure_prob_plot)
 
     def __create_table(self):
-        self.regression_table = DataTable(source=self.source['table'], columns=self.table_columns, index_position=None)
+        self.regression_table = DataTable(
+            source=self.source["table"],
+            columns=self.table_columns,
+            index_position=None,
+        )
 
     @property
     def table_columns(self):
-        return [TableColumn(field="var", title="Group %s" % self.group, width=100),
-                TableColumn(field="coef", title="Coef", formatter=NumberFormatter(format="0.000"), width=50),
-                TableColumn(field="std_err", title="Std. Err.", formatter=NumberFormatter(format="0.000"), width=50),
-                TableColumn(field="t_value", title="t-value", formatter=NumberFormatter(format="0.000"), width=50),
-                TableColumn(field="p_value", title="p-value", formatter=NumberFormatter(format="0.000"), width=50),
-                TableColumn(field="spacer", title="", width=2),
-                TableColumn(field="fit_param", title="", width=75)]
+        return [
+            TableColumn(field="var", title="Group %s" % self.group, width=100),
+            TableColumn(
+                field="coef",
+                title="Coef",
+                formatter=NumberFormatter(format="0.000"),
+                width=50,
+            ),
+            TableColumn(
+                field="std_err",
+                title="Std. Err.",
+                formatter=NumberFormatter(format="0.000"),
+                width=50,
+            ),
+            TableColumn(
+                field="t_value",
+                title="t-value",
+                formatter=NumberFormatter(format="0.000"),
+                width=50,
+            ),
+            TableColumn(
+                field="p_value",
+                title="p-value",
+                formatter=NumberFormatter(format="0.000"),
+                width=50,
+            ),
+            TableColumn(field="spacer", title="", width=2),
+            TableColumn(field="fit_param", title="", width=75),
+        ]
 
     def __add_plot_data(self):
-        self.plot_data = {grp: self.figure.circle('x', 'y', source=self.source['plot'][grp])
-                          for grp in [1, 2]}
-        self.plot_trend = {grp: self.figure.line('x', 'y', source=self.source['trend'][grp])
-                           for grp in [1, 2]}
-        self.plot_residuals = self.figure_residual_fits.circle('x', 'y', source=self.source['residuals'], color='color')
-        self.plot_residuals_zero = self.figure_residual_fits.line('x', 'y', source=self.source['residuals_zero'])
-        self.plot_prob = self.figure_prob_plot.circle('x', 'y', source=self.source['prob'], color='color')
-        self.plot_prob_45 = self.figure_prob_plot.line('x', 'y', source=self.source['prob_45'])
+        self.plot_data = {
+            grp: self.figure.circle("x", "y", source=self.source["plot"][grp])
+            for grp in [1, 2]
+        }
+        self.plot_trend = {
+            grp: self.figure.line("x", "y", source=self.source["trend"][grp])
+            for grp in [1, 2]
+        }
+        self.plot_residuals = self.figure_residual_fits.circle(
+            "x", "y", source=self.source["residuals"], color="color"
+        )
+        self.plot_residuals_zero = self.figure_residual_fits.line(
+            "x", "y", source=self.source["residuals_zero"]
+        )
+        self.plot_prob = self.figure_prob_plot.circle(
+            "x", "y", source=self.source["prob"], color="color"
+        )
+        self.plot_prob_45 = self.figure_prob_plot.line(
+            "x", "y", source=self.source["prob_45"]
+        )
 
     def __add_hover(self):
-        self.figure.add_tools(HoverTool(show_arrow=True,
-                                        tooltips=[('ID', '@mrn'),
-                                                  ('x', '@x{0.2f}'),
-                                                  ('y', '@y{0.2f}')],
-                                        renderers=[self.plot_data[1], self.plot_data[2]]))
+        self.figure.add_tools(
+            HoverTool(
+                show_arrow=True,
+                tooltips=[
+                    ("ID", "@mrn"),
+                    ("x", "@x{0.2f}"),
+                    ("y", "@y{0.2f}"),
+                ],
+                renderers=[self.plot_data[1], self.plot_data[2]],
+            )
+        )
 
-        self.figure_residual_fits.add_tools(HoverTool(show_arrow=True,
-                                                      tooltips=[('ID', '@mrn'),
-                                                                ('Date', '@date{%F}'),
-                                                                ('x', '@x{0.2f}'),
-                                                                ('y', '@y{0.2f}')],
-                                                      formatters={'date': 'datetime'},
-                                                      renderers=[self.plot_residuals]))
+        self.figure_residual_fits.add_tools(
+            HoverTool(
+                show_arrow=True,
+                tooltips=[
+                    ("ID", "@mrn"),
+                    ("Date", "@date{%F}"),
+                    ("x", "@x{0.2f}"),
+                    ("y", "@y{0.2f}"),
+                ],
+                formatters={"date": "datetime"},
+                renderers=[self.plot_residuals],
+            )
+        )
 
-        self.figure_prob_plot.add_tools(HoverTool(show_arrow=True,
-                                                  tooltips=[('x', '@x{0.2f}'),
-                                                            ('y', '@y{0.2f}')],
-                                                  renderers=[self.plot_prob]))
+        self.figure_prob_plot.add_tools(
+            HoverTool(
+                show_arrow=True,
+                tooltips=[("x", "@x{0.2f}"), ("y", "@y{0.2f}")],
+                renderers=[self.plot_prob],
+            )
+        )
 
     def __do_layout(self):
-        self.bokeh_layout = column(self.figure,
-                                   self.regression_table,
-                                   row(self.figure_residual_fits, self.figure_prob_plot))
+        self.bokeh_layout = column(
+            self.figure,
+            self.regression_table,
+            row(self.figure_residual_fits, self.figure_prob_plot),
+        )
 
     def update_plot(self, plot_data, group, x_var, x_axis_title, y_axis_title):
         self.group = group
@@ -1062,9 +1599,11 @@ class PlotRegression(Plot):
         self.clear_sources()
         for grp in [1, 2]:
             if plot_data[grp] is None:
-                self.source['plot'][grp].data = {key: [] for key in ['x', 'y', 'mrn', 'uid', 'dates']}
+                self.source["plot"][grp].data = {
+                    key: [] for key in ["x", "y", "mrn", "uid", "dates"]
+                }
             else:
-                self.source['plot'][grp].data = plot_data[grp]
+                self.source["plot"][grp].data = plot_data[grp]
 
         self.update_trend(x_var)
         self.figure.xaxis.axis_label = x_axis_title
@@ -1073,24 +1612,42 @@ class PlotRegression(Plot):
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.GetSize()
-        self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
-        self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
-        self.figure_residual_fits.plot_width = int(self.size_factor['resid'][0] * float(panel_width))
-        self.figure_residual_fits.plot_height = int(self.size_factor['resid'][1] * float(panel_height))
-        self.figure_prob_plot.plot_width = int(self.size_factor['prob'][0] * float(panel_width))
-        self.figure_prob_plot.plot_height = int(self.size_factor['prob'][1] * float(panel_height))
-        self.regression_table.width = int(self.size_factor['table'][0] * float(panel_width))
-        self.regression_table.height = int(self.size_factor['table'][1] * float(panel_height))
+        self.figure.plot_width = int(
+            self.size_factor["plot"][0] * float(panel_width)
+        )
+        self.figure.plot_height = int(
+            self.size_factor["plot"][1] * float(panel_height)
+        )
+        self.figure_residual_fits.plot_width = int(
+            self.size_factor["resid"][0] * float(panel_width)
+        )
+        self.figure_residual_fits.plot_height = int(
+            self.size_factor["resid"][1] * float(panel_height)
+        )
+        self.figure_prob_plot.plot_width = int(
+            self.size_factor["prob"][0] * float(panel_width)
+        )
+        self.figure_prob_plot.plot_height = int(
+            self.size_factor["prob"][1] * float(panel_height)
+        )
+        self.regression_table.width = int(
+            self.size_factor["table"][0] * float(panel_width)
+        )
+        self.regression_table.height = int(
+            self.size_factor["table"][1] * float(panel_height)
+        )
 
     def update_trend(self, x_var):
 
         mrn, date, x_trend, y_trend = {}, {}, {}, {}
         for grp in [1, 2]:
-            if self.source['plot'][grp].data['x']:
-                x, y, mrn[grp], date[grp] = self.clean_data(self.source['plot'][grp].data['x'],
-                                                            self.source['plot'][grp].data['y'],
-                                                            mrn=self.source['plot'][grp].data['mrn'],
-                                                            dates=self.source['plot'][grp].data['date'])
+            if self.source["plot"][grp].data["x"]:
+                x, y, mrn[grp], date[grp] = self.clean_data(
+                    self.source["plot"][grp].data["x"],
+                    self.source["plot"][grp].data["y"],
+                    mrn=self.source["plot"][grp].data["mrn"],
+                    dates=self.source["plot"][grp].data["date"],
+                )
 
                 data = np.array([y, x])
                 clean_data = data[:, ~np.any(np.isnan(data), axis=0)]
@@ -1100,94 +1657,141 @@ class PlotRegression(Plot):
                 self.reg[grp] = MultiVariableRegression(X, y)
 
                 x_trend[grp] = [min(x), max(x)]
-                y_trend[grp] = np.add(np.multiply(x_trend[grp], self.reg[grp].slope), self.reg[grp].y_intercept)
+                y_trend[grp] = np.add(
+                    np.multiply(x_trend[grp], self.reg[grp].slope),
+                    self.reg[grp].y_intercept,
+                )
             else:
                 self.reg[grp] = None
                 x_trend[grp] = None
                 y_trend[grp] = None
 
-        self.source['residuals'].data = {'x': self.reg[self.group].predictions,
-                                         'y': self.reg[self.group].residuals,
-                                         'mrn': mrn[self.group],
-                                         'date': date[self.group],
-                                         'color': [self.color[self.group]] * len(mrn[self.group])}
+        self.source["residuals"].data = {
+            "x": self.reg[self.group].predictions,
+            "y": self.reg[self.group].residuals,
+            "mrn": mrn[self.group],
+            "date": date[self.group],
+            "color": [self.color[self.group]] * len(mrn[self.group]),
+        }
 
-        self.source['residuals_zero'].data = {'x': [min(self.reg[self.group].predictions),
-                                                    max(self.reg[self.group].predictions)],
-                                              'y': [0, 0],
-                                              'mrn': [None, None]}
+        self.source["residuals_zero"].data = {
+            "x": [
+                min(self.reg[self.group].predictions),
+                max(self.reg[self.group].predictions),
+            ],
+            "y": [0, 0],
+            "mrn": [None, None],
+        }
 
-        self.source['prob'].data = {'x': self.reg[self.group].norm_prob_plot[0],
-                                    'y': self.reg[self.group].norm_prob_plot[1],
-                                    'color': [self.color[self.group]] * len(self.reg[self.group].norm_prob_plot[0])}
+        self.source["prob"].data = {
+            "x": self.reg[self.group].norm_prob_plot[0],
+            "y": self.reg[self.group].norm_prob_plot[1],
+            "color": [self.color[self.group]]
+            * len(self.reg[self.group].norm_prob_plot[0]),
+        }
 
-        self.source['prob_45'].data = {'x': self.reg[self.group].x_trend_prob,
-                                       'y': self.reg[self.group].y_trend_prob}
+        self.source["prob_45"].data = {
+            "x": self.reg[self.group].x_trend_prob,
+            "y": self.reg[self.group].y_trend_prob,
+        }
 
-        self.source['table'].data = {'var': ['y-int', x_var],
-                                     'coef': [self.reg[self.group].y_intercept, self.reg[self.group].slope],
-                                     'std_err': self.reg[self.group].sd_b,
-                                     't_value': self.reg[self.group].ts_b,
-                                     'p_value': self.reg[self.group].p_values,
-                                     'spacer': ['', ''],
-                                     'fit_param': ["R²: %0.3f" % self.reg[self.group].r_sq,
-                                                   "MSE: %0.3f" % self.reg[self.group].mse]}
+        self.source["table"].data = {
+            "var": ["y-int", x_var],
+            "coef": [
+                self.reg[self.group].y_intercept,
+                self.reg[self.group].slope,
+            ],
+            "std_err": self.reg[self.group].sd_b,
+            "t_value": self.reg[self.group].ts_b,
+            "p_value": self.reg[self.group].p_values,
+            "spacer": ["", ""],
+            "fit_param": [
+                "R²: %0.3f" % self.reg[self.group].r_sq,
+                "MSE: %0.3f" % self.reg[self.group].mse,
+            ],
+        }
 
         for grp in [1, 2]:
             if x_trend[grp]:
-                self.source['trend'][grp].data = {'x': x_trend[grp],
-                                                  'y': y_trend[grp]}
+                self.source["trend"][grp].data = {
+                    "x": x_trend[grp],
+                    "y": y_trend[grp],
+                }
             else:
-                self.source['trend'][grp].data = {'x': [], 'y': [], 'mrn': []}
+                self.source["trend"][grp].data = {"x": [], "y": [], "mrn": []}
 
     def get_csv_data(self):
-        plot_data = self.source['plot'][self.group].data
-        csv_data = ['Linear Regression',
-                    'Data',
-                    ',MRN,%s' % ','.join(plot_data['mrn']),
-                    ',Study Instance UID,%s' % ','.join(plot_data['uid']),
-                    ',Sim Study Date,%s' % ','.join(plot_data['date']),
-                    'Independent,%s,%s' % (self.y_axis_title, ','.join(str(a) for a in plot_data['y'])),
-                    'Dependent,%s,%s' % (self.x_axis_title, ','.join(str(a) for a in plot_data['x'])),
-                    '',
-                    self.get_csv_model(),
-                    '',
-                    self.get_csv_analysis()]
+        plot_data = self.source["plot"][self.group].data
+        csv_data = [
+            "Linear Regression",
+            "Data",
+            ",MRN,%s" % ",".join(plot_data["mrn"]),
+            ",Study Instance UID,%s" % ",".join(plot_data["uid"]),
+            ",Sim Study Date,%s" % ",".join(plot_data["date"]),
+            "Independent,%s,%s"
+            % (self.y_axis_title, ",".join(str(a) for a in plot_data["y"])),
+            "Dependent,%s,%s"
+            % (self.x_axis_title, ",".join(str(a) for a in plot_data["x"])),
+            "",
+            self.get_csv_model(),
+            "",
+            self.get_csv_analysis(),
+        ]
 
-        return '\n'.join(csv_data)
+        return "\n".join(csv_data)
 
     def get_csv_model(self):
-        data = self.source['table'].data
-        csv_model = ['Model',
-                     ',Coef,Std. Err.,t-value,p-value']
-        for i in range(len(data['var'])):
+        data = self.source["table"].data
+        csv_model = ["Model", ",Coef,Std. Err.,t-value,p-value"]
+        for i in range(len(data["var"])):
             csv_model.append(self.get_csv_model_row(i))
 
-        csv_model.extend(["R^2,%s" % self.reg[self.group].r_sq,
-                          "MSE,%s" % self.reg[self.group].mse])
+        csv_model.extend(
+            [
+                "R^2,%s" % self.reg[self.group].r_sq,
+                "MSE,%s" % self.reg[self.group].mse,
+            ]
+        )
 
-        return '\n'.join(csv_model)
+        return "\n".join(csv_model)
 
     def get_csv_analysis(self):
-        return '\n'.join(['Analysis',
-                          'Quantiles,%s' % ','.join(str(v) for v in self.reg[self.group].norm_prob_plot[0]),
-                          'Ordered Values,%s' % ','.join(str(v) for v in self.reg[self.group].norm_prob_plot[1]),
-                          '',
-                          'Residuals,%s' % ','.join(str(v) for v in self.reg[self.group].residuals),
-                          'Fitted Values,%s' % ','.join(str(v) for v in self.reg[self.group].predictions)])
+        return "\n".join(
+            [
+                "Analysis",
+                "Quantiles,%s"
+                % ",".join(
+                    str(v) for v in self.reg[self.group].norm_prob_plot[0]
+                ),
+                "Ordered Values,%s"
+                % ",".join(
+                    str(v) for v in self.reg[self.group].norm_prob_plot[1]
+                ),
+                "",
+                "Residuals,%s"
+                % ",".join(str(v) for v in self.reg[self.group].residuals),
+                "Fitted Values,%s"
+                % ",".join(str(v) for v in self.reg[self.group].predictions),
+            ]
+        )
 
     def get_csv_model_row(self, index):
-        data = self.source['table'].data
-        variables = ['var', 'coef', 'std_err', 't_value', 'p_value']
-        return ','.join([str(data[var][index]) for var in variables])
+        data = self.source["table"].data
+        variables = ["var", "coef", "std_err", "t_value", "p_value"]
+        return ",".join([str(data[var][index]) for var in variables])
 
     def clear_source(self, source_key):
         if type(self.source[source_key]) is dict:
             for grp in [1, 2]:
-                data = {data_key: [] for data_key in list(self.source[source_key][grp].data)}
+                data = {
+                    data_key: []
+                    for data_key in list(self.source[source_key][grp].data)
+                }
                 self.source[source_key][grp].data = data
         else:
-            data = {data_key: [] for data_key in list(self.source[source_key].data)}
+            data = {
+                data_key: [] for data_key in list(self.source[source_key].data)
+            }
             self.source[source_key].data = data
 
     def clear_sources(self):
@@ -1201,39 +1805,58 @@ class PlotRegression(Plot):
         self.color[1] = self.options.PLOT_COLOR
         self.color[2] = self.options.PLOT_COLOR_2
         for group in [1, 2]:
-            glyph = getattr(self, 'plot_%s' % 'data')[group].glyph
+            glyph = getattr(self, "plot_%s" % "data")[group].glyph
             glyph.line_color = self.color[group]
             glyph.fill_color = self.color[group]
-            glyph.size = getattr(self.options, 'REGRESSION_%s' % 'CIRCLE_SIZE')
-            glyph.line_alpha = getattr(self.options, 'REGRESSION_%s' % 'ALPHA')
-            glyph.fill_alpha = getattr(self.options, 'REGRESSION_%s' % 'ALPHA')
+            glyph.size = getattr(self.options, "REGRESSION_%s" % "CIRCLE_SIZE")
+            glyph.line_alpha = getattr(self.options, "REGRESSION_%s" % "ALPHA")
+            glyph.fill_alpha = getattr(self.options, "REGRESSION_%s" % "ALPHA")
 
         for group in [1, 2]:
-            glyph = getattr(self, 'plot_%s' % 'trend')[group].glyph
+            glyph = getattr(self, "plot_%s" % "trend")[group].glyph
             glyph.line_color = self.color[group]
-            glyph.line_width = getattr(self.options, 'REGRESSION_%s' % 'LINE_WIDTH')
-            glyph.line_dash = getattr(self.options, 'REGRESSION_%s' % 'LINE_DASH')
+            glyph.line_width = getattr(
+                self.options, "REGRESSION_%s" % "LINE_WIDTH"
+            )
+            glyph.line_dash = getattr(
+                self.options, "REGRESSION_%s" % "LINE_DASH"
+            )
 
-        for circle_plot in ['residuals', 'prob']:
-            glyph = getattr(self, 'plot_%s' % circle_plot).glyph
+        for circle_plot in ["residuals", "prob"]:
+            glyph = getattr(self, "plot_%s" % circle_plot).glyph
             glyph.line_color = self.color[self.group]
             glyph.fill_color = self.color[self.group]
-            glyph.size = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'CIRCLE_SIZE')
-            glyph.line_alpha = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'ALPHA')
-            glyph.fill_alpha = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'ALPHA')
+            glyph.size = getattr(
+                self.options, "REGRESSION_RESIDUAL_%s" % "CIRCLE_SIZE"
+            )
+            glyph.line_alpha = getattr(
+                self.options, "REGRESSION_RESIDUAL_%s" % "ALPHA"
+            )
+            glyph.fill_alpha = getattr(
+                self.options, "REGRESSION_RESIDUAL_%s" % "ALPHA"
+            )
 
-        for line_plot in ['residuals_zero', 'prob_45']:
-            glyph = getattr(self, 'plot_%s' % line_plot).glyph
-            glyph.line_color = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'LINE_COLOR')
-            glyph.line_width = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'LINE_WIDTH')
-            glyph.line_dash = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'LINE_DASH')
-            glyph.line_alpha = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'ALPHA')
+        for line_plot in ["residuals_zero", "prob_45"]:
+            glyph = getattr(self, "plot_%s" % line_plot).glyph
+            glyph.line_color = getattr(
+                self.options, "REGRESSION_RESIDUAL_%s" % "LINE_COLOR"
+            )
+            glyph.line_width = getattr(
+                self.options, "REGRESSION_RESIDUAL_%s" % "LINE_WIDTH"
+            )
+            glyph.line_dash = getattr(
+                self.options, "REGRESSION_RESIDUAL_%s" % "LINE_DASH"
+            )
+            glyph.line_alpha = getattr(
+                self.options, "REGRESSION_RESIDUAL_%s" % "ALPHA"
+            )
 
 
 class PlotMultiVarRegression(Plot):
     """
     Class to generate plot for MultiVariable Frame created from Regression tab
     """
+
     def __init__(self, parent, options, group):
         """
         :param parent: the wx UI object where the plot will be displayed
@@ -1242,27 +1865,49 @@ class PlotMultiVarRegression(Plot):
         """
         Plot.__init__(self, parent, options)
 
-        self.type = 'multi-variable_regression'
+        self.type = "multi-variable_regression"
         self.parent = parent
         self.group = group
 
-        self.size_factor = {'resid': (0.475, 0.45),
-                            'prob': (0.475, 0.45),
-                            'table': (0.95, 0.45)}
+        self.size_factor = {
+            "resid": (0.475, 0.45),
+            "prob": (0.475, 0.45),
+            "table": (0.95, 0.45),
+        }
 
         self.options = options
         self.X, self.X_init, self.y = None, None, None
-        self.x_variables, self.x_variables_updated, self.y_variable, self.stats_data = None, None, None, None
+        (
+            self.x_variables,
+            self.x_variables_updated,
+            self.y_variable,
+            self.stats_data,
+        ) = (None, None, None, None)
         self.mrn, self.uid, self.dates = None, None, None
         self.reg = None
-        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], uid=[], date=[])),
-                       'trend': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
-                       'residuals': ColumnDataSource(data=dict(x=[], y=[], mrn=[], date=[])),
-                       'residuals_zero': ColumnDataSource(data=dict(x=[], y=[])),
-                       'prob': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
-                       'prob_45': ColumnDataSource(data=dict(x=[], y=[])),
-                       'table': ColumnDataSource(data=dict(var=[], coef=[], std_err=[], t_value=[], p_value=[],
-                                                           spacer=[], fit_param=[]))}
+        self.source = {
+            "plot": ColumnDataSource(
+                data=dict(x=[], y=[], mrn=[], uid=[], date=[])
+            ),
+            "trend": ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+            "residuals": ColumnDataSource(
+                data=dict(x=[], y=[], mrn=[], date=[])
+            ),
+            "residuals_zero": ColumnDataSource(data=dict(x=[], y=[])),
+            "prob": ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+            "prob_45": ColumnDataSource(data=dict(x=[], y=[])),
+            "table": ColumnDataSource(
+                data=dict(
+                    var=[],
+                    coef=[],
+                    std_err=[],
+                    t_value=[],
+                    p_value=[],
+                    spacer=[],
+                    fit_param=[],
+                )
+            ),
+        }
 
         self.__add_additional_figures()
         self.__add_plot_data()
@@ -1275,54 +1920,117 @@ class PlotMultiVarRegression(Plot):
     def __add_additional_figures(self):
         self.figure_prob_plot = figure(tools=DEFAULT_TOOLS)
         self.figures.append(self.figure_prob_plot)
-        self.figure_prob_plot.xaxis.axis_label = 'Quantiles'
-        self.figure_prob_plot.yaxis.axis_label = 'Ordered Values'
+        self.figure_prob_plot.xaxis.axis_label = "Quantiles"
+        self.figure_prob_plot.yaxis.axis_label = "Ordered Values"
 
     def __add_plot_data(self):
-        self.plot_residuals = self.figure.circle('x', 'y', source=self.source['residuals'])
-        self.plot_residuals_zero = self.figure.line('x', 'y', source=self.source['residuals_zero'])
-        self.plot_prob = self.figure_prob_plot.circle('x', 'y', source=self.source['prob'])
-        self.plot_prob_45 = self.figure_prob_plot.line('x', 'y', source=self.source['prob_45'])
+        self.plot_residuals = self.figure.circle(
+            "x", "y", source=self.source["residuals"]
+        )
+        self.plot_residuals_zero = self.figure.line(
+            "x", "y", source=self.source["residuals_zero"]
+        )
+        self.plot_prob = self.figure_prob_plot.circle(
+            "x", "y", source=self.source["prob"]
+        )
+        self.plot_prob_45 = self.figure_prob_plot.line(
+            "x", "y", source=self.source["prob_45"]
+        )
 
     def __add_hover(self):
-        self.figure.add_tools(HoverTool(show_arrow=True,
-                                        tooltips=[('ID', '@mrn'),
-                                                  ('Date', '@date{%F}'),
-                                                  ('x', '@x{0.2f}'),
-                                                  ('y', '@y{0.2f}')],
-                                        formatters={'date': 'datetime'},
-                                        renderers=[self.plot_residuals]))
+        self.figure.add_tools(
+            HoverTool(
+                show_arrow=True,
+                tooltips=[
+                    ("ID", "@mrn"),
+                    ("Date", "@date{%F}"),
+                    ("x", "@x{0.2f}"),
+                    ("y", "@y{0.2f}"),
+                ],
+                formatters={"date": "datetime"},
+                renderers=[self.plot_residuals],
+            )
+        )
 
-        self.figure_prob_plot.add_tools(HoverTool(show_arrow=True,
-                                                  tooltips=[('x', '@x{0.2f}'),
-                                                            ('y', '@y{0.2f}')],
-                                                  renderers=[self.plot_prob]))
+        self.figure_prob_plot.add_tools(
+            HoverTool(
+                show_arrow=True,
+                tooltips=[("x", "@x{0.2f}"), ("y", "@y{0.2f}")],
+                renderers=[self.plot_prob],
+            )
+        )
 
     def __create_table(self):
-        columns = [TableColumn(field="var", title="", width=100),
-                   TableColumn(field="coef", title="Coef", formatter=NumberFormatter(format="0.000"), width=40),
-                   TableColumn(field="std_err", title="Std. Err.", formatter=NumberFormatter(format="0.000"), width=40),
-                   TableColumn(field="t_value", title="t-value", formatter=NumberFormatter(format="0.000"), width=40),
-                   TableColumn(field="p_value", title="p-value", formatter=NumberFormatter(format="0.000"), width=40),
-                   TableColumn(field="spacer", title="", width=5),
-                   TableColumn(field="fit_param", title="", width=75)]
-        self.regression_table = DataTable(source=self.source['table'], columns=columns, index_position=None)
+        columns = [
+            TableColumn(field="var", title="", width=100),
+            TableColumn(
+                field="coef",
+                title="Coef",
+                formatter=NumberFormatter(format="0.000"),
+                width=40,
+            ),
+            TableColumn(
+                field="std_err",
+                title="Std. Err.",
+                formatter=NumberFormatter(format="0.000"),
+                width=40,
+            ),
+            TableColumn(
+                field="t_value",
+                title="t-value",
+                formatter=NumberFormatter(format="0.000"),
+                width=40,
+            ),
+            TableColumn(
+                field="p_value",
+                title="p-value",
+                formatter=NumberFormatter(format="0.000"),
+                width=40,
+            ),
+            TableColumn(field="spacer", title="", width=5),
+            TableColumn(field="fit_param", title="", width=75),
+        ]
+        self.regression_table = DataTable(
+            source=self.source["table"], columns=columns, index_position=None
+        )
 
     def __do_layout(self):
-        self.bokeh_layout = column(row(self.figure, self.figure_prob_plot),
-                                   self.regression_table)
+        self.bokeh_layout = column(
+            row(self.figure, self.figure_prob_plot), self.regression_table
+        )
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.GetSize()
-        self.figure.plot_width = int(self.size_factor['resid'][0] * float(panel_width))
-        self.figure.plot_height = int(self.size_factor['resid'][1] * float(panel_height))
-        self.figure_prob_plot.plot_width = int(self.size_factor['prob'][0] * float(panel_width))
-        self.figure_prob_plot.plot_height = int(self.size_factor['prob'][1] * float(panel_height))
-        self.regression_table.width = int(self.size_factor['table'][0] * float(panel_width))
-        self.regression_table.height = int(self.size_factor['table'][1] * float(panel_height))
+        self.figure.plot_width = int(
+            self.size_factor["resid"][0] * float(panel_width)
+        )
+        self.figure.plot_height = int(
+            self.size_factor["resid"][1] * float(panel_height)
+        )
+        self.figure_prob_plot.plot_width = int(
+            self.size_factor["prob"][0] * float(panel_width)
+        )
+        self.figure_prob_plot.plot_height = int(
+            self.size_factor["prob"][1] * float(panel_height)
+        )
+        self.regression_table.width = int(
+            self.size_factor["table"][0] * float(panel_width)
+        )
+        self.regression_table.height = int(
+            self.size_factor["table"][1] * float(panel_height)
+        )
 
-    def update_plot(self, y_variable, x_variables, stats_data, update_x_variables=True, reg=None):
-        self.type = 'multi-variable_regression_%s' % y_variable.replace(' ', '_')
+    def update_plot(
+        self,
+        y_variable,
+        x_variables,
+        stats_data,
+        update_x_variables=True,
+        reg=None,
+    ):
+        self.type = "multi-variable_regression_%s" % y_variable.replace(
+            " ", "_"
+        )
         self.set_figure_dimensions()
         self.y_variable = y_variable
         self.x_variables_updated = x_variables
@@ -1331,8 +2039,15 @@ class PlotMultiVarRegression(Plot):
         self.stats_data = stats_data
         self.clear_sources()
         x_len = len(x_variables)
-        self.X, self.y, self.mrn, self.uid, self.dates = stats_data.get_X_and_y(y_variable, x_variables,
-                                                                                include_patient_info=True)
+        (
+            self.X,
+            self.y,
+            self.mrn,
+            self.uid,
+            self.dates,
+        ) = stats_data.get_X_and_y(
+            y_variable, x_variables, include_patient_info=True
+        )
         if update_x_variables:
             self.X_init = deepcopy(self.X)
 
@@ -1341,40 +2056,63 @@ class PlotMultiVarRegression(Plot):
         else:
             self.reg = reg
 
-        self.source['residuals'].data = {'x': self.reg.predictions,
-                                         'y': self.reg.residuals,
-                                         'mrn': self.mrn,
-                                         'date': self.dates}
+        self.source["residuals"].data = {
+            "x": self.reg.predictions,
+            "y": self.reg.residuals,
+            "mrn": self.mrn,
+            "date": self.dates,
+        }
 
-        self.source['residuals_zero'].data = {'x': [min(self.reg.predictions), max(self.reg.predictions)],
-                                              'y': [0, 0]}
+        self.source["residuals_zero"].data = {
+            "x": [min(self.reg.predictions), max(self.reg.predictions)],
+            "y": [0, 0],
+        }
 
-        self.source['prob'].data = {'x': self.reg.norm_prob_plot[0],
-                                    'y': self.reg.norm_prob_plot[1]}
+        self.source["prob"].data = {
+            "x": self.reg.norm_prob_plot[0],
+            "y": self.reg.norm_prob_plot[1],
+        }
 
-        self.source['prob_45'].data = {'x': self.reg.x_trend_prob,
-                                       'y': self.reg.y_trend_prob}
+        self.source["prob_45"].data = {
+            "x": self.reg.x_trend_prob,
+            "y": self.reg.y_trend_prob,
+        }
 
-        fit_param = [''] * (x_len + 1)
-        fit_param[0] = "R²: %0.3f ----- MSE: %0.3f" % (self.reg.r_sq, self.reg.mse)
-        fit_param[1] = "f stat: %0.3f ---- p value: %0.3f" % (self.reg.f_stat, self.reg.f_p_value)
-        self.source['table'].data = {'var': ['y-int'] + x_variables,
-                                     'coef': [self.reg.y_intercept] + self.reg.slope.tolist(),
-                                     'std_err': self.reg.sd_b,
-                                     't_value': self.reg.ts_b,
-                                     'p_value': self.reg.p_values,
-                                     'spacer': [''] * (x_len + 1),
-                                     'fit_param': fit_param}
+        fit_param = [""] * (x_len + 1)
+        fit_param[0] = "R²: %0.3f ----- MSE: %0.3f" % (
+            self.reg.r_sq,
+            self.reg.mse,
+        )
+        fit_param[1] = "f stat: %0.3f ---- p value: %0.3f" % (
+            self.reg.f_stat,
+            self.reg.f_p_value,
+        )
+        self.source["table"].data = {
+            "var": ["y-int"] + x_variables,
+            "coef": [self.reg.y_intercept] + self.reg.slope.tolist(),
+            "std_err": self.reg.sd_b,
+            "t_value": self.reg.ts_b,
+            "p_value": self.reg.p_values,
+            "spacer": [""] * (x_len + 1),
+            "fit_param": fit_param,
+        }
 
-        self.figure.xaxis.axis_label = 'Fitted Values'
-        self.figure.yaxis.axis_label = 'Residuals'
+        self.figure.xaxis.axis_label = "Fitted Values"
+        self.figure.yaxis.axis_label = "Residuals"
 
         self.update_bokeh_layout_in_wx_python()
 
     def remove_worst_p_value(self):
         index = self.worst_x_p_value_index  # self.p_values has y-int
-        new_x_variables = [x for i, x in enumerate(self.x_variables_updated) if i != index]
-        self.update_plot(self.y_variable, new_x_variables, self.stats_data, update_x_variables=False)
+        new_x_variables = [
+            x for i, x in enumerate(self.x_variables_updated) if i != index
+        ]
+        self.update_plot(
+            self.y_variable,
+            new_x_variables,
+            self.stats_data,
+            update_x_variables=False,
+        )
 
     @property
     def worst_x_p_value_index(self):
@@ -1385,129 +2123,190 @@ class PlotMultiVarRegression(Plot):
     def worst_x_p_value(self):
         index = self.worst_x_p_value_index
         if index is not None and len(self.reg.p_values) > 2:
-            return self.reg.p_values[index+1]
+            return self.reg.p_values[index + 1]
 
     def backward_elimination(self, threshold=0.05):
-        while self.worst_x_p_value is not None and self.worst_x_p_value > threshold:
+        while (
+            self.worst_x_p_value is not None
+            and self.worst_x_p_value > threshold
+        ):
             self.remove_worst_p_value()
 
     def get_csv_data(self):
-        csv_data = ['Multi-Variable Regression',
-                    'Data',
-                    ',MRN,%s' % ','.join(self.mrn),
-                    ',Study Instance UID,%s' % ','.join(self.uid),
-                    ',Sim Study Date,%s' % ','.join(self.dates),
-                    self.get_regression_csv_row(self.y_variable, self.y, var_type='Dependent')]
+        csv_data = [
+            "Multi-Variable Regression",
+            "Data",
+            ",MRN,%s" % ",".join(self.mrn),
+            ",Study Instance UID,%s" % ",".join(self.uid),
+            ",Sim Study Date,%s" % ",".join(self.dates),
+            self.get_regression_csv_row(
+                self.y_variable, self.y, var_type="Dependent"
+            ),
+        ]
 
         for i, x_variable in enumerate(self.x_variables_updated):
-            csv_data.append(self.get_regression_csv_row(x_variable, self.X[:, i]))
+            csv_data.append(
+                self.get_regression_csv_row(x_variable, self.X[:, i])
+            )
 
-        csv_data.append('')
+        csv_data.append("")
         csv_data.append(self.get_csv_model())
 
-        csv_data.append('')
+        csv_data.append("")
         csv_data.append(self.get_csv_analysis())
 
-        return '\n'.join(csv_data)
+        return "\n".join(csv_data)
 
     def get_csv_model(self):
-        data = self.source['table'].data
-        csv_model = ['Model',
-                     ',Coef,Std. Err.,t-value,p-value']
-        for i in range(len(data['var'])):
+        data = self.source["table"].data
+        csv_model = ["Model", ",Coef,Std. Err.,t-value,p-value"]
+        for i in range(len(data["var"])):
             csv_model.append(self.get_csv_model_row(i))
 
-        csv_model.extend(["R^2,%s" % self.reg.r_sq,
-                          "MSE,%s" % self.reg.mse,
-                          "f-stat,%s" % self.reg.f_stat,
-                          "f p-value,%s" % self.reg.f_p_value])
+        csv_model.extend(
+            [
+                "R^2,%s" % self.reg.r_sq,
+                "MSE,%s" % self.reg.mse,
+                "f-stat,%s" % self.reg.f_stat,
+                "f p-value,%s" % self.reg.f_p_value,
+            ]
+        )
 
-        return '\n'.join(csv_model)
+        return "\n".join(csv_model)
 
     def get_csv_analysis(self):
-        return '\n'.join(['Analysis',
-                          'Quantiles,%s' % ','.join(str(v) for v in self.reg.norm_prob_plot[0]),
-                          'Ordered Values,%s' % ','.join(str(v) for v in self.reg.norm_prob_plot[1]),
-                          '',
-                          'Residuals,%s' % ','.join(str(v) for v in self.reg.residuals),
-                          'Fitted Values,%s' % ','.join(str(v) for v in self.reg.predictions)])
+        return "\n".join(
+            [
+                "Analysis",
+                "Quantiles,%s"
+                % ",".join(str(v) for v in self.reg.norm_prob_plot[0]),
+                "Ordered Values,%s"
+                % ",".join(str(v) for v in self.reg.norm_prob_plot[1]),
+                "",
+                "Residuals,%s" % ",".join(str(v) for v in self.reg.residuals),
+                "Fitted Values,%s"
+                % ",".join(str(v) for v in self.reg.predictions),
+            ]
+        )
 
     def get_csv_model_row(self, index):
-        data = self.source['table'].data
-        variables = ['var', 'coef', 'std_err', 't_value', 'p_value']
-        return ','.join([str(data[var][index]) for var in variables])
+        data = self.source["table"].data
+        variables = ["var", "coef", "std_err", "t_value", "p_value"]
+        return ",".join([str(data[var][index]) for var in variables])
 
     @staticmethod
-    def get_regression_csv_row(var_name, data, var_type='Independent'):
-        return '%s,%s,%s' % (var_type, var_name, ','.join(str(a) for a in data))
+    def get_regression_csv_row(var_name, data, var_type="Independent"):
+        return "%s,%s,%s" % (
+            var_type,
+            var_name,
+            ",".join(str(a) for a in data),
+        )
 
     def get_final_stats_data(self, include_all=True):
         X = [self.X, self.X_init][include_all]
         x_variables = [self.x_variables_updated, self.x_variables][include_all]
-        return {'X': X, 'y': self.y,
-                'x_variables': x_variables,
-                'y_variable': self.y_variable,
-                'multi_var_pred': self.reg.predictions,
-                'options': self.options,
-                'mrn': self.mrn,
-                'study_date': self.dates,
-                'uid': self.uid}
+        return {
+            "X": X,
+            "y": self.y,
+            "x_variables": x_variables,
+            "y_variable": self.y_variable,
+            "multi_var_pred": self.reg.predictions,
+            "options": self.options,
+            "mrn": self.mrn,
+            "study_date": self.dates,
+            "uid": self.uid,
+        }
 
     def apply_options(self):
         super().apply_options()
-        self.figure_prob_plot.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.figure_prob_plot.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.figure_prob_plot.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.figure_prob_plot.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.figure_prob_plot.xaxis.axis_label_text_font_size = (
+            self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        )
+        self.figure_prob_plot.yaxis.axis_label_text_font_size = (
+            self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        )
+        self.figure_prob_plot.xaxis.major_label_text_font_size = (
+            self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        )
+        self.figure_prob_plot.yaxis.major_label_text_font_size = (
+            self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        )
 
-        plot_color = [self.options.PLOT_COLOR_2, self.options.PLOT_COLOR][self.group == 1]
-        for circle_plot in ['residuals', 'prob']:
-            glyph = getattr(self, 'plot_%s' % circle_plot).glyph
-            glyph.size = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'CIRCLE_SIZE')
-            glyph.line_alpha = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'ALPHA')
-            glyph.fill_alpha = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'ALPHA')
+        plot_color = [self.options.PLOT_COLOR_2, self.options.PLOT_COLOR][
+            self.group == 1
+        ]
+        for circle_plot in ["residuals", "prob"]:
+            glyph = getattr(self, "plot_%s" % circle_plot).glyph
+            glyph.size = getattr(
+                self.options, "REGRESSION_RESIDUAL_%s" % "CIRCLE_SIZE"
+            )
+            glyph.line_alpha = getattr(
+                self.options, "REGRESSION_RESIDUAL_%s" % "ALPHA"
+            )
+            glyph.fill_alpha = getattr(
+                self.options, "REGRESSION_RESIDUAL_%s" % "ALPHA"
+            )
             glyph.line_color = plot_color
             glyph.fill_color = plot_color
 
-        for line_plot in ['residuals_zero', 'prob_45']:
-            glyph = getattr(self, 'plot_%s' % line_plot).glyph
-            glyph.line_color = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'LINE_COLOR')
-            glyph.line_width = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'LINE_WIDTH')
-            glyph.line_dash = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'LINE_DASH')
-            glyph.line_alpha = getattr(self.options, 'REGRESSION_RESIDUAL_%s' % 'ALPHA')
+        for line_plot in ["residuals_zero", "prob_45"]:
+            glyph = getattr(self, "plot_%s" % line_plot).glyph
+            glyph.line_color = getattr(
+                self.options, "REGRESSION_RESIDUAL_%s" % "LINE_COLOR"
+            )
+            glyph.line_width = getattr(
+                self.options, "REGRESSION_RESIDUAL_%s" % "LINE_WIDTH"
+            )
+            glyph.line_dash = getattr(
+                self.options, "REGRESSION_RESIDUAL_%s" % "LINE_DASH"
+            )
+            glyph.line_alpha = getattr(
+                self.options, "REGRESSION_RESIDUAL_%s" % "ALPHA"
+            )
 
 
 class PlotControlChart(Plot):
     """
     Generate plot for Control Chart frame
     """
+
     def __init__(self, parent, options):
         """
         :param parent: the wx UI object where the plot will be displayed
         :param options: user preferences
         :type options: Options
         """
-        Plot.__init__(self, parent, options, x_axis_label='Study')
+        Plot.__init__(self, parent, options, x_axis_label="Study")
 
-        self.type = 'control_chart'
+        self.type = "control_chart"
         self.parent = parent
-        self.size_factor = {'plot': (0.940, 0.359)}
+        self.size_factor = {"plot": (0.940, 0.359)}
         self.group = 1
 
-        self.y_axis_label = ''
+        self.y_axis_label = ""
         self.options = options
-        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], color=[], alpha=[], dates=[])),
-                       'center_line': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
-                       'ucl_line': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
-                       'lcl_line': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
-                       'bound': ColumnDataSource(data=dict(x=[], mrn=[], upper=[], avg=[], lower=[])),
-                       'patch': ColumnDataSource(data=dict(x=[], y=[])),
-                       'adj_plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], color=[], alpha=[], dates=[])),
-                       'adj_center_line': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
-                       'adj_ucl_line': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
-                       'adj_lcl_line': ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
-                       'adj_bound': ColumnDataSource(data=dict(x=[], mrn=[], upper=[], avg=[], lower=[])),
-                       'adj_patch': ColumnDataSource(data=dict(x=[], y=[]))}
+        self.source = {
+            "plot": ColumnDataSource(
+                data=dict(x=[], y=[], mrn=[], color=[], alpha=[], dates=[])
+            ),
+            "center_line": ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+            "ucl_line": ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+            "lcl_line": ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+            "bound": ColumnDataSource(
+                data=dict(x=[], mrn=[], upper=[], avg=[], lower=[])
+            ),
+            "patch": ColumnDataSource(data=dict(x=[], y=[])),
+            "adj_plot": ColumnDataSource(
+                data=dict(x=[], y=[], mrn=[], color=[], alpha=[], dates=[])
+            ),
+            "adj_center_line": ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+            "adj_ucl_line": ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+            "adj_lcl_line": ColumnDataSource(data=dict(x=[], y=[], mrn=[])),
+            "adj_bound": ColumnDataSource(
+                data=dict(x=[], mrn=[], upper=[], avg=[], lower=[])
+            ),
+            "adj_patch": ColumnDataSource(data=dict(x=[], y=[])),
+        }
 
         self.__add_adj_figure()
         self.__add_plot_data()
@@ -1522,125 +2321,214 @@ class PlotControlChart(Plot):
     def __add_adj_figure(self):
         self.adj_figure = figure()
         self.figures.append(self.adj_figure)
-        self.adj_figure.xaxis.axis_label = 'Study'
-        self.adj_figure.yaxis.axis_label = 'Residual'
+        self.adj_figure.xaxis.axis_label = "Study"
+        self.adj_figure.yaxis.axis_label = "Residual"
         self.adj_figure.yaxis.axis_label_text_baseline = "bottom"
 
     def __add_plot_data(self):
-        self.plot_data = self.figure.circle('x', 'y', source=self.source['plot'],
-                                            alpha='alpha', color='color')
-        self.plot_data_line = self.figure.line('x', 'y', source=self.source['plot'])
-        self.plot_patch = self.figure.patch('x', 'y', source=self.source['patch'])
+        self.plot_data = self.figure.circle(
+            "x", "y", source=self.source["plot"], alpha="alpha", color="color"
+        )
+        self.plot_data_line = self.figure.line(
+            "x", "y", source=self.source["plot"]
+        )
+        self.plot_patch = self.figure.patch(
+            "x", "y", source=self.source["patch"]
+        )
 
-        self.plot_center_line = self.figure.line('x', 'y', source=self.source['center_line'])
-        self.plot_lcl_line = self.figure.line('x', 'y', source=self.source['lcl_line'])
-        self.plot_ucl_line = self.figure.line('x', 'y', source=self.source['ucl_line'])
+        self.plot_center_line = self.figure.line(
+            "x", "y", source=self.source["center_line"]
+        )
+        self.plot_lcl_line = self.figure.line(
+            "x", "y", source=self.source["lcl_line"]
+        )
+        self.plot_ucl_line = self.figure.line(
+            "x", "y", source=self.source["ucl_line"]
+        )
 
-        self.adj_plot_data = self.adj_figure.circle('x', 'y', source=self.source['adj_plot'],
-                                                    alpha='alpha', color='color')
-        self.adj_plot_data_line = self.adj_figure.line('x', 'y', source=self.source['adj_plot'])
-        self.adj_plot_patch = self.adj_figure.patch('x', 'y', source=self.source['adj_patch'])
-        self.adj_plot_center_line = self.adj_figure.line('x', 'y', source=self.source['adj_center_line'])
-        self.adj_plot_lcl_line = self.adj_figure.line('x', 'y', source=self.source['adj_lcl_line'])
-        self.adj_plot_ucl_line = self.adj_figure.line('x', 'y', source=self.source['adj_ucl_line'])
+        self.adj_plot_data = self.adj_figure.circle(
+            "x",
+            "y",
+            source=self.source["adj_plot"],
+            alpha="alpha",
+            color="color",
+        )
+        self.adj_plot_data_line = self.adj_figure.line(
+            "x", "y", source=self.source["adj_plot"]
+        )
+        self.adj_plot_patch = self.adj_figure.patch(
+            "x", "y", source=self.source["adj_patch"]
+        )
+        self.adj_plot_center_line = self.adj_figure.line(
+            "x", "y", source=self.source["adj_center_line"]
+        )
+        self.adj_plot_lcl_line = self.adj_figure.line(
+            "x", "y", source=self.source["adj_lcl_line"]
+        )
+        self.adj_plot_ucl_line = self.adj_figure.line(
+            "x", "y", source=self.source["adj_ucl_line"]
+        )
 
     def __add_hover(self):
-        self.figure.add_tools(HoverTool(show_arrow=True,
-                                        tooltips=[('ID', '@mrn'),
-                                                  ('Date', '@dates{%F}'),
-                                                  ('Study', '@x'),
-                                                  ('Value', '@y{0.2f}')],
-                                        formatters={'dates': 'datetime'},
-                                        renderers=[self.plot_data]))
+        self.figure.add_tools(
+            HoverTool(
+                show_arrow=True,
+                tooltips=[
+                    ("ID", "@mrn"),
+                    ("Date", "@dates{%F}"),
+                    ("Study", "@x"),
+                    ("Value", "@y{0.2f}"),
+                ],
+                formatters={"dates": "datetime"},
+                renderers=[self.plot_data],
+            )
+        )
 
-        self.adj_figure.add_tools(HoverTool(show_arrow=True,
-                                            tooltips=[('ID', '@mrn'),
-                                                      ('Date', '@dates{%F}'),
-                                                      ('Study', '@x'),
-                                                      ('Value', '@y{0.2f}')],
-                                            formatters={'dates': 'datetime'},
-                                            renderers=[self.adj_plot_data]))
+        self.adj_figure.add_tools(
+            HoverTool(
+                show_arrow=True,
+                tooltips=[
+                    ("ID", "@mrn"),
+                    ("Date", "@dates{%F}"),
+                    ("Study", "@x"),
+                    ("Value", "@y{0.2f}"),
+                ],
+                formatters={"dates": "datetime"},
+                renderers=[self.adj_plot_data],
+            )
+        )
 
     @property
     def legend_items(self):
-        return [("Charting Variable   ", [self.plot_data]),
-                ("Charting Variable Line  ", [self.plot_data_line]),
-                ('Center Line   ', [self.plot_center_line]),
-                ('UCL  ', [self.plot_ucl_line]),
-                ('LCL  ', [self.plot_lcl_line])]
+        return [
+            ("Charting Variable   ", [self.plot_data]),
+            ("Charting Variable Line  ", [self.plot_data_line]),
+            ("Center Line   ", [self.plot_center_line]),
+            ("UCL  ", [self.plot_ucl_line]),
+            ("LCL  ", [self.plot_lcl_line]),
+        ]
 
     @property
     def legend_items_adj(self):
-        return [("Residuals   ", [self.adj_plot_data]),
-                ("Residuals Line  ", [self.adj_plot_data_line]),
-                ('Center Line   ', [self.adj_plot_center_line]),
-                ('UCL  ', [self.adj_plot_ucl_line]),
-                ('LCL  ', [self.adj_plot_lcl_line])]
+        return [
+            ("Residuals   ", [self.adj_plot_data]),
+            ("Residuals Line  ", [self.adj_plot_data_line]),
+            ("Center Line   ", [self.adj_plot_center_line]),
+            ("UCL  ", [self.adj_plot_ucl_line]),
+            ("LCL  ", [self.adj_plot_lcl_line]),
+        ]
 
     def __create_divs(self):
-        self.div_center_line = Div(text='', width=175)
-        self.div_ucl = Div(text='', width=175)
-        self.div_lcl = Div(text='', width=175)
+        self.div_center_line = Div(text="", width=175)
+        self.div_ucl = Div(text="", width=175)
+        self.div_lcl = Div(text="", width=175)
 
-        self.div_adj_center_line = Div(text='', width=175)
-        self.div_adj_ucl = Div(text='', width=175)
-        self.div_adj_lcl = Div(text='', width=175)
+        self.div_adj_center_line = Div(text="", width=175)
+        self.div_adj_ucl = Div(text="", width=175)
+        self.div_adj_lcl = Div(text="", width=175)
 
     def __do_layout(self):
-        self.bokeh_layout = column(self.figure,
-                                   row(self.div_center_line, self.div_ucl, self.div_lcl),
-                                   self.adj_figure,
-                                   row(self.div_adj_center_line, self.div_adj_ucl, self.div_adj_lcl))
+        self.bokeh_layout = column(
+            self.figure,
+            row(self.div_center_line, self.div_ucl, self.div_lcl),
+            self.adj_figure,
+            row(self.div_adj_center_line, self.div_adj_ucl, self.div_adj_lcl),
+        )
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.GetSize()
-        self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
-        self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
-        self.adj_figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
-        self.adj_figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
+        self.figure.plot_width = int(
+            self.size_factor["plot"][0] * float(panel_width)
+        )
+        self.figure.plot_height = int(
+            self.size_factor["plot"][1] * float(panel_height)
+        )
+        self.adj_figure.plot_width = int(
+            self.size_factor["plot"][0] * float(panel_width)
+        )
+        self.adj_figure.plot_height = int(
+            self.size_factor["plot"][1] * float(panel_height)
+        )
 
-    def update_plot(self, x, y, mrn, uid, dates, y_axis_label='Y Axis', update_layout=True, cl_overrides=None):
+    def update_plot(
+        self,
+        x,
+        y,
+        mrn,
+        uid,
+        dates,
+        y_axis_label="Y Axis",
+        update_layout=True,
+        cl_overrides=None,
+    ):
         self.set_figure_dimensions()
         self.clear_sources()
         self.y_axis_label = y_axis_label
         self.figure.yaxis.axis_label = self.y_axis_label
 
-        x, y, mrn, uid, dates = self.clean_data(x, y, mrn=mrn, uid=uid, dates=dates)
+        x, y, mrn, uid, dates = self.clean_data(
+            x, y, mrn=mrn, uid=uid, dates=dates
+        )
 
         if len(x) > 1:
 
             center_line, ucl, lcl = get_control_limits(y)
             if cl_overrides is not None:
-                if 'UCL' in cl_overrides and cl_overrides['UCL'] is not None:
-                    ucl = cl_overrides['UCL']
-                if 'LCL' in cl_overrides and cl_overrides['LCL'] is not None:
-                    lcl = cl_overrides['LCL']
+                if "UCL" in cl_overrides and cl_overrides["UCL"] is not None:
+                    ucl = cl_overrides["UCL"]
+                if "LCL" in cl_overrides and cl_overrides["LCL"] is not None:
+                    lcl = cl_overrides["LCL"]
 
-            plot_color = [self.options.PLOT_COLOR_2, self.options.PLOT_COLOR][self.group == 1]
-            ooc_color = [self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR_2,
-                         self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR][self.group == 1]
+            plot_color = [self.options.PLOT_COLOR_2, self.options.PLOT_COLOR][
+                self.group == 1
+            ]
+            ooc_color = [
+                self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR_2,
+                self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR,
+            ][self.group == 1]
             colors = [ooc_color, plot_color]
-            alphas = [self.options.CONTROL_CHART_OUT_OF_CONTROL_ALPHA, self.options.CONTROL_CHART_CIRCLE_ALPHA]
+            alphas = [
+                self.options.CONTROL_CHART_OUT_OF_CONTROL_ALPHA,
+                self.options.CONTROL_CHART_CIRCLE_ALPHA,
+            ]
             color = [colors[ucl >= value >= lcl] for value in y]
             alpha = [alphas[ucl >= value >= lcl] for value in y]
 
-            self.source['plot'].data = {'x': x, 'y': y, 'mrn': mrn, 'uid': uid,
-                                        'color': color, 'alpha': alpha, 'dates': dates}
+            self.source["plot"].data = {
+                "x": x,
+                "y": y,
+                "mrn": mrn,
+                "uid": uid,
+                "color": color,
+                "alpha": alpha,
+                "dates": dates,
+            }
 
-            self.source['patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
-                                         'y': [ucl, ucl, lcl, lcl], 'color': [plot_color] * 4}
-            self.source['center_line'].data = {'x': [min(x), max(x)],
-                                               'y': [center_line] * 2,
-                                               'mrn': ['center line'] * 2}
+            self.source["patch"].data = {
+                "x": [x[0], x[-1], x[-1], x[0]],
+                "y": [ucl, ucl, lcl, lcl],
+                "color": [plot_color] * 4,
+            }
+            self.source["center_line"].data = {
+                "x": [min(x), max(x)],
+                "y": [center_line] * 2,
+                "mrn": ["center line"] * 2,
+            }
 
-            self.source['lcl_line'].data = {'x': [min(x), max(x)],
-                                            'y': [lcl] * 2,
-                                            'mrn': ['center line'] * 2}
-            self.source['ucl_line'].data = {'x': [min(x), max(x)],
-                                            'y': [ucl] * 2,
-                                            'mrn': ['center line'] * 2}
+            self.source["lcl_line"].data = {
+                "x": [min(x), max(x)],
+                "y": [lcl] * 2,
+                "mrn": ["center line"] * 2,
+            }
+            self.source["ucl_line"].data = {
+                "x": [min(x), max(x)],
+                "y": [ucl] * 2,
+                "mrn": ["center line"] * 2,
+            }
 
-            self.div_center_line.text = "<b>Center line</b>: %0.3f" % center_line
+            self.div_center_line.text = (
+                "<b>Center line</b>: %0.3f" % center_line
+            )
             self.div_ucl.text = "<b>UCL</b>: %0.3f" % ucl
             self.div_lcl.text = "<b>LCL</b>: %0.3f" % lcl
         else:
@@ -1650,35 +2538,61 @@ class PlotControlChart(Plot):
         if update_layout:
             self.update_bokeh_layout_in_wx_python()
 
-    def update_adjusted_control_chart(self, x, residuals, mrn, uid, dates, update_layout=True):
+    def update_adjusted_control_chart(
+        self, x, residuals, mrn, uid, dates, update_layout=True
+    ):
 
         center_line, ucl, lcl = get_control_limits(residuals)
 
-        plot_color = [self.options.PLOT_COLOR_2, self.options.PLOT_COLOR][self.group == 1]
-        ooc_color = [self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR_2,
-                     self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR][self.group == 1]
+        plot_color = [self.options.PLOT_COLOR_2, self.options.PLOT_COLOR][
+            self.group == 1
+        ]
+        ooc_color = [
+            self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR_2,
+            self.options.CONTROL_CHART_OUT_OF_CONTROL_COLOR,
+        ][self.group == 1]
         colors = [ooc_color, plot_color]
-        alphas = [self.options.CONTROL_CHART_OUT_OF_CONTROL_ALPHA, self.options.CONTROL_CHART_CIRCLE_ALPHA]
+        alphas = [
+            self.options.CONTROL_CHART_OUT_OF_CONTROL_ALPHA,
+            self.options.CONTROL_CHART_CIRCLE_ALPHA,
+        ]
         color = [colors[ucl > value > lcl] for value in residuals]
         alpha = [alphas[ucl > value > lcl] for value in residuals]
 
-        self.source['adj_plot'].data = {'x': x, 'y': residuals, 'mrn': mrn, 'uid': uid,
-                                        'color': color, 'alpha': alpha, 'dates': dates}
+        self.source["adj_plot"].data = {
+            "x": x,
+            "y": residuals,
+            "mrn": mrn,
+            "uid": uid,
+            "color": color,
+            "alpha": alpha,
+            "dates": dates,
+        }
 
-        self.source['adj_patch'].data = {'x': [x[0], x[-1], x[-1], x[0]],
-                                         'y': [ucl, ucl, lcl, lcl]}
-        self.source['adj_center_line'].data = {'x': [min(x), max(x)],
-                                               'y': [center_line] * 2,
-                                               'mrn': ['center line'] * 2}
+        self.source["adj_patch"].data = {
+            "x": [x[0], x[-1], x[-1], x[0]],
+            "y": [ucl, ucl, lcl, lcl],
+        }
+        self.source["adj_center_line"].data = {
+            "x": [min(x), max(x)],
+            "y": [center_line] * 2,
+            "mrn": ["center line"] * 2,
+        }
 
-        self.source['adj_lcl_line'].data = {'x': [min(x), max(x)],
-                                            'y': [lcl] * 2,
-                                            'mrn': ['center line'] * 2}
-        self.source['adj_ucl_line'].data = {'x': [min(x), max(x)],
-                                            'y': [ucl] * 2,
-                                            'mrn': ['center line'] * 2}
+        self.source["adj_lcl_line"].data = {
+            "x": [min(x), max(x)],
+            "y": [lcl] * 2,
+            "mrn": ["center line"] * 2,
+        }
+        self.source["adj_ucl_line"].data = {
+            "x": [min(x), max(x)],
+            "y": [ucl] * 2,
+            "mrn": ["center line"] * 2,
+        }
 
-        self.div_adj_center_line.text = "<b>Center line</b>: %0.3f" % center_line
+        self.div_adj_center_line.text = (
+            "<b>Center line</b>: %0.3f" % center_line
+        )
         self.div_adj_ucl.text = "<b>UCL</b>: %0.3f" % ucl
         self.div_adj_lcl.text = "<b>LCL</b>: %0.3f" % lcl
 
@@ -1686,9 +2600,13 @@ class PlotControlChart(Plot):
             self.update_bokeh_layout_in_wx_python()
 
     @staticmethod
-    def get_adjusted_control_chart(y_variable, x_variables, regression, stats_data):
+    def get_adjusted_control_chart(
+        y_variable, x_variables, regression, stats_data
+    ):
 
-        X, y, mrn, uid, dates = stats_data.get_X_and_y(y_variable, x_variables, include_patient_info=True)
+        X, y, mrn, uid, dates = stats_data.get_X_and_y(
+            y_variable, x_variables, include_patient_info=True
+        )
         predictions = regression.reg.predict(X)
         residuals = np.subtract(y, predictions)
 
@@ -1703,8 +2621,13 @@ class PlotControlChart(Plot):
             mrn_sorted.append(mrn[sort_index[s]])
             uid_sorted.append(uid[sort_index[s]])
 
-        return {'x': x, 'residuals': residuals_sorted,
-                'mrn': mrn_sorted, 'uid': uid_sorted, 'dates': dates_sorted}
+        return {
+            "x": x,
+            "residuals": residuals_sorted,
+            "mrn": mrn_sorted,
+            "uid": uid_sorted,
+            "dates": dates_sorted,
+        }
 
     def clear_plot(self):
         self.clear_div()  # super class does not have these Div objects
@@ -1724,55 +2647,111 @@ class PlotControlChart(Plot):
 
     def get_csv(self):
 
-        data = self.source['plot'].data
-        resid = self.source['adj_plot'].data['y']
-        residual_column = ',Residual' if resid else ''
-        csv_data = ['MRN,Study Instance UID,Study #,Date,%s%s' % (self.y_axis_label, residual_column)]
-        for i in range(len(data['mrn'])):
-            csv_data.append(','.join(str(data[key][i]).replace(',', '^') for key in ['mrn', 'uid', 'x', 'dates', 'y']))
+        data = self.source["plot"].data
+        resid = self.source["adj_plot"].data["y"]
+        residual_column = ",Residual" if resid else ""
+        csv_data = [
+            "MRN,Study Instance UID,Study #,Date,%s%s"
+            % (self.y_axis_label, residual_column)
+        ]
+        for i in range(len(data["mrn"])):
+            csv_data.append(
+                ",".join(
+                    str(data[key][i]).replace(",", "^")
+                    for key in ["mrn", "uid", "x", "dates", "y"]
+                )
+            )
             if resid:
-                csv_data[-1] = csv_data[-1] + ',%s' % resid[i]
+                csv_data[-1] = csv_data[-1] + ",%s" % resid[i]
 
-        return '\n'.join(csv_data)
+        return "\n".join(csv_data)
 
     def apply_options(self):
         super().apply_options()
 
-        self.adj_figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.adj_figure.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.adj_figure.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.adj_figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.adj_figure.xaxis.axis_label_text_font_size = (
+            self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        )
+        self.adj_figure.yaxis.axis_label_text_font_size = (
+            self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        )
+        self.adj_figure.xaxis.major_label_text_font_size = (
+            self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        )
+        self.adj_figure.yaxis.major_label_text_font_size = (
+            self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        )
         self.adj_figure.min_border = self.options.MIN_BORDER
 
-        for circle_plot in ['plot_data', 'adj_plot_data']:
+        for circle_plot in ["plot_data", "adj_plot_data"]:
             glyph = getattr(self, circle_plot).glyph
-            glyph.size = getattr(self.options, 'CONTROL_CHART_%s' % 'CIRCLE_SIZE')
+            glyph.size = getattr(
+                self.options, "CONTROL_CHART_%s" % "CIRCLE_SIZE"
+            )
 
-        for plot_type in ['', 'adj_']:
+        for plot_type in ["", "adj_"]:
             # line plots
-            for line_plot in ['data', 'center_line', 'lcl_line', 'ucl_line']:
-                glyph = getattr(self, '%splot_%s' % (plot_type, line_plot)).glyph
-                modifier = 'LINE_' if line_plot == 'data' else '%s_' % line_plot.upper()
-                glyph.line_color = getattr(self.options, 'CONTROL_CHART_%s%s' % (modifier, 'COLOR'))
-                glyph.line_width = getattr(self.options, 'CONTROL_CHART_%s%s' % (modifier, 'WIDTH'))
-                glyph.line_dash = getattr(self.options, 'CONTROL_CHART_%s%s' % (modifier, 'DASH'))
-                if line_plot != 'data':
-                    glyph.line_alpha = getattr(self.options, 'CONTROL_CHART_%s%s' % (modifier, 'ALPHA'))
+            for line_plot in ["data", "center_line", "lcl_line", "ucl_line"]:
+                glyph = getattr(
+                    self, "%splot_%s" % (plot_type, line_plot)
+                ).glyph
+                modifier = (
+                    "LINE_"
+                    if line_plot == "data"
+                    else "%s_" % line_plot.upper()
+                )
+                glyph.line_color = getattr(
+                    self.options, "CONTROL_CHART_%s%s" % (modifier, "COLOR")
+                )
+                glyph.line_width = getattr(
+                    self.options, "CONTROL_CHART_%s%s" % (modifier, "WIDTH")
+                )
+                glyph.line_dash = getattr(
+                    self.options, "CONTROL_CHART_%s%s" % (modifier, "DASH")
+                )
+                if line_plot != "data":
+                    glyph.line_alpha = getattr(
+                        self.options,
+                        "CONTROL_CHART_%s%s" % (modifier, "ALPHA"),
+                    )
 
             # patches
-            glyph = getattr(self, '%splot_patch' % plot_type).glyph
-            glyph.fill_color = getattr(self.options, 'CONTROL_CHART_PATCH_COLOR')
-            glyph.fill_alpha = getattr(self.options, 'CONTROL_CHART_PATCH_ALPHA')
-            glyph.line_color = getattr(self.options, 'CONTROL_CHART_PATCH_COLOR')
-            glyph.line_alpha = getattr(self.options, 'CONTROL_CHART_PATCH_ALPHA')
+            glyph = getattr(self, "%splot_patch" % plot_type).glyph
+            glyph.fill_color = getattr(
+                self.options, "CONTROL_CHART_PATCH_COLOR"
+            )
+            glyph.fill_alpha = getattr(
+                self.options, "CONTROL_CHART_PATCH_ALPHA"
+            )
+            glyph.line_color = getattr(
+                self.options, "CONTROL_CHART_PATCH_COLOR"
+            )
+            glyph.line_alpha = getattr(
+                self.options, "CONTROL_CHART_PATCH_ALPHA"
+            )
 
 
 class PlotMachineLearning(Plot):
     """
     Generate plot for Machine Learning frames created in the MultiVariable Regression frame
     """
-    def __init__(self, parent, options, x_variables, y_variable, mrn, study_date, uid, multi_var_pred=None,
-                 ml_type=None, ml_type_short=None, include_test_data=True, is_classifier=False, **kwargs):
+
+    def __init__(
+        self,
+        parent,
+        options,
+        x_variables,
+        y_variable,
+        mrn,
+        study_date,
+        uid,
+        multi_var_pred=None,
+        ml_type=None,
+        ml_type_short=None,
+        include_test_data=True,
+        is_classifier=False,
+        **kwargs
+    ):
         """
         :param parent: the wx UI object where the plot will be displayed
         :param options: user preferences
@@ -1780,8 +2759,8 @@ class PlotMachineLearning(Plot):
         """
         Plot.__init__(self, parent, options)
 
-        self.plot_types = ['train']
-        self.type = 'machine_learning'
+        self.plot_types = ["train"]
+        self.type = "machine_learning"
         self.ml_type = ml_type
         self.ml_type_short = ml_type_short
         self.parent = parent
@@ -1793,8 +2772,10 @@ class PlotMachineLearning(Plot):
         self.is_classifier = is_classifier
 
         x_size = [0.64, 0.38][include_test_data]
-        self.size_factor = {'data': (x_size, [0.425, 0.85][is_classifier]),
-                            'diff': (x_size, 0.425)}
+        self.size_factor = {
+            "data": (x_size, [0.425, 0.85][is_classifier]),
+            "diff": (x_size, 0.425),
+        }
 
         self.options = options
         self.multi_var_pred = multi_var_pred
@@ -1802,33 +2783,77 @@ class PlotMachineLearning(Plot):
         self.y_variable = y_variable
         self.x_variables = x_variables
 
-        self.div_title = {'train': Div(text="<b>Current Queried Data with Loaded Model</b>")}
-        self.div_mse = {'train': Div()}
+        self.div_title = {
+            "train": Div(text="<b>Current Queried Data with Loaded Model</b>")
+        }
+        self.div_mse = {"train": Div()}
 
-        self.source = {'train': {'data': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
-                                 'predict': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
-                                 'multi_var': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
-                                 'diff': ColumnDataSource(data=dict(x=[], y_ml=[], y_mvr=[], y0=[], mrn=[],
-                                                                    study_date=[])),
-                                 'importance': ColumnDataSource(data=dict(x=[], top=[], width=[], variable=[]))}}
+        self.source = {
+            "train": {
+                "data": ColumnDataSource(
+                    data=dict(x=[], y=[], mrn=[], study_date=[])
+                ),
+                "predict": ColumnDataSource(
+                    data=dict(x=[], y=[], mrn=[], study_date=[])
+                ),
+                "multi_var": ColumnDataSource(
+                    data=dict(x=[], y=[], mrn=[], study_date=[])
+                ),
+                "diff": ColumnDataSource(
+                    data=dict(
+                        x=[], y_ml=[], y_mvr=[], y0=[], mrn=[], study_date=[]
+                    )
+                ),
+                "importance": ColumnDataSource(
+                    data=dict(x=[], top=[], width=[], variable=[])
+                ),
+            }
+        }
 
-        self.ml_figures = {'train': {'data': figure(tools=DEFAULT_TOOLS),
-                                     'diff': figure(tools=DEFAULT_TOOLS)}}
-        self.figures.extend([self.ml_figures['train']['data'], self.ml_figures['train']['diff']])
+        self.ml_figures = {
+            "train": {
+                "data": figure(tools=DEFAULT_TOOLS),
+                "diff": figure(tools=DEFAULT_TOOLS),
+            }
+        }
+        self.figures.extend(
+            [
+                self.ml_figures["train"]["data"],
+                self.ml_figures["train"]["diff"],
+            ]
+        )
 
         if self.include_test_data:
-            self.plot_types.append('test')
-            self.div_title['train'] = Div(text="<b>Training Data</b>")
-            self.div_title['test'] = Div(text="<b>Testing Data</b>")
-            self.div_mse['test'] = Div()
-            self.source['test'] = {'data': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
-                                   'predict': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
-                                   'multi_var': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[])),
-                                   'diff': ColumnDataSource(data=dict(x=[], y_ml=[], y_mvr=[], y0=[], mrn=[],
-                                                                      study_date=[]))}
-            self.ml_figures['test'] = {'data': figure(tools=DEFAULT_TOOLS),
-                                       'diff': figure(tools=DEFAULT_TOOLS)}
-            self.figures.extend([self.ml_figures['test']['data'], self.ml_figures['test']['diff']])
+            self.plot_types.append("test")
+            self.div_title["train"] = Div(text="<b>Training Data</b>")
+            self.div_title["test"] = Div(text="<b>Testing Data</b>")
+            self.div_mse["test"] = Div()
+            self.source["test"] = {
+                "data": ColumnDataSource(
+                    data=dict(x=[], y=[], mrn=[], study_date=[])
+                ),
+                "predict": ColumnDataSource(
+                    data=dict(x=[], y=[], mrn=[], study_date=[])
+                ),
+                "multi_var": ColumnDataSource(
+                    data=dict(x=[], y=[], mrn=[], study_date=[])
+                ),
+                "diff": ColumnDataSource(
+                    data=dict(
+                        x=[], y_ml=[], y_mvr=[], y0=[], mrn=[], study_date=[]
+                    )
+                ),
+            }
+            self.ml_figures["test"] = {
+                "data": figure(tools=DEFAULT_TOOLS),
+                "diff": figure(tools=DEFAULT_TOOLS),
+            }
+            self.figures.extend(
+                [
+                    self.ml_figures["test"]["data"],
+                    self.ml_figures["test"]["diff"],
+                ]
+            )
 
         self.initialize_figures()
 
@@ -1850,106 +2875,203 @@ class PlotMachineLearning(Plot):
         for data_type in self.plot_types:
             srcs = self.source[data_type]
             figs = self.ml_figures[data_type]
-            self.renderers[data_type] = {'data': figs['data'].cross('x', 'y', source=srcs['data']),
-                                         'predict': figs['data'].circle('x', 'y', source=srcs['predict']),
-                                         'diff': figs['diff'].circle(x='x', y='y0', source=srcs['diff'], alpha=0),
-                                         'diff_ml': figs['diff'].varea(x='x', y1='y_ml', y2='y0', source=srcs['diff'])}
+            self.renderers[data_type] = {
+                "data": figs["data"].cross("x", "y", source=srcs["data"]),
+                "predict": figs["data"].circle(
+                    "x", "y", source=srcs["predict"]
+                ),
+                "diff": figs["diff"].circle(
+                    x="x", y="y0", source=srcs["diff"], alpha=0
+                ),
+                "diff_ml": figs["diff"].varea(
+                    x="x", y1="y_ml", y2="y0", source=srcs["diff"]
+                ),
+            }
             if self.multi_var_pred is not None:
-                self.renderers[data_type]['multi_var'] = figs['data'].circle('x', 'y', source=srcs['multi_var'])
-                self.renderers[data_type]['diff_mvr'] = figs['diff'].varea(x='x', y1='y_mvr', y2='y0', source=srcs['diff'])
+                self.renderers[data_type]["multi_var"] = figs["data"].circle(
+                    "x", "y", source=srcs["multi_var"]
+                )
+                self.renderers[data_type]["diff_mvr"] = figs["diff"].varea(
+                    x="x", y1="y_mvr", y2="y0", source=srcs["diff"]
+                )
 
     def __do_layout(self):
         if self.is_classifier:
-            self.bokeh_layout = row(column(self.div_title['train'], self.div_mse['train'],
-                                           self.ml_figures['train']['data']))
+            self.bokeh_layout = row(
+                column(
+                    self.div_title["train"],
+                    self.div_mse["train"],
+                    self.ml_figures["train"]["data"],
+                )
+            )
         else:
-            self.bokeh_layout = row(column(self.div_title['train'], self.div_mse['train'],
-                                           self.ml_figures['train']['data'], self.ml_figures['train']['diff']))
+            self.bokeh_layout = row(
+                column(
+                    self.div_title["train"],
+                    self.div_mse["train"],
+                    self.ml_figures["train"]["data"],
+                    self.ml_figures["train"]["diff"],
+                )
+            )
         if self.include_test_data:
             if self.is_classifier:
-                self.bokeh_layout.children.append(column(self.div_title['test'], self.div_mse['test'],
-                                                         self.ml_figures['test']['data']))
+                self.bokeh_layout.children.append(
+                    column(
+                        self.div_title["test"],
+                        self.div_mse["test"],
+                        self.ml_figures["test"]["data"],
+                    )
+                )
             else:
-                self.bokeh_layout.children.append(column(self.div_title['test'], self.div_mse['test'],
-                                                         self.ml_figures['test']['data'], self.ml_figures['test']['diff']))
+                self.bokeh_layout.children.append(
+                    column(
+                        self.div_title["test"],
+                        self.div_mse["test"],
+                        self.ml_figures["test"]["data"],
+                        self.ml_figures["test"]["diff"],
+                    )
+                )
 
     def __add_hover(self):
         for data_type in self.plot_types:
-            self.ml_figures[data_type]['data'].add_tools(HoverTool(show_arrow=True,
-                                                                   tooltips=[('ID', '@mrn'),
-                                                                             ('Date', '@study_date{%F}'),
-                                                                             ('Study', '@x{int}'),
-                                                                             ('Value', '@y{0.2f}')],
-                                                                   formatters={'study_date': 'datetime'}))
+            self.ml_figures[data_type]["data"].add_tools(
+                HoverTool(
+                    show_arrow=True,
+                    tooltips=[
+                        ("ID", "@mrn"),
+                        ("Date", "@study_date{%F}"),
+                        ("Study", "@x{int}"),
+                        ("Value", "@y{0.2f}"),
+                    ],
+                    formatters={"study_date": "datetime"},
+                )
+            )
 
-            tooltips = [('ID', '@mrn'),
-                        ('Date', '@study_date'),
-                        ('Study', '@x{int}'),
-                        (self.ml_type_short, '@y_ml{0.2f}')]
+            tooltips = [
+                ("ID", "@mrn"),
+                ("Date", "@study_date"),
+                ("Study", "@x{int}"),
+                (self.ml_type_short, "@y_ml{0.2f}"),
+            ]
             if self.multi_var_pred is not None:
-                tooltips.append(('MVR', '@y_mvr{0.2f}'))
+                tooltips.append(("MVR", "@y_mvr{0.2f}"))
 
-            self.ml_figures[data_type]['diff'].add_tools(HoverTool(show_arrow=True, mode='vline',
-                                                                   tooltips=tooltips,
-                                                                   formatters={'study_date': 'datetime'}))
+            self.ml_figures[data_type]["diff"].add_tools(
+                HoverTool(
+                    show_arrow=True,
+                    mode="vline",
+                    tooltips=tooltips,
+                    formatters={"study_date": "datetime"},
+                )
+            )
 
     def __add_legend_ml(self):
         legend = {}
         for data_type in self.plot_types:
             if self.multi_var_pred is not None:
-                legend[data_type] = {'data': Legend(items=[("Data  ", [self.renderers[data_type]['data']]),
-                                                           ("%s  " % self.ml_type,
-                                                            [self.renderers[data_type]['predict']]),
-                                                           ("Multi-Variable Reg.  ",
-                                                            [self.renderers[data_type]['multi_var']])],
-                                                    orientation='horizontal'),
-                                     'diff': Legend(items=[("%s  " % self.ml_type,
-                                                            [self.renderers[data_type]['diff_ml']]),
-                                                           ("Multi-Variable Reg.  ",
-                                                            [self.renderers[data_type]['diff_mvr']])],
-                                                    orientation='horizontal')}
+                legend[data_type] = {
+                    "data": Legend(
+                        items=[
+                            ("Data  ", [self.renderers[data_type]["data"]]),
+                            (
+                                "%s  " % self.ml_type,
+                                [self.renderers[data_type]["predict"]],
+                            ),
+                            (
+                                "Multi-Variable Reg.  ",
+                                [self.renderers[data_type]["multi_var"]],
+                            ),
+                        ],
+                        orientation="horizontal",
+                    ),
+                    "diff": Legend(
+                        items=[
+                            (
+                                "%s  " % self.ml_type,
+                                [self.renderers[data_type]["diff_ml"]],
+                            ),
+                            (
+                                "Multi-Variable Reg.  ",
+                                [self.renderers[data_type]["diff_mvr"]],
+                            ),
+                        ],
+                        orientation="horizontal",
+                    ),
+                }
             else:
-                legend[data_type] = {'data': Legend(items=[("Data  ", [self.renderers[data_type]['data']]),
-                                                           ("%s  " % self.ml_type,
-                                                            [self.renderers[data_type]['predict']])],
-                                                    orientation='horizontal'),
-                                     'diff': Legend(items=[("%s  " % self.ml_type,
-                                                            [self.renderers[data_type]['diff_ml']])],
-                                                    orientation='horizontal')}
-            for key in {'data', 'diff'}:
-                self.ml_figures[data_type][key].add_layout(legend[data_type][key], 'above')
+                legend[data_type] = {
+                    "data": Legend(
+                        items=[
+                            ("Data  ", [self.renderers[data_type]["data"]]),
+                            (
+                                "%s  " % self.ml_type,
+                                [self.renderers[data_type]["predict"]],
+                            ),
+                        ],
+                        orientation="horizontal",
+                    ),
+                    "diff": Legend(
+                        items=[
+                            (
+                                "%s  " % self.ml_type,
+                                [self.renderers[data_type]["diff_ml"]],
+                            )
+                        ],
+                        orientation="horizontal",
+                    ),
+                }
+            for key in {"data", "diff"}:
+                self.ml_figures[data_type][key].add_layout(
+                    legend[data_type][key], "above"
+                )
                 self.ml_figures[data_type][key].legend.click_policy = "hide"
 
-        self.legends.extend([legend['train']['data'], legend['train']['diff']])
-        if 'test' in self.ml_figures.keys():
-            self.legends.extend([legend['test']['data'], legend['test']['diff']])
+        self.legends.extend([legend["train"]["data"], legend["train"]["diff"]])
+        if "test" in self.ml_figures.keys():
+            self.legends.extend(
+                [legend["test"]["data"], legend["test"]["diff"]]
+            )
 
     def initialize_figures(self):
 
         for data_type in self.plot_types:
-            for key in {'data', 'diff'}:
+            for key in {"data", "diff"}:
                 fig = self.ml_figures[data_type][key]
-                fig.xaxis.axis_label = 'Study'
+                fig.xaxis.axis_label = "Study"
                 fig.yaxis.axis_label_text_baseline = "bottom"
-                if data_type == 'test':
+                if data_type == "test":
                     fig.background_fill_color = "black"
                     fig.background_fill_alpha = 0.05
 
-            self.ml_figures[data_type]['data'].yaxis.axis_label = self.y_variable
-            self.ml_figures[data_type]['diff'].yaxis.axis_label = 'Residual'
+            self.ml_figures[data_type][
+                "data"
+            ].yaxis.axis_label = self.y_variable
+            self.ml_figures[data_type]["diff"].yaxis.axis_label = "Residual"
 
-        self.ml_figures['train']['diff'].x_range = self.ml_figures['train']['data'].x_range
+        self.ml_figures["train"]["diff"].x_range = self.ml_figures["train"][
+            "data"
+        ].x_range
         if self.include_test_data:
-            self.ml_figures['test']['data'].y_range = self.ml_figures['train']['data'].y_range
-            self.ml_figures['test']['diff'].y_range = self.ml_figures['train']['diff'].y_range
-            self.ml_figures['test']['diff'].x_range = self.ml_figures['test']['data'].x_range
+            self.ml_figures["test"]["data"].y_range = self.ml_figures["train"][
+                "data"
+            ].y_range
+            self.ml_figures["test"]["diff"].y_range = self.ml_figures["train"][
+                "diff"
+            ].y_range
+            self.ml_figures["test"]["diff"].x_range = self.ml_figures["test"][
+                "data"
+            ].x_range
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.frame_size
         for data_type in self.plot_types:
-            for key in ['data', 'diff']:
-                self.ml_figures[data_type][key].plot_width = int(self.size_factor['data'][0] * float(panel_width))
-                self.ml_figures[data_type][key].plot_height = int(self.size_factor['data'][1] * float(panel_height))
+            for key in ["data", "diff"]:
+                self.ml_figures[data_type][key].plot_width = int(
+                    self.size_factor["data"][0] * float(panel_width)
+                )
+                self.ml_figures[data_type][key].plot_height = int(
+                    self.size_factor["data"][1] * float(panel_height)
+                )
 
     def update_data(self, plot_data):
         """
@@ -1958,36 +3080,64 @@ class PlotMachineLearning(Plot):
         :return:
         """
 
-        self.X = plot_data.X['data']
+        self.X = plot_data.X["data"]
 
         for data_type in self.plot_types:
-            plot_data_type = [data_type, 'data'][len(self.plot_types) == 1 and data_type == 'train']
+            plot_data_type = [data_type, "data"][
+                len(self.plot_types) == 1 and data_type == "train"
+            ]
             x = plot_data.x[plot_data_type]
             y = plot_data.y[plot_data_type]
             y_pred = plot_data.predictions[plot_data_type]
             if self.multi_var_pred is not None:
-                multi_var_pred = [self.multi_var_pred[i] for i in plot_data.indices[plot_data_type]]
+                multi_var_pred = [
+                    self.multi_var_pred[i]
+                    for i in plot_data.indices[plot_data_type]
+                ]
             else:
                 multi_var_pred = None
             mrn = [self.mrn[i] for i in plot_data.indices[plot_data_type]]
             uid = [self.uid[i] for i in plot_data.indices[plot_data_type]]
-            study_date = [self.study_date[i] for i in plot_data.indices[plot_data_type]]
+            study_date = [
+                self.study_date[i] for i in plot_data.indices[plot_data_type]
+            ]
 
             srcs = self.source[data_type]
 
-            srcs['data'].data = {'x': x, 'y': y, 'mrn': mrn, 'study_date': study_date, 'uid': uid}
-            srcs['predict'].data = {'x': x, 'y': y_pred, 'mrn': mrn, 'study_date': study_date}
+            srcs["data"].data = {
+                "x": x,
+                "y": y,
+                "mrn": mrn,
+                "study_date": study_date,
+                "uid": uid,
+            }
+            srcs["predict"].data = {
+                "x": x,
+                "y": y_pred,
+                "mrn": mrn,
+                "study_date": study_date,
+            }
             if multi_var_pred is not None:
-                srcs['multi_var'].data = {'x': x, 'y': multi_var_pred, 'mrn': mrn, 'study_date': study_date}
+                srcs["multi_var"].data = {
+                    "x": x,
+                    "y": multi_var_pred,
+                    "mrn": mrn,
+                    "study_date": study_date,
+                }
 
-            data = {'x': x,
-                    'y_ml': np.subtract(np.array(y), np.array(y_pred)),
-                    'y0': [0] * len(x),
-                    'mrn': mrn, 'study_date': study_date}
+            data = {
+                "x": x,
+                "y_ml": np.subtract(np.array(y), np.array(y_pred)),
+                "y0": [0] * len(x),
+                "mrn": mrn,
+                "study_date": study_date,
+            }
             if multi_var_pred is not None:
-                data['y_mvr'] = np.subtract(np.array(y), np.array(multi_var_pred))
+                data["y_mvr"] = np.subtract(
+                    np.array(y), np.array(multi_var_pred)
+                )
 
-            srcs['diff'].data = data
+            srcs["diff"].data = data
 
             mse_values = [plot_data.mse[data_type]]
             if multi_var_pred is not None:
@@ -1999,37 +3149,64 @@ class PlotMachineLearning(Plot):
                 else:
                     mse_text.append("%0.2E" % mse)
             if multi_var_pred is not None:
-                self.div_mse[data_type].text = "<u>Mean Square Error</u>: %s (%s) --- %s (MVR)" % \
-                                               (mse_text[0], self.ml_type_short, mse_text[1])
+                self.div_mse[
+                    data_type
+                ].text = "<u>Mean Square Error</u>: %s (%s) --- %s (MVR)" % (
+                    mse_text[0],
+                    self.ml_type_short,
+                    mse_text[1],
+                )
             else:
                 if self.is_classifier:
-                    self.div_mse[data_type].text = "<u>Accuracy</u>: %0.2f%%" % (100 * plot_data.accuracy[data_type])
+                    self.div_mse[
+                        data_type
+                    ].text = "<u>Accuracy</u>: %0.2f%%" % (
+                        100 * plot_data.accuracy[data_type]
+                    )
                 else:
-                    self.div_mse[data_type].text = "<u>Mean Square Error</u>: %s (%s)" % \
-                                                   (mse_text[0], self.ml_type_short)
+                    self.div_mse[
+                        data_type
+                    ].text = "<u>Mean Square Error</u>: %s (%s)" % (
+                        mse_text[0],
+                        self.ml_type_short,
+                    )
 
         self.update_bokeh_layout_in_wx_python()
 
     def get_csv(self):
 
-        col_titles = 'MRN,Study Instance UID,Study #,Date,%s,%s' % (self.y_variable, self.ml_type)
+        col_titles = "MRN,Study Instance UID,Study #,Date,%s,%s" % (
+            self.y_variable,
+            self.ml_type,
+        )
         if self.multi_var_pred is not None:
             col_titles = col_titles + ",Multi-Variable Regression"
         csv_data = []
         for data_type in self.plot_types:
-            data = self.source[data_type]['data'].data
+            data = self.source[data_type]["data"].data
             if self.include_test_data:
                 data_title = data_type
             else:
-                data_title = 'Loaded Model Applied to Queried '
-            csv_data.append('%s Data\n%s' % (data_title, col_titles))
-            for i in range(len(data['mrn'])):
-                csv_data.append(','.join(str(data[key][i]).replace(',', '^')
-                                         for key in ['mrn', 'uid', 'x', 'study_date', 'y']))
-                csv_data[-1] = "%s,%s" % (csv_data[-1], self.source[data_type]['predict'].data['y'][i])
+                data_title = "Loaded Model Applied to Queried "
+            csv_data.append("%s Data\n%s" % (data_title, col_titles))
+            for i in range(len(data["mrn"])):
+                csv_data.append(
+                    ",".join(
+                        str(data[key][i]).replace(",", "^")
+                        for key in ["mrn", "uid", "x", "study_date", "y"]
+                    )
+                )
+                csv_data[-1] = "%s,%s" % (
+                    csv_data[-1],
+                    self.source[data_type]["predict"].data["y"][i],
+                )
                 if self.multi_var_pred is not None:
-                    csv_data[-1] = csv_data[-1] + ",%s" % self.source[data_type]['multi_var'].data['y'][i]
-            csv_data.append('\n')
+                    csv_data[-1] = (
+                        csv_data[-1]
+                        + ",%s"
+                        % self.source[data_type]["multi_var"].data["y"][i]
+                    )
+            csv_data.append("\n")
 
         # Original dataset (in case not all data was used for training and testing
         # data = self.source['data'].data
@@ -2041,50 +3218,87 @@ class PlotMachineLearning(Plot):
         #                                  self.source[data_type]['predict'].data['y'][i],
         #                                  self.source[data_type]['multi_var'].data['y'][i])
 
-        return '\n'.join(csv_data)
+        return "\n".join(csv_data)
 
     def apply_options(self):
         super().apply_options()
 
         for data_type in self.plot_types:
-            for key in {'data', 'diff'}:
+            for key in {"data", "diff"}:
                 fig = self.ml_figures[data_type][key]
-                fig.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-                fig.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-                fig.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-                fig.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+                fig.xaxis.axis_label_text_font_size = (
+                    self.options.PLOT_AXIS_LABEL_FONT_SIZE
+                )
+                fig.yaxis.axis_label_text_font_size = (
+                    self.options.PLOT_AXIS_LABEL_FONT_SIZE
+                )
+                fig.xaxis.major_label_text_font_size = (
+                    self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+                )
+                fig.yaxis.major_label_text_font_size = (
+                    self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+                )
                 fig.min_border = self.options.MIN_BORDER
 
         for data_type in self.plot_types:
-            glyph = self.renderers[data_type]['data'].glyph
-            glyph.size = getattr(self.options, 'MACHINE_LEARNING_SIZE_DATA')
-            glyph.line_color = getattr(self.options, 'MACHINE_LEARNING_COLOR_DATA')
-            glyph.fill_color = getattr(self.options, 'MACHINE_LEARNING_COLOR_DATA')
+            glyph = self.renderers[data_type]["data"].glyph
+            glyph.size = getattr(self.options, "MACHINE_LEARNING_SIZE_DATA")
+            glyph.line_color = getattr(
+                self.options, "MACHINE_LEARNING_COLOR_DATA"
+            )
+            glyph.fill_color = getattr(
+                self.options, "MACHINE_LEARNING_COLOR_DATA"
+            )
 
-            line_types = ['predict', 'multi_var'] if self.multi_var_pred is not None else ['predict']
+            line_types = (
+                ["predict", "multi_var"]
+                if self.multi_var_pred is not None
+                else ["predict"]
+            )
             for line_type in line_types:
                 glyph = self.renderers[data_type][line_type].glyph
-                glyph.size = getattr(self.options, 'MACHINE_LEARNING_SIZE_%s' % line_type.upper())
-                glyph.line_alpha = getattr(self.options, 'MACHINE_LEARNING_ALPHA')
-                glyph.fill_alpha = getattr(self.options, 'MACHINE_LEARNING_ALPHA')
-                glyph.line_color = getattr(self.options, 'MACHINE_LEARNING_COLOR_%s' % line_type.upper())
-                glyph.fill_color = getattr(self.options, 'MACHINE_LEARNING_COLOR_%s' % line_type.upper())
+                glyph.size = getattr(
+                    self.options,
+                    "MACHINE_LEARNING_SIZE_%s" % line_type.upper(),
+                )
+                glyph.line_alpha = getattr(
+                    self.options, "MACHINE_LEARNING_ALPHA"
+                )
+                glyph.fill_alpha = getattr(
+                    self.options, "MACHINE_LEARNING_ALPHA"
+                )
+                glyph.line_color = getattr(
+                    self.options,
+                    "MACHINE_LEARNING_COLOR_%s" % line_type.upper(),
+                )
+                glyph.fill_color = getattr(
+                    self.options,
+                    "MACHINE_LEARNING_COLOR_%s" % line_type.upper(),
+                )
 
-            diff_types = ['ml', 'mvr'] if self.multi_var_pred is not None else ['ml']
+            diff_types = (
+                ["ml", "mvr"] if self.multi_var_pred is not None else ["ml"]
+            )
             for diff_type in diff_types:
-                glyph = self.renderers[data_type]['diff_%s' % diff_type].glyph
-                color_modifier = ['PREDICT', 'MULTI_VAR'][diff_type == 'mvr']
-                glyph.fill_color = getattr(self.options, 'MACHINE_LEARNING_COLOR_%s' % color_modifier)
-                glyph.fill_alpha = getattr(self.options, 'MACHINE_LEARNING_ALPHA_DIFF')
+                glyph = self.renderers[data_type]["diff_%s" % diff_type].glyph
+                color_modifier = ["PREDICT", "MULTI_VAR"][diff_type == "mvr"]
+                glyph.fill_color = getattr(
+                    self.options, "MACHINE_LEARNING_COLOR_%s" % color_modifier
+                )
+                glyph.fill_alpha = getattr(
+                    self.options, "MACHINE_LEARNING_ALPHA_DIFF"
+                )
 
 
 class PlotFeatureImportance(Plot):
-    def __init__(self, parent, options, x_variables, feature_importances, title):
+    def __init__(
+        self, parent, options, x_variables, feature_importances, title
+    ):
         Plot.__init__(self, parent, options)
 
-        self.size_factor = {'plot': (0.95, 0.9)}
+        self.size_factor = {"plot": (0.95, 0.9)}
 
-        self.type = 'feature_importance'
+        self.type = "feature_importance"
 
         self.div_title = Div(text="<b>%s</b>" % title)
 
@@ -2094,9 +3308,13 @@ class PlotFeatureImportance(Plot):
         self.x_variables = x_variables
         self.feature_importances = feature_importances
 
-        self.source = {'plot': ColumnDataSource(data=dict(x=[], y=[], mrn=[], study_date=[]))}
+        self.source = {
+            "plot": ColumnDataSource(
+                data=dict(x=[], y=[], mrn=[], study_date=[])
+            )
+        }
 
-        self.figure = figure(y_range=[''], tools="")
+        self.figure = figure(y_range=[""], tools="")
 
         self.initialize_figures()
 
@@ -2113,54 +3331,90 @@ class PlotFeatureImportance(Plot):
         self.apply_options()
 
     def __add_plot_data(self):
-        self.hbar = self.figure.hbar(y='y', right='right', left=0, height='height', source=self.source['plot'],
-                                     alpha=0.6)
+        self.hbar = self.figure.hbar(
+            y="y",
+            right="right",
+            left=0,
+            height="height",
+            source=self.source["plot"],
+            alpha=0.6,
+        )
 
     def __do_layout(self):
-        self.bokeh_layout = column(self.div_title,
-                                   self.figure)
+        self.bokeh_layout = column(self.div_title, self.figure)
 
     def __add_hover(self):
-        self.figure.add_tools(HoverTool(show_arrow=True, mode='hline',
-                                        tooltips=[('Importance', '@right{0.4f}'),
-                                                  ('Variable', '@variable')]))
+        self.figure.add_tools(
+            HoverTool(
+                show_arrow=True,
+                mode="hline",
+                tooltips=[
+                    ("Importance", "@right{0.4f}"),
+                    ("Variable", "@variable"),
+                ],
+            )
+        )
 
     def initialize_figures(self):
         self.figure.xaxis.axis_label_text_baseline = "bottom"
-        self.figure.xaxis.axis_label = 'Importance'
+        self.figure.xaxis.axis_label = "Importance"
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.GetSize()
-        self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
-        self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
+        self.figure.plot_width = int(
+            self.size_factor["plot"][0] * float(panel_width)
+        )
+        self.figure.plot_height = int(
+            self.size_factor["plot"][1] * float(panel_height)
+        )
 
     def set_data(self):
         length = len(self.feature_importances)
-        order = [i[0] for i in sorted(enumerate(self.feature_importances), key=lambda x:x[1])]
-        self.source['plot'].data = {'y': [i+0.5 for i in range(length)],
-                                    'right': [self.feature_importances[i] for i in order],
-                                    'height': [0.5] * length,
-                                    'variable': [self.x_variables[i] for i in order]}
+        order = [
+            i[0]
+            for i in sorted(
+                enumerate(self.feature_importances), key=lambda x: x[1]
+            )
+        ]
+        self.source["plot"].data = {
+            "y": [i + 0.5 for i in range(length)],
+            "right": [self.feature_importances[i] for i in order],
+            "height": [0.5] * length,
+            "variable": [self.x_variables[i] for i in order],
+        }
         self.figure.y_range.factors = [self.x_variables[i] for i in order]
         self.figure.x_range = Range1d(0, max(self.feature_importances) * 1.05)
 
     def apply_options(self):
         super().apply_options()
 
-        self.figure.xaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.figure.yaxis.axis_label_text_font_size = self.options.PLOT_AXIS_LABEL_FONT_SIZE
-        self.figure.xaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
-        self.figure.yaxis.major_label_text_font_size = self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        self.figure.xaxis.axis_label_text_font_size = (
+            self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        )
+        self.figure.yaxis.axis_label_text_font_size = (
+            self.options.PLOT_AXIS_LABEL_FONT_SIZE
+        )
+        self.figure.xaxis.major_label_text_font_size = (
+            self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        )
+        self.figure.yaxis.major_label_text_font_size = (
+            self.options.PLOT_AXIS_MAJOR_LABEL_FONT_SIZE
+        )
         self.figure.min_border = self.options.MIN_BORDER
 
-        self.hbar.glyph.fill_color = self.options.MACHINE_LEARNING_COLOR_PREDICT
-        self.hbar.glyph.line_color = self.options.MACHINE_LEARNING_COLOR_PREDICT
+        self.hbar.glyph.fill_color = (
+            self.options.MACHINE_LEARNING_COLOR_PREDICT
+        )
+        self.hbar.glyph.line_color = (
+            self.options.MACHINE_LEARNING_COLOR_PREDICT
+        )
 
 
 class PlotROIMap(Plot):
     """
     Generate visual representation of the roi map
     """
+
     def __init__(self, parent, roi_map):
         """
         :param parent: the wx UI object where the plot will be displayed
@@ -2169,20 +3423,22 @@ class PlotROIMap(Plot):
         """
         Plot.__init__(self, parent, None)
 
-        self.type = 'roi_map'
+        self.type = "roi_map"
         self.parent = parent
 
-        self.size_factor = {'plot': (0.972, 0.904)}
+        self.size_factor = {"plot": (0.972, 0.904)}
 
         self.roi_map = roi_map
 
         # Plot
-        self.figure = figure(x_range=["Institutional ROI", "Physician ROI", "Variations"],
-                             x_axis_location="above",
-                             title="(Linked by Physician dropdowns)",
-                             tools="reset, ywheel_zoom, ywheel_pan",
-                             active_scroll='ywheel_pan')
-        self.figure.title.align = 'center'
+        self.figure = figure(
+            x_range=["Institutional ROI", "Physician ROI", "Variations"],
+            x_axis_location="above",
+            title="(Linked by Physician dropdowns)",
+            tools="reset, ywheel_zoom, ywheel_pan",
+            active_scroll="ywheel_pan",
+        )
+        self.figure.title.align = "center"
         # self.roi_map_plot.title.text_font_style = "italic"
         self.figure.title.text_font_size = "15pt"
         self.figure.xaxis.axis_line_color = None
@@ -2198,57 +3454,111 @@ class PlotROIMap(Plot):
         self.figure.min_border_left = 50
         self.figure.min_border_bottom = 30
 
-        self.source['map'] = ColumnDataSource(data={'name': [], 'color': [], 'x': [], 'y': [],
-                                                    'x0': [], 'y0': [], 'x1': [], 'y1': []})
-        self.figure.circle("x", "y", size=12, source=self.source['map'], line_color="black", fill_alpha=0.8,
-                           color='color')
-        labels = LabelSet(x="x", y="y", text="name", y_offset=8, text_color="#555555",
-                          source=self.source['map'], text_align='center')
+        self.source["map"] = ColumnDataSource(
+            data={
+                "name": [],
+                "color": [],
+                "x": [],
+                "y": [],
+                "x0": [],
+                "y0": [],
+                "x1": [],
+                "y1": [],
+            }
+        )
+        self.figure.circle(
+            "x",
+            "y",
+            size=12,
+            source=self.source["map"],
+            line_color="black",
+            fill_alpha=0.8,
+            color="color",
+        )
+        labels = LabelSet(
+            x="x",
+            y="y",
+            text="name",
+            y_offset=8,
+            text_color="#555555",
+            source=self.source["map"],
+            text_align="center",
+        )
         self.figure.add_layout(labels)
-        self.figure.segment(x0='x0', y0='y0', x1='x1', y1='y1', source=self.source['map'], alpha=0.5)
+        self.figure.segment(
+            x0="x0",
+            y0="y0",
+            x1="x1",
+            y1="y1",
+            source=self.source["map"],
+            alpha=0.5,
+        )
 
         self.bokeh_layout = column(self.figure)
 
-    def update_roi_map_source_data(self, physician, plot_type=None, y_shift=None):
+    def update_roi_map_source_data(
+        self, physician, plot_type=None, y_shift=None
+    ):
         self.set_figure_dimensions()
-        new_data = self.roi_map.get_all_institutional_roi_visual_coordinates(physician)
+        new_data = self.roi_map.get_all_institutional_roi_visual_coordinates(
+            physician
+        )
 
-        i_roi = new_data['institutional_roi']
-        p_roi = new_data['physician_roi']
+        i_roi = new_data["institutional_roi"]
+        p_roi = new_data["physician_roi"]
         b_roi = self.roi_map.branched_institutional_rois[physician]
-        if plot_type == 'Linked':
-            ignored_roi = [p_roi[i] for i in range(len(i_roi)) if i_roi[i] == 'uncategorized']
-        elif plot_type == 'Unlinked':
-            ignored_roi = [p_roi[i] for i in range(len(i_roi)) if i_roi[i] != 'uncategorized']
-        elif plot_type == 'Branched':
-            ignored_roi = [p_roi[i] for i in range(len(i_roi)) if i_roi[i] not in b_roi]
+        if plot_type == "Linked":
+            ignored_roi = [
+                p_roi[i]
+                for i in range(len(i_roi))
+                if i_roi[i] == "uncategorized"
+            ]
+        elif plot_type == "Unlinked":
+            ignored_roi = [
+                p_roi[i]
+                for i in range(len(i_roi))
+                if i_roi[i] != "uncategorized"
+            ]
+        elif plot_type == "Branched":
+            ignored_roi = [
+                p_roi[i] for i in range(len(i_roi)) if i_roi[i] not in b_roi
+            ]
         else:
             ignored_roi = []
 
-        new_data = self.roi_map.get_all_institutional_roi_visual_coordinates(physician,
-                                                                             ignored_physician_rois=ignored_roi)
+        new_data = self.roi_map.get_all_institutional_roi_visual_coordinates(
+            physician, ignored_physician_rois=ignored_roi
+        )
         # Shift coordinates so plot is initially viewing the provided shift or physician_roi
         if y_shift is not None and new_data is not None:
             try:
                 if type(y_shift) is str:
-                    index = new_data['name'].index(y_shift)
-                    y_shift = new_data['y'][index] + 3
-                for key in ['y', 'y0', 'y1']:
-                    new_data[key] = (np.array(new_data[key]) - y_shift).tolist()
+                    index = new_data["name"].index(y_shift)
+                    y_shift = new_data["y"][index] + 3
+                for key in ["y", "y0", "y1"]:
+                    new_data[key] = (
+                        np.array(new_data[key]) - y_shift
+                    ).tolist()
             except ValueError:
                 pass
 
-        self.figure.title.text = 'ROI Map for %s' % physician
+        self.figure.title.text = "ROI Map for %s" % physician
         if new_data:
-            self.source['map'].data = new_data
-            self.figure.y_range.bounds = (min(self.source['map'].data['y1']) - 6,
-                                          max(self.source['map'].data['y1']) + 6)
+            self.source["map"].data = new_data
+            self.figure.y_range.bounds = (
+                min(self.source["map"].data["y1"]) - 6,
+                max(self.source["map"].data["y1"]) + 6,
+            )
             self.update_bokeh_layout_in_wx_python()
         else:
-            self.clear_source('map')
+            self.clear_source("map")
             self.clear_plot()
 
     def set_figure_dimensions(self):
         panel_width, panel_height = self.parent.GetSize()
-        self.figure.plot_width = int(self.size_factor['plot'][0] * float(panel_width))
-        self.figure.plot_height = int(self.size_factor['plot'][1] * float(panel_height))
+        self.figure.plot_width = int(
+            self.size_factor["plot"][0] * float(panel_width)
+        )
+        self.figure.plot_height = int(
+            self.size_factor["plot"][1] * float(panel_height)
+        )

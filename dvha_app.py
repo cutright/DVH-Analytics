@@ -18,7 +18,8 @@ import multiprocessing
 if __name__ == "__main__":
 
     # Required if running from PyInstaller freeze
-    # Multiprocessing library used for dose summation to avoid memory allocation issues
+    # Multiprocessing library used for dose summation to avoid memory
+    # allocation issues
     multiprocessing.freeze_support()
 
     # SVG export with Bokeh requires PhantomJS

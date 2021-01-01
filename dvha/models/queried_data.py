@@ -13,13 +13,18 @@ Class for viewing SQL table data of the current query
 import wx
 from dvha.models.data_table import DataTable
 from dvha.dialogs.export import save_data_to_file
-from dvha.tools.utilities import get_window_size, set_msw_background_color, set_frame_icon
+from dvha.tools.utilities import (
+    get_window_size,
+    set_msw_background_color,
+    set_frame_icon,
+)
 
 
 class QueriedDataFrame(wx.Frame):
     """
     Generate a simple table to view data of the current query for a specified SQL table
     """
+
     def __init__(self, data_obj, columns, data_key, menu, menu_item_id):
         """
         :param data_obj: object containing data to be viewed for each group
@@ -32,7 +37,7 @@ class QueriedDataFrame(wx.Frame):
         :type menu: Menu
         :param menu_item_id: the ID of the menu item associated with the specified data_obj
         """
-        wx.Frame.__init__(self, None, title='%s Data' % data_key[0:-1])
+        wx.Frame.__init__(self, None, title="%s Data" % data_key[0:-1])
 
         self.data = data_obj
         self.columns = columns
@@ -40,11 +45,19 @@ class QueriedDataFrame(wx.Frame):
         self.menu = menu
         self.menu_item_id = menu_item_id
 
-        self.list_ctrl = wx.ListCtrl(self, wx.ID_ANY,
-                                     style=wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
+        self.list_ctrl = wx.ListCtrl(
+            self,
+            wx.ID_ANY,
+            style=wx.BORDER_SUNKEN
+            | wx.LC_HRULES
+            | wx.LC_REPORT
+            | wx.LC_VRULES,
+        )
 
         self.button_export = wx.Button(self, wx.ID_ANY, "Export to CSV")
-        self.radio_button_query_group = wx.RadioBox(self, wx.ID_ANY, 'Query Group', choices=['1', '2'])
+        self.radio_button_query_group = wx.RadioBox(
+            self, wx.ID_ANY, "Query Group", choices=["1", "2"]
+        )
 
         self.data_table = DataTable(self.list_ctrl)
         self.data_table.set_data(self.table_data, self.columns)
@@ -67,7 +80,11 @@ class QueriedDataFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_export, id=self.button_export.GetId())
         self.Bind(wx.EVT_LIST_COL_CLICK, self.sort_table, self.list_ctrl)
         self.Bind(wx.EVT_CLOSE, self.on_close)
-        self.Bind(wx.EVT_RADIOBOX, self.on_group_select, id=self.radio_button_query_group.GetId())
+        self.Bind(
+            wx.EVT_RADIOBOX,
+            self.on_group_select,
+            id=self.radio_button_query_group.GetId(),
+        )
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -77,13 +94,18 @@ class QueriedDataFrame(wx.Frame):
         sizer_widgets.Add(sizer_button, 0, wx.ALL, 10)
         sizer_widgets.Add(self.radio_button_query_group, 0, wx.ALL, 10)
         sizer_wrapper.Add(sizer_widgets, 0, 0, 0)
-        sizer_wrapper.Add(self.list_ctrl, 1, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 10)
+        sizer_wrapper.Add(
+            self.list_ctrl, 1, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 10
+        )
         self.SetSizer(sizer_wrapper)
         self.Center()
 
     @property
     def table_data(self):
-        return {column: getattr(self.selected_data, column) for column in self.columns}
+        return {
+            column: getattr(self.selected_data, column)
+            for column in self.columns
+        }
 
     @property
     def selected_group(self):
@@ -102,13 +124,22 @@ class QueriedDataFrame(wx.Frame):
         self.Destroy()
 
     def on_export(self, *args):
-        save_data_to_file(self, "Export Group %s %s to CSV" % (self.selected_group, self.sql_table),
-                          self.data_table.get_csv())
+        save_data_to_file(
+            self,
+            "Export Group %s %s to CSV"
+            % (self.selected_group, self.sql_table),
+            self.data_table.get_csv(),
+        )
 
     def toggle_data_menu_item(self):
-        short_cut = ['DVHs', 'Plans', 'Rxs', 'Beams'].index(self.sql_table) + 1
-        show_hide = ['Show', 'Hide']['Show' in self.menu.GetLabel(self.menu_item_id)]
-        self.menu.SetLabel(self.menu_item_id, '%s %s\tCtrl+%s' % (show_hide, self.sql_table, short_cut))
+        short_cut = ["DVHs", "Plans", "Rxs", "Beams"].index(self.sql_table) + 1
+        show_hide = ["Show", "Hide"][
+            "Show" in self.menu.GetLabel(self.menu_item_id)
+        ]
+        self.menu.SetLabel(
+            self.menu_item_id,
+            "%s %s\tCtrl+%s" % (show_hide, self.sql_table, short_cut),
+        )
 
     def sort_table(self, evt):
         self.data_table.sort_table(evt)

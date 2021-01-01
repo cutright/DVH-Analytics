@@ -41,27 +41,39 @@ class DVH:
         if uid:
             constraints_str = "study_instance_uid in ('%s')" % "', '".join(uid)
             if dvh_condition:
-                constraints_str = "(%s) and %s" % (dvh_condition, constraints_str)
+                constraints_str = "(%s) and %s" % (
+                    dvh_condition,
+                    constraints_str,
+                )
         else:
-            constraints_str = ''
+            constraints_str = ""
 
         # Get DVH data from SQL and set as attributes
-        dvh_data = QuerySQL('DVHs', constraints_str, group=group)
+        dvh_data = QuerySQL("DVHs", constraints_str, group=group)
         if dvh_data.mrn:
-            ignored_keys = {'cnx', 'cursor', 'table_name', 'constraints_str', 'condition_str'}
+            ignored_keys = {
+                "cnx",
+                "cursor",
+                "table_name",
+                "constraints_str",
+                "condition_str",
+            }
             self.keys = []
             for key, value in dvh_data.__dict__.items():
                 if not key.startswith("__") and key not in ignored_keys:
-                    if key == 'dvh_string':
-                        dvh_split = [dvh.split(',')[::self.dvh_bin_width] for i, dvh in enumerate(value)]
+                    if key == "dvh_string":
+                        dvh_split = [
+                            dvh.split(",")[:: self.dvh_bin_width]
+                            for dvh in value
+                        ]
                     setattr(self, key, value)
-                    if '_string' not in key:
+                    if "_string" not in key:
                         self.keys.append(key)
 
             # Move mrn to beginning of self.keys
-            if 'mrn' in self.keys:
-                self.keys.pop(self.keys.index('mrn'))
-                self.keys.insert(0, 'mrn')
+            if "mrn" in self.keys:
+                self.keys.pop(self.keys.index("mrn"))
+                self.keys.insert(0, "mrn")
 
             # uid passed into DVH init is a unique list for querying and it is not in order of query results
             self.uid = self.study_instance_uid
@@ -69,11 +81,10 @@ class DVH:
             # Add these properties to dvh_data since they aren't in the DVHs SQL table
             self.count = len(self.mrn)
             self.study_count = len(set(self.uid))
-            self.rx_dose = self.get_plan_values('rx_dose')
-            self.sim_study_date = self.get_plan_values('sim_study_date')
-            self.keys.append('rx_dose')
-            self.endpoints = {'data': None,
-                              'defs': None}
+            self.rx_dose = self.get_plan_values("rx_dose")
+            self.sim_study_date = self.get_plan_values("sim_study_date")
+            self.keys.append("rx_dose")
+            self.endpoints = {"data": None, "defs": None}
             self.eud = None
             self.ntcp_or_tcp = None
 
@@ -96,19 +107,25 @@ class DVH:
             for i in range(self.count):
                 # Process dth_string to numpy array
                 try:
-                    self.dth.append(np.array(self.dth_string[i].split(','), dtype=np.float))
+                    self.dth.append(
+                        np.array(self.dth_string[i].split(","), dtype=np.float)
+                    )
                 except Exception:
                     self.dth.append(np.array([0]))
 
             # Store these now so they can be saved in DVH object without needing to query later
             with DVH_SQL() as cnx:
-                self.physician_count = len(cnx.get_unique_values('Plans', 'physician',
-                                                                 "study_instance_uid in ('%s')" % "','".join(self.uid)))
-            self.total_fxs = self.get_plan_values('fxs')
-            self.fx_dose = self.get_rx_values('fx_dose')
+                self.physician_count = len(
+                    cnx.get_unique_values(
+                        "Plans",
+                        "physician",
+                        "study_instance_uid in ('%s')" % "','".join(self.uid),
+                    )
+                )
+            self.total_fxs = self.get_plan_values("fxs")
+            self.fx_dose = self.get_rx_values("fx_dose")
         else:
             self.count = 0
-
 
     def get_plan_values(self, plan_column):
         """
@@ -119,9 +136,15 @@ class DVH:
         :rtype: list
         """
         with DVH_SQL() as cnx:
-            condition = "study_instance_uid in ('%s')" % "','".join(self.study_instance_uid)
-            data = cnx.query('Plans', 'study_instance_uid, %s' % plan_column, condition)
-            force_date = cnx.is_sqlite_column_datetime('Plans', plan_column)  # returns False for pgsql
+            condition = "study_instance_uid in ('%s')" % "','".join(
+                self.study_instance_uid
+            )
+            data = cnx.query(
+                "Plans", "study_instance_uid, %s" % plan_column, condition
+            )
+            force_date = cnx.is_sqlite_column_datetime(
+                "Plans", plan_column
+            )  # returns False for pgsql
 
         uids = [row[0] for row in data]
         values = [row[1] for row in data]
@@ -133,7 +156,7 @@ class DVH:
                     else:
                         values[i] = str(date_parser(value))
                 except Exception:
-                    values[i] = 'None'
+                    values[i] = "None"
         return [values[uids.index(uid)] for uid in self.study_instance_uid]
 
     def get_rx_values(self, rx_column):
@@ -145,8 +168,12 @@ class DVH:
         :rtype: list
         """
         with DVH_SQL() as cnx:
-            condition = "study_instance_uid in ('%s')" % "','".join(self.study_instance_uid)
-            data = cnx.query('Rxs', 'study_instance_uid, %s' % rx_column, condition)
+            condition = "study_instance_uid in ('%s')" % "','".join(
+                self.study_instance_uid
+            )
+            data = cnx.query(
+                "Rxs", "study_instance_uid, %s" % rx_column, condition
+            )
 
         uids = [row[0] for row in data]
         values = [row[1] for row in data]
@@ -165,7 +192,9 @@ class DVH:
         :rtype: list
         """
         bins, width, num_dvhs = self.bin_count, self.dvh_bin_width, self.count
-        return [np.multiply(np.array(range(bins)) + width/2., width).tolist()] * num_dvhs
+        return [
+            np.multiply(np.array(range(bins)) + width / 2.0, width).tolist()
+        ] * num_dvhs
 
     @property
     def y_data(self):
@@ -196,7 +225,9 @@ class DVH:
         """
         return np.percentile(self.dvh, percentile, 1)
 
-    def get_dose_to_volume(self, volume, volume_scale='absolute', dose_scale='absolute'):
+    def get_dose_to_volume(
+        self, volume, volume_scale="absolute", dose_scale="absolute"
+    ):
         """
         :param volume: the specified volume in cm^3
         :param volume_scale: either 'relative' or 'absolute'
@@ -209,25 +240,35 @@ class DVH:
             dvh = np.zeros(len(self.dvh))
             for y in range(len(self.dvh)):
                 dvh[y] = self.dvh[y][x]
-            if volume_scale == 'relative':
-                doses[x] = dose_to_volume(dvh, volume, dvh_bin_width=self.dvh_bin_width)
+            if volume_scale == "relative":
+                doses[x] = dose_to_volume(
+                    dvh, volume, dvh_bin_width=self.dvh_bin_width
+                )
             else:
                 if self.volume[x]:
-                    doses[x] = dose_to_volume(dvh, volume/self.volume[x], dvh_bin_width=self.dvh_bin_width)
+                    doses[x] = dose_to_volume(
+                        dvh,
+                        volume / self.volume[x],
+                        dvh_bin_width=self.dvh_bin_width,
+                    )
                 else:
                     doses[x] = 0
-        if dose_scale == 'relative':
+        if dose_scale == "relative":
             if self.rx_dose[0]:
-                doses = np.divide(doses * 100, self.rx_dose[0:self.count])
+                doses = np.divide(doses * 100, self.rx_dose[0 : self.count])
             else:
-                self.rx_dose[0] = 1  # if review dvh isn't defined, the following line would crash
-                doses = np.divide(doses * 100, self.rx_dose[0:self.count])
+                self.rx_dose[
+                    0
+                ] = 1  # if review dvh isn't defined, the following line would crash
+                doses = np.divide(doses * 100, self.rx_dose[0 : self.count])
                 self.rx_dose[0] = 0
                 doses[0] = 0
 
         return doses.tolist()
 
-    def get_volume_of_dose(self, dose, dose_scale='absolute', volume_scale='absolute'):
+    def get_volume_of_dose(
+        self, dose, dose_scale="absolute", volume_scale="absolute"
+    ):
         """
         :param dose: input dose use to calculate a volume of dose for entire sample
         :param dose_scale: either 'absolute' or 'relative'
@@ -241,18 +282,24 @@ class DVH:
             dvh = np.zeros(len(self.dvh))
             for y in range(len(self.dvh)):
                 dvh[y] = self.dvh[y][x]
-            if dose_scale == 'relative':
+            if dose_scale == "relative":
                 if isinstance(self.rx_dose[x], str):
                     volumes[x] = 0
                 else:
-                    volumes[x] = volume_of_dose(dvh, dose * self.rx_dose[x], dvh_bin_width=self.dvh_bin_width)
+                    volumes[x] = volume_of_dose(
+                        dvh,
+                        dose * self.rx_dose[x],
+                        dvh_bin_width=self.dvh_bin_width,
+                    )
             else:
-                volumes[x] = volume_of_dose(dvh, dose, dvh_bin_width=self.dvh_bin_width)
+                volumes[x] = volume_of_dose(
+                    dvh, dose, dvh_bin_width=self.dvh_bin_width
+                )
 
-        if volume_scale == 'absolute':
-            volumes = np.multiply(volumes, self.volume[0:self.count])
+        if volume_scale == "absolute":
+            volumes = np.multiply(volumes, self.volume[0 : self.count])
         else:
-            volumes = np.multiply(volumes, 100.)
+            volumes = np.multiply(volumes, 100.0)
 
         return volumes.tolist()
 
@@ -265,7 +312,9 @@ class DVH:
 
         answer = np.zeros(self.count)
         for x in range(self.count):
-            answer[x] = self.get_volume_of_dose(float(self.rx_dose[x] * rx_dose_fraction))
+            answer[x] = self.get_volume_of_dose(
+                float(self.rx_dose[x] * rx_dose_fraction)
+            )
 
         return answer
 
@@ -276,7 +325,9 @@ class DVH:
         x_axis, dvhs = self.resample_dvh()
         return x_axis
 
-    def get_stat_dvh(self, stat_type='mean', dose_scale='absolute', volume_scale='relative'):
+    def get_stat_dvh(
+        self, stat_type="mean", dose_scale="absolute", volume_scale="relative"
+    ):
         """
         :param stat_type: either min, mean, median, max, or std
         :param dose_scale: either 'absolute' or 'relative'
@@ -284,44 +335,50 @@ class DVH:
         :return: a single dvh where each bin is the stat_type of each bin for the entire sample
         :rtype: numpy 1D array
         """
-        if dose_scale == 'relative':
+        if dose_scale == "relative":
             x_axis, dvhs = self.resample_dvh()
         else:
             dvhs = self.dvh
 
-        if volume_scale == 'absolute':
+        if volume_scale == "absolute":
             dvhs = self.dvhs_to_abs_vol(dvhs)
 
-        stat_function = {'min': np.min,
-                         'mean': np.mean,
-                         'median': np.median,
-                         'max': np.max,
-                         'std': np.std}
+        stat_function = {
+            "min": np.min,
+            "mean": np.mean,
+            "median": np.median,
+            "max": np.max,
+            "std": np.std,
+        }
         dvh = stat_function[stat_type](dvhs, 1)
 
         return dvh
 
-    def get_standard_stat_dvh(self, dose_scale='absolute', volume_scale='relative'):
+    def get_standard_stat_dvh(
+        self, dose_scale="absolute", volume_scale="relative"
+    ):
         """
         :param dose_scale: either 'absolute' or 'relative'
         :param volume_scale: either 'absolute' or 'relative'
         :return: a standard set of statistical dvhs (min, q1, mean, median, q1, and max)
         :rtype: dict
         """
-        if dose_scale == 'relative':
+        if dose_scale == "relative":
             x_axis, dvhs = self.resample_dvh()
         else:
             dvhs = self.dvh
 
-        if volume_scale == 'absolute':
+        if volume_scale == "absolute":
             dvhs = self.dvhs_to_abs_vol(dvhs)
 
-        standard_stat_dvh = {'min': np.min(dvhs, 1),
-                             'q1': np.percentile(dvhs, 25, 1),
-                             'mean': np.mean(dvhs, 1),
-                             'median': np.median(dvhs, 1),
-                             'q3': np.percentile(dvhs, 75, 1),
-                             'max': np.max(dvhs, 1)}
+        standard_stat_dvh = {
+            "min": np.min(dvhs, 1),
+            "q1": np.percentile(dvhs, 25, 1),
+            "mean": np.mean(dvhs, 1),
+            "median": np.median(dvhs, 1),
+            "q3": np.percentile(dvhs, 75, 1),
+            "max": np.max(dvhs, 1),
+        }
 
         return standard_stat_dvh
 
@@ -338,42 +395,66 @@ class DVH:
         :return: x-axis, y-axis of resampled DVHs
         """
 
-        min_rx_dose = np.min(self.rx_dose) * 100.
-        new_bin_count = int(np.divide(float(self.bin_count), min_rx_dose) * resampled_bin_count)
+        min_rx_dose = np.min(self.rx_dose) * 100.0
+        new_bin_count = int(
+            np.divide(float(self.bin_count), min_rx_dose) * resampled_bin_count
+        )
 
         x1 = np.linspace(0, self.bin_count, self.bin_count)
         y2 = np.zeros([new_bin_count, self.count])
         for i in range(self.count):
-            x2 = np.multiply(np.linspace(0, new_bin_count, new_bin_count),
-                             self.rx_dose[i] * 100. / resampled_bin_count)
+            x2 = np.multiply(
+                np.linspace(0, new_bin_count, new_bin_count),
+                self.rx_dose[i] * 100.0 / resampled_bin_count,
+            )
             y2[:, i] = np.interp(x2, x1, self.dvh[:, i])
-        x2 = np.divide(np.linspace(0, new_bin_count-1, new_bin_count) + 0.5, resampled_bin_count)
+        x2 = np.divide(
+            np.linspace(0, new_bin_count - 1, new_bin_count) + 0.5,
+            resampled_bin_count,
+        )
         return x2, y2
 
     def get_summary(self):
-        summary = ["Study count: %s" % self.study_count,
-                   "DVH count: %s" % self.count,
-                   "Institutional ROI count: %s" % len(set(self.institutional_roi)),
-                   "Physician ROI count: %s" % len(set(self.physician_roi)),
-                   "ROI type count: %s" % len(set(self.roi_type)),
-                   "Physician count: %s" % self.physician_count,
-                   "\nMin, Mean, Max",
-                   "Rx dose (Gy): %0.2f, %0.2f, %0.2f" % (min(self.rx_dose),
-                                                          sum(self.rx_dose) / self.count,
-                                                          max(self.rx_dose)),
-                   "Volume (cc): %0.2f, %0.2f, %0.2f" % (min(self.volume),
-                                                         sum(self.volume) / self.count,
-                                                         max(self.volume)),
-                   "Min dose (Gy): %0.2f, %0.2f, %0.2f" % (min(self.min_dose),
-                                                           sum(self.min_dose) / self.count,
-                                                           max(self.min_dose)),
-                   "Mean dose (Gy): %0.2f, %0.2f, %0.2f" % (min(self.mean_dose),
-                                                            sum(self.mean_dose) / self.count,
-                                                            max(self.mean_dose)),
-                   "Max dose (Gy): %0.2f, %0.2f, %0.2f" % (min(self.max_dose),
-                                                           sum(self.max_dose) / self.count,
-                                                           max(self.max_dose))]
-        return '\n'.join(summary)
+        summary = [
+            "Study count: %s" % self.study_count,
+            "DVH count: %s" % self.count,
+            "Institutional ROI count: %s" % len(set(self.institutional_roi)),
+            "Physician ROI count: %s" % len(set(self.physician_roi)),
+            "ROI type count: %s" % len(set(self.roi_type)),
+            "Physician count: %s" % self.physician_count,
+            "\nMin, Mean, Max",
+            "Rx dose (Gy): %0.2f, %0.2f, %0.2f"
+            % (
+                min(self.rx_dose),
+                sum(self.rx_dose) / self.count,
+                max(self.rx_dose),
+            ),
+            "Volume (cc): %0.2f, %0.2f, %0.2f"
+            % (
+                min(self.volume),
+                sum(self.volume) / self.count,
+                max(self.volume),
+            ),
+            "Min dose (Gy): %0.2f, %0.2f, %0.2f"
+            % (
+                min(self.min_dose),
+                sum(self.min_dose) / self.count,
+                max(self.min_dose),
+            ),
+            "Mean dose (Gy): %0.2f, %0.2f, %0.2f"
+            % (
+                min(self.mean_dose),
+                sum(self.mean_dose) / self.count,
+                max(self.mean_dose),
+            ),
+            "Max dose (Gy): %0.2f, %0.2f, %0.2f"
+            % (
+                min(self.max_dose),
+                sum(self.max_dose) / self.count,
+                max(self.max_dose),
+            ),
+        ]
+        return "\n".join(summary)
 
     @property
     def has_data(self):
@@ -389,7 +470,12 @@ class DVH:
         :return: True if the dvh meets the constraint
         :rtype: bool
         """
-        return constraint(self.dvh[:, index], self.mean_dose[index], self.volume[index], self.dvh_bin_width)
+        return constraint(
+            self.dvh[:, index],
+            self.mean_dose[index],
+            self.volume[index],
+            self.dvh_bin_width,
+        )
 
 
 # Returns the isodose level outlining the given volume
@@ -424,7 +510,10 @@ def volume_of_dose(dvh, dose, dvh_bin_width=1):
     :return: volume in cm^3 of roi receiving at least the specified dose
     """
 
-    x = [int(np.floor(dose / dvh_bin_width * 100)), int(np.ceil(dose / dvh_bin_width * 100))]
+    x = [
+        int(np.floor(dose / dvh_bin_width * 100)),
+        int(np.ceil(dose / dvh_bin_width * 100)),
+    ]
     if len(dvh) < x[1]:
         return dvh[-1]
     y = [dvh[x[0]], dvh[x[1]]]
@@ -447,12 +536,14 @@ def calc_eud(dvh, a, dvh_bin_width=1):
 
     dose_bins = np.linspace(0, np.size(dvh), np.size(dvh))
     dose_bins = np.round(dose_bins, 3) * dvh_bin_width
-    bin_centers = dose_bins - (dvh_bin_width / 2.)
-    eud = np.power(np.sum(np.multiply(v, np.power(bin_centers, a))), 1. / float(a))
+    bin_centers = dose_bins - (dvh_bin_width / 2.0)
+    eud = np.power(
+        np.sum(np.multiply(v, np.power(bin_centers, a))), 1.0 / float(a)
+    )
     eud = np.round(eud, 2) * 0.01
 
     return eud
 
 
 def calc_tcp(gamma_50, td_tcd, eud):
-    return 1. / (1. + (td_tcd / eud) ** (4. * gamma_50))
+    return 1.0 / (1.0 + (td_tcd / eud) ** (4.0 * gamma_50))

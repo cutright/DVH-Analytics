@@ -6,17 +6,23 @@ import wx
 
 class Spreadsheet(wx.grid.Grid):
     def __init__(self, parent):
-        wx.grid.Grid.__init__(self, parent, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
+        wx.grid.Grid.__init__(
+            self, parent, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0
+        )
         self.Bind(wx.EVT_KEY_DOWN, self.on_key)
         self.Bind(wx.grid.EVT_GRID_CELL_CHANGING, self.on_change)
-        self.Bind(wx.grid.EVT_GRID_LABEL_RIGHT_CLICK, self.on_label_right_click)
+        self.Bind(
+            wx.grid.EVT_GRID_LABEL_RIGHT_CLICK, self.on_label_right_click
+        )
         self.Bind(wx.grid.EVT_GRID_CELL_RIGHT_CLICK, self.on_cell_right_click)
         self.selected_rows = []
         self.selected_cols = []
         self.history = []
 
     def get_col_headers(self):
-        return [self.GetColLabelValue(col) for col in range(self.GetNumberCols())]
+        return [
+            self.GetColLabelValue(col) for col in range(self.GetNumberCols())
+        ]
 
     def get_table(self):
         for row in range(self.GetNumberRows()):
@@ -36,31 +42,35 @@ class Spreadsheet(wx.grid.Grid):
         self.add_history({"type": "add_cols", "cols": self.selected_cols})
 
     def delete_rows(self, event):
-        self.delete_row_or_col(event, 'rows')
+        self.delete_row_or_col(event, "rows")
 
     def delete_cols(self, event):
-        self.delete_row_or_col(event, 'cols')
+        self.delete_row_or_col(event, "cols")
 
     def delete_row_or_col(self, event, del_type):
-        action = [self.DeleteRows, self.DeleteCols][del_type == 'cols']
-        selected = [self.selected_rows, self.selected_cols][del_type == 'cols']
+        action = [self.DeleteRows, self.DeleteCols][del_type == "cols"]
+        selected = [self.selected_rows, self.selected_cols][del_type == "cols"]
         self.delete(event)
         data = []
         for element in reversed(selected):
-            data.append((
-                element,
-                {  # More attributes can be added
-                    "label": self.GetColLabelValue(element),
-                    "size": self.GetColSize(element)
-                }
-            ))
+            data.append(
+                (
+                    element,
+                    {  # More attributes can be added
+                        "label": self.GetColLabelValue(element),
+                        "size": self.GetColSize(element),
+                    },
+                )
+            )
             action(element)
         self.add_history({"type": "delete_%s" % del_type, "cols": data})
 
     def on_cell_right_click(self, event):
-        menus = [(wx.NewId(), "Cut", self.cut),
-                 (wx.NewId(), "Copy", self.copy),
-                 (wx.NewId(), "Paste", self.paste)]
+        menus = [
+            (wx.NewId(), "Cut", self.cut),
+            (wx.NewId(), "Copy", self.copy),
+            (wx.NewId(), "Paste", self.paste),
+        ]
         popup_menu = wx.Menu()
         for menu in menus:
             if menu is None:
@@ -74,10 +84,12 @@ class Spreadsheet(wx.grid.Grid):
         return
 
     def on_label_right_click(self, event):
-        menus = [(wx.NewId(), "Cut", self.cut),
-                 (wx.NewId(), "Copy", self.copy),
-                 (wx.NewId(), "Paste", self.paste),
-                 None]
+        menus = [
+            (wx.NewId(), "Cut", self.cut),
+            (wx.NewId(), "Copy", self.copy),
+            (wx.NewId(), "Paste", self.paste),
+            None,
+        ]
 
         # Select if right clicked row or column is not in selection
         if event.GetRow() > -1:
@@ -127,7 +139,9 @@ class Spreadsheet(wx.grid.Grid):
             for row, col, attribute in action["cells"]:
                 self.SetCellValue(row, col, attribute["value"])
                 if action["type"] == "delete":
-                    self.SetCellAlignment(row, col, *attribute["alignment"])  # *attribute["alignment"] > horiz, vert
+                    self.SetCellAlignment(
+                        row, col, *attribute["alignment"]
+                    )  # *attribute["alignment"] > horiz, vert
 
         elif action["type"] == "delete_rows":
             for row, attribute in reversed(action["rows"]):
@@ -182,8 +196,9 @@ class Spreadsheet(wx.grid.Grid):
             self.cut(event)
 
         # Ctrl+V or Shift + Insert
-        elif (event.ControlDown() and event.GetKeyCode() == 67) \
-                or (event.ShiftDown() and event.GetKeyCode() == 322):
+        elif (event.ControlDown() and event.GetKeyCode() == 67) or (
+            event.ShiftDown() and event.GetKeyCode() == 322
+        ):
             self.paste(event)
 
         else:
@@ -240,7 +255,7 @@ class Spreadsheet(wx.grid.Grid):
             return []
         start_row, start_col, end_row, end_col = selection
 
-        data = u''
+        data = u""
 
         rows = range(start_row, end_row + 1)
         for row in rows:
@@ -306,11 +321,19 @@ class Spreadsheet(wx.grid.Grid):
                     end_col = target_col
 
                 # save previous value of the cell for undo
-                history.append([target_row, target_col, {"value": self.GetCellValue(target_row, target_col)}])
+                history.append(
+                    [
+                        target_row,
+                        target_col,
+                        {"value": self.GetCellValue(target_row, target_col)},
+                    ]
+                )
 
                 self.SetCellValue(target_row, target_col, value)
 
-        self.SelectBlock(start_row, start_col, end_row, end_col)  # select pasted range
+        self.SelectBlock(
+            start_row, start_col, end_row, end_col
+        )  # select pasted range
         if out_of_range:
             wx.MessageBox("Pasted data is out of Grid range", "Warning")
 
@@ -321,7 +344,7 @@ class Spreadsheet(wx.grid.Grid):
         for row, col in self.get_selected_cells():
             attributes = {
                 "value": self.GetCellValue(row, col),
-                "alignment": self.GetCellAlignment(row, col)
+                "alignment": self.GetCellAlignment(row, col),
             }
             cells.append((row, col, attributes))
             self.SetCellValue(row, col, "")

@@ -10,7 +10,9 @@ from os.path import basename
 def set_reg(name, reg_path, value):
     try:
         winreg.CreateKey(winreg.HKEY_CURRENT_USER, reg_path)
-        registry_key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, reg_path, 0, winreg.KEY_WRITE)
+        registry_key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER, reg_path, 0, winreg.KEY_WRITE
+        )
         winreg.SetValueEx(registry_key, name, 0, winreg.REG_DWORD, value)
         winreg.CloseKey(registry_key)
         return True
@@ -20,7 +22,9 @@ def set_reg(name, reg_path, value):
 
 def get_reg(name, reg_path):
     try:
-        registry_key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, reg_path, 0, winreg.KEY_READ)
+        registry_key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER, reg_path, 0, winreg.KEY_READ
+        )
         value, regtype = winreg.QueryValueEx(registry_key, name)
         winreg.CloseKey(registry_key)
         return value
