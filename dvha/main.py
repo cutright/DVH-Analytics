@@ -1257,12 +1257,8 @@ class DVHAMainFrame(wx.Frame):
 
         # Used to group queries by variable, will combine all queries of same variable with an OR operator
         # e.g., queries_by_sql_column['Plans'][key] = list of strings, where key is sql column
-        queries_by_sql_column = {
-            "Plans": {},
-            "Rxs": {},
-            "Beams": {},
-            "DVHs": {},
-        }
+        queries_by_sql_column = {'Plans': {}, 'Rxs': {}, 'Beams': {}, 'DVHs': {}}
+        operator_by_sql_column = {'Plans': {}, 'Rxs': {}, 'Beams': {}, 'DVHs': {}}
 
         # Categorical filter
         if self.data_table_categorical.row_count:
@@ -1274,14 +1270,10 @@ class DVHAMainFrame(wx.Frame):
                 value = self.data_table_categorical.data["category_2"][i]
                 if col not in queries_by_sql_column[table]:
                     queries_by_sql_column[table][col] = []
-                operator = ["=", "!="][
-                    {"Include": 0, "Exclude": 1}[
-                        self.data_table_categorical.data["Filter Type"][i]
-                    ]
-                ]
-                queries_by_sql_column[table][col].append(
-                    "%s %s '%s'" % (col, operator, value)
-                )
+                    operator_by_sql_column[table][col] = []
+                operator = ['=', '!='][{'Include': 0, 'Exclude': 1}[self.data_table_categorical.data['Filter Type'][i]]]
+                queries_by_sql_column[table][col].append("%s %s '%s'" % (col, operator, value))
+                operator_by_sql_column[table][col].append(self.data_table_categorical.data['Filter Type'][i])
 
         # Range filter
         if self.data_table_numerical.row_count:
@@ -1300,21 +1292,24 @@ class DVHAMainFrame(wx.Frame):
                         value_high = value_high + "::date"
                 if col not in queries_by_sql_column[table]:
                     queries_by_sql_column[table][col] = []
-                operator = ["BETWEEN", "NOT BETWEEN"][
-                    {"Include": 0, "Exclude": 1}[
-                        self.data_table_numerical.data["Filter Type"][i]
-                    ]
-                ]
-                queries_by_sql_column[table][col].append(
-                    "%s %s %s AND %s" % (col, operator, value_low, value_high)
-                )
+                    operator_by_sql_column[table][col] = []
+                operator = ['BETWEEN', 'NOT BETWEEN'][
+                    {'Include': 0, 'Exclude': 1}[self.data_table_numerical.data['Filter Type'][i]]]
+                queries_by_sql_column[table][col].append("%s %s %s AND %s" % (col, operator, value_low, value_high))
+                operator_by_sql_column[table][col].append(self.data_table_numerical.data['Filter Type'][i])
 
         for table in queries:
             for col in queries_by_sql_column[table]:
-                queries[table].append(
-                    "(%s)" % " OR ".join(queries_by_sql_column[table][col])
-                )
-            queries[table] = " AND ".join(queries[table])
+                includes = [item for i, item in enumerate(queries_by_sql_column[table][col]) if
+                            not operator_by_sql_column[table][col][i]]
+                excludes = [item for i, item in enumerate(queries_by_sql_column[table][col]) if
+                            operator_by_sql_column[table][col][i]]
+
+                includes_str = "(%s)" % ' OR '.join(includes) if includes else None
+                excludes_str = "(%s)" % ' AND '.join(excludes) if excludes else None
+
+                queries[table].append("(%s)" % ' AND '.join([item for item in [includes_str, excludes_str] if item]))
+            queries[table] = ' AND '.join(queries[table])
 
         uids = get_study_instance_uids(
             plans=queries["Plans"], rxs=queries["Rxs"], beams=queries["Beams"]

@@ -5,7 +5,8 @@ v0.9.2 (TBD)
  - [Database] Added centroid_dist_to_iso_min and centroid_dist_to_iso_max columns to DVHs table
  - [Linting] Applied Black code style
  - [Docs] Backend documentation at [dvha.readthedocs.io](http://dvha.readthedocs.io)
- 
+ - [Import] Resolve import crash when DICOM-RT Plan is missing FractionGroupSequence [Issue 127](https://github.com/cutright/DVH-Analytics/issues/127) 
+
 
 v0.9.1 (2020.12.13)
 --------------------
