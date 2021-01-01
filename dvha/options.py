@@ -270,7 +270,7 @@ class DefaultOptions:
 
         self.AUTO_SQL_DB_BACKUP = False
 
-        self.MIN_RESOLUTION_MAIN = (1350, 900)
+        self.MIN_RESOLUTION_MAIN = (600, 400)
 
         self.SHOW_NEW_PTV_CALC_WARNING = True
 

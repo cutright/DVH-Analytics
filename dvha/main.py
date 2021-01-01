@@ -501,9 +501,10 @@ class DVHAMainFrame(wx.Frame):
             for key in self.tab_keys
         }
 
-        self.text_summary = wx.StaticText(
-            self, wx.ID_ANY, "", style=wx.ALIGN_LEFT
-        )
+        # self.text_summary = wx.StaticText(
+        #     self, wx.ID_ANY, "", style=wx.ALIGN_LEFT
+        # )
+        self.text_summary = wx.TextCtrl(self, wx.ID_ANY, style=wx.TE_MULTILINE | wx.TE_READONLY)
 
     def __bind_layout_objects(self):
         self.Bind(
@@ -676,7 +677,7 @@ class DVHAMainFrame(wx.Frame):
             self.table_numerical, 1, wx.ALL | wx.EXPAND, 10
         )
 
-        sizer_summary.Add(self.text_summary)
+        sizer_summary.Add(self.text_summary, 1, wx.EXPAND, 0)
 
         panel_left = wx.BoxSizer(wx.VERTICAL)
         panel_left.Add(
@@ -785,12 +786,12 @@ class DVHAMainFrame(wx.Frame):
         self.SetSizer(sizer_main)
         self.Layout()
 
-        size = get_window_size(0.833, 0.875)
-        size_final = (
-            max(size[0], self.options.MIN_RESOLUTION_MAIN[0]),
-            max(size[1], self.options.MIN_RESOLUTION_MAIN[1]),
-        )
-        self.SetSize(size_final)
+        # size = get_window_size(0.833, 0.875)
+        # size_final = (
+        #     max(size[0], self.options.MIN_RESOLUTION_MAIN[0]),
+        #     max(size[1], self.options.MIN_RESOLUTION_MAIN[1]),
+        # )
+        self.SetSize(self.options.MIN_RESOLUTION_MAIN)
 
         self.Center()
 
@@ -1424,7 +1425,7 @@ class DVHAMainFrame(wx.Frame):
         self.radbio.clear_data()
         self.time_series.clear_data()
         self.notebook_main_view.SetSelection(0)
-        self.text_summary.SetLabelText("")
+        self.text_summary.SetValue("")
         self.__disable_notebook_tabs()
         self.disable_query_buttons("categorical")
         self.disable_query_buttons("numerical")
@@ -1700,7 +1701,7 @@ class DVHAMainFrame(wx.Frame):
             text = self.group_data[group]["dvh"].get_summary()
         else:
             text = ""
-        self.text_summary.SetLabelText(text)
+        self.text_summary.SetValue(text)
 
     def InstallThreadExcepthook(self):
         """Workaround for sys.excepthook thread bug from Jonathan Ellis
