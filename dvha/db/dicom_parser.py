@@ -129,19 +129,29 @@ class DICOM_Parser:
         self.rx_data = []
         self.beam_data = {}
         self.ref_beam_data = []
-        for fx_grp_index, fx_grp_seq in enumerate(self.rt_data['plan'].FractionGroupSequence):
+
+        if hasattr(self.rt_data['plan'], 'FractionGroupSequence'):
+            for fx_grp_index, fx_grp_seq in enumerate(self.rt_data['plan'].FractionGroupSequence):
+                self.rx_data.append(RxParser(self.rt_data['plan'], self.dicompyler_rt_plan, self.rt_data['structure'],
+                                             fx_grp_index, self.poi_rx_data, self.study_instance_uid_to_be_imported))
+                self.beam_data[fx_grp_index] = []
+                for fx_grp_beam in range(int(fx_grp_seq.NumberOfBeams)):
+                    beam_number = self.beam_sequence[beam_num].BeamNumber
+                    beam_seq = self.beam_sequence[beam_num]
+                    cp_seq = self.get_cp_sequence(self.beam_sequence[beam_num])
+                    ref_beam_seq_index = self.get_referenced_beam_sequence_index(fx_grp_seq, beam_number)
+                    ref_beam_seq = fx_grp_seq.ReferencedBeamSequence[ref_beam_seq_index]
+                    self.beam_data[fx_grp_index].append(BeamParser(beam_seq, ref_beam_seq, cp_seq, self.mlca_options))
+
+                    beam_num += 1
+        else:  # https://github.com/cutright/DVH-Analytics/issues/127
             self.rx_data.append(RxParser(self.rt_data['plan'], self.dicompyler_rt_plan, self.rt_data['structure'],
-                                         fx_grp_index, self.poi_rx_data, self.study_instance_uid_to_be_imported))
-            self.beam_data[fx_grp_index] = []
-            for fx_grp_beam in range(int(fx_grp_seq.NumberOfBeams)):
-                beam_number = self.beam_sequence[beam_num].BeamNumber
+                                         0, self.poi_rx_data, self.study_instance_uid_to_be_imported))
+            self.beam_data[0] = []
+            for beam_num in range(len(self.beam_sequence)):
                 beam_seq = self.beam_sequence[beam_num]
                 cp_seq = self.get_cp_sequence(self.beam_sequence[beam_num])
-                ref_beam_seq_index = self.get_referenced_beam_sequence_index(fx_grp_seq, beam_number)
-                ref_beam_seq = fx_grp_seq.ReferencedBeamSequence[ref_beam_seq_index]
-                self.beam_data[fx_grp_index].append(BeamParser(beam_seq, ref_beam_seq, cp_seq, self.mlca_options))
-
-                beam_num += 1
+                self.beam_data[0].append(BeamParser(beam_seq, None, cp_seq, self.mlca_options))
 
     @staticmethod
     def get_referenced_beam_sequence_index(fx_grp_seq, beam_number):
@@ -685,11 +695,12 @@ class DICOM_Parser:
 
     @property
     def fxs(self):
-        try:
-            fx_grp_seq = self.rt_data['plan'].FractionGroupSequence
-            return [int(float(fx_grp.NumberOfFractionsPlanned)) for fx_grp in fx_grp_seq]
-        except ValueError:
-            pass
+        if hasattr(self.rt_data['plan'], 'FractionGroupSequence'):
+            try:
+                fx_grp_seq = self.rt_data['plan'].FractionGroupSequence
+                return [int(float(fx_grp.NumberOfFractionsPlanned)) for fx_grp in fx_grp_seq]
+            except ValueError:
+                pass
 
     @property
     def fxs_total(self):
@@ -699,7 +710,9 @@ class DICOM_Parser:
 
     @property
     def fx_grp_count(self):
-        return len(self.rt_data['plan'].FractionGroupSequence)
+        if hasattr(self.rt_data['plan'], 'FractionGroupSequence'):
+            return len(self.rt_data['plan'].FractionGroupSequence)
+        return 1
 
     @property
     def patient_orientation(self):
@@ -828,6 +841,10 @@ class DICOM_Parser:
     def plan_complexity(self):
         plan_complexity = 0
         fx_counts = self.fxs
+
+        if fx_counts is None:  # No ReferencedBeamSequence, assume 1 FxGrp
+            fx_counts = [1]
+
         for fx_index, fx in self.beam_data.items():
             fxs = fx_counts[fx_index]
             for beam in fx:
@@ -1391,8 +1408,12 @@ class RxParser:
         self.dicompyler_plan = dicompyler_plan
         self.rt_structure = rt_structure
         self.study_instance_uid = study_instance_uid
-        self.fx_grp_data = rt_plan.FractionGroupSequence[fx_grp_index]
         self.dose_ref_index = self.get_dose_ref_seq_index()
+
+        if hasattr(rt_plan, 'FractionGroupSequence'):
+            self.fx_grp_data = rt_plan.FractionGroupSequence[fx_grp_index]
+        else:
+            self.fx_grp_data = None
 
         self.pinnacle_rx_data = None
         if pinnacle_rx_data and fx_grp_index+1 in list(pinnacle_rx_data):
@@ -1433,6 +1454,10 @@ class RxParser:
                                                      "study_instance_uid = '%s'" % self.study_instance_uid)
         if not fraction_group_start:
             fraction_group_start = 0
+
+        if self.fx_grp_data is None:
+            return fraction_group_start
+
         return self.fx_grp_data.FractionGroupNumber + fraction_group_start
 
     @property
@@ -1461,7 +1486,7 @@ class RxParser:
 
     @property
     def fx_count(self):
-        return int(self.fx_grp_data.NumberOfFractionsPlanned)
+        return int(getattr(self.fx_grp_data, 'NumberOfFractionsPlanned', 0))
 
     @property
     def fx_dose(self):
@@ -1493,10 +1518,13 @@ class RxParser:
     def beam_count(self):
         if hasattr(self.fx_grp_data, 'NumberOfBeams'):
             return int(self.fx_grp_data.NumberOfBeams)
+        return len(self.rt_plan.BeamSequence)
 
     @property
     def beam_numbers(self):
-        return [ref_beam.ReferencedBeamNumber for ref_beam in self.fx_grp_data.ReferencedBeamSequence]
+        if hasattr(self.fx_grp_data, 'ReferencedBeamSequence'):
+            return [ref_beam.ReferencedBeamNumber for ref_beam in self.fx_grp_data.ReferencedBeamSequence]
+        return list(range(1, self.beam_count+1))
 
 
 class PreImportData:
