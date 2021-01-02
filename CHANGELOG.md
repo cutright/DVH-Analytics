@@ -8,6 +8,9 @@ v0.9.2 (TBD)
  - [Import] Resolve import crash when DICOM-RT Plan is missing FractionGroupSequence [Issue 127](https://github.com/cutright/DVH-Analytics/issues/127) 
  - [GUI] Allow for smaller window sizes, set min resolution to 600 x 400 [Issue 123](https://github.com/cutright/DVH-Analytics/issues/123)
 
+v0.9.1.post1 (2020.12.25)
+-------------------------
+ - [Import] Check for dicompyler-core version before using 'memmap_rtdose' [Issue #128](https://github.com/cutright/DVH-Analytics/issues/128)
 
 v0.9.1 (2020.12.13)
 --------------------
