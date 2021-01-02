@@ -19,7 +19,6 @@ from dvha.tools.utilities import (
     convert_value_to_str,
     get_selected_listctrl_items,
     float_or_none,
-    get_window_size,
 )
 from dvha.dialogs.export import save_data_to_file
 
@@ -176,7 +175,6 @@ class RadBioFrame:
         )
         sizer_published_values.Add(label_published_values, 0, wx.ALL, 5)
         sizer_published_values.Add(self.table_published_values, 0, wx.ALL, 5)
-        # sizer_published_values.SetMinSize(get_window_size(0.2, 0.06))
         sizer_main.Add(sizer_published_values, 0, wx.BOTTOM | wx.EXPAND, 5)
 
         label_parameters = wx.StaticText(self.parent, wx.ID_ANY, "Parameters:")
