@@ -22,17 +22,16 @@ from dvha.db import sql_columns
 
 class StatsData:
     """Class used to to collect data for Regression and Control Chart
-    This process is different than for Time Series since regressions require all variables to be the same length
+    This process is different than for Time Series since regressions require
+    all variables to be the same length
 
     Parameters
     ----------
     dvhs : DVH
         data from DVH query
     table_data : dict
-        table data other than from DVHs
-
-    Returns
-    -------
+        table data other than from DVHs. Has keys of 'Plans', 'Rxs', 'Beams'
+        with values of QuerySQL objects
 
     """
 
@@ -119,7 +118,7 @@ class StatsData:
                         temp = {s: [] for s in stat_types}
                         for uid in self.uids:
                             for stat in stat_types:
-                                values = self.get_src_values(
+                                values = self._get_src_values(
                                     src, var_name, uid
                                 )
                                 values = [v for v in values if v != "None"]
@@ -136,10 +135,11 @@ class StatsData:
                                 "units": self.column_info[var]["units"],
                                 "values": temp[stat],
                             }
-        self.validate_data()
+        self._validate_data()
 
-    def validate_data(self):
-        """Remove any variables that are constant to avoid crash on regression"""
+    def _validate_data(self):
+        """Remove any variables that are constant to avoid crash on
+        regression"""
         bad_vars = []
         for var_name, var_obj in self.data.items():
             if "Date" in var_name:
@@ -158,15 +158,9 @@ class StatsData:
             self.data.pop(var)
 
     def update_endpoints_and_radbio(self):
-        """Update endpoint and radbio data in self.data. This function is needed since all of these values are calculated
+        """Update endpoint and radbio data in self.data. This function is
+        needed since all of these values are calculated
         after a query and user may change these values.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-
         """
         if self.dvhs:
             if self.dvhs.endpoints["defs"]:
@@ -189,24 +183,25 @@ class StatsData:
                     "units": "",
                     "values": self.dvhs.ntcp_or_tcp,
                 }
-            self.validate_data()
+            self._validate_data()
 
     @staticmethod
-    def get_src_values(src, var_name, uid):
+    def _get_src_values(src, var_name, uid):
         """
 
         Parameters
         ----------
-        src :
-
-        var_name :
-
-        uid :
-
+        src : QuerySQL
+            table data
+        var_name : str
+            attribute to be extracted from table data
+        uid : str
+            StudyInstanceUID stored in the SQL database
 
         Returns
         -------
-
+        list
+            values of ``var_name`` from table data that match ``uid``
         """
         uid_indices = [
             i for i, x in enumerate(src.study_instance_uid) if x == uid
@@ -214,29 +209,33 @@ class StatsData:
         return [getattr(src, var_name)[i] for i in uid_indices]
 
     def get_plan_index(self, uid):
-        """
+        """Get the index of ``uid`` from the Plans table
 
         Parameters
         ----------
-        uid :
-
+        uid : str
+            StudyInstanceUID as stored in the SQL database
 
         Returns
         -------
+        int
+            Plans table index for ``uid``
 
         """
         return self.table_data["Plans"].study_instance_uid.index(uid)
 
     def get_beam_indices(self, uid):
-        """
+        """Get the indices of the Beams table with ``uid``
 
         Parameters
         ----------
-        uid :
-
+        uid : str
+            StudyInstanceUID as stored in the SQL database
 
         Returns
         -------
+        list
+            Beams table indices that match ``uid``
 
         """
         return [
@@ -264,7 +263,8 @@ class StatsData:
         if x in list(self.data) and y in list(self.data):
             # TODO: potential data length issue with study_instance_uid
             # Received the following error with 0.6.9, can't reproduce
-            # BokehUserWarning: ColumnDataSource's columns must be of the same length. Current lengths:
+            # BokehUserWarning: ColumnDataSource's columns must be of the
+            # same length. Current lengths:
             # ('date', 69), ('mrn', 69), ('uid', 70), ('x', 69), ('y', 69)
             # Appears to point to this function's return?
             return {
@@ -278,32 +278,58 @@ class StatsData:
 
     @property
     def uids(self):
-        """ """
+        """StudyInstanceUIDs from DVH object
+
+        Returns
+        -------
+        list
+            ``DVH.study_instance_uid``
+        """
         return self.dvhs.study_instance_uid
 
     @property
     def mrns(self):
-        """ """
+        """MRNs from DVH object
+
+        Returns
+        -------
+        list
+            ``DVH.mrn``
+        """
         return self.dvhs.mrn
 
     @property
     def sim_study_dates(self):
-        """ """
+        """Simulation dates from Plans table
+
+        Returns
+        -------
+        list
+            Simulation dates
+        """
         return self.data["Simulation Date"]["values"]
 
     @property
     def variables(self):
-        """ """
+        """Get variable names for plotting
+
+        Returns
+        -------
+        list
+            keys of ``StatsData.data`` sans 'Simulation Date'
+
+        """
         return [var for var in list(self.data) if var != "Simulation Date"]
 
     @property
-    def trending_variables(self):
-        """ """
-        return list(self.data)
-
-    @property
     def vars_with_nan_values(self):
-        """ """
+        """Find variable names that contain non-numerical values
+
+        Returns
+        -------
+        list
+            Variable names that cannot be converted to ``float``
+        """
         ans = []
         for var in self.variables:
             for val in self.data[var]["values"]:
@@ -315,15 +341,17 @@ class StatsData:
         return ans
 
     def get_axis_title(self, variable):
-        """
+        """Get the plot axis title for ``variable``
 
         Parameters
         ----------
-        variable :
-
+        variable : str
+            A key of ``StatsData.data``
 
         Returns
         -------
+        str
+            ``variable`` with units if stored
 
         """
         if self.data[variable]["units"]:
@@ -340,7 +368,7 @@ class StatsData:
         x_variables : list
             independent variables
         include_patient_info : bool
-            If True, return mrn, uid, dates with X and y (Default value = False)
+            If True, return mrn, uid, dates with X and y
 
         Returns
         -------
@@ -382,19 +410,16 @@ class StatsData:
         return X, y, mrn, uid, dates
 
     def add_variable(self, variable, values, units=""):
-        """
+        """Add a new variable to ``StatsData.data``, will not over-write
 
         Parameters
         ----------
-        variable :
-
-        values :
-
-        units :
-             (Default value = '')
-
-        Returns
-        -------
+        variable : str
+            variable name to be used as a key and plot title
+        values : list
+            values to be stored for ``variable``
+        units : str, optional
+             Define units for display on plot
 
         """
         if variable not in list(self.data):
@@ -404,15 +429,12 @@ class StatsData:
             self.correlation_variables.sort()
 
     def del_variable(self, variable):
-        """
+        """Delete a variable from ``StatsData.data``
 
         Parameters
         ----------
-        variable :
-
-
-        Returns
-        -------
+        variable : str
+            variable name
 
         """
         if variable in list(self.data):
@@ -422,19 +444,16 @@ class StatsData:
             self.correlation_variables.pop(index)
 
     def set_variable_data(self, variable, data, units=None):
-        """
+        """Replace the data for the given variable in ``StatsData.data``
 
         Parameters
         ----------
-        variable :
-
-        data :
-
-        units :
-             (Default value = None)
-
-        Returns
-        -------
+        variable : str
+            variable name
+        data : list
+            new data
+        units : str, optional
+             Define units for display on plot
 
         """
         self.data[variable]["values"] = data
@@ -442,17 +461,14 @@ class StatsData:
             self.data[variable]["units"] = units
 
     def set_variable_units(self, variable, units):
-        """
+        """Set the units for the given variable in ``StatsData.data``
 
         Parameters
         ----------
-        variable :
-
-        units :
-
-
-        Returns
-        -------
+        variable : str
+            variable name
+        units : str
+            units for display on plot
 
         """
         self.data[variable]["units"] = units
@@ -460,19 +476,20 @@ class StatsData:
     def get_corr_matrix_data(
         self, options, included_vars=None, extra_vars=None
     ):
-        """
+        """Get a Pearson-R correlation matrix
 
         Parameters
         ----------
-        options :
-
-        included_vars :
-             (Default value = None)
+        options : dvha.options.Options
+            DVHA options class object
+        included_vars : list, optional
+             variables to be included in matrix
         extra_vars :
              (Default value = None)
 
         Returns
         -------
+        tuple(dict, list)
 
         """
         if included_vars is None:
@@ -629,16 +646,17 @@ class StatsData:
 
 
 def get_index_of_nan(numpy_array):
-    """
+    """Find indices of np.nan values
 
     Parameters
     ----------
-    numpy_array :
-
+    numpy_array : np.ndarray
+        A numpy array
 
     Returns
     -------
-
+    list
+        indicies of ``numpy_array`` that are ``np.nan``
     """
     bad_indices = []
     nan_data = np.isnan(numpy_array)
@@ -656,13 +674,15 @@ def str_starts_with_any_in_list(string_a, string_list):
 
     Parameters
     ----------
-    string_a :
-
-    string_list :
-
+    string_a : str
+        Any string
+    string_list : list
+        A list of strings
 
     Returns
     -------
+    bool
+        True if any ``string_a`` starts with any string in ``string_list``
 
     """
     for string_b in string_list:
@@ -677,9 +697,9 @@ def get_p_values(X, y, predictions, params):
 
     Parameters
     ----------
-    X : np.array
+    X : np.ndarray
         independent data
-    y : np.array
+    y : np.ndarray
         dependent data
     predictions :
         output from linear_model.LinearRegression.predict
@@ -719,9 +739,6 @@ class MultiVariableRegression:
         independent data
     y : list
         dependent data
-
-    Returns
-    -------
 
     """
 
@@ -813,13 +830,10 @@ def sync_variables_in_stats_data_objects(stats_data_1, stats_data_2):
 
     Parameters
     ----------
-    stats_data_1 :
-
-    stats_data_2 :
-
-
-    Returns
-    -------
+    stats_data_1 : StatsData
+        A StatsData object (e.g., Group 1)
+    stats_data_2 : StatsData
+        Another StatsData object (e.g., Group 2)
 
     """
 

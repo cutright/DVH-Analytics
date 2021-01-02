@@ -92,6 +92,7 @@ Dependencies
 * `RapidFuzz <https://github.com/rhasspy/rapidfuzz>`__
 * `selenium <https://github.com/SeleniumHQ/selenium/>`__
 * `PhantomJS <https://phantomjs.org/>`__
+* `DVHA MLC Analyzer <http://mlca.dvhanalytics.com>`__
 
 
 Support

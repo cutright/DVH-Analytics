@@ -42,11 +42,3 @@ Stats
     :members:
     :undoc-members:
     :show-inheritance:
-
-Utilities
----------
-.. automodule:: dvha.tools.utilities
-    :members:
-    :undoc-members:
-    :show-inheritance:
-

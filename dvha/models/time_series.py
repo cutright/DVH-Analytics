@@ -106,9 +106,9 @@ class TimeSeriesFrame:
     @property
     def choices(self):
         if self.stats_data[1]:
-            choices = self.stats_data[1].trending_variables
+            choices = self.stats_data[1].variables
             if self.stats_data[2]:
-                choices.extend(self.stats_data[2].trending_variables)
+                choices.extend(self.stats_data[2].variables)
                 choices = list(set(choices))
         else:
             choices = list(sql_columns.numerical)

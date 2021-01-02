@@ -898,11 +898,11 @@ class PlotTimeSeries(Plot):
         return [
             ("Data 1 ", [self.plot_data]),
             ("Avg 1 ", [self.plot_avg]),
-            ("Rolling Avg 1 ", [self.plot_trend]),
+            ("Trend 1 ", [self.plot_trend]),
             ("Perc. Region 1 ", [self.plot_patch]),
             ("Data 2 ", [self.plot_data_2]),
             ("Avg 2 ", [self.plot_avg_2]),
-            ("Rolling Avg 2 ", [self.plot_trend_2]),
+            ("Trend 2 ", [self.plot_trend_2]),
             ("Perc. Region 2 ", [self.plot_patch_2]),
         ]
 

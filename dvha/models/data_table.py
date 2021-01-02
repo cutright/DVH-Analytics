@@ -214,7 +214,7 @@ class DataTable:
                 if isinstance(row[i], int):
                     value = "%d" % row[i]
                 elif isinstance(row[i], float):
-                    value = "%0.5f" % row[i]
+                    value = "%0.2f" % row[i]
                 else:
                     value = str(row[i])
                 self.layout.SetItem(index, i, value)

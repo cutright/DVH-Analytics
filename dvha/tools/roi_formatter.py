@@ -2,22 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # tools.roi_formatter.py
-"""
-Formatting tools for roi data (dicompyler, Shapely, DVHA)
-
-"sets of points" objects
-    dictionaries using str(z) as keys
-        where z is the slice or z in DICOM coordinates
-        each item is a list of points representing a polygon, each point is a 3-item list [x, y, z]
-
-roi_coord_string from the SQL database
-    Each contour is delimited with a ':'
-        For example, ring ROIs will have an outer contour with a negative inner contour
-    Each contour is a csv of of x,y,z values in the following format
-        z,x1,y1,x2,y2...xn,yn
-        Each contour has the same z coordinate for all points
-
-"""
+"""Formatting tools for roi data (dicompyler, Shapely, DVHA)"""
 # Copyright (c) 2016-2019 Dan Cutright
 # This file is part of DVH Analytics, released under a BSD license.
 #    See the file LICENSE included with this distribution, also
@@ -26,6 +11,20 @@ roi_coord_string from the SQL database
 from shapely.geometry import Polygon, Point
 from shapely import speedups
 import numpy as np
+
+# "sets of points" objects
+#     dictionaries using str(z) as keys
+#         where z is the slice or z in DICOM coordinates
+#         each item is a list of points representing a polygon,
+#         each point is a 3-item list [x, y, z]
+#
+# roi_coord_string from the SQL database
+#     Each contour is delimited with a ':'
+#         For example, ring ROIs will have an outer contour with a negative
+#         inner contour
+#     Each contour is a csv of of x,y,z values in the following format
+#         z,x1,y1,x2,y2...xn,yn
+#         Each contour has the same z coordinate for all points
 
 
 MIN_SLICE_THICKNESS = 2  # Update method to pull from DICOM

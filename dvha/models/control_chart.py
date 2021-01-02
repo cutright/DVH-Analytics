@@ -119,7 +119,7 @@ class ControlChartFrame:
     def update_combo_box_y_choices(self):
         stats_data = self.group_data[self.group]["stats_data"]
         if stats_data:
-            self.choices = stats_data.trending_variables
+            self.choices = stats_data.variables
             self.choices.sort()
             self.combo_box_y_axis.SetItems(self.choices)
             self.combo_box_y_axis.SetValue("ROI Max Dose")
