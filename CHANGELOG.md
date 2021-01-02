@@ -6,7 +6,7 @@ v0.9.2 (TBD)
  - [Linting] Applied Black code style
  - [Docs] Backend documentation at [dvha.readthedocs.io](http://dvha.readthedocs.io)
  - [Import] Resolve import crash when DICOM-RT Plan is missing FractionGroupSequence [Issue 127](https://github.com/cutright/DVH-Analytics/issues/127) 
- - [GUI] Allow for smaller window sizes, set min resolution to 600 x 400 [Issue 123](https://github.com/cutright/DVH-Analytics/issues/123)
+ - [GUI] Allow for smaller window sizes, set min resolution to 1200 x 700 [Issue 123](https://github.com/cutright/DVH-Analytics/issues/123)
 
 v0.9.1.post1 (2020.12.25)
 -------------------------

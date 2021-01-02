@@ -11,38 +11,40 @@ DVHs
 ----
 Storage of DVHs and other ROI specific data.
 
-======================  =============  =======  ==============   ==========================================
-Column                  Data Type       Units   DICOM Tag        Description
-======================  =============  =======  ==============   ==========================================
-mrn                     text           --       (0010, 0020)     Medical Record Number (PatientID)
-study_instance_uid      text           --       (0020, 000d)     Unique ID tied to planning image set
-institutional_roi       varchar(50)    --       --               Standard ROI name for all physician
-physician_roi           varchar(50)    --       --               Standard ROI name for patient's physician
-roi_name                varchar(50)    --       (3006, 0026)     ROI name as in plan
-roi_type                varchar(20)    --       (3006, 00a4)     ROI categegoy (e.g., ORGAN, PTV)
-volume                  real           cm³      --               ROI volume per dicompyler
-min_dose                real           Gy       --               Min ROI dose per dicompyler
-mean_dose               real           Gy       --               Mean ROI dose per dicompyler
-max_dose                real           Gy       --               Max ROI dose per dicompyler
-dvh_string              text           cGy      --               CSV of DVH in 1 $cGy$ bins
-roi_coord_string        text           --       (3006, 0050)     Single string containing all ROI points
-dist_to_ptv_min         real           cm       --               Calculated with scipy's cdist function
-dist_to_ptv_mean        real           cm       --               Calculated with scipy's cdist function
-dist_to_ptv_median      real           cm       --               Calculated with scipy's cdist function
-dist_to_ptv_max         real           cm       --               Calculated with scipy's cdist function
-surface_area            real           cm²      --               DVHA custom function, needs validation
-ptv_overlap             real           cm³      --               DVHA custom function with Shapely
-import_time_stamp       timestamp      --       --               Time per SQL at time of import
-centroid                varchar(35)    --       --               DVHA custom function
-dist_to_ptv_centroids   real           cm       --               DVHA custom function
-dth_string              text           cm       --               numpy histogram of scipy cdist with PTV
-spread_x                real           cm       (3006, 0050)     Max distance in x-dim of ROI
-spread_y                real           cm       (3006, 0050)     Max distance in y-dim of ROI
-spread_z                real           cm       (3006, 0050)     Max distance in z-dim of ROI
-cross_section_max       real           cm²      --               DVHA custom function with Shapely
-cross_section_median    real           cm²      --               DVHA custom function with Shapely
-toxicity_grade          smallint       --       --               Not yet implemented
-======================  =============  =======  ==============   ==========================================
+========================  =============  =======  ==============   ==========================================
+Column                    Data Type       Units   DICOM Tag        Description
+========================  =============  =======  ==============   ==========================================
+mrn                       text           --       (0010, 0020)     Medical Record Number (PatientID)
+study_instance_uid        text           --       (0020, 000d)     Unique ID tied to planning image set
+institutional_roi         varchar(50)    --       --               Standard ROI name for all physician
+physician_roi             varchar(50)    --       --               Standard ROI name for patient's physician
+roi_name                  varchar(50)    --       (3006, 0026)     ROI name as in plan
+roi_type                  varchar(20)    --       (3006, 00a4)     ROI categegoy (e.g., ORGAN, PTV)
+volume                    real           cm³      --               ROI volume per dicompyler
+min_dose                  real           Gy       --               Min ROI dose per dicompyler
+mean_dose                 real           Gy       --               Mean ROI dose per dicompyler
+max_dose                  real           Gy       --               Max ROI dose per dicompyler
+dvh_string                text           cGy      --               CSV of DVH in 1 $cGy$ bins
+roi_coord_string          text           --       (3006, 0050)     Single string containing all ROI points
+dist_to_ptv_min           real           cm       --               Calculated with scipy's cdist function
+dist_to_ptv_mean          real           cm       --               Calculated with scipy's cdist function
+dist_to_ptv_median        real           cm       --               Calculated with scipy's cdist function
+dist_to_ptv_max           real           cm       --               Calculated with scipy's cdist function
+surface_area              real           cm²      --               DVHA custom function, needs validation
+ptv_overlap               real           cm³      --               DVHA custom function with Shapely
+import_time_stamp         timestamp      --       --               Time per SQL at time of import
+centroid                  varchar(35)    --       --               DVHA custom function
+dist_to_ptv_centroids     real           cm       --               DVHA custom function
+dth_string                text           cm       --               numpy histogram of scipy cdist with PTV
+spread_x                  real           cm       (3006, 0050)     Max distance in x-dim of ROI
+spread_y                  real           cm       (3006, 0050)     Max distance in y-dim of ROI
+spread_z                  real           cm       (3006, 0050)     Max distance in z-dim of ROI
+cross_section_max         real           cm²      --               DVHA custom function with Shapely
+cross_section_median      real           cm²      --               DVHA custom function with Shapely
+toxicity_grade            smallint       --       --               Not yet implemented
+centroid_dist_to_iso_min  --             --       --               DVHA custom function
+centroid_dist_to_iso_max  --             --       --               DVHA custom function
+========================  =============  =======  ==============   ==========================================
 
 
 Plans
