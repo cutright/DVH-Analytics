@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to the power-user documentation for DVH Analytics!
-==========================================================
+Welcome to the documentation for DVHA power-users!
+==================================================
 
 The documentation here is largely geared towards advanced uses of DVHA
 involving custom scripts with python. Basic use of the graphical user
