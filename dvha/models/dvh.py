@@ -389,7 +389,7 @@ class DVH:
         np.ndarray
             the x axis of a resampled dvh
         """
-        x_axis, dvhs = self.resample_dvh(resample_dvh=resampled_bin_count)
+        x_axis, dvhs = self.resample_dvh(resampled_bin_count=resampled_bin_count)
         return x_axis
 
     def get_stat_dvh(
