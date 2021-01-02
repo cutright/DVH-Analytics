@@ -119,17 +119,19 @@ class TimeSeriesFrame:
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_plot = wx.BoxSizer(wx.HORIZONTAL)
         sizer_widgets = wx.StaticBoxSizer(
-            wx.StaticBox(self.parent, wx.ID_ANY, ""), wx.HORIZONTAL
+            wx.StaticBox(self.parent, wx.ID_ANY, ""), wx.VERTICAL
         )
         sizer_percentile = wx.BoxSizer(wx.VERTICAL)
         sizer_lookback_distance = wx.BoxSizer(wx.VERTICAL)
         sizer_histogram_bins = wx.BoxSizer(wx.VERTICAL)
         sizer_y_axis = wx.BoxSizer(wx.VERTICAL)
+        sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_input = wx.BoxSizer(wx.HORIZONTAL)
 
         label_y_axis = wx.StaticText(self.parent, wx.ID_ANY, "Y Axis:")
         sizer_y_axis.Add(label_y_axis, 0, wx.LEFT, 5)
         sizer_y_axis.Add(self.combo_box_y_axis, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_widgets.Add(sizer_y_axis, 1, wx.EXPAND, 0)
+        sizer_input.Add(sizer_y_axis, 1, wx.EXPAND, 0)
 
         label_histogram_bins = wx.StaticText(
             self.parent, wx.ID_ANY, "Hist. Bins:"
@@ -146,18 +148,20 @@ class TimeSeriesFrame:
         sizer_lookback_distance.Add(
             self.text_input_lookback_distance, 0, wx.ALL | wx.EXPAND, 5
         )
-        sizer_widgets.Add(sizer_lookback_distance, 1, wx.EXPAND, 0)
+        sizer_input.Add(sizer_lookback_distance, 1, wx.EXPAND, 0)
 
         label_percentile = wx.StaticText(self.parent, wx.ID_ANY, "Percentile:")
         sizer_percentile.Add(label_percentile, 0, wx.LEFT, 5)
         sizer_percentile.Add(
             self.text_inputs_percentile, 0, wx.ALL | wx.EXPAND, 5
         )
-        sizer_widgets.Add(sizer_percentile, 1, wx.EXPAND, 0)
-        sizer_widgets.Add(sizer_histogram_bins, 1, wx.EXPAND, 0)
-        sizer_widgets.Add(self.button_update_plot, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_widgets.Add(self.button_export_csv, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_widgets.Add(self.button_save_figure, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_input.Add(sizer_percentile, 1, wx.EXPAND, 0)
+        sizer_input.Add(sizer_histogram_bins, 1, wx.EXPAND, 0)
+        sizer_buttons.Add(self.button_update_plot, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_buttons.Add(self.button_export_csv, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_buttons.Add(self.button_save_figure, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_widgets.Add(sizer_input, 0, wx.ALL | wx.EXPAND, 0)
+        sizer_widgets.Add(sizer_buttons, 0, wx.ALL | wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_widgets, 0, wx.BOTTOM | wx.EXPAND, 5)
 
         self.plot = PlotTimeSeries(self.parent, self.options)
