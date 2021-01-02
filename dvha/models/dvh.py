@@ -39,6 +39,7 @@ class DVH:
         either 1 or 2
 
     """
+
     def __init__(self, uid=None, dvh_condition=None, dvh_bin_width=5, group=1):
         self.dvh_bin_width = dvh_bin_width
 
@@ -389,7 +390,9 @@ class DVH:
         np.ndarray
             the x axis of a resampled dvh
         """
-        x_axis, dvhs = self.resample_dvh(resampled_bin_count=resampled_bin_count)
+        x_axis, dvhs = self.resample_dvh(
+            resampled_bin_count=resampled_bin_count
+        )
         return x_axis
 
     def get_stat_dvh(
@@ -686,10 +689,10 @@ def calc_tcp(gamma, td_tcd, eud):
     ----------
     gamma : float
         Gamma_50
-        
+
     td_tcd : float
         Either TD_50 or TCD_50
-        
+
     eud : float
         equivalent uniform dose
 

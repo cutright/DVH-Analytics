@@ -659,9 +659,10 @@ class DICOM_Parser:
 
             # Remove kwargs invalid before 0.5.6
             from dicompylercore import __version__ as dicompylercore_version
-            if dicompylercore_version in ['0.5.4', '0.5.5']:
-                if 'memmap_rtdose' in kwargs.keys():
-                    kwargs.pop('memmap_rtdose')
+
+            if dicompylercore_version in ["0.5.4", "0.5.5"]:
+                if "memmap_rtdose" in kwargs.keys():
+                    kwargs.pop("memmap_rtdose")
 
             try:
                 try:
