@@ -31,6 +31,9 @@ class QuerySQL:
         condition in SQL syntax
     unique : bool, optional
         If True, only unique values stored
+    columns : list, optional
+        A list of SQL column names to be included in the return. If left as
+        ``None``, all columns will be returned
     group : int, optional
         either 1 or 2
 
