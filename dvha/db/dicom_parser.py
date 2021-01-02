@@ -193,28 +193,58 @@ class DICOM_Parser:
         self.beam_data = {}
         self.ref_beam_data = []
 
-        if hasattr(self.rt_data['plan'], 'FractionGroupSequence'):
-            for fx_grp_index, fx_grp_seq in enumerate(self.rt_data['plan'].FractionGroupSequence):
-                self.rx_data.append(RxParser(self.rt_data['plan'], self.dicompyler_rt_plan, self.rt_data['structure'],
-                                             fx_grp_index, self.poi_rx_data, self.study_instance_uid_to_be_imported))
+        if hasattr(self.rt_data["plan"], "FractionGroupSequence"):
+            for fx_grp_index, fx_grp_seq in enumerate(
+                self.rt_data["plan"].FractionGroupSequence
+            ):
+                self.rx_data.append(
+                    RxParser(
+                        self.rt_data["plan"],
+                        self.dicompyler_rt_plan,
+                        self.rt_data["structure"],
+                        fx_grp_index,
+                        self.poi_rx_data,
+                        self.study_instance_uid_to_be_imported,
+                    )
+                )
                 self.beam_data[fx_grp_index] = []
                 for fx_grp_beam in range(int(fx_grp_seq.NumberOfBeams)):
                     beam_number = self.beam_sequence[beam_num].BeamNumber
                     beam_seq = self.beam_sequence[beam_num]
                     cp_seq = self.get_cp_sequence(self.beam_sequence[beam_num])
-                    ref_beam_seq_index = self.get_referenced_beam_sequence_index(fx_grp_seq, beam_number)
-                    ref_beam_seq = fx_grp_seq.ReferencedBeamSequence[ref_beam_seq_index]
-                    self.beam_data[fx_grp_index].append(BeamParser(beam_seq, ref_beam_seq, cp_seq, self.mlca_options))
+                    ref_beam_seq_index = (
+                        self.get_referenced_beam_sequence_index(
+                            fx_grp_seq, beam_number
+                        )
+                    )
+                    ref_beam_seq = fx_grp_seq.ReferencedBeamSequence[
+                        ref_beam_seq_index
+                    ]
+                    self.beam_data[fx_grp_index].append(
+                        BeamParser(
+                            beam_seq, ref_beam_seq, cp_seq, self.mlca_options
+                        )
+                    )
 
                     beam_num += 1
         else:  # https://github.com/cutright/DVH-Analytics/issues/127
-            self.rx_data.append(RxParser(self.rt_data['plan'], self.dicompyler_rt_plan, self.rt_data['structure'],
-                                         0, self.poi_rx_data, self.study_instance_uid_to_be_imported))
+            self.rx_data.append(
+                RxParser(
+                    self.rt_data["plan"],
+                    self.dicompyler_rt_plan,
+                    self.rt_data["structure"],
+                    0,
+                    self.poi_rx_data,
+                    self.study_instance_uid_to_be_imported,
+                )
+            )
             self.beam_data[0] = []
             for beam_num in range(len(self.beam_sequence)):
                 beam_seq = self.beam_sequence[beam_num]
                 cp_seq = self.get_cp_sequence(self.beam_sequence[beam_num])
-                self.beam_data[0].append(BeamParser(beam_seq, None, cp_seq, self.mlca_options))
+                self.beam_data[0].append(
+                    BeamParser(beam_seq, None, cp_seq, self.mlca_options)
+                )
 
     @staticmethod
     def get_referenced_beam_sequence_index(fx_grp_seq, beam_number):
@@ -491,22 +521,22 @@ class DICOM_Parser:
             "beam_mu_per_deg": [beam.beam_mu_per_deg, "real"],
             "beam_mu_per_cp": [beam.beam_mu_per_cp, "real"],
             "import_time_stamp": [None, "timestamp"],
-            "area_min": [mlc_stat_data["area"][5] / 100., "real"],
-            "area_mean": [mlc_stat_data["area"][3] / 100., "real"],
-            "area_median": [mlc_stat_data["area"][2] / 100., "real"],
-            "area_max": [mlc_stat_data["area"][0] / 100., "real"],
-            "perim_min": [mlc_stat_data["area"][5] / 10., "real"],
-            "perim_mean": [mlc_stat_data["area"][3] / 10., "real"],
-            "perim_median": [mlc_stat_data["area"][2] / 10., "real"],
-            "perim_max": [mlc_stat_data["area"][0] / 10., "real"],
-            "x_perim_min": [mlc_stat_data["x_perim"][5] / 10., "real"],
-            "x_perim_mean": [mlc_stat_data["x_perim"][3] / 10., "real"],
-            "x_perim_median": [mlc_stat_data["x_perim"][2] / 10., "real"],
-            "x_perim_max": [mlc_stat_data["x_perim"][0] / 10., "real"],
-            "y_perim_min": [mlc_stat_data["y_perim"][5] / 10., "real"],
-            "y_perim_mean": [mlc_stat_data["y_perim"][3] / 10., "real"],
-            "y_perim_median": [mlc_stat_data["y_perim"][2] / 10., "real"],
-            "y_perim_max": [mlc_stat_data["y_perim"][0] / 10., "real"],
+            "area_min": [mlc_stat_data["area"][5] / 100.0, "real"],
+            "area_mean": [mlc_stat_data["area"][3] / 100.0, "real"],
+            "area_median": [mlc_stat_data["area"][2] / 100.0, "real"],
+            "area_max": [mlc_stat_data["area"][0] / 100.0, "real"],
+            "perim_min": [mlc_stat_data["area"][5] / 10.0, "real"],
+            "perim_mean": [mlc_stat_data["area"][3] / 10.0, "real"],
+            "perim_median": [mlc_stat_data["area"][2] / 10.0, "real"],
+            "perim_max": [mlc_stat_data["area"][0] / 10.0, "real"],
+            "x_perim_min": [mlc_stat_data["x_perim"][5] / 10.0, "real"],
+            "x_perim_mean": [mlc_stat_data["x_perim"][3] / 10.0, "real"],
+            "x_perim_median": [mlc_stat_data["x_perim"][2] / 10.0, "real"],
+            "x_perim_max": [mlc_stat_data["x_perim"][0] / 10.0, "real"],
+            "y_perim_min": [mlc_stat_data["y_perim"][5] / 10.0, "real"],
+            "y_perim_mean": [mlc_stat_data["y_perim"][3] / 10.0, "real"],
+            "y_perim_median": [mlc_stat_data["y_perim"][2] / 10.0, "real"],
+            "y_perim_max": [mlc_stat_data["y_perim"][0] / 10.0, "real"],
             "complexity_min": [mlc_stat_data["cmp_score"][5], "real"],
             "complexity_mean": [mlc_stat_data["cmp_score"][3], "real"],
             "complexity_median": [mlc_stat_data["cmp_score"][2], "real"],
@@ -968,20 +998,23 @@ class DICOM_Parser:
             TissueHeterogeneityCorrection (3004,0014)
 
         """
-        heterogeneity_correction = 'IMAGE'
+        heterogeneity_correction = "IMAGE"
         try:
-            if hasattr(self.rt_data['dose'], 'TissueHeterogeneityCorrection'):
-                if isinstance(self.rt_data['dose'].TissueHeterogeneityCorrection,
-                              str):
+            if hasattr(self.rt_data["dose"], "TissueHeterogeneityCorrection"):
+                if isinstance(
+                    self.rt_data["dose"].TissueHeterogeneityCorrection, str
+                ):
                     heterogeneity_correction = self.rt_data[
-                        'dose'].TissueHeterogeneityCorrection
+                        "dose"
+                    ].TissueHeterogeneityCorrection
                 else:
-                    heterogeneity_correction = ','.join(
-                        self.rt_data['dose'].TissueHeterogeneityCorrection)
+                    heterogeneity_correction = ",".join(
+                        self.rt_data["dose"].TissueHeterogeneityCorrection
+                    )
         except Exception as e:
             msg = "Could not extract heterogeneity correction."
             push_to_log(e, msg=msg)
-            heterogeneity_correction = ''
+            heterogeneity_correction = ""
 
         return heterogeneity_correction
 
@@ -1087,10 +1120,13 @@ class DICOM_Parser:
             NumberOfFractionsPlanned (300A,0078) for each
             FractionGroupSequence (300A,0070)
         """
-        if hasattr(self.rt_data['plan'], 'FractionGroupSequence'):
+        if hasattr(self.rt_data["plan"], "FractionGroupSequence"):
             try:
-                fx_grp_seq = self.rt_data['plan'].FractionGroupSequence
-                return [int(float(fx_grp.NumberOfFractionsPlanned)) for fx_grp in fx_grp_seq]
+                fx_grp_seq = self.rt_data["plan"].FractionGroupSequence
+                return [
+                    int(float(fx_grp.NumberOfFractionsPlanned))
+                    for fx_grp in fx_grp_seq
+                ]
             except ValueError:
                 pass
 
@@ -1116,8 +1152,8 @@ class DICOM_Parser:
         int
             Length of FractionGroupSequence (300A,0070)
         """
-        if hasattr(self.rt_data['plan'], 'FractionGroupSequence'):
-            return len(self.rt_data['plan'].FractionGroupSequence)
+        if hasattr(self.rt_data["plan"], "FractionGroupSequence"):
+            return len(self.rt_data["plan"].FractionGroupSequence)
         return 1
 
     @property
@@ -2523,7 +2559,7 @@ class RxParser:
         self.study_instance_uid = study_instance_uid
         self.dose_ref_index = self.get_dose_ref_seq_index()
 
-        if hasattr(rt_plan, 'FractionGroupSequence'):
+        if hasattr(rt_plan, "FractionGroupSequence"):
             self.fx_grp_data = rt_plan.FractionGroupSequence[fx_grp_index]
         else:
             self.fx_grp_data = None
@@ -2667,7 +2703,7 @@ class RxParser:
         int
             NumberOfFractionsPlanned (300A,0078)
         """
-        return int(getattr(self.fx_grp_data, 'NumberOfFractionsPlanned', 0))
+        return int(getattr(self.fx_grp_data, "NumberOfFractionsPlanned", 0))
 
     @property
     def fx_dose(self):
@@ -2743,9 +2779,12 @@ class RxParser:
         list
             ReferencedBeamNumber (300C,0006)
         """
-        if hasattr(self.fx_grp_data, 'ReferencedBeamSequence'):
-            return [ref_beam.ReferencedBeamNumber for ref_beam in self.fx_grp_data.ReferencedBeamSequence]
-        return list(range(1, self.beam_count+1))
+        if hasattr(self.fx_grp_data, "ReferencedBeamSequence"):
+            return [
+                ref_beam.ReferencedBeamNumber
+                for ref_beam in self.fx_grp_data.ReferencedBeamSequence
+            ]
+        return list(range(1, self.beam_count + 1))
 
 
 class PreImportData:

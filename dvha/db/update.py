@@ -457,11 +457,11 @@ def beam_complexity(cnx, study_instance_uid):
     stat_map = {"min": 5, "mean": 3, "median": 2, "max": 0}
 
     unit_factor = {
-        "area": 100.,
-        "x_perim": 10.,
-        "y_perim": 10.,
-        "complexity": 1.,
-        "cp_mu": 1.,
+        "area": 100.0,
+        "x_perim": 10.0,
+        "y_perim": 10.0,
+        "complexity": 1.0,
+        "cp_mu": 1.0,
     }
 
     for beam_num, beam in enumerate(rt_plan.BeamSequence):
@@ -479,7 +479,10 @@ def beam_complexity(cnx, study_instance_uid):
 
             for c in list(column_vars):
                 for s in list(stat_map):
-                    value = summary_stats[column_vars[c]][stat_map[s]] / unit_factor[c]
+                    value = (
+                        summary_stats[column_vars[c]][stat_map[s]]
+                        / unit_factor[c]
+                    )
                     column = "%s_%s" % (c, s)
                     cnx.update("Beams", column, value, condition)
             cnx.update(

@@ -27,7 +27,7 @@ class ROINamePredictor:
     """
 
     def __init__(
-        self, roi_map, weight_simple=1.0, weight_partial=0.6, threshold=0.
+        self, roi_map, weight_simple=1.0, weight_partial=0.6, threshold=0.0
     ):
 
         self.roi_map = roi_map
