@@ -211,12 +211,10 @@ class DataTable:
         if self.layout:
             index = self.layout.InsertItem(50000, str(row[0]))
             for i in range(len(row))[1:]:
-                if (
-                    isinstance(row[i], float)
-                    or isinstance(row[i], int)
-                    and str(row[i]) not in {"True", "False"}
-                ):
-                    value = "%0.2f" % row[i]
+                if isinstance(row[i], int):
+                    value = "%d" % row[i]
+                elif isinstance(row[i], float):
+                    value = "%0.5f" % row[i]
                 else:
                     value = str(row[i])
                 self.layout.SetItem(index, i, value)

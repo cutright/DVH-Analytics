@@ -31,7 +31,7 @@ from dvha.tools.roi_formatter import (
     get_planes_from_string,
 )
 from dvha.tools import roi_geometry as roi_calc
-from dvha.tools.mlc_analyzer import Beam as mlca
+from mlca.mlc_analyzer import Beam as mlca
 from dvha.db.sql_connector import DVH_SQL
 
 
@@ -491,22 +491,22 @@ class DICOM_Parser:
             "beam_mu_per_deg": [beam.beam_mu_per_deg, "real"],
             "beam_mu_per_cp": [beam.beam_mu_per_cp, "real"],
             "import_time_stamp": [None, "timestamp"],
-            "area_min": [mlc_stat_data["area"][5], "real"],
-            "area_mean": [mlc_stat_data["area"][3], "real"],
-            "area_median": [mlc_stat_data["area"][2], "real"],
-            "area_max": [mlc_stat_data["area"][0], "real"],
-            "perim_min": [mlc_stat_data["area"][5], "real"],
-            "perim_mean": [mlc_stat_data["area"][3], "real"],
-            "perim_median": [mlc_stat_data["area"][2], "real"],
-            "perim_max": [mlc_stat_data["area"][0], "real"],
-            "x_perim_min": [mlc_stat_data["x_perim"][5], "real"],
-            "x_perim_mean": [mlc_stat_data["x_perim"][3], "real"],
-            "x_perim_median": [mlc_stat_data["x_perim"][2], "real"],
-            "x_perim_max": [mlc_stat_data["x_perim"][0], "real"],
-            "y_perim_min": [mlc_stat_data["y_perim"][5], "real"],
-            "y_perim_mean": [mlc_stat_data["y_perim"][3], "real"],
-            "y_perim_median": [mlc_stat_data["y_perim"][2], "real"],
-            "y_perim_max": [mlc_stat_data["y_perim"][0], "real"],
+            "area_min": [mlc_stat_data["area"][5] / 100., "real"],
+            "area_mean": [mlc_stat_data["area"][3] / 100., "real"],
+            "area_median": [mlc_stat_data["area"][2] / 100., "real"],
+            "area_max": [mlc_stat_data["area"][0] / 100., "real"],
+            "perim_min": [mlc_stat_data["area"][5] / 10., "real"],
+            "perim_mean": [mlc_stat_data["area"][3] / 10., "real"],
+            "perim_median": [mlc_stat_data["area"][2] / 10., "real"],
+            "perim_max": [mlc_stat_data["area"][0] / 10., "real"],
+            "x_perim_min": [mlc_stat_data["x_perim"][5] / 10., "real"],
+            "x_perim_mean": [mlc_stat_data["x_perim"][3] / 10., "real"],
+            "x_perim_median": [mlc_stat_data["x_perim"][2] / 10., "real"],
+            "x_perim_max": [mlc_stat_data["x_perim"][0] / 10., "real"],
+            "y_perim_min": [mlc_stat_data["y_perim"][5] / 10., "real"],
+            "y_perim_mean": [mlc_stat_data["y_perim"][3] / 10., "real"],
+            "y_perim_median": [mlc_stat_data["y_perim"][2] / 10., "real"],
+            "y_perim_max": [mlc_stat_data["y_perim"][0] / 10., "real"],
             "complexity_min": [mlc_stat_data["cmp_score"][5], "real"],
             "complexity_mean": [mlc_stat_data["cmp_score"][3], "real"],
             "complexity_median": [mlc_stat_data["cmp_score"][2], "real"],
@@ -968,19 +968,20 @@ class DICOM_Parser:
             TissueHeterogeneityCorrection (3004,0014)
 
         """
-        if hasattr(self.rt_data["dose"], "TissueHeterogeneityCorrection"):
-            if isinstance(
-                self.rt_data["dose"].TissueHeterogeneityCorrection, list
-            ):
-                heterogeneity_correction = ",".join(
-                    self.rt_data["dose"].TissueHeterogeneityCorrection
-                )
-            else:
-                heterogeneity_correction = str(
-                    self.rt_data["dose"].TissueHeterogeneityCorrection
-                )
-        else:
-            heterogeneity_correction = "IMAGE"
+        heterogeneity_correction = 'IMAGE'
+        try:
+            if hasattr(self.rt_data['dose'], 'TissueHeterogeneityCorrection'):
+                if isinstance(self.rt_data['dose'].TissueHeterogeneityCorrection,
+                              str):
+                    heterogeneity_correction = self.rt_data[
+                        'dose'].TissueHeterogeneityCorrection
+                else:
+                    heterogeneity_correction = ','.join(
+                        self.rt_data['dose'].TissueHeterogeneityCorrection)
+        except Exception as e:
+            msg = "Could not extract heterogeneity correction."
+            push_to_log(e, msg=msg)
+            heterogeneity_correction = ''
 
         return heterogeneity_correction
 

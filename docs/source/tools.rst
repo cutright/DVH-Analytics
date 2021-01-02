@@ -1,13 +1,6 @@
 dvha.tools
 ==========
 
-MLC Analyzer
-------------
-.. automodule:: dvha.tools.mlc_analyzer
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 Name Prediction
 ---------------
 .. automodule:: dvha.tools.name_prediction

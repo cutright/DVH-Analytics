@@ -16,7 +16,7 @@ from dvha.db.sql_connector import DVH_SQL
 from dvha.tools import roi_geometry as roi_geom
 from dvha.tools import roi_formatter as roi_form
 from dvha.tools.errors import push_to_log
-from dvha.tools.mlc_analyzer import Beam as BeamAnalyzer
+from mlca.mlc_analyzer import Beam as BeamAnalyzer
 from dvha.tools.utilities import calc_stats, sample_roi
 
 
@@ -447,6 +447,23 @@ def beam_complexity(cnx, study_instance_uid):
 
     rt_plan = dicom.read_file(rt_plan_file_path)
 
+    column_vars = {
+        "area": "area",
+        "x_perim": "x_perim",
+        "y_perim": "y_perim",
+        "complexity": "cmp_score",
+        "cp_mu": "cp_mu",
+    }
+    stat_map = {"min": 5, "mean": 3, "median": 2, "max": 0}
+
+    unit_factor = {
+        "area": 100.,
+        "x_perim": 10.,
+        "y_perim": 10.,
+        "complexity": 1.,
+        "cp_mu": 1.,
+    }
+
     for beam_num, beam in enumerate(rt_plan.BeamSequence):
         try:
             condition = "study_instance_uid = '%s' and beam_number = '%s'" % (
@@ -460,18 +477,9 @@ def beam_complexity(cnx, study_instance_uid):
                 key: calc_stats(mlca_data.summary[key]) for key in mlc_keys
             }
 
-            column_vars = {
-                "area": "area",
-                "x_perim": "x_perim",
-                "y_perim": "y_perim",
-                "complexity": "cmp_score",
-                "cp_mu": "cp_mu",
-            }
-            stat_map = {"min": 5, "mean": 3, "median": 2, "max": 0}
-
             for c in list(column_vars):
                 for s in list(stat_map):
-                    value = summary_stats[column_vars[c]][stat_map[s]]
+                    value = summary_stats[column_vars[c]][stat_map[s]] / unit_factor[c]
                     column = "%s_%s" % (c, s)
                     cnx.update("Beams", column, value, condition)
             cnx.update(
