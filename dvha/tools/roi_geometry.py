@@ -4,12 +4,6 @@
 # tools.roi_geometry.py
 """
 Tools for geometric calculations
-
-"sets of points" objects
-    dictionaries using str(z) as keys
-        where z is the slice or z in DICOM coordinates
-        each item is a list of points representing a polygon, each point is a 3-item list [x, y, z]
-
 """
 # Copyright (c) 2016-2019 Dan Cutright
 # This file is part of DVH Analytics, released under a BSD license.
@@ -25,6 +19,13 @@ from dvha.tools.roi_formatter import (
     dicompyler_roi_to_sets_of_points,
     get_shapely_from_sets_of_points,
 )
+
+
+# "sets of points" objects
+#     dictionaries using str(z) as keys
+#         where z is the slice or z in DICOM coordinates
+#         each item is a list of points representing a polygon,
+#         each point is a 3-item list [x, y, z]
 
 
 def union(rois):

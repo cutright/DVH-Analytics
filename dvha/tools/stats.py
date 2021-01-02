@@ -481,15 +481,19 @@ class StatsData:
         Parameters
         ----------
         options : dvha.options.Options
-            DVHA options class object
+            DVHA options class object. Used to get colors.
         included_vars : list, optional
              variables to be included in matrix
-        extra_vars :
-             (Default value = None)
+        extra_vars : list, optional
+             variables to be excluded from the matrix
 
         Returns
         -------
-        tuple(dict, list)
+        tuple (dict, list)
+            The dictionary has keys of 'source_data', 'x_factors' and
+            'y_factors'. `source_data` is used for bokeh plotting, the factors
+            are for axis tick labels. The 2nd parameter of the tuple is a list
+            of removed mrns
 
         """
         if included_vars is None:
@@ -656,7 +660,7 @@ def get_index_of_nan(numpy_array):
     Returns
     -------
     list
-        indicies of ``numpy_array`` that are ``np.nan``
+        indices of ``numpy_array`` that are ``np.nan``
     """
     bad_indices = []
     nan_data = np.isnan(numpy_array)
