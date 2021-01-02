@@ -488,12 +488,12 @@ class PlotStatDVH(Plot):
     def legend_items(self):
         return [
             ("Max  ", [self.stats_max]),
-            ("Median  ", [self.stats_median]),
+            ("Med.  ", [self.stats_median]),
             ("Mean  ", [self.stats_mean]),
             ("Min  ", [self.stats_min]),
             ("IQR  ", [self.iqr]),
             ("Max 2 ", [self.stats_max_2]),
-            ("Median 2 ", [self.stats_median_2]),
+            ("Med. 2 ", [self.stats_median_2]),
             ("Mean 2 ", [self.stats_mean_2]),
             ("Min 2 ", [self.stats_min_2]),
             ("IQR 2 ", [self.iqr_2]),
@@ -899,11 +899,11 @@ class PlotTimeSeries(Plot):
             ("Data 1 ", [self.plot_data]),
             ("Avg 1 ", [self.plot_avg]),
             ("Trend 1 ", [self.plot_trend]),
-            ("Perc. Region 1 ", [self.plot_patch]),
+            ("% Region 1 ", [self.plot_patch]),
             ("Data 2 ", [self.plot_data_2]),
             ("Avg 2 ", [self.plot_avg_2]),
             ("Trend 2 ", [self.plot_trend_2]),
-            ("Perc. Region 2 ", [self.plot_patch_2]),
+            ("% Region 2 ", [self.plot_patch_2]),
         ]
 
     @property

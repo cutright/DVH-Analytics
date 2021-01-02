@@ -679,7 +679,7 @@ class DVHAMainFrame(wx.Frame):
             self.table_numerical, 1, wx.ALL | wx.EXPAND, 10
         )
 
-        sizer_summary.Add(self.text_summary, 1, wx.EXPAND, 0)
+        sizer_summary.Add(self.text_summary, 1, wx.EXPAND | wx.ALL, 5)
 
         panel_left = wx.BoxSizer(wx.VERTICAL)
         panel_left.Add(
@@ -788,12 +788,12 @@ class DVHAMainFrame(wx.Frame):
         self.SetSizer(sizer_main)
         self.Layout()
 
-        # size = get_window_size(0.833, 0.875)
-        # size_final = (
-        #     max(size[0], self.options.MIN_RESOLUTION_MAIN[0]),
-        #     max(size[1], self.options.MIN_RESOLUTION_MAIN[1]),
-        # )
-        self.SetSize(self.options.MIN_RESOLUTION_MAIN)
+        size = get_window_size(0.833, 0.875)
+        size_final = (
+            max(size[0], self.options.MIN_RESOLUTION_MAIN[0]),
+            max(size[1], self.options.MIN_RESOLUTION_MAIN[1]),
+        )
+        self.SetSize(size_final)
 
         self.Center()
 

@@ -86,6 +86,8 @@ class ControlChartFrame:
         sizer_widgets = wx.StaticBoxSizer(
             wx.StaticBox(self.parent, wx.ID_ANY, ""), wx.HORIZONTAL
         )
+        sizer_input = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_buttons = wx.BoxSizer(wx.VERTICAL)
         sizer_y_axis = wx.BoxSizer(wx.VERTICAL)
         sizer_lcl = wx.BoxSizer(wx.VERTICAL)
         sizer_ucl = wx.BoxSizer(wx.VERTICAL)
@@ -95,21 +97,31 @@ class ControlChartFrame:
         )
         sizer_y_axis.Add(label_y_axis, 0, wx.LEFT, 5)
         sizer_y_axis.Add(self.combo_box_y_axis, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_widgets.Add(sizer_y_axis, 0, wx.EXPAND, 0)
+        sizer_input.Add(sizer_y_axis, 0, wx.EXPAND, 0)
 
         label_lcl = wx.StaticText(self.parent, wx.ID_ANY, "LCL Override:")
         sizer_lcl.Add(label_lcl, 0, wx.LEFT, 5)
         sizer_lcl.Add(self.limit_override["LCL"], 0, wx.ALL | wx.EXPAND, 5)
-        sizer_widgets.Add(sizer_lcl, 0, wx.EXPAND, 0)
+        sizer_input.Add(sizer_lcl, 0, wx.EXPAND, 0)
 
         label_ucl = wx.StaticText(self.parent, wx.ID_ANY, "UCL Override:")
         sizer_ucl.Add(label_ucl, 0, wx.LEFT, 5)
         sizer_ucl.Add(self.limit_override["UCL"], 0, wx.ALL | wx.EXPAND, 5)
-        sizer_widgets.Add(sizer_ucl, 0, wx.EXPAND, 0)
+        sizer_input.Add(sizer_ucl, 0, wx.EXPAND, 0)
 
-        sizer_widgets.Add(self.button_update, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_widgets.Add(self.button_export, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_widgets.Add(self.button_save_figure, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_buttons.Add(
+            self.button_update, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 5
+        )
+        sizer_buttons.Add(
+            self.button_export, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 5
+        )
+        sizer_buttons.Add(
+            self.button_save_figure, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 5
+        )
+
+        sizer_widgets.Add(sizer_input, 0, wx.EXPAND, 0)
+        sizer_widgets.Add(sizer_buttons, 1, wx.EXPAND, 0)
+
         sizer_wrapper.Add(sizer_widgets, 0, wx.EXPAND | wx.BOTTOM, 5)
         sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
         sizer_wrapper.Add(sizer_plot, 1, wx.EXPAND, 0)

@@ -152,8 +152,7 @@ class RadBioFrame:
         sizer_parameters_input = wx.StaticBoxSizer(
             wx.StaticBox(self.parent, wx.ID_ANY, ""), wx.HORIZONTAL
         )
-        sizer_button = wx.BoxSizer(wx.VERTICAL)
-        sizer_button_2 = wx.BoxSizer(wx.VERTICAL)
+        sizer_buttons = wx.BoxSizer(wx.VERTICAL)
         sizer_td_50 = wx.BoxSizer(wx.VERTICAL)
         sizer_gamma_50 = wx.BoxSizer(wx.VERTICAL)
         sizer_eud = wx.BoxSizer(wx.VERTICAL)
@@ -176,9 +175,9 @@ class RadBioFrame:
             )
         )
         sizer_published_values.Add(label_published_values, 0, wx.ALL, 5)
-        sizer_published_values.Add(self.table_published_values, 1, wx.ALL, 10)
-        sizer_published_values.SetMinSize(get_window_size(0.298, 0.08))
-        sizer_main.Add(sizer_published_values, 0, wx.ALL | wx.EXPAND, 10)
+        sizer_published_values.Add(self.table_published_values, 0, wx.ALL, 5)
+        # sizer_published_values.SetMinSize(get_window_size(0.2, 0.06))
+        sizer_main.Add(sizer_published_values, 0, wx.BOTTOM | wx.EXPAND, 5)
 
         label_parameters = wx.StaticText(self.parent, wx.ID_ANY, "Parameters:")
         label_parameters.SetFont(
@@ -210,12 +209,17 @@ class RadBioFrame:
 
         sizer_parameters_input.Add(self.radio_box_query_group, 0, 0, 0)
 
-        sizer_button.Add(self.button_apply_parameters, 0, wx.ALL, 10)
-        sizer_button_2.Add(self.button_export, 0, wx.ALL, 10)
-        sizer_parameters_input.Add(sizer_button, 1, wx.EXPAND, 0)
-        sizer_parameters_input.Add(sizer_button_2, 1, wx.EXPAND, 0)
-        sizer_parameters.Add(sizer_parameters_input, 1, wx.ALL | wx.EXPAND, 5)
-        sizer_main.Add(sizer_parameters, 0, wx.ALL | wx.EXPAND, 10)
+        sizer_buttons.Add(
+            self.button_apply_parameters, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5
+        )
+        sizer_buttons.Add(
+            self.button_export, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5
+        )
+        sizer_parameters_input.Add(sizer_buttons, 1, wx.EXPAND, 0)
+        sizer_parameters.Add(
+            sizer_parameters_input, 1, wx.BOTTOM | wx.EXPAND, 5
+        )
+        sizer_main.Add(sizer_parameters, 0, wx.ALL | wx.EXPAND, 5)
 
         sizer_main.Add(
             wx.StaticText(self.parent, wx.ID_ANY, "Query Group 1:"),
@@ -223,14 +227,14 @@ class RadBioFrame:
             wx.BOTTOM,
             5,
         )
-        sizer_main.Add(self.table_rad_bio[1], 1, wx.ALL | wx.EXPAND, 10)
+        sizer_main.Add(self.table_rad_bio[1], 0, wx.ALL | wx.EXPAND, 5)
         sizer_main.Add(
             wx.StaticText(self.parent, wx.ID_ANY, "Query Group 2:"),
             0,
             wx.BOTTOM,
             5,
         )
-        sizer_main.Add(self.table_rad_bio[2], 1, wx.ALL | wx.EXPAND, 10)
+        sizer_main.Add(self.table_rad_bio[2], 0, wx.ALL | wx.EXPAND, 5)
 
         self.layout = sizer_main
 
@@ -301,7 +305,8 @@ class RadBioFrame:
 
     def apply_parameters(self, evt):
         """
-        Calculate rad bio values based on parameters supplied by user, pass information on to other tabs in GUI
+        Calculate rad bio values based on parameters supplied by user,
+        pass information on to other tabs in GUI
         """
 
         # Convert user supplied parameters from text to floats
