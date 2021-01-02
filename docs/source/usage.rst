@@ -81,7 +81,7 @@ Some data you may want with each of your DVHs is spread across multiple tables.
 The :meth:`dvha.models.dvh.DVH` object uses :meth:`dvha.db.sql_to_python.QuerySQL`
 to query the database, adds some pertinent data from other tables, and provides
 many commonly used functions dealing with DVHs. The key difference is that
-DVH accepts a list of ``study_instance_uid``, rather than any SQL syntax.
+DVH could accept a list of ``study_instance_uid``, rather than any SQL syntax.
 
 The equivalent of the previous example, using ``DVH`` is below:
 
