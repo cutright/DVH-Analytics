@@ -2710,7 +2710,9 @@ class RxParser:
         int
             NumberOfFractionsPlanned (300A,0078)
         """
-        return int(getattr(self.fx_grp_data, "NumberOfFractionsPlanned", 0))
+        return int(
+            float(getattr(self.fx_grp_data, "NumberOfFractionsPlanned", 0))
+        )
 
     @property
     def fx_dose(self):
