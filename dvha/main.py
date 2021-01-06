@@ -1692,6 +1692,9 @@ class DVHAMainFrame(wx.Frame):
             pass
 
     def on_reset_windows(self, *evt):
+        defaults = DefaultOptions()
+        for key in ["MIN_RESOLUTION_MAIN", "MAX_INIT_RESOLUTION_MAIN"]:
+            self.options.set_option(key, getattr(defaults, key))
         self.options.clear_positions()
         self.options.clear_window_sizes()
         self.__apply_size_and_position()
