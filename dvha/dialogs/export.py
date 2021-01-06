@@ -542,7 +542,7 @@ class ExportFigure(wx.Frame):
         self.SetMaxSize(self.GetSize())
         self.Layout()
 
-        self.options.set_window_position(self, "export_figure")
+        self.options.apply_window_position(self, "export_figure")
 
     @property
     def plot(self):

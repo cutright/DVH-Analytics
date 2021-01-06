@@ -1243,7 +1243,7 @@ class UserSettings(wx.Frame):
         self.Layout()
         self.Fit()
 
-        self.options.set_window_position(self, "user_settings")
+        self.options.apply_window_position(self, "user_settings")
 
     def __do_bind(self):
         self.Bind(

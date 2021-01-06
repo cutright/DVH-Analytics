@@ -1092,6 +1092,27 @@ def get_window_size(width, height):
     return tuple([int(width * user_width), int(height * user_height)])
 
 
+def apply_resolution_limits(size, options):
+    """Apply min and max limits to a window size
+
+    Parameters
+    ----------
+    size : tuple
+        window size (width, height)
+    options : Options
+        dvha.options.Options class object
+
+    Returns
+    -------
+    tuple
+        width, height
+    """
+
+    min_size = options.MIN_RESOLUTION_MAIN
+    max_size = options.MAX_INIT_RESOLUTION_MAIN
+    return tuple([min(max(size[i], min_size[i]), max_size[i]) for i in [0, 1]])
+
+
 def set_frame_icon(frame):
     """
 

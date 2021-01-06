@@ -77,12 +77,15 @@ from dvha.tools.utilities import (
     initialize_directories,
     set_frame_icon,
     main_is_frozen,
+    apply_resolution_limits
 )
 from dvha.db.sql_columns import all_columns as sql_column_info
 
 
 class DVHAMainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
+
+        self.allow_window_size_save = False
 
         #############################################################################
         # The following block of code for logging adapted from dicompyler
@@ -573,6 +576,7 @@ class DVHAMainFrame(wx.Frame):
         )
 
         self.Bind(wx.EVT_SIZE, self.on_resize)
+        self.Bind(wx.EVT_MOVE, self.on_move)
 
     def __set_properties(self):
         self.SetTitle("DVH Analytics")
@@ -788,14 +792,16 @@ class DVHAMainFrame(wx.Frame):
         self.SetSizer(sizer_main)
         self.Layout()
 
-        size = get_window_size(0.833, 0.875)
-        size_final = (
-            max(size[0], self.options.MIN_RESOLUTION_MAIN[0]),
-            max(size[1], self.options.MIN_RESOLUTION_MAIN[1]),
-        )
-        self.SetSize(size_final)
+        if self.options.window_sizes["main"] is not None:
+            size = self.options.window_sizes["main"]
+        else:
+            size = get_window_size(0.833, 0.875)
+            size = apply_resolution_limits(size, self.options)
 
-        self.Center()
+        self.SetSize(size)
+        self.options.apply_window_position(self, "main")
+
+        self.allow_window_size_save = True
 
     def __enable_notebook_tabs(self):
         for key in self.tab_keys:
@@ -1676,10 +1682,18 @@ class DVHAMainFrame(wx.Frame):
 
     def on_resize(self, *evt):
         try:
+            if self.allow_window_size_save:
+                self.options.set_window_size(self, "main")
             self.Refresh()
             self.Layout()
             wx.CallAfter(self.redraw_plots)
         except RuntimeError:
+            pass
+
+    def on_move(self, *evt):
+        try:
+            self.options.save_window_position(self, "main")
+        except Exception:
             pass
 
     def on_plotting_memory_error(self, plot_type):
