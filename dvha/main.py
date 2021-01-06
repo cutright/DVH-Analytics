@@ -1331,12 +1331,12 @@ class DVHAMainFrame(wx.Frame):
                 includes = [
                     item
                     for i, item in enumerate(queries_by_sql_column[table][col])
-                    if not operator_by_sql_column[table][col][i]
+                    if operator_by_sql_column[table][col][i]
                 ]
                 excludes = [
                     item
                     for i, item in enumerate(queries_by_sql_column[table][col])
-                    if operator_by_sql_column[table][col][i]
+                    if not operator_by_sql_column[table][col][i]
                 ]
 
                 includes_str = (
