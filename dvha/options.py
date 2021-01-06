@@ -271,7 +271,11 @@ class DefaultOptions:
         }
         self.apply_range_edits = False
 
-        self.positions = {"user_settings": None, "export_figure": None, "main": None}
+        self.positions = {
+            "user_settings": None,
+            "export_figure": None,
+            "main": None,
+        }
         self.window_sizes = {"main": None, "import": None}
 
         self.AUTO_SQL_DB_BACKUP = False
@@ -318,8 +322,10 @@ class Options(DefaultOptions):
                     loaded_options = pickle.load(infile)
                 self.upgrade_options(loaded_options)
             except Exception as e:
-                msg = "Options.load: Options file corrupted. Loading " \
-                      "default options."
+                msg = (
+                    "Options.load: Options file corrupted. Loading "
+                    "default options."
+                )
                 push_to_log(e, msg=msg)
                 loaded_options = {}
 
@@ -380,8 +386,10 @@ class Options(DefaultOptions):
             if current_checksum == stored_checksum:
                 return True
         except Exception as e:
-            msg = "Options.is_options_file_valid: Corrupted options file " \
-                  "detected. Loading default options."
+            msg = (
+                "Options.is_options_file_valid: Corrupted options file "
+                "detected. Loading default options."
+            )
             push_to_log(e, msg=msg)
             return False
 
@@ -401,6 +409,11 @@ class Options(DefaultOptions):
         """Clear all stored window positions, may be useful if window is
         off screen on Show"""
         self.positions = {key: None for key in list(self.positions)}
+
+    def clear_window_sizes(self, *evt):
+        """Clear all stored window sizes, may be useful if window is
+        off screen on Show"""
+        self.window_sizes = {key: None for key in list(self.window_sizes)}
 
     def apply_window_position(self, frame, position_key):
         """Given a frame, set to previously stored position or center it"""

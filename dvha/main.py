@@ -77,7 +77,7 @@ from dvha.tools.utilities import (
     initialize_directories,
     set_frame_icon,
     main_is_frozen,
-    apply_resolution_limits
+    apply_resolution_limits,
 )
 from dvha.db.sql_columns import all_columns as sql_column_info
 
@@ -430,10 +430,8 @@ class DVHAMainFrame(wx.Frame):
                 wx.ID_ANY, "&Preferences\tCtrl+,"
             )
             self.Bind(wx.EVT_MENU, self.on_pref, menu_user_settings)
-        menu_win_pos = settings_menu.Append(
-            wx.ID_ANY, "Reset Window Positions"
-        )
-        self.Bind(wx.EVT_MENU, self.options.clear_positions, menu_win_pos)
+        menu_win_pos = settings_menu.Append(wx.ID_ANY, "Reset Windows")
+        self.Bind(wx.EVT_MENU, self.on_reset_windows, menu_win_pos)
 
         self.Bind(wx.EVT_MENU, self.on_toolbar_database, menu_db_admin)
         self.Bind(wx.EVT_MENU, self.on_sqlite_backup, menu_db_backup)
@@ -792,6 +790,9 @@ class DVHAMainFrame(wx.Frame):
         self.SetSizer(sizer_main)
         self.Layout()
 
+        self.__apply_size_and_position()
+
+    def __apply_size_and_position(self):
         if self.options.window_sizes["main"] is not None:
             size = self.options.window_sizes["main"]
         else:
@@ -1689,6 +1690,11 @@ class DVHAMainFrame(wx.Frame):
             wx.CallAfter(self.redraw_plots)
         except RuntimeError:
             pass
+
+    def on_reset_windows(self, *evt):
+        self.options.clear_positions()
+        self.options.clear_window_sizes()
+        self.__apply_size_and_position()
 
     def on_move(self, *evt):
         try:
