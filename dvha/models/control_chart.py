@@ -82,7 +82,7 @@ class ControlChartFrame:
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
-        sizer_plot = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_plot = wx.BoxSizer(wx.HORIZONTAL)
         sizer_widgets = wx.StaticBoxSizer(
             wx.StaticBox(self.parent, wx.ID_ANY, ""), wx.VERTICAL
         )
@@ -123,10 +123,15 @@ class ControlChartFrame:
         sizer_widgets.Add(sizer_buttons, 0, 0, 0)
 
         sizer_wrapper.Add(sizer_widgets, 0, wx.EXPAND | wx.BOTTOM, 5)
-        sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
-        sizer_wrapper.Add(sizer_plot, 1, wx.EXPAND, 0)
 
         self.layout = sizer_wrapper
+
+    def add_plot_to_layout(self):
+        self.plot.init_layout()
+        self.sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
+        self.update_plot()
+        self.layout.Add(self.sizer_plot, 1, wx.EXPAND, 0)
+        self.layout.Layout()
 
     def update_combo_box_y_choices(self):
         stats_data = self.group_data[self.group]["stats_data"]
@@ -148,46 +153,47 @@ class ControlChartFrame:
 
     def update_plot(self, *evt):
         stats_data = self.group_data[self.group]["stats_data"]
-        dates = stats_data.sim_study_dates
-        sort_index = sorted(range(len(dates)), key=lambda k: dates[k])
-        dates_sorted = [dates[i] for i in sort_index]
+        if stats_data is not None:
+            dates = stats_data.sim_study_dates
+            sort_index = sorted(range(len(dates)), key=lambda k: dates[k])
+            dates_sorted = [dates[i] for i in sort_index]
 
-        y_values_sorted = [
-            stats_data.data[self.y_axis]["values"][i] for i in sort_index
-        ]
-        mrn_sorted = [stats_data.mrns[i] for i in sort_index]
-        uid_sorted = [stats_data.uids[i] for i in sort_index]
+            y_values_sorted = [
+                stats_data.data[self.y_axis]["values"][i] for i in sort_index
+            ]
+            mrn_sorted = [stats_data.mrns[i] for i in sort_index]
+            uid_sorted = [stats_data.uids[i] for i in sort_index]
 
-        # remove data with no date
-        if "None" in dates_sorted:
-            final_index = dates_sorted.index("None")
-            dates_sorted = dates_sorted[:final_index]
-            y_values_sorted = y_values_sorted[:final_index]
-            mrn_sorted = mrn_sorted[:final_index]
-            uid_sorted = uid_sorted[:final_index]
+            # remove data with no date
+            if "None" in dates_sorted:
+                final_index = dates_sorted.index("None")
+                dates_sorted = dates_sorted[:final_index]
+                y_values_sorted = y_values_sorted[:final_index]
+                mrn_sorted = mrn_sorted[:final_index]
+                uid_sorted = uid_sorted[:final_index]
 
-        x = list(range(1, len(dates_sorted) + 1))
+            x = list(range(1, len(dates_sorted) + 1))
 
-        self.plot.group = self.group
-        self.plot.update_plot(
-            x,
-            y_values_sorted,
-            mrn_sorted,
-            uid_sorted,
-            dates_sorted,
-            y_axis_label=self.y_axis,
-            cl_overrides=self.cl_overrides,
-        )
-
-        if (
-            self.models[self.group]
-            and self.y_axis in self.models[self.group].keys()
-        ):
-            model_data = self.models[self.group][self.y_axis]
-            adj_data = self.plot.get_adjusted_control_chart(
-                stats_data=stats_data, **model_data
+            self.plot.group = self.group
+            self.plot.update_plot(
+                x,
+                y_values_sorted,
+                mrn_sorted,
+                uid_sorted,
+                dates_sorted,
+                y_axis_label=self.y_axis,
+                cl_overrides=self.cl_overrides,
             )
-            self.plot.update_adjusted_control_chart(**adj_data)
+
+            if (
+                self.models[self.group]
+                and self.y_axis in self.models[self.group].keys()
+            ):
+                model_data = self.models[self.group][self.y_axis]
+                adj_data = self.plot.get_adjusted_control_chart(
+                    stats_data=stats_data, **model_data
+                )
+                self.plot.update_adjusted_control_chart(**adj_data)
 
     def update_data(self, group_data):
         self.group_data = group_data

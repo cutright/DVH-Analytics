@@ -40,6 +40,7 @@ from dvha.tools.utilities import (
     moving_avg,
     is_windows,
     FIG_WILDCARDS,
+    get_windows_webview_backend,
 )
 from dvha.tools.stats import MultiVariableRegression, get_control_limits
 from dvha.paths import TEMP_DIR
@@ -49,6 +50,8 @@ from sklearn.metrics import mean_squared_error
 
 
 DEFAULT_TOOLS = "pan,box_zoom,crosshair,reset"
+
+BACKEND = get_windows_webview_backend()
 
 
 class Plot:
@@ -80,8 +83,8 @@ class Plot:
         """
 
         self.options = options
-
-        self.layout = wx.html2.WebView.New(parent)
+        self.parent = parent
+        self.layout = None
         self.bokeh_layout = None
         self.html_str = ""
 
@@ -165,22 +168,30 @@ class Plot:
         for key in list(self.source):
             self.clear_source(key)
 
-    def update_bokeh_layout_in_wx_python(self):
-        try:
-            self.html_str = get_layout_html(self.bokeh_layout)
-        except MemoryError as e:
-            msg = "Plot.update_bokeh_layout_in_wx_python: bokeh.io.export.get_layout_html failed"
-            push_to_log(e, msg=msg)
-            raise PlottingMemoryError(self.type)
-        if is_windows():  # Windows requires LoadURL()
-            if not isdir(TEMP_DIR):
-                mkdir(TEMP_DIR)
-            web_file = join(TEMP_DIR, "%s.html" % self.type)
-            with open(web_file, "wb") as f:
-                f.write(self.html_str.encode("utf-8"))
-            self.layout.LoadURL(web_file)
+    def init_layout(self):
+        if BACKEND is None:
+            self.layout = wx.html2.WebView.New(self.parent)
         else:
-            self.layout.SetPage(self.html_str, "")
+            self.layout = wx.html2.WebView.New(self.parent, backend=BACKEND["id"])
+        self.update_bokeh_layout_in_wx_python()
+
+    def update_bokeh_layout_in_wx_python(self):
+        if self.layout is not None:
+            try:
+                self.html_str = get_layout_html(self.bokeh_layout)
+            except MemoryError as e:
+                msg = "Plot.update_bokeh_layout_in_wx_python: bokeh.io.export.get_layout_html failed"
+                push_to_log(e, msg=msg)
+                raise PlottingMemoryError(self.type)
+            if is_windows():  # Windows requires LoadURL()
+                if not isdir(TEMP_DIR):
+                    mkdir(TEMP_DIR)
+                web_file = join(TEMP_DIR, "%s.html" % self.type)
+                with open(web_file, "wb") as f:
+                    f.write(self.html_str.encode("utf-8"))
+                self.layout.LoadURL(web_file)
+            else:
+                self.layout.SetPage(self.html_str, "")
 
     def set_obj_attr(self, obj_attr_dict, obj_type="figure"):
         """During plot export, user can supply custom figure properties, apply these and store original values"""

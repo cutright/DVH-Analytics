@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.9.3 (TBD)
+--------------------
+ - [GUI] Edge backend available for MSW (in progress)
+
 v0.9.2 (2021.01.09)
 --------------------
  - [Database] Added centroid_dist_to_iso_min and centroid_dist_to_iso_max columns to DVHs table

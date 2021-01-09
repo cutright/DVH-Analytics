@@ -148,8 +148,6 @@ class DVHAMainFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.layout_set = False
-
         self.sizer_dvhs = wx.BoxSizer(wx.VERTICAL)
 
         set_msw_background_color(
@@ -230,7 +228,6 @@ class DVHAMainFrame(wx.Frame):
         self.disable_query_buttons("categorical")
         self.disable_query_buttons("numerical")
         self.button_query_execute.Disable()
-        self.__disable_notebook_tabs()
 
         self.Bind(wx.EVT_CLOSE, self.on_quit)
         self.tool_bar_windows = {
@@ -497,6 +494,7 @@ class DVHAMainFrame(wx.Frame):
             "Regression",
             "Control Chart",
         ]
+        self._created_tabs = []
         self.notebook_tab = {
             key: wx.Panel(self.notebook_main_view, wx.ID_ANY)
             for key in self.tab_keys
@@ -576,6 +574,9 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_SIZE, self.on_resize)
         self.Bind(wx.EVT_MOVE, self.on_move)
 
+        self.notebook_main_view.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED,
+                                     self.on_page_selection)
+
     def __set_properties(self):
         self.SetTitle("DVH Analytics")
 
@@ -640,6 +641,14 @@ class DVHAMainFrame(wx.Frame):
         self.control_chart = ControlChartFrame(self)
         self.radbio = RadBioFrame(self)
         self.endpoint = EndpointFrame(self)
+
+        self.plot_frames = {
+            "DVHs": self.plot,
+            "Time Series": self.time_series,
+            "Correlation": self.correlation,
+            "Regression": self.regression,
+            "Control Chart": self.control_chart,
+        }
 
     def __do_layout(self):
         sizer_summary = wx.StaticBoxSizer(
@@ -736,7 +745,6 @@ class DVHAMainFrame(wx.Frame):
         sizer_welcome.Add(text_welcome, 0, wx.ALIGN_CENTER | wx.ALL, 25)
         self.notebook_tab["Welcome"].SetSizer(sizer_welcome)
 
-        self.sizer_dvhs.Add(self.plot.layout, 1, wx.EXPAND | wx.ALL, 25)
         self.notebook_tab["DVHs"].SetSizer(self.sizer_dvhs)
 
         sizer_endpoint = wx.BoxSizer(wx.VERTICAL)
@@ -803,16 +811,6 @@ class DVHAMainFrame(wx.Frame):
         self.options.apply_window_position(self, "main")
 
         self.allow_window_size_save = True
-
-    def __enable_notebook_tabs(self):
-        for key in self.tab_keys:
-            self.notebook_tab[key].Enable()
-        self.__enable_initial_buttons_in_tabs()
-
-    def __disable_notebook_tabs(self):
-        for key in self.tab_keys:
-            if key != "Welcome":
-                self.notebook_tab[key].Disable()
 
     def __enable_initial_buttons_in_tabs(self):
         self.endpoint.enable_initial_buttons()
@@ -1231,7 +1229,6 @@ class DVHAMainFrame(wx.Frame):
 
                 if group == 1:
                     self.notebook_main_view.SetSelection(1)
-                    self.__enable_notebook_tabs()
 
                 self.save_data[
                     "main_categorical_%s" % group
@@ -1475,7 +1472,6 @@ class DVHAMainFrame(wx.Frame):
         self.time_series.clear_data()
         self.notebook_main_view.SetSelection(0)
         self.text_summary.SetValue("")
-        self.__disable_notebook_tabs()
         self.disable_query_buttons("categorical")
         self.disable_query_buttons("numerical")
         self.button_query_execute.Disable()
@@ -1786,6 +1782,21 @@ class DVHAMainFrame(wx.Frame):
                 sys.excepthook(*sys.exc_info())
 
         threading.Thread.run = Run
+
+    def on_page_selection(self, event):
+        index = event.GetSelection()
+        key = self.tab_keys[index]
+        if key not in self._created_tabs:
+            self._created_tabs.append(key)
+            if key in self.plot_frames.keys():
+                if key == 'DVHs':
+                    self.plot.init_layout()
+                    self.sizer_dvhs.Add(self.plot.layout, 1,
+                                        wx.EXPAND | wx.ALL, 25)
+                    self.notebook_tab["DVHs"].Layout()
+                else:
+                    self.plot_frames[key].add_plot_to_layout()
+        event.Skip()
 
 
 class MainApp(wx.App):

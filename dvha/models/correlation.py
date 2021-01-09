@@ -73,19 +73,25 @@ class CorrelationFrame:
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_plot = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_plot = wx.BoxSizer(wx.HORIZONTAL)
 
         sizer_buttons.Add(self.button_var_select, 0, wx.RIGHT, 5)
         sizer_buttons.Add(self.button_var_default, 0, wx.RIGHT, 5)
         sizer_buttons.Add(self.button_export_csv, 0, wx.RIGHT, 5)
         sizer_buttons.Add(self.button_save_figure, 0, wx.RIGHT, 5)
 
-        sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
+        # self.sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
 
         sizer_wrapper.Add(sizer_buttons, 0, wx.BOTTOM, 5)
-        sizer_wrapper.Add(sizer_plot, 1, wx.EXPAND, 0)
 
         self.layout = sizer_wrapper
+
+    def add_plot_to_layout(self):
+        self.plot.init_layout()
+        self.sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
+        self.layout.Add(self.sizer_plot, 1, wx.EXPAND, 0)
+        self.update_plot_data()
+        self.layout.Layout()
 
     def on_var_select(self, evt):
         categories = [
