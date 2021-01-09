@@ -1,7 +1,7 @@
 include dvha_app.py
 recursive-include dvha/*.py
 include CHANGELOG.md
-include README.md
+include README.rst
 include LICENSE.txt
 include dvha/resources/LICENSE.txt
 include dvha/resources/logo.png
