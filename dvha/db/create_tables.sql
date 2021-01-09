@@ -60,3 +60,6 @@ ALTER TABLE Plans ADD COLUMN IF NOT EXISTS ptv_surface_area real;
 ALTER TABLE Plans ADD COLUMN IF NOT EXISTS ptv_volume real;
 ALTER TABLE Plans ADD COLUMN IF NOT EXISTS ptv_max_dose real;
 ALTER TABLE Plans ADD COLUMN IF NOT EXISTS ptv_min_dose real;
+-- The following columns have been added as of DVH Analytics 0.9.2
+ALTER TABLE DVHs ADD COLUMN IF NOT EXISTS centroid_dist_to_iso_min real;
+ALTER TABLE DVHs ADD COLUMN IF NOT EXISTS centroid_dist_to_iso_max real;
