@@ -2,7 +2,8 @@
 
 v0.9.3 (TBD)
 --------------------
- - [GUI] Edge backend available for MSW (in progress)
+ - [GUI] Edge backend available for MSW
+ - [GUI] Only visible plots are redrawn on window resizing
 
 v0.9.2 (2021.01.09)
 --------------------
