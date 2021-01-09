@@ -148,6 +148,8 @@ class DVHAMainFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
+        self.active_tab = "Welcome"
+
         self.sizer_dvhs = wx.BoxSizer(wx.VERTICAL)
 
         set_msw_background_color(
@@ -1651,11 +1653,15 @@ class DVHAMainFrame(wx.Frame):
 
     def redraw_plots(self):
         if self.group_data[1]["dvh"]:
-            self.plot.redraw_plot()
-            self.time_series.plot.redraw_plot()
-            self.correlation.plot.redraw_plot()
-            self.regression.plot.redraw_plot()
-            self.control_chart.plot.redraw_plot()
+            if self.active_tab == 'DVHs':
+                self.plot.redraw_plot()
+            elif self.active_tab in self.plot_frames.keys():
+                self.plot_frames[self.active_tab].plot.redraw_plot()
+            # self.plot.redraw_plot()
+            # self.time_series.plot.redraw_plot()
+            # self.correlation.plot.redraw_plot()
+            # self.regression.plot.redraw_plot()
+            # self.control_chart.plot.redraw_plot()
 
     def apply_plot_options(self):
         self.plot.apply_options()
@@ -1786,6 +1792,7 @@ class DVHAMainFrame(wx.Frame):
     def on_page_selection(self, event):
         index = event.GetSelection()
         key = self.tab_keys[index]
+        self.active_tab = key
         if key not in self._created_tabs:
             self._created_tabs.append(key)
             if key in self.plot_frames.keys():
@@ -1796,6 +1803,11 @@ class DVHAMainFrame(wx.Frame):
                     self.notebook_tab["DVHs"].Layout()
                 else:
                     self.plot_frames[key].add_plot_to_layout()
+        else:
+            if key == 'DVHs':
+                self.plot.redraw_plot()
+            elif key in self.plot_frames.keys():
+                self.plot_frames[key].plot.redraw_plot()
         event.Skip()
 
 

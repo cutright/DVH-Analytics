@@ -1,5 +1,5 @@
-dicompyler-core>=0.5.6
-wxPython>=4.0.4,<4.1.0
+dicompyler-core>=0.5.5
+wxPython>=4.1.1
 pypubsub
 numpy
 scipy

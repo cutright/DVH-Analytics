@@ -34,6 +34,7 @@ from os.path import join, isdir, splitext
 from os import mkdir
 from scipy.stats import ttest_ind, ranksums, normaltest
 from dvha.dialogs.export import save_data_to_file
+from dvha.options import Options
 from dvha.tools.errors import PlottingMemoryError, ErrorDialog, push_to_log
 from dvha.tools.utilities import (
     collapse_into_single_dates,
@@ -51,7 +52,8 @@ from sklearn.metrics import mean_squared_error
 
 DEFAULT_TOOLS = "pan,box_zoom,crosshair,reset"
 
-BACKEND = get_windows_webview_backend()
+enable_edge = Options().ENABLE_EDGE_BACKEND
+BACKEND = get_windows_webview_backend(enable_edge)
 
 
 class Plot:
@@ -325,8 +327,9 @@ class Plot:
         pass
 
     def redraw_plot(self):
-        self.set_figure_dimensions()
-        self.update_bokeh_layout_in_wx_python()
+        if self.layout is not None:
+            self.set_figure_dimensions()
+            self.update_bokeh_layout_in_wx_python()
 
     def apply_options(self):
         self.__apply_default_figure_options()

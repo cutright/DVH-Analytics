@@ -25,6 +25,7 @@ from dvha.tools.utilities import (
     set_msw_background_color,
     set_frame_icon,
     backup_sqlite_db,
+    is_windows,
 )
 from dvha.db import sql_columns
 from dvha.db.sql_connector import DVH_SQL
@@ -947,6 +948,12 @@ class UserSettings(wx.Frame):
         self.spin_ctrl_alpha_input = wx.SpinCtrlDouble(
             self, wx.ID_ANY, "0", min=0, max=1.0, style=wx.SP_ARROW_KEYS
         )
+
+        if is_windows():
+            self.checkbox_edge_backend = wx.CheckBox(
+                self, wx.ID_ANY, "Enable Edge WebView Backend"
+            )
+
         self.button_restore_defaults = wx.Button(
             self, wx.ID_ANY, "Restore Defaults"
         )
@@ -1055,6 +1062,14 @@ class UserSettings(wx.Frame):
             "DVH Line Width Selection"
         )
         self.combo_box_sizes_category.SetValue("Plot Axis Label Font Size")
+
+        if is_windows():
+            self.checkbox_edge_backend.SetValue(self.options.ENABLE_EDGE_BACKEND)
+            self.checkbox_edge_backend.SetToolTip(
+                "Allows for more complete plot interaction. Must restart DVHA for "
+                "change to be applied. Requires MS Edge Beta to be installed: "
+                "https://www.microsoftedgeinsider.com/en-us/download"
+            )
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -1229,6 +1244,8 @@ class UserSettings(wx.Frame):
         sizer_alpha_input.Add(self.spin_ctrl_alpha_input, 0, 0, 0)
         sizer_alpha.Add(sizer_alpha_input, 1, wx.EXPAND, 0)
         sizer_plot_options.Add(sizer_alpha, 1, wx.EXPAND, 0)
+        if is_windows():
+            sizer_plot_options.Add(self.checkbox_edge_backend, 0, wx.EXPAND | wx.TOP, 5)
         sizer_wrapper.Add(
             sizer_plot_options, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10
         )
@@ -1342,6 +1359,12 @@ class UserSettings(wx.Frame):
             self.update_alpha_val,
             id=self.spin_ctrl_alpha_input.GetId(),
         )
+        if is_windows():
+            self.Bind(
+                wx.EVT_CHECKBOX,
+                self.on_enable_edge,
+                id=self.checkbox_edge_backend.GetId(),
+            )
 
         self.Bind(
             wx.EVT_BUTTON,
@@ -1640,6 +1663,11 @@ class UserSettings(wx.Frame):
     def on_use_dicom_dvh(self, *evt):
         self.options.set_option(
             "USE_DICOM_DVH", self.checkbox_dicom_dvh.GetValue()
+        )
+
+    def on_enable_edge(self, *evt):
+        self.options.set_option(
+            "ENABLE_EDGE_BACKEND", self.checkbox_edge_backend.GetValue()
         )
 
     def on_apply(self, *evt):

@@ -1592,7 +1592,7 @@ def next_csv_element(csv_str, delimiter=","):
     return csv_str[:next_delimiter], csv_str[next_delimiter + 1 :]
 
 
-def get_windows_webview_backend():
+def get_windows_webview_backend(include_edge=False):
     """Get the wx.html2 backend for MSW
 
     Returns
@@ -1608,6 +1608,8 @@ def get_windows_webview_backend():
             (webview.WebViewBackendWebKit, 'WebViewBackendWebKit'),
             (webview.WebViewBackendDefault, 'WebViewBackendDefault')
         ]
+        if not include_edge:
+            backends.pop(0)
         webview.WebView.MSWSetEmulationLevel(webview.WEBVIEWIE_EMU_IE11)
         for id, name in backends:
             if webview.WebView.IsBackendAvailable(id):
