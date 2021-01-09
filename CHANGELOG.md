@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.9.2.post1 (2021.01.09)
+--------------------
+ - [PyPI] Allow dicompyler-core 0.5.5, since 0.5.6 is not on PyPI
+
 v0.9.2 (2021.01.09)
 --------------------
  - [Database] Added centroid_dist_to_iso_min and centroid_dist_to_iso_max columns to DVHs table
