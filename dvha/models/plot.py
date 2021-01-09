@@ -174,7 +174,9 @@ class Plot:
         if BACKEND is None:
             self.layout = wx.html2.WebView.New(self.parent)
         else:
-            self.layout = wx.html2.WebView.New(self.parent, backend=BACKEND["id"])
+            self.layout = wx.html2.WebView.New(
+                self.parent, backend=BACKEND["id"]
+            )
 
     def init_layout(self):
         self.set_layout()

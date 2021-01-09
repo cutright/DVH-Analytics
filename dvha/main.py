@@ -576,8 +576,9 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_SIZE, self.on_resize)
         self.Bind(wx.EVT_MOVE, self.on_move)
 
-        self.notebook_main_view.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED,
-                                     self.on_page_selection)
+        self.notebook_main_view.Bind(
+            wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_page_selection
+        )
 
     def __set_properties(self):
         self.SetTitle("DVH Analytics")
@@ -1653,7 +1654,7 @@ class DVHAMainFrame(wx.Frame):
 
     def redraw_plots(self):
         if self.group_data[1]["dvh"]:
-            if self.active_tab == 'DVHs':
+            if self.active_tab == "DVHs":
                 self.plot.redraw_plot()
             elif self.active_tab in self.plot_frames.keys():
                 self.plot_frames[self.active_tab].plot.redraw_plot()
@@ -1796,15 +1797,16 @@ class DVHAMainFrame(wx.Frame):
         if key not in self._created_tabs:
             self._created_tabs.append(key)
             if key in self.plot_frames.keys():
-                if key == 'DVHs':
+                if key == "DVHs":
                     self.plot.init_layout()
-                    self.sizer_dvhs.Add(self.plot.layout, 1,
-                                        wx.EXPAND | wx.ALL, 25)
+                    self.sizer_dvhs.Add(
+                        self.plot.layout, 1, wx.EXPAND | wx.ALL, 25
+                    )
                     self.notebook_tab["DVHs"].Layout()
                 else:
                     self.plot_frames[key].add_plot_to_layout()
         else:
-            if key == 'DVHs':
+            if key == "DVHs":
                 self.plot.redraw_plot()
             elif key in self.plot_frames.keys():
                 self.plot_frames[key].plot.redraw_plot()

@@ -1603,10 +1603,10 @@ def get_windows_webview_backend(include_edge=False):
     if is_windows():
         # WebView Backends
         backends = [
-            (webview.WebViewBackendEdge, 'WebViewBackendEdge'),
-            (webview.WebViewBackendIE, 'WebViewBackendIE'),
-            (webview.WebViewBackendWebKit, 'WebViewBackendWebKit'),
-            (webview.WebViewBackendDefault, 'WebViewBackendDefault')
+            (webview.WebViewBackendEdge, "WebViewBackendEdge"),
+            (webview.WebViewBackendIE, "WebViewBackendIE"),
+            (webview.WebViewBackendWebKit, "WebViewBackendWebKit"),
+            (webview.WebViewBackendDefault, "WebViewBackendDefault"),
         ]
         if not include_edge:
             backends.pop(0)

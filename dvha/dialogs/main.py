@@ -1064,7 +1064,9 @@ class UserSettings(wx.Frame):
         self.combo_box_sizes_category.SetValue("Plot Axis Label Font Size")
 
         if is_windows():
-            self.checkbox_edge_backend.SetValue(self.options.ENABLE_EDGE_BACKEND)
+            self.checkbox_edge_backend.SetValue(
+                self.options.ENABLE_EDGE_BACKEND
+            )
             self.checkbox_edge_backend.SetToolTip(
                 "Allows for more complete plot interaction. Must restart DVHA for "
                 "change to be applied. Requires MS Edge Beta to be installed: "
@@ -1245,7 +1247,9 @@ class UserSettings(wx.Frame):
         sizer_alpha.Add(sizer_alpha_input, 1, wx.EXPAND, 0)
         sizer_plot_options.Add(sizer_alpha, 1, wx.EXPAND, 0)
         if is_windows():
-            sizer_plot_options.Add(self.checkbox_edge_backend, 0, wx.EXPAND | wx.TOP, 5)
+            sizer_plot_options.Add(
+                self.checkbox_edge_backend, 0, wx.EXPAND | wx.TOP, 5
+            )
         sizer_wrapper.Add(
             sizer_plot_options, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10
         )
