@@ -54,5 +54,4 @@ setup(
     install_requires=requires,
     entry_points={"console_scripts": ["dvha = dvha.main:start"]},
     long_description=long_description,
-    long_description_content_type="text/x-rst",
 )
