@@ -170,11 +170,14 @@ class Plot:
         for key in list(self.source):
             self.clear_source(key)
 
-    def init_layout(self):
+    def set_layout(self):
         if BACKEND is None:
             self.layout = wx.html2.WebView.New(self.parent)
         else:
             self.layout = wx.html2.WebView.New(self.parent, backend=BACKEND["id"])
+
+    def init_layout(self):
+        self.set_layout()
         self.update_bokeh_layout_in_wx_python()
 
     def update_bokeh_layout_in_wx_python(self):
@@ -1878,6 +1881,7 @@ class PlotMultiVarRegression(Plot):
         :type options: Options
         """
         Plot.__init__(self, parent, options)
+        self.set_layout()
 
         self.type = "multi-variable_regression"
         self.parent = parent
@@ -2772,6 +2776,7 @@ class PlotMachineLearning(Plot):
         :type options: Options
         """
         Plot.__init__(self, parent, options)
+        self.set_layout()
 
         self.plot_types = ["train"]
         self.type = "machine_learning"
@@ -3309,6 +3314,7 @@ class PlotFeatureImportance(Plot):
         self, parent, options, x_variables, feature_importances, title
     ):
         Plot.__init__(self, parent, options)
+        self.set_layout()
 
         self.size_factor = {"plot": (0.95, 0.9)}
 
@@ -3436,6 +3442,7 @@ class PlotROIMap(Plot):
         :type roi_map: DatabaseROIs
         """
         Plot.__init__(self, parent, None)
+        self.set_layout()
 
         self.type = "roi_map"
         self.parent = parent
