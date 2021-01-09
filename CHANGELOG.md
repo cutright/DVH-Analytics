@@ -1,12 +1,13 @@
 # Change log of DVH Analytics
 
-v0.9.2 (TBD)
+v0.9.2 (2021.01.09)
 --------------------
  - [Database] Added centroid_dist_to_iso_min and centroid_dist_to_iso_max columns to DVHs table
  - [Linting] Applied Black code style
  - [Docs] Backend documentation at [dvha.readthedocs.io](http://dvha.readthedocs.io)
  - [Import] Resolve import crash when DICOM-RT Plan is missing FractionGroupSequence [Issue 127](https://github.com/cutright/DVH-Analytics/issues/127) 
  - [GUI] Allow for smaller window sizes, set min resolution to 1200 x 700 [Issue 123](https://github.com/cutright/DVH-Analytics/issues/123)
+ - [Import] Handle NumberOfFractionsPlanned when stored as a string [Issue 131](https://github.com/cutright/DVH-Analytics/issues/131)
 
 v0.9.1.post1 (2020.12.25)
 -------------------------

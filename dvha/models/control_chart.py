@@ -84,10 +84,10 @@ class ControlChartFrame:
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
         sizer_plot = wx.BoxSizer(wx.HORIZONTAL)
         sizer_widgets = wx.StaticBoxSizer(
-            wx.StaticBox(self.parent, wx.ID_ANY, ""), wx.HORIZONTAL
+            wx.StaticBox(self.parent, wx.ID_ANY, ""), wx.VERTICAL
         )
         sizer_input = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_buttons = wx.BoxSizer(wx.VERTICAL)
+        sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_y_axis = wx.BoxSizer(wx.VERTICAL)
         sizer_lcl = wx.BoxSizer(wx.VERTICAL)
         sizer_ucl = wx.BoxSizer(wx.VERTICAL)
@@ -119,8 +119,8 @@ class ControlChartFrame:
             self.button_save_figure, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 5
         )
 
-        sizer_widgets.Add(sizer_input, 0, wx.EXPAND, 0)
-        sizer_widgets.Add(sizer_buttons, 1, wx.EXPAND, 0)
+        sizer_widgets.Add(sizer_input, 1, wx.EXPAND, 0)
+        sizer_widgets.Add(sizer_buttons, 0, 0, 0)
 
         sizer_wrapper.Add(sizer_widgets, 0, wx.EXPAND | wx.BOTTOM, 5)
         sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
