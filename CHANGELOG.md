@@ -1,9 +1,14 @@
 # Change log of DVH Analytics
 
+
 v0.9.3 (TBD)
 --------------------
  - [GUI] Edge backend available for MSW
  - [GUI] Only visible plots are redrawn on window resizing
+
+v0.9.2.post1 (2021.01.09)
+--------------------
+ - [PyPI] Allow dicompyler-core 0.5.5, since 0.5.6 is not on PyPI
 
 v0.9.2 (2021.01.09)
 --------------------
