@@ -258,6 +258,7 @@ class ImportDicomFrame(wx.Frame):
             "set_pre_import_parsed_dicom_data",
         )
         pub.subscribe(self.pre_import_complete, "pre_import_complete")
+        pub.subscribe(self.pre_import_canceled, "pre_import_canceled")
         pub.subscribe(self.build_dicom_file_tree, "build_dicom_file_tree")
 
     def __do_bind(self):
@@ -804,6 +805,7 @@ class ImportDicomFrame(wx.Frame):
         # pub.unsubscribe(self.parse_dicom_data, "parse_dicom_data")
         # pub.unsubscribe(self.set_pre_import_parsed_dicom_data, 'set_pre_import_parsed_dicom_data')
         # pub.unsubscribe(self.pre_import_complete, "pre_import_complete")
+        pub.sendMessage("import_dicom_cancel")
         self.do_unsubscribe()
         self.Destroy()
 
@@ -812,6 +814,7 @@ class ImportDicomFrame(wx.Frame):
         pub.unsubAll(topicName="parse_dicom_data")
         pub.unsubAll(topicName="set_pre_import_parsed_dicom_data")
         pub.unsubAll(topicName="pre_import_complete")
+        pub.unsubAll(topicName="pre_import_canceled")
         pub.unsubAll(topicName="build_dicom_file_tree")
 
     def on_save_roi_map(self, evt):
@@ -1344,6 +1347,10 @@ class ImportDicomFrame(wx.Frame):
         )
         self.is_all_data_parsed = True
         wx.CallAfter(self.validate)
+
+    def pre_import_canceled(self):
+        self.label_progress.SetLabelText("")
+        self.label_warning.SetLabelText("Parsing Canceled")
 
     def set_pre_import_parsed_dicom_data(self, msg):
         uid = msg["uid"]

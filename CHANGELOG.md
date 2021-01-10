@@ -5,6 +5,7 @@ v0.9.3 (TBD)
 --------------------
  - [GUI] Edge backend available for MSW
  - [GUI] Only visible plots are redrawn on window resizing
+ - [Import] Closing import progress, DICOM Import, or main windows terminate file parsing threads
 
 v0.9.2.post1 (2021.01.09)
 --------------------

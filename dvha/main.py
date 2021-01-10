@@ -1405,6 +1405,9 @@ class DVHAMainFrame(wx.Frame):
     # Menu bar event functions
     # --------------------------------------------------------------------------------------------------------------
     def close_windows(self):
+
+        pub.sendMessage("import_dicom_cancel")
+
         for view in self.data_views.values():
             if hasattr(view, "Destroy"):
                 try:

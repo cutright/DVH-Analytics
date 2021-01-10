@@ -23,9 +23,6 @@ from dvha.tools.utilities import get_file_paths
 from time import sleep
 
 
-SCRIPT_DIR = os.path.dirname(__file__)
-
-
 class DicomTreeBuilder:
     """
     This class processes data for various UI objects from models.import_dicom.ImportDicomFrame
@@ -69,20 +66,9 @@ class DicomTreeBuilder:
         self.root_files = None
         self.tree_ctrl_files.DeleteAllItems()
 
-        # These dictionaries will be used for easy lookup of tree_ctrl_files nodes
-        self.patient_nodes = {}  # key: mrn
-        self.study_nodes = {}  # key: study_instance_uid
-        self.plan_nodes = {}  # key: sop_instance_uid
-        self.file_nodes = {}  # key: absolute file path
-
-        self.dicom_file_paths = {}
-        self.other_dicom_files = {}
-        self.current_index = 0
         self.file_types = ["rtplan", "rtstruct", "rtdose"]
-        self.file_tree = {}
-        self.roi_name_map = {}
-        self.roi_nodes = {}
-        self.roi_name_over_ride = {}
+
+        self.__init_vars()
 
         self.__do_subscribe()
         self.__set_images()
@@ -94,6 +80,7 @@ class DicomTreeBuilder:
         pub.subscribe(
             self.set_file_tree, "dicom_directory_parser_set_file_tree"
         )
+        pub.subscribe(self.clear_tree_ctrl, "dicom_directory_parser_clear_tree")
 
     def __set_images(self):
         self.image_list = wx.ImageList(16, 16)
@@ -127,8 +114,8 @@ class DicomTreeBuilder:
         )
 
     def parse_directory(self):
-        """
-        Initiate directory parsing.  Creates a wx.Dialog, reads dicom headers and sorts files into dictionaries
+        """Initiate directory parsing.  Creates a wx.Dialog, reads dicom
+        headers and sorts files into dictionaries
         """
         PreImportParsingProgressFrame(
             self.start_path, search_subfolders=self.search_subfolders
@@ -156,6 +143,24 @@ class DicomTreeBuilder:
         """
         file_type = dicom_dataset.Modality.lower()
         return [file_type, "other"][file_type not in self.file_types]
+
+    def __init_vars(self):
+        self.patient_nodes = {}  # key: mrn
+        self.study_nodes = {}  # key: study_instance_uid
+        self.plan_nodes = {}  # key: sop_instance_uid
+        self.file_nodes = {}  # key: absolute file path
+
+        self.dicom_file_paths = {}
+        self.other_dicom_files = {}
+        self.current_index = 0
+        self.file_tree = {}
+        self.roi_name_map = {}
+        self.roi_nodes = {}
+        self.roi_name_over_ride = {}
+
+    def clear_tree_ctrl(self):
+        self.__init_vars()
+        wx.CallAfter(self.tree_ctrl_files.DeleteAllItems)
 
     def build_tree_ctrl_files(self):
         """
@@ -483,6 +488,8 @@ class PreImportParsingProgressFrame(wx.Dialog):
         self.__do_subscribe()
         self.__do_layout()
 
+        self.Bind(wx.EVT_CLOSE, self.on_evt_close)
+
         self.run()
 
     def __set_properties(self):
@@ -496,6 +503,7 @@ class PreImportParsingProgressFrame(wx.Dialog):
         pub.subscribe(self.update, "pre_import_progress_update")
         pub.subscribe(self.pub_set_title, "pre_import_progress_set_title")
         pub.subscribe(self.close, "pre_import_progress_close")
+        pub.subscribe(self.on_evt_close, "import_dicom_cancel")
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
@@ -512,7 +520,8 @@ class PreImportParsingProgressFrame(wx.Dialog):
     def update(self, msg):
         """
         Update the progress message and gauge
-        :param msg: a dictionary with keys of 'label' and 'gauge' text and progress fraction, respectively
+        :param msg: a dictionary with keys of 'label' and 'gauge' text and
+        progress fraction, respectively
         :type msg: dict
         """
         wx.CallAfter(self.label.SetLabelText, msg["label"])
@@ -523,13 +532,18 @@ class PreImportParsingProgressFrame(wx.Dialog):
         Initiate layout in GUI and begin dicom directory parser thread
         """
         self.Show()
+        self.ToggleWindowStyle(wx.STAY_ON_TOP)
         DicomDirectoryParserWorker(self.start_path, self.search_subfolders)
 
     def close(self):
-        """
-        Destroy layout in GUI and send message to being dicom parsing
-        """
+        """Destroy layout in GUI and send message to begin dicom parsing"""
         pub.sendMessage("pre_import_complete")
+        self.Destroy()
+
+    def on_evt_close(self, *evt):
+        pub.sendMessage("pre_import_canceled")
+        pub.sendMessage("dicom_dir_parser_terminate")
+        pub.sendMessage("pre_import_file_set_terminate")
         self.Destroy()
 
 
@@ -563,7 +577,13 @@ class DicomDirectoryParserWorker(Thread):
         self.dicom_file_paths = {}
         self.other_dicom_files = {}
 
+        self.terminate = False
+        pub.subscribe(self.set_terminate, "dicom_dir_parser_terminate")
+
         self.start()  # begin thread
+
+    def set_terminate(self):
+        self.terminate = True
 
     def get_queue(self):
         file_paths = get_file_paths(
@@ -582,8 +602,8 @@ class DicomDirectoryParserWorker(Thread):
         return queue
 
     def run(self):
-        """
-        Begin the thread to parse directory. Returns plan_file_sets and dicom_file_paths through pubsub
+        """Begin the thread to parse directory. Returns plan_file_sets and
+        dicom_file_paths through pubsub
         """
 
         queue = self.get_queue()
@@ -591,6 +611,9 @@ class DicomDirectoryParserWorker(Thread):
         worker.setDaemon(True)
         worker.start()
         queue.join()
+
+        if self.terminate:
+            return
 
         self.do_association()
 
@@ -609,7 +632,8 @@ class DicomDirectoryParserWorker(Thread):
     def do_parse(self, queue):
         while queue.qsize():
             parameters = queue.get()
-            self.parser(*parameters)
+            if not self.terminate:
+                self.parser(*parameters)
             queue.task_done()
 
     def parser(self, file_path, msg):
@@ -888,7 +912,13 @@ class PreImportFileSetParserWorker(Thread):
         self.other_dicom_files = other_dicom_files
         self.total_plan_count = len(self.file_paths)
 
+        self.terminate = False
+        pub.subscribe(self.set_terminate, "pre_import_file_set_terminate")
+
         self.start()
+
+    def set_terminate(self):
+        self.terminate = True
 
     def run(self):
         queue = self.get_queue()
@@ -896,8 +926,11 @@ class PreImportFileSetParserWorker(Thread):
         worker.setDaemon(True)
         worker.start()
         queue.join()
-        sleep(0.3)  # Allow time for user to see final progress in GUI
-        pub.sendMessage("pre_import_progress_close")
+        if not self.terminate:
+            sleep(0.3)  # Allow time for user to see final progress in GUI
+            pub.sendMessage("pre_import_progress_close")
+        else:
+            pub.sendMessage("dicom_directory_parser_clear_tree")
 
     def get_queue(self):
         queue = Queue()
@@ -924,8 +957,12 @@ class PreImportFileSetParserWorker(Thread):
     def do_parse(self, queue):
         while queue.qsize():
             parameters = queue.get()
-            self.parser(*parameters)
+            if not self.terminate:
+                self.parser(*parameters)
             queue.task_done()
+
+        if self.terminate:
+            return
 
         plan_count = self.total_plan_count
         msg = {
