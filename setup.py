@@ -37,7 +37,7 @@ setup(
                 "plots with Bokeh",
     author="Dan Cutright",
     author_email="dan.cutright@gmail.com",
-    url="https://github.com/cutright/DVH-Analytics-Desktop",
+    url="https://github.com/cutright/DVH-Analytics",
     download_url="https://github.com/cutright/DVH-Analytics-Desktop/archive/master.zip",
     license="BSD License",
     keywords=[

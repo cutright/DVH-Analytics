@@ -21,7 +21,7 @@ logger = logging.getLogger("dvha")
 if environ.get("READTHEDOCS") == "True" or "sphinx" in prefix:
     ERR_DLG_FLAGS = None
 else:
-    ERR_DLG_FLAGS = wx.ICON_ERROR | wx.OK | wx.OK_DEFAULT
+    ERR_DLG_FLAGS = wx.ICON_ERROR | wx.OK | wx.OK_DEFAULT | wx.CENTER
 
 
 class SQLError(Exception):
@@ -82,7 +82,6 @@ class ErrorDialog:
         :param flags: flags for wx.MessageDialog
         """
         self.dlg = wx.MessageDialog(parent, message, caption, flags)
-        self.dlg.Center()
         self.dlg.ShowModal()
         self.dlg.Destroy()
 

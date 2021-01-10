@@ -226,7 +226,6 @@ class DVHAMainFrame(wx.Frame):
         self.__set_tooltips()
         self.__add_notebook_frames()
         self.__do_layout()
-
         self.disable_query_buttons("categorical")
         self.disable_query_buttons("numerical")
         self.button_query_execute.Disable()
@@ -1818,7 +1817,6 @@ class DVHAMainFrame(wx.Frame):
 
 class MainApp(wx.App):
     def OnInit(self):
-
         initialize_directories()
         if is_windows():
             from dvha.tools.windows_reg_edit import (
@@ -1828,7 +1826,6 @@ class MainApp(wx.App):
 
             set_ie_emulation_level()
             set_ie_lockdown_level()
-
         self.SetAppName("DVH Analytics")
         self.frame = DVHAMainFrame(None, wx.ID_ANY, "")
         set_frame_icon(self.frame)
@@ -1841,6 +1838,12 @@ class MainApp(wx.App):
         for window in wx.GetTopLevelWindows():
             wx.CallAfter(window.Close)
         return super().OnExit()
+
+    def InitLocale(self):
+        # https://docs.wxpython.org/MigrationGuide.html#possible-locale-mismatch-on-windows
+        if is_windows():
+            return
+        super().InitLocale()
 
 
 def start():
