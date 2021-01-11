@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.9.2.post2 (2021.01.09)
+--------------------
+ - [Import] Use default DVH calc if high resolution fails [Issue 133](https://github.com/cutright/DVH-Analytics/issues/133)
+
 v0.9.2.post1 (2021.01.09)
 --------------------
  - [PyPI] Allow dicompyler-core 0.5.5, since 0.5.6 is not on PyPI
