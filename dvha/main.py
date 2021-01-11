@@ -651,6 +651,7 @@ class DVHAMainFrame(wx.Frame):
             "Regression": self.regression,
             "Control Chart": self.control_chart,
         }
+        self.do_plot_refresh = {key: False for key in self.plot_frames.keys()}
 
     def __do_layout(self):
         sizer_summary = wx.StaticBoxSizer(
@@ -1656,6 +1657,8 @@ class DVHAMainFrame(wx.Frame):
 
     def redraw_plots(self):
         if self.group_data[1]["dvh"]:
+            if self.active_tab in self.do_plot_refresh.keys():
+                self.do_plot_refresh[self.active_tab] = False
             if self.active_tab == "DVHs":
                 self.plot.redraw_plot()
             elif self.active_tab in self.plot_frames.keys():
@@ -1692,6 +1695,8 @@ class DVHAMainFrame(wx.Frame):
                 self.options.set_window_size(self, "main")
             self.Refresh()
             self.Layout()
+            for key in self.do_plot_refresh.keys():
+                self.do_plot_refresh[key] = True
             wx.CallAfter(self.redraw_plots)
         except RuntimeError:
             pass
@@ -1807,7 +1812,8 @@ class DVHAMainFrame(wx.Frame):
                     self.notebook_tab["DVHs"].Layout()
                 else:
                     self.plot_frames[key].add_plot_to_layout()
-        else:
+        elif key in self.do_plot_refresh and self.do_plot_refresh[key]:
+            self.do_plot_refresh[key] = False
             if key == "DVHs":
                 self.plot.redraw_plot()
             elif key in self.plot_frames.keys():

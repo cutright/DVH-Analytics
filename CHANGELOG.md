@@ -3,7 +3,7 @@
 
 v0.9.3 (TBD)
 --------------------
- - [GUI] Edge backend available for MSW
+ - [GUI] Edge backend available for MSW (wxpython >=4.1.1)
  - [GUI] Only visible plots are redrawn on window resizing
  - [Import] Closing import progress, DICOM Import, or main windows terminate file parsing threads
 
