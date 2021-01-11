@@ -80,7 +80,9 @@ class DicomTreeBuilder:
         pub.subscribe(
             self.set_file_tree, "dicom_directory_parser_set_file_tree"
         )
-        pub.subscribe(self.clear_tree_ctrl, "dicom_directory_parser_clear_tree")
+        pub.subscribe(
+            self.clear_tree_ctrl, "dicom_directory_parser_clear_tree"
+        )
 
     def __set_images(self):
         self.image_list = wx.ImageList(16, 16)

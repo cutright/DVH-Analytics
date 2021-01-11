@@ -434,6 +434,7 @@ class ExportFigure(wx.Frame):
                                 "0",
                                 min=0,
                                 max=1,
+                                inc=0.1,
                                 style=wx.SP_ARROW_KEYS,
                             )
                         )

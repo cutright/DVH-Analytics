@@ -946,7 +946,13 @@ class UserSettings(wx.Frame):
             style=wx.CB_DROPDOWN | wx.CB_READONLY,
         )
         self.spin_ctrl_alpha_input = wx.SpinCtrlDouble(
-            self, wx.ID_ANY, "0", min=0, max=1.0, style=wx.SP_ARROW_KEYS
+            self,
+            wx.ID_ANY,
+            "0",
+            min=0,
+            max=1.0,
+            style=wx.SP_ARROW_KEYS,
+            inc=0.1,
         )
 
         if is_windows():

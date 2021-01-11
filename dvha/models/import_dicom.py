@@ -1573,6 +1573,7 @@ class ImportStatusDialog(wx.Dialog):
         self.Bind(
             wx.EVT_BUTTON, self.set_terminate, id=self.button_cancel.GetId()
         )
+        self.Bind(wx.EVT_CLOSE, self.set_terminate)
 
         self.start_time = datetime.now()
 
@@ -1715,7 +1716,11 @@ class ImportStatusDialog(wx.Dialog):
             "Elapsed Time: %s" % elapsed_time,
         )
 
-    def set_terminate(self, evt):
+    def set_terminate(self, *evt):
+        caption = "Terminate import?"
+        MessageDialog(self, caption, action_yes_func=self.send_terminate)
+
+    def send_terminate(self):
         pub.sendMessage("terminate_import")
         self.close()
 
