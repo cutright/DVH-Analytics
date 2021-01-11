@@ -1811,6 +1811,7 @@ class DVHAMainFrame(wx.Frame):
         if key not in self._created_tabs:
             self._created_tabs.append(key)
             if key in self.plot_frames.keys():
+                self.do_plot_refresh[key] = False
                 if key == "DVHs":
                     self.plot.init_layout()
                     self.sizer_dvhs.Add(
