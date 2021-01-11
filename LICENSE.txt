@@ -1,4 +1,4 @@
-Copyright (c) 2016-2020 Dan Cutright
+Copyright (c) 2016-2021 Dan Cutright
 
 All rights reserved.
 
