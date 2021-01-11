@@ -222,6 +222,14 @@ class DVHAMainFrame(wx.Frame):
             self.table_numerical, columns=columns["numerical"]
         )
 
+        self.do_plot_refresh = {
+            "DVHs": False,
+            "Time Series": False,
+            "Correlation": False,
+            "Regression": False,
+            "Control Chart": False,
+        }
+
         self.__set_properties()
         self.__set_tooltips()
         self.__add_notebook_frames()
@@ -651,7 +659,6 @@ class DVHAMainFrame(wx.Frame):
             "Regression": self.regression,
             "Control Chart": self.control_chart,
         }
-        self.do_plot_refresh = {key: False for key in self.plot_frames.keys()}
 
     def __do_layout(self):
         sizer_summary = wx.StaticBoxSizer(
