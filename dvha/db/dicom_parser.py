@@ -660,7 +660,7 @@ class DICOM_Parser:
             # Remove kwargs invalid before 0.5.6
             from dicompylercore import __version__ as dicompylercore_version
 
-            if dicompylercore_version in ["0.5.4", "0.5.5"]:
+            if dicompylercore_version == "0.5.5":
                 if "memmap_rtdose" in kwargs.keys():
                     kwargs.pop("memmap_rtdose")
 
@@ -681,22 +681,35 @@ class DICOM_Parser:
 
             # If small volume, increase resolution
             if dvh.volume < self.dvh_small_volume_threshold:
-                kwargs["interpolation_resolution"] = (
-                    self.rt_data["dose"].PixelSpacing[0]
-                    / self.dvh_high_resolution_factor,
-                    self.rt_data["dose"].PixelSpacing[1]
-                    / self.dvh_high_resolution_factor,
-                )
-                kwargs[
-                    "interpolation_segments_between_planes"
-                ] = self.dvh_high_resolution_segments_between
-
                 try:
-                    dvh = dvhcalc.get_dvh(**kwargs)
-                except MemoryError:
-                    kwargs["memmap_rtdose"] = True
-                    # dicompyler-core needs to re-parse the dose file
-                    dvh = dvhcalc.get_dvh(**kwargs)
+                    kwargs["interpolation_resolution"] = (
+                        self.rt_data["dose"].PixelSpacing[0]
+                        / self.dvh_high_resolution_factor,
+                        self.rt_data["dose"].PixelSpacing[1]
+                        / self.dvh_high_resolution_factor,
+                    )
+                    if dicompylercore_version == "0.5.5":
+                        kwargs["interpolation_resolution"] = kwargs[
+                            "interpolation_resolution"
+                        ][0]
+
+                    kwargs[
+                        "interpolation_segments_between_planes"
+                    ] = self.dvh_high_resolution_segments_between
+
+                    try:
+                        dvh_new = dvhcalc.get_dvh(**kwargs)
+                    except MemoryError:
+                        kwargs["memmap_rtdose"] = True
+                        # dicompyler-core needs to re-parse the dose file
+                        dvh_new = dvhcalc.get_dvh(**kwargs)
+                    dvh = dvh_new
+                except Exception as e:
+                    msg = (
+                        "Small volume calculation failed, "
+                        "using default calculation"
+                    )
+                    push_to_log(e, msg=msg)
 
         if dvh and dvh.volume > 0:  # ignore points and empty ROIs
             geometries = self.get_dvh_geometries(dvh_index)
