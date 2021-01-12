@@ -25,7 +25,7 @@ from dvha.tools.utilities import (
     set_msw_background_color,
     set_frame_icon,
     backup_sqlite_db,
-    is_windows,
+    is_edge_backend_available,
 )
 from dvha.db import sql_columns
 from dvha.db.sql_connector import DVH_SQL
@@ -955,7 +955,7 @@ class UserSettings(wx.Frame):
             inc=0.1,
         )
 
-        if is_windows():
+        if is_edge_backend_available():
             self.checkbox_edge_backend = wx.CheckBox(
                 self, wx.ID_ANY, "Enable Edge WebView Backend"
             )
@@ -1069,7 +1069,7 @@ class UserSettings(wx.Frame):
         )
         self.combo_box_sizes_category.SetValue("Plot Axis Label Font Size")
 
-        if is_windows():
+        if is_edge_backend_available():
             self.checkbox_edge_backend.SetValue(
                 self.options.ENABLE_EDGE_BACKEND
             )
@@ -1252,7 +1252,7 @@ class UserSettings(wx.Frame):
         sizer_alpha_input.Add(self.spin_ctrl_alpha_input, 0, 0, 0)
         sizer_alpha.Add(sizer_alpha_input, 1, wx.EXPAND, 0)
         sizer_plot_options.Add(sizer_alpha, 1, wx.EXPAND, 0)
-        if is_windows():
+        if is_edge_backend_available():
             sizer_plot_options.Add(
                 self.checkbox_edge_backend, 0, wx.EXPAND | wx.TOP, 5
             )
@@ -1369,7 +1369,7 @@ class UserSettings(wx.Frame):
             self.update_alpha_val,
             id=self.spin_ctrl_alpha_input.GetId(),
         )
-        if is_windows():
+        if is_edge_backend_available():
             self.Bind(
                 wx.EVT_CHECKBOX,
                 self.on_enable_edge,
