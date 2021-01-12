@@ -26,6 +26,7 @@ from dvha.tools.utilities import (
     set_frame_icon,
     backup_sqlite_db,
     is_edge_backend_available,
+    is_windows,
 )
 from dvha.db import sql_columns
 from dvha.db.sql_connector import DVH_SQL
@@ -955,10 +956,12 @@ class UserSettings(wx.Frame):
             inc=0.1,
         )
 
-        if is_edge_backend_available():
+        if is_windows():
             self.checkbox_edge_backend = wx.CheckBox(
                 self, wx.ID_ANY, "Enable Edge WebView Backend"
             )
+        if not is_edge_backend_available():
+            self.checkbox_edge_backend.Disable()
 
         self.button_restore_defaults = wx.Button(
             self, wx.ID_ANY, "Restore Defaults"
@@ -1069,13 +1072,14 @@ class UserSettings(wx.Frame):
         )
         self.combo_box_sizes_category.SetValue("Plot Axis Label Font Size")
 
-        if is_edge_backend_available():
+        if is_windows():
             self.checkbox_edge_backend.SetValue(
                 self.options.ENABLE_EDGE_BACKEND
             )
             self.checkbox_edge_backend.SetToolTip(
                 "Allows for more complete plot interaction. Must restart DVHA for "
-                "change to be applied. Requires MS Edge Beta to be installed: "
+                "change to be applied. If you cannot toggle this checkbox, "
+                "Edge is not availabe. Requires MS Edge Beta to be installed: "
                 "https://www.microsoftedgeinsider.com/en-us/download"
             )
 
@@ -1252,7 +1256,7 @@ class UserSettings(wx.Frame):
         sizer_alpha_input.Add(self.spin_ctrl_alpha_input, 0, 0, 0)
         sizer_alpha.Add(sizer_alpha_input, 1, wx.EXPAND, 0)
         sizer_plot_options.Add(sizer_alpha, 1, wx.EXPAND, 0)
-        if is_edge_backend_available():
+        if is_windows():
             sizer_plot_options.Add(
                 self.checkbox_edge_backend, 0, wx.EXPAND | wx.TOP, 5
             )
