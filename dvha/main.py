@@ -1239,6 +1239,7 @@ class DVHAMainFrame(wx.Frame):
 
                 if group == 1:
                     self.notebook_main_view.SetSelection(1)
+                    self.__enable_initial_buttons_in_tabs()
 
                 self.save_data[
                     "main_categorical_%s" % group
