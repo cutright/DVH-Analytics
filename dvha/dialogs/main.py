@@ -25,6 +25,7 @@ from dvha.tools.utilities import (
     set_msw_background_color,
     set_frame_icon,
     backup_sqlite_db,
+    is_edge_backend_available,
     is_windows,
 )
 from dvha.db import sql_columns
@@ -959,6 +960,8 @@ class UserSettings(wx.Frame):
             self.checkbox_edge_backend = wx.CheckBox(
                 self, wx.ID_ANY, "Enable Edge WebView Backend"
             )
+        if not is_edge_backend_available():
+            self.checkbox_edge_backend.Disable()
 
         self.button_restore_defaults = wx.Button(
             self, wx.ID_ANY, "Restore Defaults"
@@ -1075,7 +1078,8 @@ class UserSettings(wx.Frame):
             )
             self.checkbox_edge_backend.SetToolTip(
                 "Allows for more complete plot interaction. Must restart DVHA for "
-                "change to be applied. Requires MS Edge Beta to be installed: "
+                "change to be applied. If you cannot toggle this checkbox, "
+                "Edge is not availabe. Requires MS Edge Beta to be installed: "
                 "https://www.microsoftedgeinsider.com/en-us/download"
             )
 
@@ -1369,7 +1373,7 @@ class UserSettings(wx.Frame):
             self.update_alpha_val,
             id=self.spin_ctrl_alpha_input.GetId(),
         )
-        if is_windows():
+        if is_edge_backend_available():
             self.Bind(
                 wx.EVT_CHECKBOX,
                 self.on_enable_edge,
