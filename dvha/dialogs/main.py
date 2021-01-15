@@ -960,8 +960,8 @@ class UserSettings(wx.Frame):
             self.checkbox_edge_backend = wx.CheckBox(
                 self, wx.ID_ANY, "Enable Edge WebView Backend"
             )
-        if not is_edge_backend_available():
-            self.checkbox_edge_backend.Disable()
+            if is_edge_backend_available():
+                self.checkbox_edge_backend.Disable()
 
         self.button_restore_defaults = wx.Button(
             self, wx.ID_ANY, "Restore Defaults"
@@ -1373,7 +1373,7 @@ class UserSettings(wx.Frame):
             self.update_alpha_val,
             id=self.spin_ctrl_alpha_input.GetId(),
         )
-        if is_edge_backend_available():
+        if is_windows() and is_edge_backend_available():
             self.Bind(
                 wx.EVT_CHECKBOX,
                 self.on_enable_edge,
