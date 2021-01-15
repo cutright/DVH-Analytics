@@ -1,10 +1,11 @@
 # Change log of DVH Analytics
 
-v0.9.3 (TBD)
+v0.9.3 (2021.01.14)
 --------------------
  - [GUI] Edge backend available for MSW (wxpython >=4.1.1)
  - [GUI] Only visible plots are redrawn on window resizing
  - [Import] Closing import progress, DICOM Import, or main windows terminate file parsing threads
+ - [Database Admin] Fixed bug preventing delete by study by StudyInstanceUID [Issue 135](https://github.com/cutright/DVH-Analytics/issues/135)
 
 v0.9.2.post2 (2021.01.09)
 --------------------
