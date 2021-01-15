@@ -32,8 +32,6 @@ REVIEW_DIR = join(DATA_DIR, "review")
 BACKUP_DIR = join(DATA_DIR, "backup")
 TEMP_DIR = join(DATA_DIR, "temp")
 MODELS_DIR = join(DATA_DIR, "models")
-PROTOCOL_DIR = join(DATA_DIR, "protocols")
-PROTOCOL_DEFAULT_DIR = join(RESOURCES_DIR, "protocols")
 DIRECTORIES = {
     key[:-4]: value for key, value in locals().items() if key.endswith("_DIR")
 }

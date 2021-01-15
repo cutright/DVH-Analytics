@@ -169,9 +169,9 @@ class RegressionFrame:
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
-        sizer_plot = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_plot_pane = wx.BoxSizer(wx.VERTICAL)
-        sizer_plot_view = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_plot = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_plot_pane = wx.BoxSizer(wx.VERTICAL)
+        self.sizer_plot_view = wx.BoxSizer(wx.HORIZONTAL)
         sizer_input = wx.BoxSizer(wx.HORIZONTAL)
         sizer_check_box = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -233,16 +233,22 @@ class RegressionFrame:
         sizer_y_axis.Add(sizer_y_axis_select, 1, wx.EXPAND, 0)
         sizer_input.Add(sizer_y_axis, 1, wx.ALL, 5)
 
-        sizer_plot_pane.Add(sizer_input, 0, wx.EXPAND, 0)
-        sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
-        sizer_plot_view.Add(sizer_plot, 1, wx.EXPAND, 10)
-        sizer_plot_pane.Add(sizer_plot_view, 1, wx.EXPAND, 0)
-        self.pane_plot.SetSizer(sizer_plot_pane)
+        self.sizer_plot_pane.Add(sizer_input, 0, wx.EXPAND, 0)
+        # self.sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
+        self.sizer_plot_view.Add(self.sizer_plot, 1, wx.EXPAND, 10)
+        self.sizer_plot_pane.Add(self.sizer_plot_view, 1, wx.EXPAND, 0)
+        self.pane_plot.SetSizer(self.sizer_plot_pane)
         self.window.SplitVertically(self.pane_tree, self.pane_plot)
         sizer_wrapper.Add(self.window, 1, wx.EXPAND, 0)
         self.window.SetSashPosition(250)
 
         self.layout = sizer_wrapper
+
+    def add_plot_to_layout(self):
+        self.plot.init_layout()
+        self.sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
+        self.update_plot()
+        self.pane_plot.Layout()
 
     @property
     def x_axis(self):

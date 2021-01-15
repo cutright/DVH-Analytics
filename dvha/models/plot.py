@@ -34,12 +34,14 @@ from os.path import join, isdir, splitext
 from os import mkdir
 from scipy.stats import ttest_ind, ranksums, normaltest
 from dvha.dialogs.export import save_data_to_file
+from dvha.options import Options
 from dvha.tools.errors import PlottingMemoryError, ErrorDialog, push_to_log
 from dvha.tools.utilities import (
     collapse_into_single_dates,
     moving_avg,
     is_windows,
     FIG_WILDCARDS,
+    get_windows_webview_backend,
 )
 from dvha.tools.stats import MultiVariableRegression, get_control_limits
 from dvha.paths import TEMP_DIR
@@ -49,6 +51,9 @@ from sklearn.metrics import mean_squared_error
 
 
 DEFAULT_TOOLS = "pan,box_zoom,crosshair,reset"
+
+enable_edge = Options().ENABLE_EDGE_BACKEND
+BACKEND = get_windows_webview_backend(enable_edge)
 
 
 class Plot:
@@ -80,8 +85,8 @@ class Plot:
         """
 
         self.options = options
-
-        self.layout = wx.html2.WebView.New(parent)
+        self.parent = parent
+        self.layout = None
         self.bokeh_layout = None
         self.html_str = ""
 
@@ -165,22 +170,35 @@ class Plot:
         for key in list(self.source):
             self.clear_source(key)
 
-    def update_bokeh_layout_in_wx_python(self):
-        try:
-            self.html_str = get_layout_html(self.bokeh_layout)
-        except MemoryError as e:
-            msg = "Plot.update_bokeh_layout_in_wx_python: bokeh.io.export.get_layout_html failed"
-            push_to_log(e, msg=msg)
-            raise PlottingMemoryError(self.type)
-        if is_windows():  # Windows requires LoadURL()
-            if not isdir(TEMP_DIR):
-                mkdir(TEMP_DIR)
-            web_file = join(TEMP_DIR, "%s.html" % self.type)
-            with open(web_file, "wb") as f:
-                f.write(self.html_str.encode("utf-8"))
-            self.layout.LoadURL(web_file)
+    def set_layout(self):
+        if BACKEND is None:
+            self.layout = wx.html2.WebView.New(self.parent)
         else:
-            self.layout.SetPage(self.html_str, "")
+            self.layout = wx.html2.WebView.New(
+                self.parent, backend=BACKEND["id"]
+            )
+
+    def init_layout(self):
+        self.set_layout()
+        self.update_bokeh_layout_in_wx_python()
+
+    def update_bokeh_layout_in_wx_python(self):
+        if self.layout is not None:
+            try:
+                self.html_str = get_layout_html(self.bokeh_layout)
+            except MemoryError as e:
+                msg = "Plot.update_bokeh_layout_in_wx_python: bokeh.io.export.get_layout_html failed"
+                push_to_log(e, msg=msg)
+                raise PlottingMemoryError(self.type)
+            if is_windows():  # Windows requires LoadURL()
+                if not isdir(TEMP_DIR):
+                    mkdir(TEMP_DIR)
+                web_file = join(TEMP_DIR, "%s.html" % self.type)
+                with open(web_file, "wb") as f:
+                    f.write(self.html_str.encode("utf-8"))
+                self.layout.LoadURL(web_file)
+            else:
+                self.layout.SetPage(self.html_str, "")
 
     def set_obj_attr(self, obj_attr_dict, obj_type="figure"):
         """During plot export, user can supply custom figure properties, apply these and store original values"""
@@ -314,8 +332,9 @@ class Plot:
         pass
 
     def redraw_plot(self):
-        self.set_figure_dimensions()
-        self.update_bokeh_layout_in_wx_python()
+        if self.layout is not None:
+            self.set_figure_dimensions()
+            self.update_bokeh_layout_in_wx_python()
 
     def apply_options(self):
         self.__apply_default_figure_options()
@@ -1864,6 +1883,7 @@ class PlotMultiVarRegression(Plot):
         :type options: Options
         """
         Plot.__init__(self, parent, options)
+        self.set_layout()
 
         self.type = "multi-variable_regression"
         self.parent = parent
@@ -2758,6 +2778,7 @@ class PlotMachineLearning(Plot):
         :type options: Options
         """
         Plot.__init__(self, parent, options)
+        self.set_layout()
 
         self.plot_types = ["train"]
         self.type = "machine_learning"
@@ -3295,6 +3316,7 @@ class PlotFeatureImportance(Plot):
         self, parent, options, x_variables, feature_importances, title
     ):
         Plot.__init__(self, parent, options)
+        self.set_layout()
 
         self.size_factor = {"plot": (0.95, 0.9)}
 
@@ -3422,6 +3444,7 @@ class PlotROIMap(Plot):
         :type roi_map: DatabaseROIs
         """
         Plot.__init__(self, parent, None)
+        self.set_layout()
 
         self.type = "roi_map"
         self.parent = parent

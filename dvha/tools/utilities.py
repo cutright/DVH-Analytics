@@ -12,6 +12,7 @@ General utilities for DVHA
 #    available at https://github.com/cutright/DVH-Analytics
 
 import wx
+import wx.html2 as webview
 from datetime import datetime
 from dateutil.parser import parse as parse_date
 import linecache
@@ -1589,3 +1590,40 @@ def next_csv_element(csv_str, delimiter=","):
 
     next_delimiter = csv_str.find(delimiter)
     return csv_str[:next_delimiter], csv_str[next_delimiter + 1 :]
+
+
+def get_windows_webview_backend(include_edge=False):
+    """Get the wx.html2 backend for MSW
+
+    Returns
+    -------
+    dict
+        wx.html2 backend id and name. Returns None if not MSW.
+    """
+    if is_windows():
+        # WebView Backends
+        backends = [
+            (webview.WebViewBackendEdge, "WebViewBackendEdge"),
+            (webview.WebViewBackendIE, "WebViewBackendIE"),
+            (webview.WebViewBackendWebKit, "WebViewBackendWebKit"),
+            (webview.WebViewBackendDefault, "WebViewBackendDefault"),
+        ]
+        if not include_edge:
+            backends.pop(0)
+        webview.WebView.MSWSetEmulationLevel(webview.WEBVIEWIE_EMU_IE11)
+        for id, name in backends:
+            if webview.WebView.IsBackendAvailable(id):
+                return {"id": id, "name": name}
+
+
+def is_edge_backend_available():
+    """Check if WebViewBackendEdge is available
+
+    Returns
+    -------
+    bool
+        True if wx.html2.WebViewBackendEdge is available
+    """
+    if is_windows():
+        return webview.WebView.IsBackendAvailable(webview.WebViewBackendEdge)
+    return False

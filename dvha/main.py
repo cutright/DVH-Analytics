@@ -148,7 +148,7 @@ class DVHAMainFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.layout_set = False
+        self.active_tab = "Welcome"
 
         self.sizer_dvhs = wx.BoxSizer(wx.VERTICAL)
 
@@ -222,15 +222,21 @@ class DVHAMainFrame(wx.Frame):
             self.table_numerical, columns=columns["numerical"]
         )
 
+        self.do_plot_refresh = {
+            "DVHs": False,
+            "Time Series": False,
+            "Correlation": False,
+            "Regression": False,
+            "Control Chart": False,
+        }
+
         self.__set_properties()
         self.__set_tooltips()
         self.__add_notebook_frames()
         self.__do_layout()
-
         self.disable_query_buttons("categorical")
         self.disable_query_buttons("numerical")
         self.button_query_execute.Disable()
-        self.__disable_notebook_tabs()
 
         self.Bind(wx.EVT_CLOSE, self.on_quit)
         self.tool_bar_windows = {
@@ -497,6 +503,7 @@ class DVHAMainFrame(wx.Frame):
             "Regression",
             "Control Chart",
         ]
+        self._created_tabs = []
         self.notebook_tab = {
             key: wx.Panel(self.notebook_main_view, wx.ID_ANY)
             for key in self.tab_keys
@@ -576,6 +583,10 @@ class DVHAMainFrame(wx.Frame):
         self.Bind(wx.EVT_SIZE, self.on_resize)
         self.Bind(wx.EVT_MOVE, self.on_move)
 
+        self.notebook_main_view.Bind(
+            wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_page_selection
+        )
+
     def __set_properties(self):
         self.SetTitle("DVH Analytics")
 
@@ -640,6 +651,14 @@ class DVHAMainFrame(wx.Frame):
         self.control_chart = ControlChartFrame(self)
         self.radbio = RadBioFrame(self)
         self.endpoint = EndpointFrame(self)
+
+        self.plot_frames = {
+            "DVHs": self.plot,
+            "Time Series": self.time_series,
+            "Correlation": self.correlation,
+            "Regression": self.regression,
+            "Control Chart": self.control_chart,
+        }
 
     def __do_layout(self):
         sizer_summary = wx.StaticBoxSizer(
@@ -736,7 +755,6 @@ class DVHAMainFrame(wx.Frame):
         sizer_welcome.Add(text_welcome, 0, wx.ALIGN_CENTER | wx.ALL, 25)
         self.notebook_tab["Welcome"].SetSizer(sizer_welcome)
 
-        self.sizer_dvhs.Add(self.plot.layout, 1, wx.EXPAND | wx.ALL, 25)
         self.notebook_tab["DVHs"].SetSizer(self.sizer_dvhs)
 
         sizer_endpoint = wx.BoxSizer(wx.VERTICAL)
@@ -803,16 +821,6 @@ class DVHAMainFrame(wx.Frame):
         self.options.apply_window_position(self, "main")
 
         self.allow_window_size_save = True
-
-    def __enable_notebook_tabs(self):
-        for key in self.tab_keys:
-            self.notebook_tab[key].Enable()
-        self.__enable_initial_buttons_in_tabs()
-
-    def __disable_notebook_tabs(self):
-        for key in self.tab_keys:
-            if key != "Welcome":
-                self.notebook_tab[key].Disable()
 
     def __enable_initial_buttons_in_tabs(self):
         self.endpoint.enable_initial_buttons()
@@ -1231,7 +1239,7 @@ class DVHAMainFrame(wx.Frame):
 
                 if group == 1:
                     self.notebook_main_view.SetSelection(1)
-                    self.__enable_notebook_tabs()
+                    self.__enable_initial_buttons_in_tabs()
 
                 self.save_data[
                     "main_categorical_%s" % group
@@ -1405,6 +1413,9 @@ class DVHAMainFrame(wx.Frame):
     # Menu bar event functions
     # --------------------------------------------------------------------------------------------------------------
     def close_windows(self):
+
+        pub.sendMessage("import_dicom_cancel")
+
         for view in self.data_views.values():
             if hasattr(view, "Destroy"):
                 try:
@@ -1475,7 +1486,6 @@ class DVHAMainFrame(wx.Frame):
         self.time_series.clear_data()
         self.notebook_main_view.SetSelection(0)
         self.text_summary.SetValue("")
-        self.__disable_notebook_tabs()
         self.disable_query_buttons("categorical")
         self.disable_query_buttons("numerical")
         self.button_query_execute.Disable()
@@ -1655,11 +1665,17 @@ class DVHAMainFrame(wx.Frame):
 
     def redraw_plots(self):
         if self.group_data[1]["dvh"]:
-            self.plot.redraw_plot()
-            self.time_series.plot.redraw_plot()
-            self.correlation.plot.redraw_plot()
-            self.regression.plot.redraw_plot()
-            self.control_chart.plot.redraw_plot()
+            if self.active_tab in self.do_plot_refresh.keys():
+                self.do_plot_refresh[self.active_tab] = False
+            if self.active_tab == "DVHs":
+                self.plot.redraw_plot()
+            elif self.active_tab in self.plot_frames.keys():
+                self.plot_frames[self.active_tab].plot.redraw_plot()
+            # self.plot.redraw_plot()
+            # self.time_series.plot.redraw_plot()
+            # self.correlation.plot.redraw_plot()
+            # self.regression.plot.redraw_plot()
+            # self.control_chart.plot.redraw_plot()
 
     def apply_plot_options(self):
         self.plot.apply_options()
@@ -1687,6 +1703,8 @@ class DVHAMainFrame(wx.Frame):
                 self.options.set_window_size(self, "main")
             self.Refresh()
             self.Layout()
+            for key in self.do_plot_refresh.keys():
+                self.do_plot_refresh[key] = True
             wx.CallAfter(self.redraw_plots)
         except RuntimeError:
             pass
@@ -1787,10 +1805,33 @@ class DVHAMainFrame(wx.Frame):
 
         threading.Thread.run = Run
 
+    def on_page_selection(self, event):
+        index = event.GetSelection()
+        key = self.tab_keys[index]
+        self.active_tab = key
+        if key not in self._created_tabs:
+            self._created_tabs.append(key)
+            if key in self.plot_frames.keys():
+                self.do_plot_refresh[key] = False
+                if key == "DVHs":
+                    self.plot.init_layout()
+                    self.sizer_dvhs.Add(
+                        self.plot.layout, 1, wx.EXPAND | wx.ALL, 25
+                    )
+                    self.notebook_tab["DVHs"].Layout()
+                else:
+                    self.plot_frames[key].add_plot_to_layout()
+        elif key in self.do_plot_refresh and self.do_plot_refresh[key]:
+            self.do_plot_refresh[key] = False
+            if key == "DVHs":
+                self.plot.redraw_plot()
+            elif key in self.plot_frames.keys():
+                self.plot_frames[key].plot.redraw_plot()
+        event.Skip()
+
 
 class MainApp(wx.App):
     def OnInit(self):
-
         initialize_directories()
         if is_windows():
             from dvha.tools.windows_reg_edit import (
@@ -1800,7 +1841,6 @@ class MainApp(wx.App):
 
             set_ie_emulation_level()
             set_ie_lockdown_level()
-
         self.SetAppName("DVH Analytics")
         self.frame = DVHAMainFrame(None, wx.ID_ANY, "")
         set_frame_icon(self.frame)
@@ -1813,6 +1853,12 @@ class MainApp(wx.App):
         for window in wx.GetTopLevelWindows():
             wx.CallAfter(window.Close)
         return super().OnExit()
+
+    def InitLocale(self):
+        # https://docs.wxpython.org/MigrationGuide.html#possible-locale-mismatch-on-windows
+        if is_windows():
+            return
+        super().InitLocale()
 
 
 def start():

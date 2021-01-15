@@ -117,7 +117,7 @@ class TimeSeriesFrame:
 
     def __do_layout(self):
         sizer_wrapper = wx.BoxSizer(wx.VERTICAL)
-        sizer_plot = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_plot = wx.BoxSizer(wx.HORIZONTAL)
         sizer_widgets = wx.StaticBoxSizer(
             wx.StaticBox(self.parent, wx.ID_ANY, ""), wx.VERTICAL
         )
@@ -165,10 +165,14 @@ class TimeSeriesFrame:
         sizer_wrapper.Add(sizer_widgets, 0, wx.BOTTOM | wx.EXPAND, 5)
 
         self.plot = PlotTimeSeries(self.parent, self.options)
-        sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
-        sizer_wrapper.Add(sizer_plot, 1, wx.EXPAND, 0)
 
         self.layout = sizer_wrapper
+
+    def add_plot_to_layout(self):
+        self.plot.init_layout()
+        self.sizer_plot.Add(self.plot.layout, 1, wx.EXPAND, 0)
+        self.layout.Add(self.sizer_plot, 1, wx.EXPAND, 0)
+        self.layout.Layout()
 
     def combo_box_y_axis_ticker(self, evt):
         self.update_plot()

@@ -299,6 +299,8 @@ class DefaultOptions:
         self.DVH_HIGH_RESOLUTION_FACTOR_OPTIONS = ["2", "4", "8", "16", "32"]
         self.DVH_HIGH_RESOLUTION_SEGMENTS_BETWEEN = 3  # Must be int
 
+        self.ENABLE_EDGE_BACKEND = False
+
 
 class Options(DefaultOptions):
     def __init__(self):

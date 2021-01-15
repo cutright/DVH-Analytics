@@ -455,10 +455,10 @@ class DeletePatientDialog(ChangeOrDeleteBaseClass):
     def action(self):
         if self.text_ctrl_2.GetValue() == "delete":
             value = self.text_ctrl_1.GetValue()
+            key = "mrn" if self.sql_column == "mrn" else "uid"
+            kwarg = {key: value}
             with DVH_SQL() as cnx:
-                dicom_files = cnx.get_dicom_file_paths(
-                    **{self.sql_column: value}
-                )
+                dicom_files = cnx.get_dicom_file_paths(**kwarg)
                 cnx.delete_rows("%s = '%s'" % (self.sql_column, value))
 
             DeleteFilesFromQuery(self, dicom_files)
