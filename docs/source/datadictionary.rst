@@ -27,7 +27,7 @@ dist_to_ptv_mean          real           cm       --               Calculated wi
 dist_to_ptv_median        real           cm       --               Calculated with scipy's cdist function
 dist_to_ptv_min           real           cm       --               Calculated with scipy's cdist function
 dth_string                text           cm       --               numpy histogram of scipy cdist with PTV
-dvh_string                text           cGy      --               CSV of DVH in 1 $cGy$ bins
+dvh_string                text           cGy      --               CSV of DVH in 1 cGy bins
 import_time_stamp         timestamp      --       --               Time per SQL at time of import
 institutional_roi         varchar(50)    --       --               Standard ROI name for all physician
 max_dose                  real           Gy       --               Max ROI dose per dicompyler
