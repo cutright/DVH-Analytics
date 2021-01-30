@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.9.3.post1 (2021.01.29)
+-------------------------
+ - [Import] Fix for [Issue 137](https://github.com/cutright/DVH-Analytics/issues/137)
+
 v0.9.3 (2021.01.14)
 --------------------
  - [GUI] Edge backend available for MSW (wxpython >=4.1.1)

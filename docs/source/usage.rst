@@ -48,7 +48,7 @@ QuerySQL
 --------
 Use :meth:`dvha.db.sql_to_python.QuerySQL` if you'd like to query a table and
 automatically convert the results into a python object more convenient than
-the a list of lists (as in DVH_SQL.query). The equivalent of the previous
+a list of lists (as in DVH_SQL.query). The equivalent of the previous
 example, using ``QuerySQL`` is below:
 
 
