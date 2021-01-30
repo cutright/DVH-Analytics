@@ -11,6 +11,7 @@ Tools for geometric calculations
 #    available at https://github.com/cutright/DVH-Analytics
 
 from scipy.spatial.distance import cdist
+from multiprocessing import Pool
 import numpy as np
 from math import ceil
 from shapely.geometry import Point
@@ -463,7 +464,7 @@ def planes_to_voxel_centers(planes, res=1):
     ----------
     planes : dict
         a "sets of points" dictionary representing the union of the rois
-    res : int
+    res : float
         resolution factor for voxelization
 
     Returns
@@ -474,7 +475,7 @@ def planes_to_voxel_centers(planes, res=1):
     """
 
     shapely_data = get_shapely_from_sets_of_points(planes)
-    points = []
+    queue = []
     for z_index, polygon in enumerate(shapely_data["polygon"]):
         bounds = polygon.bounds
         range_x = bounds[2] - bounds[0]
@@ -488,6 +489,18 @@ def planes_to_voxel_centers(planes, res=1):
         grid = np.vstack((x.ravel(), y.ravel())).T
         for point in grid:
             if Point(point[0], point[1]).within(polygon):
-                points.append([point[0], point[1], shapely_data["z"][z_index]])
+                queue.append((point, polygon, shapely_data["z"][z_index]))
 
-    return points
+    # TODO: test multi-threading times, 1 vs 4 processes identical?
+    pool = Pool(processes=1)
+    data = pool.starmap(is_within_worker, queue)
+    pool.close()
+    data = [p for p in data if p is not None]
+
+    return data
+
+
+def is_within_worker(point, polygon, z):
+    if Point(point[0], point[1]).within(polygon):
+        return [point[0], point[1], z]
+
