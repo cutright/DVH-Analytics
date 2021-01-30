@@ -116,7 +116,7 @@ def min_distances_to_target(oar_coordinates, target_coordinates, factors=None):
         min_distances: all minimum distances (cm) of OAR-point-to-Target-point pairs
 
     """
-    # TODO: This very computationally expensive, needs a sampling method prior to calling cdist
+
     min_distances = []
     all_distances = cdist(oar_coordinates, target_coordinates, "euclidean")
     for i, oar_point in enumerate(all_distances):
@@ -140,7 +140,7 @@ def is_point_inside_roi(point, roi):
     Returns
     -------
     bool
-        Whether or not the poin is within the roi
+        Whether or not the point is within the roi
 
     """
     z_keys = list(roi.keys())
@@ -148,15 +148,12 @@ def is_point_inside_roi(point, roi):
     if np.max(roi_z) > point[2] > np.min(roi_z):
         nearest_z_index = (np.abs(roi_z - point[2])).argmin()
         nearest_z_key = z_keys[nearest_z_index]
-        if (
-            abs(float(nearest_z_key) - point[2]) < 0.5
-        ):  # make sure point is within 0.5mm
-            if (
-                len(roi[nearest_z_key]) > 2
-            ):  # make sure there are 3 points to make a polygon
-                shapely_roi = points_to_shapely_polygon(roi[nearest_z_key])
-                shapely_point = Point(point[0], point[1])
-                return shapely_point.within(shapely_roi)
+        shapely_roi = points_to_shapely_polygon(roi[nearest_z_key])
+        shapely_point = Point(point[0], point[1])
+        try:
+            return shapely_point.within(shapely_roi)
+        except Exception:
+            pass
     return False
 
 
@@ -457,3 +454,40 @@ def process_dth_string(dth_string):
     max_bin = (len(counts) - 1) / 2
     bins = np.linspace(-max_bin, max_bin, len(counts))
     return bins, counts
+
+
+def planes_to_voxel_centers(planes, res=1):
+    """Convert a sets of points into a 3D voxel centers within ROI
+
+    Parameters
+    ----------
+    planes : dict
+        a "sets of points" dictionary representing the union of the rois
+    res : int
+        resolution factor for voxelization
+
+    Returns
+    -------
+    list
+        A list of 3D points inside the ROI defined by ``planes``
+
+    """
+
+    shapely_data = get_shapely_from_sets_of_points(planes)
+    points = []
+    for z_index, polygon in enumerate(shapely_data["polygon"]):
+        bounds = polygon.bounds
+        range_x = bounds[2] - bounds[0]
+        range_y = bounds[3] - bounds[1]
+
+        axes = [
+            np.arange(range_x / res) * res + bounds[0] + res / 2.0,
+            np.arange(range_y / res) * res + bounds[1] + res / 2.0
+        ]
+        y, x = np.meshgrid(axes[1], axes[0])
+        grid = np.vstack((x.ravel(), y.ravel())).T
+        for point in grid:
+            if Point(point[0], point[1]).within(polygon):
+                points.append([point[0], point[1], shapely_data["z"][z_index]])
+
+    return points

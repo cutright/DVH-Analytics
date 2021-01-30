@@ -163,6 +163,15 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
         % (study_instance_uid, roi_name),
     )
 
+    if pre_calc is None:
+        uid = study_instance_uid
+        condition = "study_instance_uid = '%s' and roi_type like 'PTV%%'" % uid
+        ptvs = [row[0] for row in query("DVHs", "roi_name", condition)]
+        if len(ptvs):
+            pre_calc = get_total_treatment_volume_of_study(uid, ptvs=ptvs)
+        else:
+            msg = "Call to min_distances failed for %s, no PTVs found!" % uid
+            push_to_log(NotImplementedError, msg=msg)
     treatment_volume_roi = pre_calc
     treatment_volume_coord = get_treatment_volume_coord(pre_calc)
     if treatment_volume_coord is None:
@@ -247,6 +256,65 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
         if data_map:
             for key, value in data_map.items():
                 update_dvhs_table(study_instance_uid, roi_name, key, value)
+
+
+def ovh(study_instance_uid, roi_name, pre_calc=None):
+    """Calculate the overlap volume histogram.
+
+    Parameters
+    ----------
+    study_instance_uid : str
+        study instance uid
+    roi_name : str
+        name of roi
+    pre_calc : list, optional
+        coordinates of combined PTV, return from get_treatment_volume_coord
+
+    """
+
+    if pre_calc is not None:
+        treatment_volume_roi = pre_calc
+        treatment_volume_coord = get_treatment_volume_coord(pre_calc)
+    else:
+        with DVH_SQL() as cnx:
+            ptv_coordinates_strings = cnx.query(
+                "dvhs",
+                "roi_coord_string",
+                "study_instance_uid = '%s' and roi_type like 'PTV%%'"
+                % study_instance_uid,
+            )
+
+        ptvs = [
+            roi_form.get_planes_from_string(ptv[0])
+            for ptv in ptv_coordinates_strings
+        ]
+        treatment_volume_roi = roi_geom.union(ptvs)
+        treatment_volume_coord = roi_form.get_roi_coordinates_from_planes(
+            treatment_volume_roi
+        )
+    treatment_volume_coord = sample_roi(treatment_volume_coord)
+
+    oar_coord_string = query(
+        "dvhs",
+        "roi_coord_string",
+        "study_instance_uid = '%s' and roi_name = '%s'"
+        % (study_instance_uid, roi_name),
+    )[0][0]
+
+    oar_planes = roi_form.get_planes_from_string(oar_coord_string)
+    oar_voxels = roi_geom.planes_to_voxel_centers(oar_planes)
+
+    is_inside = [
+        [1, -1][roi_geom.is_point_inside_roi(point, treatment_volume_roi)]
+        for point in oar_voxels
+    ]
+    voxel_data = roi_geom.min_distances_to_target(
+        oar_voxels, treatment_volume_coord, factors=is_inside
+    )
+
+    ovh = roi_geom.dth(voxel_data)
+    ovh_string = ",".join(["%0.6f" % num for num in ovh])
+    return ovh_string
 
 
 def treatment_volume_overlap(study_instance_uid, roi_name, pre_calc=None):
@@ -735,7 +803,7 @@ def update_roi_metric(
     Parameters
     ----------
     roi_metric_calc : callable
-        Function with parameters: study_insstance_uid, roi_name, precalc
+        Function with parameters: study_instance_uid, roi_name, precalc
     uid : str
         study instance uid
     callback : callable, optional
