@@ -116,7 +116,7 @@ def min_distances_to_target(oar_coordinates, target_coordinates, factors=None):
         min_distances: all minimum distances (cm) of OAR-point-to-Target-point pairs
 
     """
-    # TODO: This very computationally expensive, needs a sampling method prior to calling cdist
+
     min_distances = []
     all_distances = cdist(oar_coordinates, target_coordinates, "euclidean")
     for i, oar_point in enumerate(all_distances):
@@ -140,7 +140,7 @@ def is_point_inside_roi(point, roi):
     Returns
     -------
     bool
-        Whether or not the poin is within the roi
+        Whether or not the point is within the roi
 
     """
     z_keys = list(roi.keys())
@@ -148,15 +148,12 @@ def is_point_inside_roi(point, roi):
     if np.max(roi_z) > point[2] > np.min(roi_z):
         nearest_z_index = (np.abs(roi_z - point[2])).argmin()
         nearest_z_key = z_keys[nearest_z_index]
-        if (
-            abs(float(nearest_z_key) - point[2]) < 0.5
-        ):  # make sure point is within 0.5mm
-            if (
-                len(roi[nearest_z_key]) > 2
-            ):  # make sure there are 3 points to make a polygon
-                shapely_roi = points_to_shapely_polygon(roi[nearest_z_key])
-                shapely_point = Point(point[0], point[1])
-                return shapely_point.within(shapely_roi)
+        shapely_roi = points_to_shapely_polygon(roi[nearest_z_key])
+        shapely_point = Point(point[0], point[1])
+        try:
+            return shapely_point.within(shapely_roi)
+        except Exception:
+            pass
     return False
 
 
@@ -457,3 +454,24 @@ def process_dth_string(dth_string):
     max_bin = (len(counts) - 1) / 2
     bins = np.linspace(-max_bin, max_bin, len(counts))
     return bins, counts
+
+
+def coord_to_voxel_centers(coords, res=1, interp_z=False):
+    """Convert a list of 3D points into a 3D grid of voxel centers"""
+
+    coords = [np.array([point[i] for point in coords]) for i in range(3)]
+    bounds = [np.array([func(x) for x in coords]) for func in [np.min, np.max]]
+    ranges = bounds[1] - bounds[0]
+
+    axes_count = 3 if interp_z else 2
+    axes = [
+        np.arange(ranges[i] / res) * res + bounds[0][i] + res / 2.0
+        for i in range(axes_count)
+    ]
+    if not interp_z:
+        axes.append(np.array(sorted(list(set(coords[2])))))
+
+    y, x, z = np.meshgrid(axes[1], axes[0], axes[2])
+    grid = np.vstack((x.ravel(), y.ravel(), z.ravel())).T
+
+    return grid
