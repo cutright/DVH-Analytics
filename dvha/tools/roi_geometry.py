@@ -456,22 +456,24 @@ def process_dth_string(dth_string):
     return bins, counts
 
 
-def coord_to_voxel_centers(coords, res=1, interp_z=False):
-    """Convert a list of 3D points into a 3D grid of voxel centers"""
+def coord_to_voxel_centers(planes, res=1):
+    """Convert a sets of points into a 3D voxel centers within ROI"""
 
-    coords = [np.array([point[i] for point in coords]) for i in range(3)]
-    bounds = [np.array([func(x) for x in coords]) for func in [np.min, np.max]]
-    ranges = bounds[1] - bounds[0]
+    shapely_data = get_shapely_from_sets_of_points(planes)
+    points = []
+    for z_index, polygon in enumerate(shapely_data["polygon"]):
+        bounds = polygon.bounds
+        range_x = bounds[2] - bounds[0]
+        range_y = bounds[3] - bounds[1]
 
-    axes_count = 3 if interp_z else 2
-    axes = [
-        np.arange(ranges[i] / res) * res + bounds[0][i] + res / 2.0
-        for i in range(axes_count)
-    ]
-    if not interp_z:
-        axes.append(np.array(sorted(list(set(coords[2])))))
+        axes = [
+            np.arange(range_x / res) * res + bounds[0] + res / 2.0,
+            np.arange(range_y / res) * res + bounds[1] + res / 2.0
+        ]
+        y, x = np.meshgrid(axes[1], axes[0])
+        grid = np.vstack((x.ravel(), y.ravel())).T
+        for point in grid:
+            if Point(point[0], point[1]).within(polygon):
+                points.append([point[0], point[1], shapely_data["z"][z_index]])
 
-    y, x, z = np.meshgrid(axes[1], axes[0], axes[2])
-    grid = np.vstack((x.ravel(), y.ravel(), z.ravel())).T
-
-    return grid
+    return points

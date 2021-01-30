@@ -300,15 +300,9 @@ def ovh(study_instance_uid, roi_name, pre_calc=None):
         "study_instance_uid = '%s' and roi_name = '%s'"
         % (study_instance_uid, roi_name),
     )[0][0]
-    oar_coordinates = roi_form.get_roi_coordinates_from_string(
-        oar_coord_string
-    )
-    oar_voxels = roi_geom.coord_to_voxel_centers(oar_coordinates)
-    oar = roi_form.get_planes_from_string(oar_coord_string)
 
-    # TODO: can we speed this up? Maybe in coord_to_voxel_centers?
-    oar_voxels = [p for p in oar_voxels if
-                  roi_geom.is_point_inside_roi(p, oar)]
+    oar_planes = roi_form.get_planes_from_string(oar_coord_string)
+    oar_voxels = roi_geom.coord_to_voxel_centers(oar_planes)
 
     is_inside = [
         [1, -1][roi_geom.is_point_inside_roi(point, treatment_volume_roi)]
