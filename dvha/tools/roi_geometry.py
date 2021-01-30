@@ -456,8 +456,22 @@ def process_dth_string(dth_string):
     return bins, counts
 
 
-def coord_to_voxel_centers(planes, res=1):
-    """Convert a sets of points into a 3D voxel centers within ROI"""
+def planes_to_voxel_centers(planes, res=1):
+    """Convert a sets of points into a 3D voxel centers within ROI
+
+    Parameters
+    ----------
+    planes : dict
+        a "sets of points" dictionary representing the union of the rois
+    res : int
+        resolution factor for voxelization
+
+    Returns
+    -------
+    list
+        A list of 3D points inside the ROI defined by ``planes``
+
+    """
 
     shapely_data = get_shapely_from_sets_of_points(planes)
     points = []

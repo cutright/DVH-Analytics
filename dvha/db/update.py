@@ -302,7 +302,7 @@ def ovh(study_instance_uid, roi_name, pre_calc=None):
     )[0][0]
 
     oar_planes = roi_form.get_planes_from_string(oar_coord_string)
-    oar_voxels = roi_geom.coord_to_voxel_centers(oar_planes)
+    oar_voxels = roi_geom.planes_to_voxel_centers(oar_planes)
 
     is_inside = [
         [1, -1][roi_geom.is_point_inside_roi(point, treatment_volume_roi)]
