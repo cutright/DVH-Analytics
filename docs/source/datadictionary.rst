@@ -23,8 +23,10 @@ cross_section_max         real           cm²      --               DVHA custom 
 cross_section_median      real           cm²      --               DVHA custom function with Shapely
 dist_to_ptv_centroids     real           cm       --               DVHA custom function
 dist_to_ptv_max           real           cm       --               Calculated with scipy's cdist function
+dist_to_ptv_75            real           cm       --               Calculated with scipy's cdist function
 dist_to_ptv_mean          real           cm       --               Calculated with scipy's cdist function
 dist_to_ptv_median        real           cm       --               Calculated with scipy's cdist function
+dist_to_ptv_25            real           cm       --               Calculated with scipy's cdist function
 dist_to_ptv_min           real           cm       --               Calculated with scipy's cdist function
 dth_string                text           cm       --               numpy histogram of scipy cdist with PTV
 dvh_string                text           cGy      --               CSV of DVH in 1 cGy bins
@@ -33,6 +35,12 @@ institutional_roi         varchar(50)    --       --               Standard ROI 
 max_dose                  real           Gy       --               Max ROI dose per dicompyler
 mean_dose                 real           Gy       --               Mean ROI dose per dicompyler
 min_dose                  real           Gy       --               Min ROI dose per dicompyler
+ovh_max                   real           cm       --               Custom DVHA overlap volume histogram calc
+ovh_75                    real           cm       --               Custom DVHA overlap volume histogram calc
+ovh_mean                  real           cm       --               Custom DVHA overlap volume histogram calc
+ovh_median                real           cm       --               Custom DVHA overlap volume histogram calc
+ovh_25                    real           cm       --               Custom DVHA overlap volume histogram calc
+ovh_min                   real           cm       --               Custom DVHA overlap volume histogram calc
 physician_roi             varchar(50)    --       --               Standard ROI name for patient's physician
 ptv_overlap               real           cm³      --               DVHA custom function with Shapely
 roi_coord_string          text           --       (3006, 0050)     Single string containing all ROI points

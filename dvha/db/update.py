@@ -244,6 +244,8 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
                 "dist_to_ptv_mean": round(float(np.mean(data)), 2),
                 "dist_to_ptv_median": round(float(np.median(data)), 2),
                 "dist_to_ptv_max": round(float(np.max(data)), 2),
+                "dist_to_ptv_25": round(float(np.percentile(data, 25)), 2),
+                "dist_to_ptv_75": round(float(np.percentile(data, 75)), 2),
                 "dth_string": dth_string,
             }
         except MemoryError as e:
@@ -321,6 +323,8 @@ def ovh(study_instance_uid, roi_name, pre_calc=None):
                 "ovh_mean": round(float(np.mean(data)), 2),
                 "ovh_median": round(float(np.median(data)), 2),
                 "ovh_max": round(float(np.max(data)), 2),
+                "ovh_25": round(float(np.percentile(data, 25)), 2),
+                "ovh_75": round(float(np.percentile(data, 75)), 2),
                 "ovh_string": ovh_string,
             }
             for key, value in data_map.items():

@@ -122,6 +122,16 @@ numerical = {
         "table": "DVHs",
         "units": "cm",
     },
+    "PTV Distance (25th %)": {
+        "var_name": "dist_to_ptv_25",
+        "table": "DVHs",
+        "units": "cm",
+    },
+    "PTV Distance (75th %)": {
+        "var_name": "dist_to_ptv_75",
+        "table": "DVHs",
+        "units": "cm",
+    },
     "OVH Min": {
         "var_name": "ovh_min",
         "table": "DVHs",
@@ -139,6 +149,16 @@ numerical = {
     },
     "OVH Max": {
         "var_name": "ovh_max",
+        "table": "DVHs",
+        "units": "cm",
+    },
+    "OVH 25th %": {
+        "var_name": "ovh_25",
+        "table": "DVHs",
+        "units": "cm",
+    },
+    "OVH 75th %": {
+        "var_name": "ovh_75",
         "table": "DVHs",
         "units": "cm",
     },
