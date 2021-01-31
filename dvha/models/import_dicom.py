@@ -2577,6 +2577,15 @@ class AssignPTV(wx.Dialog):
         else:
             self.close()
 
+        # Auto skip if < 2 PTVs
+        ptv_count = len(self.ptvs[self.study_uid])
+        if ptv_count == 0:
+            self.on_next()
+        elif ptv_count == 1:
+            self.ptvs[self.plan_uid] = [self.ptvs[self.study_uid]]
+            self.update_data()
+            self.on_next()
+
     def update_ptv_data_tables(self):
         ptvs = self.get_current_ptv_assignments()
         for key in ["ignored", "included"]:
