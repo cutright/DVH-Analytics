@@ -879,6 +879,9 @@ class UserSettings(wx.Frame):
         self.dvh_bin_width_input = wx.TextCtrl(
             self, wx.ID_ANY, str(self.options.dvh_bin_width)
         )
+        self.ovh_resolution_input = wx.TextCtrl(
+            self, wx.ID_ANY, str(self.options.OVH_RESOLUTION)
+        )
         self.dvh_bin_max_dose = wx.TextCtrl(self, wx.ID_ANY, "")
         self.dvh_bin_max_dose_units = wx.ComboBox(
             self,
@@ -1036,6 +1039,8 @@ class UserSettings(wx.Frame):
         )
         # self.dvh_bin_width_input.SetMinSize((50, 22))
         # self.dvh_bin_max_dose_units.SetMinSize((50, 22))
+        self.ovh_resolution_input.SetToolTip("Value must be numeric.")
+        self.ovh_resolution_input.SetMinSize((50, 21))
         self.combo_box_colors_category.SetMinSize(
             (250, self.combo_box_colors_category.GetSize()[1])
         )
@@ -1090,13 +1095,14 @@ class UserSettings(wx.Frame):
             wx.StaticBox(self, wx.ID_ANY, "Plot Options"), wx.VERTICAL
         )
         sizer_dvh_options = wx.StaticBoxSizer(
-            wx.StaticBox(self, wx.ID_ANY, "DVH Options"), wx.VERTICAL
+            wx.StaticBox(self, wx.ID_ANY, "DVH/OVH Options"), wx.VERTICAL
         )
         sizer_dvh_bin_width = wx.BoxSizer(wx.HORIZONTAL)
         sizer_dvh_bin_max = wx.BoxSizer(wx.HORIZONTAL)
         sizer_dvh_small_vol = wx.BoxSizer(wx.HORIZONTAL)
         sizer_dvh_segments_between = wx.BoxSizer(wx.HORIZONTAL)
         sizer_dvh_high_resolution = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_ovh_resolution = wx.BoxSizer(wx.HORIZONTAL)
         sizer_alpha = wx.BoxSizer(wx.VERTICAL)
         sizer_alpha_input = wx.BoxSizer(wx.HORIZONTAL)
         sizer_line_styles = wx.BoxSizer(wx.VERTICAL)
@@ -1209,6 +1215,14 @@ class UserSettings(wx.Frame):
             sizer_dvh_high_resolution, 0, wx.EXPAND | wx.TOP | wx.LEFT, 5
         )
 
+        label_ovh_res = wx.StaticText(self, wx.ID_ANY, "OVH Resolution (mm):")
+        label_ovh_res.SetToolTip("Set to 0 to skip calculations.")
+        sizer_ovh_resolution.Add(
+            label_ovh_res, 1, wx.EXPAND | wx.TOP | wx.LEFT, 5
+        )
+        sizer_ovh_resolution.Add(self.ovh_resolution_input, 0, wx.ALL, 5)
+        sizer_dvh_options.Add(sizer_ovh_resolution, 0, wx.EXPAND | wx.TOP, 5)
+
         sizer_wrapper.Add(sizer_dvh_options, 0, wx.ALL | wx.EXPAND, 10)
 
         label_colors = wx.StaticText(self, wx.ID_ANY, "Colors:")
@@ -1296,6 +1310,11 @@ class UserSettings(wx.Frame):
             wx.EVT_TEXT,
             self.update_dvh_bin_width_val,
             id=self.dvh_bin_width_input.GetId(),
+        )
+        self.Bind(
+            wx.EVT_TEXT,
+            self.update_ovh_resolution_val,
+            id=self.ovh_resolution_input.GetId(),
         )
         self.Bind(
             wx.EVT_TEXT,
@@ -1582,7 +1601,7 @@ class UserSettings(wx.Frame):
     def update_dvh_bin_width_val(self, *args):
         new = self.dvh_bin_width_input.GetValue()
         try:
-            val = abs(int(new))
+            val = abs(int(float(new)))
             self.options.set_option("dvh_bin_width", val)
         except ValueError:
             if new != "":
@@ -1590,8 +1609,22 @@ class UserSettings(wx.Frame):
                     str(self.options.dvh_bin_width)
                 )
 
+    def update_ovh_resolution_val(self, *args):
+        new = self.ovh_resolution_input.GetValue()
+        try:
+            val = abs(float(new))
+            self.options.set_option("OVH_RESOLUTION", val)
+        except ValueError:
+            if new != "":
+                self.ovh_resolution_input.SetValue(
+                    str(self.options.OVH_RESOLUTION)
+                )
+
     def update_dvh_bin_width_var(self, *args):
-        self.dvh_bin_width_input.SetValue(str(self.options.dvh_bin_width))
+        self.dvh_bin_width_input.SetValue("%0.1f" % self.options.dvh_bin_width)
+
+    def update_ovh_resolution_var(self, *args):
+        self.ovh_resolution_input.SetValue(str(self.options.OVH_RESOLUTION))
 
     def update_dvh_bin_max_dose_val(self, *args):
         new_val = self.dvh_bin_max_dose.GetValue()
@@ -1652,6 +1685,7 @@ class UserSettings(wx.Frame):
 
     def refresh_options(self):
         self.update_dvh_bin_width_var()
+        self.update_ovh_resolution_var()
         self.update_dvh_bin_max_dose_var()
         self.update_dvh_bin_max_dose_units_var()
         self.update_alpha_var()

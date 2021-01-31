@@ -1947,12 +1947,21 @@ class StudyImporter:
                     tv,
                 )
 
+                # Calculate OVH
+                self.post_import_calc(
+                    "Overlap Volume Histogram (OVH)",
+                    study_uid,
+                    post_import_rois,
+                    db_update.ovh,
+                    tv,
+                )
+
                 self.update_ptv_data_in_db(tv, study_uid)
 
             else:
                 msg = (
-                    "StudyImporter.run: Skipping PTV related calculations. No PTV found for mrn: %s"
-                    % mrn
+                    "StudyImporter.run: Skipping PTV related calculations. "
+                    "No PTV found for mrn: %s" % mrn
                 )
                 push_to_log(msg=msg)
 
@@ -1968,7 +1977,8 @@ class StudyImporter:
     def push(data_to_import):
         """
         Push data to the SQL database
-        :param data_to_import: data to import, should be formatted as indicated in db.sql_connector.DVH_SQL.insert_row
+        :param data_to_import: data to import, should be formatted as
+        indicated in db.sql_connector.DVH_SQL.insert_row
         :type data_to_import: dict
         """
         with DVH_SQL() as cnx:

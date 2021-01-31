@@ -65,3 +65,7 @@ ALTER TABLE DVHs ADD COLUMN IF NOT EXISTS centroid_dist_to_iso_min real;
 ALTER TABLE DVHs ADD COLUMN IF NOT EXISTS centroid_dist_to_iso_max real;
 -- The following columns have been added as of DVH Analytics 0.9.4
 ALTER TABLE DVHs ADD COLUMN IF NOT EXISTS ovh_string text;
+ALTER TABLE DVHs ADD COLUMN IF NOT EXISTS ovh_min real;
+ALTER TABLE DVHs ADD COLUMN IF NOT EXISTS ovh_mean real;
+ALTER TABLE DVHs ADD COLUMN IF NOT EXISTS ovh_median real;
+ALTER TABLE DVHs ADD COLUMN IF NOT EXISTS ovh_max real;
