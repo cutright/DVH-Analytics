@@ -3,7 +3,7 @@
 v0.9.4 (TBD)
 -------------------------
  - [Import] New OVH calculation [Issue 111](https://github.com/cutright/DVH-Analytics/issues/111)
-
+ - [Import] Bump DVHA-MLCA to 0.2.3.post1 to prevent crash if younge_complexity_score returned 0
 
 v0.9.3.post1 (2021.01.29)
 -------------------------

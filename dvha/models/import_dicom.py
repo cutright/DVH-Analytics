@@ -1801,12 +1801,17 @@ class StudyImporter:
             "DVHs": [],
         }  # DVHs will only include PTVs, others pushed en route
 
-        if (
-            not self.import_uncategorized
-        ):  # remove uncategorized ROIs unless this is checked
+        # remove uncategorized ROIs unless this is checked
+        if not self.import_uncategorized:
             for roi_key in list(roi_name_map):
-                if parsed_data.get_physician_roi(roi_key) == "uncategorized":
-                    roi_name_map.pop(roi_key)
+                try:
+                    name = parsed_data.get_physician_roi(roi_key)
+                    if name == "uncategorized":
+                        roi_name_map.pop(roi_key)
+                except Exception as e:
+                    msg = "Failed to remove %s from import list" % \
+                          roi_name_map[roi_key]
+                    push_to_log(e, msg=msg)
 
         # Remove previously imported roi's (e.g., when dose summations occur)
         with DVH_SQL() as cnx:
@@ -2344,6 +2349,7 @@ class AssignPTV(wx.Dialog):
         self.__initialize_ptv_dict()
         self.__initialize_patient_name_list()
         self.current_index = 0
+        self.__set_auto_assigned()
 
         self.plan_uid, self.study_uid = self.uids[self.current_index]
 
@@ -2395,7 +2401,10 @@ class AssignPTV(wx.Dialog):
         self.__do_bind()
         self.__do_layout()
 
-        self.update_data()
+        if not len(self.allowed_indices):
+            wx.CallAfter(self.close)
+        else:
+            self.update_data()
 
     def __set_properties(self):
         self.SetTitle("PTV Assignment for Overlap and Distance Calculations")
@@ -2433,7 +2442,7 @@ class AssignPTV(wx.Dialog):
             sizer_input.Add(sizer_text_ctrl[key], 0, wx.ALL | wx.EXPAND, 5)
 
         # PTV assignment objections
-        sizer_list_ctrl.Add(self.list_ctrl["ignored"], 0, wx.EXPAND, 0)
+        sizer_list_ctrl.Add(self.list_ctrl["ignored"], 1, wx.EXPAND, 0)
         sizer_add_remove.Add((20, 20), 0, 0, 0)  # Top Spacer
         sizer_add_remove.Add(self.button_add, 0, wx.ALIGN_CENTER | wx.ALL, 5)
         sizer_add_remove.Add(
@@ -2441,22 +2450,20 @@ class AssignPTV(wx.Dialog):
         )
         sizer_add_remove.Add((20, 20), 0, 0, 0)  # Bottom Spacer
         sizer_list_ctrl.Add(sizer_add_remove, 0, wx.ALL | wx.EXPAND, 10)
-        sizer_list_ctrl.Add(self.list_ctrl["included"], 0, wx.EXPAND, 0)
+        sizer_list_ctrl.Add(self.list_ctrl["included"], 1, wx.EXPAND, 0)
         sizer_input.Add(sizer_list_ctrl, 0, wx.ALL | wx.EXPAND, 5)
 
         # Cancel, Back, and Next buttons
         sizer_cancel.Add(self.button_cancel, 0, wx.ALL, 5)
         sizer_buttons.Add(sizer_cancel, 0, wx.EXPAND, 0)
         sizer_gauge.Add(self.gauge, 1, wx.EXPAND | wx.ALL, 5)
-        sizer_buttons.Add(self.gauge, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 50)
+        sizer_buttons.Add(sizer_gauge, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 50)
         sizer_back_next.Add(self.button_back, 0, wx.ALL, 5)
         sizer_back_next.Add(self.button_next, 0, wx.ALL, 5)
         sizer_buttons.Add(sizer_back_next, 0, wx.EXPAND, 0)
 
         sizer_main.Add(sizer_input, 1, wx.ALL | wx.EXPAND, 5)
-        sizer_main.Add(
-            sizer_buttons, 0, wx.ALIGN_RIGHT | wx.ALL | wx.EXPAND, 5
-        )
+        sizer_main.Add(sizer_buttons, 0, wx.ALL | wx.EXPAND, 5)
 
         note = wx.StaticText(
             self,
@@ -2555,11 +2562,12 @@ class AssignPTV(wx.Dialog):
 
     def update_data(self, increment=0):
         self.current_index += increment
-        progress = 100 * float(self.current_index) / (len(self.uids) - 1)
+        progress = 100 * float(self.current_index) / (len(self.allowed_indices) - 1)
         self.gauge.SetValue(progress)
         self.update_back_next_buttons()
-        if self.current_index < len(self.uids):
-            self.plan_uid, self.study_uid = self.uids[self.current_index]
+        if self.current_index < len(self.allowed_indices):
+            i = self.allowed_indices[self.current_index]
+            self.plan_uid, self.study_uid = self.uids[i]
             data = self.parsed_dicom_data[self.plan_uid]
             for key, text_ctrl in self.text_ctrl.items():
                 value = (
@@ -2576,15 +2584,6 @@ class AssignPTV(wx.Dialog):
             self.update_labels()
         else:
             self.close()
-
-        # Auto skip if < 2 PTVs
-        ptv_count = len(self.ptvs[self.study_uid])
-        if ptv_count < 2:
-            if ptv_count == 1:
-                ptvs = self.ptvs[self.study_uid]
-                self.ptvs[self.plan_uid] = self.ptvs[self.plan_uid].union(ptvs)
-                self.update_data()
-            self.on_next()
 
     def update_ptv_data_tables(self):
         ptvs = self.get_current_ptv_assignments()
@@ -2638,6 +2637,19 @@ class AssignPTV(wx.Dialog):
         self.button_back.Enable(self.current_index > 0)
         label = "Next" if self.current_index < len(self.uids) - 1 else "Finish"
         self.button_next.SetLabel(label)
+
+    def __set_auto_assigned(self):
+        # Auto skip if < 2 PTVs
+        self.auto_assigned = []
+        self.allowed_indices = []
+        for i, (plan_uid, study_uid) in enumerate(self.uids):
+            ptv_count = len(self.ptvs[study_uid])
+            if ptv_count < 2:
+                if ptv_count == 1:
+                    self.ptvs[plan_uid] = self.ptvs[self.study_uid]
+                self.auto_assigned.append(i)
+            else:
+                self.allowed_indices.append(i)
 
 
 class PreprocessDicom:
