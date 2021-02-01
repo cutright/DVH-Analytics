@@ -493,11 +493,10 @@ def planes_to_voxel_centers(planes, res=1, max_progress=None):
         grid = np.vstack((x.ravel(), y.ravel())).T
         for point in grid:
             if Point(point[0], point[1]).within(polygon):
-                if Point(point[0], point[1]).within(polygon):
-                    z = shapely_data["z"][z_index]
-                    points.append((point[0], point[1], z))
-                    progress = max_progress * z_index / z_total
-                    if max_progress is not None:
-                        pub.sendMessage("update_dvh_progress", msg=progress)
+                z = shapely_data["z"][z_index]
+                points.append((point[0], point[1], z))
+                progress = max_progress * z_index / z_total
+                if max_progress is not None:
+                    pub.sendMessage("update_dvh_progress", msg=progress)
 
     return points
