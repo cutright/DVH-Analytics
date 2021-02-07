@@ -1854,11 +1854,12 @@ class MainApp(wx.App):
             wx.CallAfter(window.Close)
         return super().OnExit()
 
-    def InitLocale(self):
-        # https://docs.wxpython.org/MigrationGuide.html#possible-locale-mismatch-on-windows
-        if is_windows():
-            return
-        super().InitLocale()
+    # May cause crash, another solution needed?
+    # def InitLocale(self):
+    #     # https://docs.wxpython.org/MigrationGuide.html#possible-locale-mismatch-on-windows
+    #     if is_windows():
+    #         return
+    #     super().InitLocale()
 
 
 def start():
