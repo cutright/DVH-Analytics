@@ -11,6 +11,7 @@ Tools for geometric calculations
 #    available at https://github.com/cutright/DVH-Analytics
 
 from scipy.spatial.distance import cdist
+from pubsub import pub
 import numpy as np
 from math import ceil
 from shapely.geometry import Point
@@ -456,15 +457,18 @@ def process_dth_string(dth_string):
     return bins, counts
 
 
-def planes_to_voxel_centers(planes, res=1):
+def planes_to_voxel_centers(planes, res=1, max_progress=None):
     """Convert a sets of points into a 3D voxel centers within ROI
 
     Parameters
     ----------
     planes : dict
         a "sets of points" dictionary representing the union of the rois
-    res : int
-        resolution factor for voxelization
+    res : float
+        resolution factor for voxels
+    max_progress : float
+        if not None, set the maximum progress bar value
+        (with update_dvh_progress)
 
     Returns
     -------
@@ -475,6 +479,7 @@ def planes_to_voxel_centers(planes, res=1):
 
     shapely_data = get_shapely_from_sets_of_points(planes)
     points = []
+    z_total = float(len(shapely_data["polygon"]))
     for z_index, polygon in enumerate(shapely_data["polygon"]):
         bounds = polygon.bounds
         range_x = bounds[2] - bounds[0]
@@ -482,12 +487,16 @@ def planes_to_voxel_centers(planes, res=1):
 
         axes = [
             np.arange(range_x / res) * res + bounds[0] + res / 2.0,
-            np.arange(range_y / res) * res + bounds[1] + res / 2.0
+            np.arange(range_y / res) * res + bounds[1] + res / 2.0,
         ]
         y, x = np.meshgrid(axes[1], axes[0])
         grid = np.vstack((x.ravel(), y.ravel())).T
         for point in grid:
             if Point(point[0], point[1]).within(polygon):
-                points.append([point[0], point[1], shapely_data["z"][z_index]])
+                z = shapely_data["z"][z_index]
+                points.append((point[0], point[1], z))
+                progress = max_progress * z_index / z_total
+                if max_progress is not None:
+                    pub.sendMessage("update_dvh_progress", msg=progress)
 
     return points

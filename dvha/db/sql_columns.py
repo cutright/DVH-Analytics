@@ -7,7 +7,7 @@ These objects are largely used for designing queries in the GUI to easily
 connect UI friendly variable names with their associated SQL tables column
 names
 """
-# Copyright (c) 2016-2019 Dan Cutright
+# Copyright (c) 2016-2021 Dan Cutright
 # This file is part of DVH Analytics, released under a BSD license.
 #    See the file LICENSE included with this distribution, also
 #    available at https://github.com/cutright/DVH-Analytics
@@ -119,6 +119,46 @@ numerical = {
     },
     "PTV Distance (Max)": {
         "var_name": "dist_to_ptv_max",
+        "table": "DVHs",
+        "units": "cm",
+    },
+    "PTV Distance (25th %)": {
+        "var_name": "dist_to_ptv_25",
+        "table": "DVHs",
+        "units": "cm",
+    },
+    "PTV Distance (75th %)": {
+        "var_name": "dist_to_ptv_75",
+        "table": "DVHs",
+        "units": "cm",
+    },
+    "OVH Min": {
+        "var_name": "ovh_min",
+        "table": "DVHs",
+        "units": "cm",
+    },
+    "OVH Mean": {
+        "var_name": "ovh_mean",
+        "table": "DVHs",
+        "units": "cm",
+    },
+    "OVH Median": {
+        "var_name": "ovh_median",
+        "table": "DVHs",
+        "units": "cm",
+    },
+    "OVH Max": {
+        "var_name": "ovh_max",
+        "table": "DVHs",
+        "units": "cm",
+    },
+    "OVH 25th %": {
+        "var_name": "ovh_25",
+        "table": "DVHs",
+        "units": "cm",
+    },
+    "OVH 75th %": {
+        "var_name": "ovh_75",
         "table": "DVHs",
         "units": "cm",
     },

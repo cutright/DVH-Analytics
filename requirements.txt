@@ -15,4 +15,4 @@ rapidfuzz
 selenium
 pandas>=1.1.5
 scikit-image
-dvha-mlca
+dvha-mlca>=0.2.3.post1

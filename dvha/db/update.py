@@ -18,6 +18,8 @@ from dvha.tools import roi_formatter as roi_form
 from dvha.tools.errors import push_to_log
 from mlca.mlc_analyzer import Beam as BeamAnalyzer
 from dvha.tools.utilities import calc_stats, sample_roi
+from pubsub import pub
+from dvha.options import Options
 
 
 def centroid(study_instance_uid, roi_name):
@@ -242,6 +244,8 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
                 "dist_to_ptv_mean": round(float(np.mean(data)), 2),
                 "dist_to_ptv_median": round(float(np.median(data)), 2),
                 "dist_to_ptv_max": round(float(np.max(data)), 2),
+                "dist_to_ptv_25": round(float(np.percentile(data, 25)), 2),
+                "dist_to_ptv_75": round(float(np.percentile(data, 75)), 2),
                 "dth_string": dth_string,
             }
         except MemoryError as e:
@@ -272,49 +276,99 @@ def ovh(study_instance_uid, roi_name, pre_calc=None):
 
     """
 
-    if pre_calc is not None:
-        treatment_volume_roi = pre_calc
-        treatment_volume_coord = get_treatment_volume_coord(pre_calc)
-    else:
-        with DVH_SQL() as cnx:
-            ptv_coordinates_strings = cnx.query(
-                "dvhs",
-                "roi_coord_string",
-                "study_instance_uid = '%s' and roi_type like 'PTV%%'"
-                % study_instance_uid,
-            )
+    res = Options().OVH_RESOLUTION
 
-        ptvs = [
-            roi_form.get_planes_from_string(ptv[0])
-            for ptv in ptv_coordinates_strings
-        ]
-        treatment_volume_roi = roi_geom.union(ptvs)
-        treatment_volume_coord = roi_form.get_roi_coordinates_from_planes(
-            treatment_volume_roi
+    if res > 0:
+
+        oar_coordinates_string = query(
+            "dvhs",
+            "roi_coord_string",
+            "study_instance_uid = '%s' and roi_name = '%s'"
+            % (study_instance_uid, roi_name),
         )
-    treatment_volume_coord = sample_roi(treatment_volume_coord)
 
-    oar_coord_string = query(
-        "dvhs",
-        "roi_coord_string",
-        "study_instance_uid = '%s' and roi_name = '%s'"
-        % (study_instance_uid, roi_name),
-    )[0][0]
+        if pre_calc is None:
+            uid = study_instance_uid
+            condition = "study_instance_uid = '%s' and roi_type like 'PTV%%'" % uid
+            ptvs = [row[0] for row in query("DVHs", "roi_name", condition)]
+            if len(ptvs):
+                pre_calc = get_total_treatment_volume_of_study(uid, ptvs=ptvs)
+            else:
+                msg = "Call to min_distances failed for %s, no PTVs found!" % uid
+                push_to_log(NotImplementedError, msg=msg)
 
-    oar_planes = roi_form.get_planes_from_string(oar_coord_string)
-    oar_voxels = roi_geom.planes_to_voxel_centers(oar_planes)
+        treatment_volume_roi = pre_calc
+        if pre_calc is None:
+            with DVH_SQL() as cnx:
+                ptv_coordinates_strings = cnx.query(
+                    "dvhs",
+                    "roi_coord_string",
+                    "study_instance_uid = '%s' and roi_type like 'PTV%%'"
+                    % study_instance_uid,
+                )
 
-    is_inside = [
-        [1, -1][roi_geom.is_point_inside_roi(point, treatment_volume_roi)]
-        for point in oar_voxels
-    ]
+            ptvs = [
+                roi_form.get_planes_from_string(ptv[0])
+                for ptv in ptv_coordinates_strings
+            ]
+            treatment_volume_roi = roi_geom.union(ptvs)
+
+        try:
+            oar = roi_form.get_planes_from_string(oar_coordinates_string[0][0])
+            data = get_ovh(oar, treatment_volume_roi, res=res)
+            ovh_string = ",".join(["%0.6f" % num for num in roi_geom.dth(data)])
+
+            data_map = {
+                "ovh_min": round(float(np.min(data)), 2),
+                "ovh_mean": round(float(np.mean(data)), 2),
+                "ovh_median": round(float(np.median(data)), 2),
+                "ovh_max": round(float(np.max(data)), 2),
+                "ovh_25": round(float(np.percentile(data, 25)), 2),
+                "ovh_75": round(float(np.percentile(data, 75)), 2),
+                "ovh_string": ovh_string,
+            }
+            for key, value in data_map.items():
+                update_dvhs_table(study_instance_uid, roi_name, key, value)
+
+        except Exception as e:
+            msg = "OVH failed for %s of study_instance_uid %s" % \
+                  (roi_name, study_instance_uid)
+            push_to_log(e, msg=msg)
+
+
+def get_ovh(oar, target, res=2):
+    """Calculate the overlap volume histogram.
+
+    Parameters
+    ----------
+    oar : dict
+        OAR sets-of-points data
+    target : dict
+        PTV sets-of-points data
+    res : int, float
+        Resolution (mm) of OVH calculation
+
+    """
+
+    treatment_volume_coord = sample_roi(get_treatment_volume_coord(target))
+    oar_voxels = roi_geom.planes_to_voxel_centers(
+        oar, res=res, max_progress=0.5
+    )
+
+    is_inside = []
+    point_count = float(len(oar_voxels))
+    for i, point in enumerate(oar_voxels):
+        is_inside.append([1, -1][roi_geom.is_point_inside_roi(point, target)])
+        progress = 0.5 * i / point_count + 0.5
+        pub.sendMessage("update_dvh_progress", msg=progress)
+
     voxel_data = roi_geom.min_distances_to_target(
         oar_voxels, treatment_volume_coord, factors=is_inside
     )
 
-    ovh = roi_geom.dth(voxel_data)
-    ovh_string = ",".join(["%0.6f" % num for num in ovh])
-    return ovh_string
+    pub.sendMessage("update_dvh_progress", msg=1)
+
+    return voxel_data
 
 
 def treatment_volume_overlap(study_instance_uid, roi_name, pre_calc=None):
@@ -855,6 +909,20 @@ def update_ptv_dist_data(uid, callback=None):
 
     """
     update_roi_metric(min_distances, uid, callback)
+
+
+def update_ovh_data(uid, callback=None):
+    """Update PTV distance data with min_distances function
+
+    Parameters
+    ----------
+    uid : str
+        study instance uid
+    callback : callable, optional
+        Accepts a dict with keys of 'label' and 'gauge'
+
+    """
+    update_roi_metric(ovh, uid, callback)
 
 
 def update_ptv_overlap(uid, callback=None):
