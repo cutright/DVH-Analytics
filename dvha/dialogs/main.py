@@ -25,7 +25,6 @@ from dvha.tools.utilities import (
     set_msw_background_color,
     set_frame_icon,
     backup_sqlite_db,
-    is_edge_backend_available,
     is_windows,
 )
 from dvha.db import sql_columns
@@ -836,11 +835,13 @@ class UserSettings(wx.Frame):
     Customize directories and visual settings for DVHA
     """
 
-    def __init__(self, parent):
+    def __init__(self, parent, is_edge_backend_available=False):
         """
         :param parent: main application frame
         """
         wx.Frame.__init__(self, None, title="User Settings")
+
+        self.is_edge_backend_available = is_edge_backend_available
 
         self.parent = parent
         self.options = parent.options
@@ -963,7 +964,7 @@ class UserSettings(wx.Frame):
             self.checkbox_edge_backend = wx.CheckBox(
                 self, wx.ID_ANY, "Enable Edge WebView Backend"
             )
-            if not is_edge_backend_available():
+            if not self.is_edge_backend_available:
                 self.checkbox_edge_backend.Disable()
 
         self.button_restore_defaults = wx.Button(
@@ -1392,7 +1393,7 @@ class UserSettings(wx.Frame):
             self.update_alpha_val,
             id=self.spin_ctrl_alpha_input.GetId(),
         )
-        if is_windows() and is_edge_backend_available():
+        if is_windows() and self.is_edge_backend_available:
             self.Bind(
                 wx.EVT_CHECKBOX,
                 self.on_enable_edge,

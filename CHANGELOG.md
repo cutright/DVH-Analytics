@@ -1,5 +1,10 @@
 # Change log of DVH Analytics
 
+v0.9.5 (TBD)
+------------
+ - [GUI] Fixed bug preventing User Preferences window from loading if on Windows without Edge being available [Issue 144](https://github.com/cutright/DVH-Analytics/issues/144)
+ 
+
 v0.9.4 (2021.02.06)
 -------------------------
  - [Import] New OVH calculation [Issue 111](https://github.com/cutright/DVH-Analytics/issues/111)
