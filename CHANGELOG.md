@@ -1,9 +1,10 @@
 # Change log of DVH Analytics
 
-v0.9.5 (TBD)
+v0.9.5 (2021.02.13)
 ------------
  - [GUI] Fixed bug preventing User Preferences window from loading if on Windows without Edge being available [Issue 144](https://github.com/cutright/DVH-Analytics/issues/144)
- 
+ - [ROI Map] Fixed bug where ROI Map edits didn't update previous imports [Issue 142](https://github.com/cutright/DVH-Analytics/issues/142)
+ - [Misc] Catch locale issue between wxWidgets and python [140](https://github.com/cutright/DVH-Analytics/issues/140)
 
 v0.9.4 (2021.02.06)
 -------------------------
