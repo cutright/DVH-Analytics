@@ -17,6 +17,7 @@ logger = logging.getLogger("dvha")
 logger.setLevel(logging.DEBUG)
 
 import wx
+import wx.html2 as webview
 from datetime import datetime
 import webbrowser
 from pubsub import pub
@@ -86,6 +87,13 @@ class DVHAMainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
 
         self.allow_window_size_save = False
+
+        self.is_edge_backend_available = None
+        try:
+            self.is_edge_backend_available = \
+                webview.WebView.IsBackendAvailable(webview.WebViewBackendEdge)
+        except Exception:
+            self.is_edge_backend_available = False
 
         #############################################################################
         # The following block of code for logging adapted from dicompyler
@@ -1525,7 +1533,7 @@ class DVHAMainFrame(wx.Frame):
 
     def on_pref(self, *args):
         if self.user_settings is None:
-            self.user_settings = UserSettings(self)
+            self.user_settings = UserSettings(self, self.is_edge_backend_available)
             self.user_settings.Show()
         else:
             self.user_settings.Raise()
@@ -1855,11 +1863,12 @@ class MainApp(wx.App):
         return super().OnExit()
 
     # May cause crash, another solution needed?
-    # def InitLocale(self):
-    #     # https://docs.wxpython.org/MigrationGuide.html#possible-locale-mismatch-on-windows
-    #     if is_windows():
-    #         return
-    #     super().InitLocale()
+    def InitLocale(self):
+        # https://docs.wxpython.org/MigrationGuide.html#possible-locale-mismatch-on-windows
+        if is_windows():
+            self.ResetLocale()
+            return
+        super().InitLocale()
 
 
 def start():

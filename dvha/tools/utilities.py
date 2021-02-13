@@ -1614,16 +1614,3 @@ def get_windows_webview_backend(include_edge=False):
         for id, name in backends:
             if webview.WebView.IsBackendAvailable(id):
                 return {"id": id, "name": name}
-
-
-def is_edge_backend_available():
-    """Check if WebViewBackendEdge is available
-
-    Returns
-    -------
-    bool
-        True if wx.html2.WebViewBackendEdge is available
-    """
-    if is_windows():
-        return webview.WebView.IsBackendAvailable(webview.WebViewBackendEdge)
-    return False
