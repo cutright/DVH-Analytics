@@ -219,6 +219,8 @@ class ROIMapFrame(wx.Frame):
 
         self.physicians_to_delete = []
 
+        pub.subscribe(self.update_uncategorized_ignored_choices, "update_uncategorized_ignored_choices")
+
         self.run()
 
     def __set_properties(self):
@@ -1406,6 +1408,7 @@ class RemapROIWorker(Thread):
         wx.CallAfter(pub.sendMessage, "roi_map_close")
 
     def update_variation(self, variation, physician, cnx):
+        variation = clean_name(variation)
 
         new_physician_roi = self.roi_map.get_physician_roi(
             physician, variation
@@ -1528,6 +1531,7 @@ class RemapROIFrame(wx.Frame):
     def close(self):
         self.roi_map.write_to_file()
         self.roi_map.import_from_file()
+        pub.sendMessage("update_uncategorized_ignored_choices")
         self.Destroy()
 
     def update_gauge_1_info(self, msg):

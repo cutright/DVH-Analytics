@@ -1438,8 +1438,13 @@ class DatabaseROIs:
         for physician, physician_roi_data in changes.items():
             variations = []
             for p_roi_data in physician_roi_data.values():
-                for delta_data in p_roi_data.values():
-                    variations.extend(delta_data["variations"])
+                add_vars, del_vars = set(), set()
+                if '-' in p_roi_data:
+                    del_vars = set(csv_to_list(p_roi_data['-']['variations'][0]))
+                if '+' in p_roi_data:
+                    add_vars = set(csv_to_list(p_roi_data['+']['variations'][0]))
+                edited_vars = del_vars.symmetric_difference(add_vars)
+                variations.extend(edited_vars)
             variations_to_update[physician] = list(set(variations))
 
         for physician in list(variations_to_update):
@@ -1461,10 +1466,7 @@ class DatabaseROIs:
                         physician, new_physician_roi
                     )
 
-                    condition = (
-                        "REPLACE(REPLACE(LOWER(roi_name), ''', '`'), '_', ' ') == '%s'"
-                        % variation
-                    )
+                    condition = f"roi_name = '{variation}'"
                     sql_query = (
                         "SELECT DISTINCT study_instance_uid, roi_name FROM DVHs WHERE %s;"
                         % condition
