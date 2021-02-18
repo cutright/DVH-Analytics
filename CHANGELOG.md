@@ -1,5 +1,11 @@
 # Change log of DVH Analytics
 
+v0.9.5.post1 (TBD)
+------------------
+ - [Import] Added generic try/except blocks to import processes to mitigate potential import failures
+ - [Import] Indicate Dose Summation MRN during summation
+ - [Import] If dose summation fails, skip import
+
 v0.9.5 (2021.02.13)
 ------------
  - [GUI] Fixed bug preventing User Preferences window from loading if on Windows without Edge being available [Issue 144](https://github.com/cutright/DVH-Analytics/issues/144)
