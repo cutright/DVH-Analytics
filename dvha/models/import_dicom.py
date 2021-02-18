@@ -1751,15 +1751,14 @@ class StudyImporter:
         self.import_uncategorized = import_uncategorized
         self.final_plan_in_study = final_plan_in_study
 
-        self.mrn = 'UNKNOWN'
-
         self.terminate = False
         pub.subscribe(self.set_terminate, "terminate_import")
 
         try:
             self.run()
         except Exception as e:
-            msg = "ERROR: Failed to Import for MRN: %s" % self.mrn
+            msg = "ERROR: Failed Import for %s %s" % \
+                  (self.msg["patient_name"], self.msg["uid"])
             push_to_log(e, msg=msg)
             self.delete_partially_updated_plan()
 
@@ -1777,7 +1776,6 @@ class StudyImporter:
         wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
 
         parsed_data = DICOM_Parser(**self.init_params)
-        self.mrn = parsed_data.mrn
 
         wx.CallAfter(pub.sendMessage, "update_elapsed_time")
 
@@ -2130,7 +2128,6 @@ class ImportWorker(Thread):
         pub.subscribe(self.set_terminate, "terminate_import")
 
     def run(self):
-        exception_raised = False
         try:
             if self.auto_sum_dose:
                 msg = {
@@ -2145,16 +2142,14 @@ class ImportWorker(Thread):
         except Exception as e:
             msg = "ERROR: Dose summation failed"
             push_to_log(e, msg=msg)
-            exception_raised = True
 
-        if not exception_raised:
-            try:
-                self.run_import()
-                if not self.terminate:
-                    wx.CallAfter(pub.sendMessage, "backup_sqlite_db")
-            except Exception as e:
-                msg = "ERROR: Import failed"
-                push_to_log(e, msg=msg)
+        try:
+            self.run_import()
+            if not self.terminate:
+                wx.CallAfter(pub.sendMessage, "backup_sqlite_db")
+        except Exception as e:
+            msg = "ERROR: Import failed"
+            push_to_log(e, msg=msg)
         self.close()
 
     def close(self):
@@ -2220,12 +2215,6 @@ class ImportWorker(Thread):
                             init_param[
                                 "dose_sum_file"
                             ] = self.dose_sum_save_file_names[study_uid]
-                            if not isfile(init_param["dose_sum_file"]):
-                                msg = "Dose Summation failed for %s. Skipping Import." \
-                                      % (msg["patient_name"])
-                                print(msg)
-                                push_to_log(msg=msg)
-                                continue
                     elif plan_count > 1:
                         init_param["plan_over_rides"][
                             "study_instance_uid"
@@ -2326,30 +2315,10 @@ class ImportWorker(Thread):
 
     @staticmethod
     def sum_two_doses(dose_file_1, dose_file_2, save_to):
-        mrn = 'UNKNOWN'
-        uid_1 = 'UNKNOWN'
-        uid_2 = 'UNKNOWN'
-        try:
-            grid_1 = DoseGrid(dose_file_1)
-            mrn = getattr(grid_1.ds, 'PatientID', mrn)
-            msg = {
-                "calculation": "Dose Grid Summation(s) for %s... "
-                               "please wait" % mrn,
-                "roi_num": 0,
-                "roi_total": 1,
-                "roi_name": "",
-                "progress": 0,
-            }
-            wx.CallAfter(pub.sendMessage, "update_calculation", msg=msg)
-            uid_1 = getattr(grid_1.ds, 'SOPInstanceUID', uid_1)
-            grid_2 = DoseGrid(dose_file_2)
-            uid_1 = getattr(grid_2.ds, 'SOPInstanceUID', uid_2)
-            grid_1.add(grid_2)
-            grid_1.save_dcm(join(TEMP_DIR, save_to))
-        except Exception as e:
-            msg = "ERROR: ImportWorker.sum_two_doses failed for mrn: %s and " \
-                  "SOPInstanceUID(s): %s, %s" % (mrn, uid_1, uid_2)
-            push_to_log(e, msg=msg)
+        grid_1 = DoseGrid(dose_file_1)
+        grid_2 = DoseGrid(dose_file_2)
+        grid_1.add(grid_2)
+        grid_1.save_dcm(join(TEMP_DIR, save_to))
 
     @staticmethod
     def delete_dose_sum_files():
