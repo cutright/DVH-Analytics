@@ -21,7 +21,7 @@ from wx.lib.agw.customtreectrl import (
 from datetime import date as datetime_obj, datetime
 from dateutil.parser import parse as parse_date
 from os import listdir, remove
-from os.path import isdir, join, isfile
+from os.path import isdir, join
 from pubsub import pub
 from multiprocessing import Pool
 from threading import Thread
