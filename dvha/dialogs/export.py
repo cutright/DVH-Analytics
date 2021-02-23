@@ -526,13 +526,13 @@ class ExportFigure(wx.Frame):
         sizer_main.Add(self.combo_plot, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
 
         sizer_buttons.Add(
-            self.button["Export"], 1, wx.EXPAND | wx.ALIGN_CENTER | wx.ALL, 5
+            self.button["Export"], 1, wx.EXPAND | wx.ALL, 5
         )
         sizer_buttons.Add(
-            self.button["Dismiss"], 1, wx.EXPAND | wx.ALIGN_CENTER | wx.ALL, 5
+            self.button["Dismiss"], 1, wx.EXPAND | wx.ALL, 5
         )
         sizer_main.Add(
-            sizer_buttons, 1, wx.EXPAND | wx.ALIGN_CENTER | wx.ALL, 5
+            sizer_buttons, 1, wx.EXPAND | wx.ALL, 5
         )
 
         sizer_wrapper.Add(sizer_main, 0, wx.EXPAND | wx.ALL, 5)
