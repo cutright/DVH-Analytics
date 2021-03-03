@@ -87,7 +87,7 @@ The equivalent of the previous example, using ``DVH`` is below:
 .. code-block:: python
 
     from dvha.models.dvh import DVH
-    dvh = DVH(condition="physician_roi = 'brainstem'")
+    dvh = DVH(dvh_condition="physician_roi = 'brainstem'")
 
 
 DVH Plotting
@@ -104,6 +104,7 @@ DVH Plotting
     title = '%s DVH for %s' % (roi_name, mrn)
 
     # Create the plot, may need to call plt.show() on some setups
+    import matplotlib.pyplot as plt
     plt.plot(x, y)
     plt.title(title)
     plt.xlabel('Dose (cGy)')
@@ -126,7 +127,7 @@ Population DVH
     plt.plot(x, q1, label='25th percentile')
     plt.plot(x, q3, label='75th percentile')
 
-    plt.title('Population DVHs loaded from test.dvha')  # note, from user manual
+    plt.title('Brainstem Population DVHs')
     plt.xlabel('Dose (cGy)')
     plt.ylabel('Relative Volume')
     plt.legend()
