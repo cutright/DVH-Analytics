@@ -1,7 +1,7 @@
 # Change log of DVH Analytics
 
-v0.9.6 (TBD)
-------------
+v0.9.6 (2021.04.01)
+-------------------
  - [Export] Fix for Image Export module crashes with wxPython 4.1.1 [Issue 146](https://github.com/cutright/DVH-Analytics/issues/146)
  - [Query] dvh_condition was ignored in DVH() if no uids provided [Issue 148](https://github.com/cutright/DVH-Analytics/issues/148)
  - [DVH] DVH bin centers were off by two bins [Issue 149](https://github.com/cutright/DVH-Analytics/issues/149)
