@@ -213,7 +213,7 @@ class DVH:
             Dose axis
         """
         bins, width = self.bin_count, self.dvh_bin_width
-        return np.multiply(np.array(range(bins)) + width / 2.0, width).tolist()
+        return np.add(np.arange(bins) * width, width / 2.0).tolist()
 
     @property
     def x_data(self):
@@ -225,10 +225,7 @@ class DVH:
             x data for plotting
 
         """
-        bins, width, num_dvhs = self.bin_count, self.dvh_bin_width, self.count
-        return [
-            np.multiply(np.array(range(bins)) + width / 2.0, width).tolist()
-        ] * num_dvhs
+        return [self.x_axis] * self.count
 
     @property
     def y_data(self):

@@ -8,7 +8,7 @@
 #    See the file LICENSE included with this distribution, also
 #    available at https://github.com/cutright/DVH-Analytics
 
-from shapely.geometry import Polygon, Point
+from shapely.geometry import Polygon, Point, MultiPolygon
 from shapely import speedups
 import numpy as np
 
@@ -171,6 +171,33 @@ def get_roi_coordinates_from_planes(sets_of_points):
     return roi_coordinates
 
 
+def get_roi_coordinates_from_shapely(shapely_dict):
+    """
+
+    Parameters
+    ----------
+    shapely_dict : dict
+        output from get_shapely_from_sets_of_points
+
+    Returns
+    -------
+    list
+        a list of numpy arrays, each array is the x, y, z coordinates of the given point
+
+    """
+    roi_coordinates = []
+
+    for i, shape in enumerate(shapely_dict["polygon"]):
+        multi_polygon = shape if isinstance(shape, MultiPolygon) else [shape]
+        for polygon in multi_polygon:
+            x, y = polygon.exterior.coords.xy
+            for j, point_x in enumerate(x):
+                roi_coordinates.append(
+                    np.array((point_x, y[j], shapely_dict["z"][i]))
+                )
+    return roi_coordinates
+
+
 def dicompyler_roi_coord_to_db_string(coord):
     """
 
@@ -196,17 +223,22 @@ def dicompyler_roi_coord_to_db_string(coord):
     return ":".join(contours)
 
 
-def get_shapely_from_sets_of_points(sets_of_points):
+def get_shapely_from_sets_of_points(sets_of_points, tolerance=None, preserve_topology=True):
     """
 
     Parameters
     ----------
     sets_of_points : dict
         a "sets of points" formatted dictionary
+    tolerance : bool, optional
+        If set to a number, will use Shapely's simplify on each contour with
+        the given tolerance
+    preserve_topology : bool, optional
+        Passed to Shapely's simplify if ``simplify_tolerance`` is set
 
     Returns
     -------
-    list
+    dict
         roi_slices which is a dictionary of lists of z, thickness, and a Shapely Polygon class object
 
     """
@@ -227,6 +259,8 @@ def get_shapely_from_sets_of_points(sets_of_points):
         thickness = thicknesses[all_z_values.index(round(float(z), 2))]
         shapely_roi = points_to_shapely_polygon(sets_of_points[z])
         if shapely_roi:
+            if tolerance is not None:
+                shapely_roi = shapely_roi.simplify(tolerance, preserve_topology)
             roi_slices["z"].append(round(float(z), 2))
             roi_slices["thickness"].append(thickness)
             roi_slices["polygon"].append(shapely_roi)

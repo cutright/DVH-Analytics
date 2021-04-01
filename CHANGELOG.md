@@ -1,7 +1,15 @@
 # Change log of DVH Analytics
 
-v0.9.5.post1 (TBD)
-------------------
+v0.9.6 (2021.04.01)
+-------------------
+ - [Export] Fix for Image Export module crashes with wxPython 4.1.1 [Issue 146](https://github.com/cutright/DVH-Analytics/issues/146)
+ - [Query] dvh_condition was ignored in DVH() if no uids provided [Issue 148](https://github.com/cutright/DVH-Analytics/issues/148)
+ - [DVH] DVH bin centers were off by two bins [Issue 149](https://github.com/cutright/DVH-Analytics/issues/149)
+ - [Import] DTH is faster and more accurate by simplifying contours before calculation [Issue 111](https://github.com/cutright/DVH-Analytics/issues/111)
+ - [Import] Better memory management for OVH calculation [Issue 143](https://github.com/cutright/DVH-Analytics/issues/143)
+
+v0.9.5.post1
+------------
  - [Import] Added generic try/except blocks to import processes to mitigate potential import failures
  - [Import] Indicate Dose Summation MRN during summation
  - [Import] If dose summation fails, skip import
@@ -10,7 +18,7 @@ v0.9.5 (2021.02.13)
 ------------
  - [GUI] Fixed bug preventing User Preferences window from loading if on Windows without Edge being available [Issue 144](https://github.com/cutright/DVH-Analytics/issues/144)
  - [ROI Map] Fixed bug where ROI Map edits didn't update previous imports [Issue 142](https://github.com/cutright/DVH-Analytics/issues/142)
- - [Misc] Catch locale issue between wxWidgets and python [140](https://github.com/cutright/DVH-Analytics/issues/140)
+ - [Misc] Catch locale issue between wxWidgets and python [Issue 140](https://github.com/cutright/DVH-Analytics/issues/140)
 
 v0.9.4 (2021.02.06)
 -------------------------
