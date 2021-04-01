@@ -367,9 +367,21 @@ def get_ovh(oar, target, res=2):
         progress = 0.5 * i / point_count + 0.5
         pub.sendMessage("update_dvh_progress", msg=progress)
 
-    voxel_data = roi_geom.min_distances_to_target(
-        oar_voxels, treatment_volume_coord, factors=is_inside
-    )
+    try:
+        voxel_data = roi_geom.min_distances_to_target(
+            oar_voxels, treatment_volume_coord, factors=is_inside
+        )
+    except Exception:
+        voxel_data = []
+        block = 1000
+        for i in range(0, len(oar_voxels), block):
+            voxel_data.extend(
+                roi_geom.min_distances_to_target(
+                    oar_voxels[i:i + block],
+                    treatment_volume_coord,
+                    factors=is_inside[i:i + block]
+                )
+            )
 
     pub.sendMessage("update_dvh_progress", msg=1)
 

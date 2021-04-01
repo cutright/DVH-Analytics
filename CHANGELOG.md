@@ -6,6 +6,7 @@ v0.9.6 (TBD)
  - [Query] dvh_condition was ignored in DVH() if no uids provided [Issue 148](https://github.com/cutright/DVH-Analytics/issues/148)
  - [DVH] DVH bin centers were off by two bins [Issue 149](https://github.com/cutright/DVH-Analytics/issues/149)
  - [Import] DTH is faster and more accurate by simplifying contours before calculation [Issue 111](https://github.com/cutright/DVH-Analytics/issues/111)
+ - [Import] Better memory management for OVH calculation [Issue 143](https://github.com/cutright/DVH-Analytics/issues/143)
 
 v0.9.5.post1
 ------------
