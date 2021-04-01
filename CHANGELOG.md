@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.9.7
+------
+ - [ROI Map] Minor speed improvement on ROI Map updating [Issue 151](https://github.com/cutright/DVH-Analytics/issues/151)
+
 v0.9.6 (2021.04.01)
 -------------------
  - [Export] Fix for Image Export module crashes with wxPython 4.1.1 [Issue 146](https://github.com/cutright/DVH-Analytics/issues/146)
