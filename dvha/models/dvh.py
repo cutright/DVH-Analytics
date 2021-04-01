@@ -43,6 +43,7 @@ class DVH:
     def __init__(self, uid=None, dvh_condition=None, dvh_bin_width=5, group=1):
         self.dvh_bin_width = dvh_bin_width
 
+        constraints_str = ""
         if uid:
             constraints_str = "study_instance_uid in ('%s')" % "', '".join(uid)
             if dvh_condition:
@@ -50,8 +51,8 @@ class DVH:
                     dvh_condition,
                     constraints_str,
                 )
-        else:
-            constraints_str = ""
+        elif dvh_condition:
+            constraints_str = dvh_condition
 
         # Get DVH data from SQL and set as attributes
         dvh_data = QuerySQL("DVHs", constraints_str, group=group)

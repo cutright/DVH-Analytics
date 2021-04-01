@@ -104,15 +104,18 @@ publication, or help the DVHA community by submitting bugs, issues, feature requ
 Cite
 ----
 DOI: `https://doi.org/10.1002/acm2.12401 <https://doi.org/10.1002/acm2.12401>`__
-Cutright D, Gopalakrishnan M, Roy A, Panchal A, and Mittal BB. "DVH Analytics: A DVH database for clinicians and researchers." Journal of Applied Clinical Medical Physics 19.5 (2018): 413-427.
+  Cutright D, Gopalakrishnan M, Roy A, Panchal A, and Mittal BB. "DVH Analytics: A DVH database for clinicians and researchers." Journal of Applied Clinical Medical Physics 19.5 (2018): 413-427.
 
 The previous web-based version described in the above publication can be found 
 `here <https://github.com/cutright/DVH-Analytics-Bokeh>`__ but is no longer being developed.
 
 Related Publications
 --------------------
+DOI: `http://doi.org/10.1002/mp.14795 <http://doi.org/10.1002/mp.14795>`__
+  Roy A, Widjaja R, Wang M, Cutright D, Gopalakrishnan M, Mittal BB. "Treatment plan quality control using multivariate control charts." Medical Physics. (2021).
+
 DOI: `https://doi.org/10.1016/j.adro.2019.11.006 <https://doi.org/10.1016/j.adro.2019.11.006>`__
-Roy A, Cutright D, Gopalakrishnan M, Yeh AB, and Mittal BB. "A Risk-Adjusted Control Chart to Evaluate IMRT Plan Quality." Advances in Radiation Oncology (2019).
+  Roy A, Cutright D, Gopalakrishnan M, Yeh AB, and Mittal BB. "A Risk-Adjusted Control Chart to Evaluate IMRT Plan Quality." Advances in Radiation Oncology (2019).
 
 
 Selected Studies Using DVHA
