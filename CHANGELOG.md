@@ -5,6 +5,7 @@ v0.9.6 (TBD)
  - [Export] Fix for Image Export module crashes with wxPython 4.1.1 [Issue 146](https://github.com/cutright/DVH-Analytics/issues/146)
  - [Query] dvh_condition was ignored in DVH() if no uids provided [Issue 148](https://github.com/cutright/DVH-Analytics/issues/148)
  - [DVH] DVH bin centers were off by two bins [Issue 149](https://github.com/cutright/DVH-Analytics/issues/149)
+ - [Import] DTH is faster and more accurate by simplifying contours before calculation [Issue 111](https://github.com/cutright/DVH-Analytics/issues/111)
 
 v0.9.5.post1
 ------------

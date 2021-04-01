@@ -174,9 +174,8 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
         else:
             msg = "Call to min_distances failed for %s, no PTVs found!" % uid
             push_to_log(NotImplementedError, msg=msg)
-    treatment_volume_roi = pre_calc
-    treatment_volume_coord = get_treatment_volume_coord(pre_calc)
-    if treatment_volume_coord is None:
+
+    if pre_calc is None:
         with DVH_SQL() as cnx:
             ptv_coordinates_strings = cnx.query(
                 "dvhs",
@@ -190,16 +189,22 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
             for ptv in ptv_coordinates_strings
         ]
         treatment_volume_roi = roi_geom.union(ptvs)
-        treatment_volume_coord = roi_form.get_roi_coordinates_from_planes(
-            treatment_volume_roi
-        )
+    else:
+        treatment_volume_roi = pre_calc
 
-    oar_coordinates = roi_form.get_roi_coordinates_from_string(
-        oar_coordinates_string[0][0]
+    tv_shapely = roi_form.get_shapely_from_sets_of_points(
+        treatment_volume_roi,
+        0.2
+    )
+    treatment_volume_coord = roi_form.get_roi_coordinates_from_shapely(
+        tv_shapely
     )
 
-    treatment_volume_coord = sample_roi(treatment_volume_coord)
-    oar_coordinates = sample_roi(oar_coordinates)
+    oar_planes = roi_form.get_planes_from_string(
+        oar_coordinates_string[0][0]
+    )
+    oar_shapely = roi_form.get_shapely_from_sets_of_points(oar_planes, 0.5)
+    oar_coordinates = roi_form.get_roi_coordinates_from_shapely(oar_shapely)
 
     try:
         is_inside = [
