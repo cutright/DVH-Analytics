@@ -1405,6 +1405,8 @@ class RemapROIWorker(Thread):
             )
             sleep(0.2)
 
+        wx.CallAfter(pub.sendMessage, "roi_map_close")
+
     def update_variation(self, variation, physician, cnx):
         variation = clean_name(variation)
 
