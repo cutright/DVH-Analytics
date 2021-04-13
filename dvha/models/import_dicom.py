@@ -1909,7 +1909,8 @@ class StudyImporter:
                         )
                     if query_return:
                         roi_type, physician_roi = tuple(query_return[0])
-                        if str(roi_type).lower() in ["organ", "ctv", "gtv"]:
+                        included_types = ["organ", "ctv", "gtv", "none", ""]
+                        if str(roi_type).lower() in included_types:
                             if not (
                                 str(physician_roi).lower()
                                 in [
