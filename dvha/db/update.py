@@ -204,7 +204,7 @@ def min_distances(study_instance_uid, roi_name, pre_calc=None):
         oar_coordinates_string[0][0]
     )
     oar_shapely = roi_form.get_shapely_from_sets_of_points(oar_planes, 0.5)
-    oar_coordinates = roi_form.get_roi_coordinates_from_shapely(oar_shapely)
+    oar_coordinates = roi_form.get_roi_coordinates_from_shapely(oar_shapely, sample_res=Options().DTH_RESOLUTION)
 
     try:
         is_inside = [

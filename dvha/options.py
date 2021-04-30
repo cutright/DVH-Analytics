@@ -301,6 +301,7 @@ class DefaultOptions:
         self.ENABLE_EDGE_BACKEND = False
 
         self.OVH_RESOLUTION = 3  # mm
+        self.DTH_RESOLUTION = 0.5  # perimeter space resolution in mm
 
 
 class Options(DefaultOptions):
