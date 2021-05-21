@@ -169,19 +169,18 @@ class EndpointFrame:
                             if endpoint_input == "relative":
                                 x /= 100.0
 
-                            dvh = self.group_data[group]["dvh"]
-                            if "V" in ep_name:
-                                ep[ep_name] = dvh.get_volume_of_dose(
-                                    x,
-                                    volume_scale=endpoint_output,
-                                    dose_scale=endpoint_input,
-                                )
-                            else:
-                                ep[ep_name] = dvh.get_dose_to_volume(
-                                    x,
-                                    dose_scale=endpoint_output,
-                                    volume_scale=endpoint_input,
-                                )
+                            func = getattr(
+                                self.group_data[group]["dvh"],
+                                "get_volume_of_dose"
+                                if "V" in ep_name
+                                else "get_dose_to_volume",
+                            )
+                            ep[ep_name] = func(
+                                x,
+                                volume_scale=endpoint_output,
+                                dose_scale=endpoint_input,
+                                compliment="C" in ep_name,
+                            )
 
         for group, ep in eps.items():
             self.data_table[group].set_data(ep, columns[group])

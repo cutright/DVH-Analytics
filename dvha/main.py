@@ -1866,7 +1866,15 @@ class MainApp(wx.App):
     def InitLocale(self):
         # https://docs.wxpython.org/MigrationGuide.html#possible-locale-mismatch-on-windows
         if is_windows():
-            self.ResetLocale()
+            try:
+                self.ResetLocale()
+            except Exception as e:
+                logger.warning(str(e))
+                try:
+                    import locale
+                    locale.setlocale(locale.LC_ALL, 'C')
+                except Exception as e:
+                    logger.warning(str(e))
             return
         super().InitLocale()
 

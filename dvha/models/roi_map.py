@@ -1434,25 +1434,22 @@ class RemapROIWorker(Thread):
             )
 
             if uids:
-                for i, uid in enumerate(uids):
+                for uid in uids:
+                    roi_type = self.roi_map.get_roi_type(
+                        physician, new_physician_roi
+                    )
                     condition = (
                         "roi_name = '%s' and study_instance_uid = '%s'"
                         % (variation, uid)
                     )
-                    cnx.update(
-                        "dvhs", "physician_roi", new_physician_roi, condition
-                    )
-                    cnx.update(
-                        "dvhs",
-                        "institutional_roi",
-                        new_institutional_roi,
-                        condition,
-                    )
-                    roi_type = self.roi_map.get_roi_type(
-                        physician, new_physician_roi
-                    )
+
+                    columns = ["physician_roi", "institutional_roi"]
+                    values = [new_physician_roi, new_institutional_roi]
                     if new_physician_roi != "uncategorized":
-                        cnx.update("dvhs", "roi_type", roi_type, condition)
+                        columns.append("roi_type")
+                        values.append(roi_type)
+
+                    cnx.update_multicolumn("dvhs", columns, values, condition)
 
 
 class RemapROIFrame(wx.Frame):

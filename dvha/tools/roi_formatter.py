@@ -171,13 +171,15 @@ def get_roi_coordinates_from_planes(sets_of_points):
     return roi_coordinates
 
 
-def get_roi_coordinates_from_shapely(shapely_dict):
+def get_roi_coordinates_from_shapely(shapely_dict, sample_res=None):
     """
 
     Parameters
     ----------
     shapely_dict : dict
         output from get_shapely_from_sets_of_points
+    sample_res : int, float
+        If set to a numeric value, sample each polygon with this resolution (mm)
 
     Returns
     -------
@@ -190,7 +192,10 @@ def get_roi_coordinates_from_shapely(shapely_dict):
     for i, shape in enumerate(shapely_dict["polygon"]):
         multi_polygon = shape if isinstance(shape, MultiPolygon) else [shape]
         for polygon in multi_polygon:
-            x, y = polygon.exterior.coords.xy
+            if isinstance(sample_res, (int, float)):
+                x, y = get_contour_sample(polygon, sample_res)
+            else:
+                x, y = polygon.exterior.coords.xy
             for j, point_x in enumerate(x):
                 roi_coordinates.append(
                     np.array((point_x, y[j], shapely_dict["z"][i]))
@@ -294,3 +299,42 @@ def dicompyler_roi_to_sets_of_points(coord):
             if len(plane_points) > 2:
                 all_points[z].append(plane_points)
     return all_points
+
+
+def get_contour_sample(polygon, dth_res=0.5) -> tuple:
+    """Get 3D points uniformly distributed in the perimeter space
+
+    Parameters
+    ----------
+    polygon : Polygon
+        shapely object
+    dth_res : int, float
+        Sampling distance in perimeter space (mm)
+
+    Returns
+    -------
+    np.ndarray
+        x coordinates of sampled contour
+    np.ndarray
+        y coordinates of sampled contour
+
+    """
+    # Get coordinates of polygon and index array
+    x, y = polygon.exterior.coords.xy
+    indices = np.arange(len(x))
+
+    # cumulative path length
+    s = np.cumsum(np.sqrt(np.diff(x) ** 2 + np.diff(y) ** 2))
+    num_samples = int(np.floor(s[-1] / dth_res))
+
+    # path length space
+    sample_s = np.arange(num_samples) * dth_res
+
+    # path length space to index space
+    sample_i = np.interp(sample_s, s, indices[1:])
+
+    # Get x and y coordinates of sampled index space
+    sample_x = np.interp(sample_i, indices, x)
+    sample_y = np.interp(sample_i, indices, y)
+
+    return sample_x, sample_y

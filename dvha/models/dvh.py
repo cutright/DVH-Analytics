@@ -278,7 +278,11 @@ class DVH:
         return np.percentile(self.dvh, percentile, 1)
 
     def get_dose_to_volume(
-        self, volume, volume_scale="absolute", dose_scale="absolute"
+        self,
+        volume,
+        volume_scale="absolute",
+        dose_scale="absolute",
+        compliment=False,
     ):
         """Get the minimum dose to a specified volume
 
@@ -290,6 +294,8 @@ class DVH:
             either 'relative' or 'absolute'
         dose_scale : str, optional
             either 'relative' or 'absolute'
+        compliment : bool, optional
+            return the max dose - value
 
         Returns
         -------
@@ -326,10 +332,20 @@ class DVH:
                 self.rx_dose[0] = 0
                 doses[0] = 0
 
+        if compliment:
+            if dose_scale == "absolute":
+                doses = self.max_dose[0 : self.count] - doses
+            else:
+                doses = 100.0 * np.divide(self.max_dose[0 : self.count], self.rx_dose) - doses
+
         return doses.tolist()
 
     def get_volume_of_dose(
-        self, dose, dose_scale="absolute", volume_scale="absolute"
+        self,
+        dose,
+        dose_scale="absolute",
+        volume_scale="absolute",
+        compliment=False,
     ):
         """Get the volume of an isodose contour defined by ``dose``
 
@@ -341,6 +357,8 @@ class DVH:
             either 'absolute' or 'relative'
         volume_scale : str, optional
             either 'absolute' or 'relative'
+        compliment : bool, optional
+            return the ROI volume - value
 
         Returns
         -------
@@ -372,6 +390,12 @@ class DVH:
             volumes = np.multiply(volumes, self.volume[0 : self.count])
         else:
             volumes = np.multiply(volumes, 100.0)
+
+        if compliment:
+            if volume_scale == "absolute":
+                volumes = self.volume[0 : self.count] - volumes
+            else:
+                volumes = 100.0 * np.ones(self.count) - volumes
 
         return volumes.tolist()
 

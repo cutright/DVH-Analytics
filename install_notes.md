@@ -19,6 +19,25 @@ If you've cloned the project, but did not run the setup.py installer, launch DVH
 $ python dvha_app.py
 ~~~
 
+### Linux
+Most likely, you will need to build wxPython from source with the proper libraries 
+already installed. See [Issue 157](https://github.com/cutright/DVH-Analytics/issues/157) for a discussion.  
+
+For example, if you are using Ubuntu 20.04.02 LTS, install the following prior 
+to installing/building wxPython:
+
+~~~
+sudo apt install git-all
+sudo apt install python3-pip
+sudo apt install libgtk-3-dev
+sudo apt-get install python-wxgtk3.0
+sudo apt install libwebkit2gtk-4.0-dev
+~~~
+
+Then create your python virtual environment and do a pip install for wxpython (possibly with --no-cache-dir if needed).
+
+Manjaro/Arch Linux users can refer to [this post](https://github.com/cutright/DVH-Analytics/issues/157#issuecomment-826392916) for tips.
+
 ## Shapely
 The python package Shapely frequently has issues installing on Windows. If your pip install failed, consider installing 
 Shapely from [here](https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely).

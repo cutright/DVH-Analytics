@@ -52,6 +52,7 @@ spread_z                  real           cm       (3006, 0050)     Max distance 
 surface_area              real           cm²      --               DVHA custom function, needs validation
 toxicity_grade            smallint       --       --               Not yet implemented
 volume                    real           cm³      --               ROI volume per dicompyler
+integral_dose             real           Gy*cm³   --               ROI mean dose times volume per dicompyler
 ========================  =============  =======  ==============   ==========================================
 
 

@@ -235,22 +235,7 @@ class DVH_SQL:
             sql_cmd = "NOW()"
         return sql_cmd
 
-    def update(self, table_name, column, value, condition_str):
-        """Change the data in the database
-
-        Parameters
-        ----------
-        table_name : str
-            DVHs', 'Plans', 'Rxs', 'Beams', or 'DICOM_Files'
-        column : str
-            SQL column to be updated
-        value : str, float, int
-            value to be set
-        condition_str : str
-            a condition in SQL syntax
-
-        """
-
+    def process_value(self, value):
         try:
             float(value)
             value_is_numeric = True
@@ -271,13 +256,47 @@ class DVH_SQL:
             value = "NULL"
         else:
             value = "'%s'" % str(value)  # need quotes to input a string
+        return value
 
-        update = "Update %s SET %s = %s WHERE %s" % (
-            table_name,
-            column,
-            value,
-            condition_str,
-        )
+    def update(self, table_name, column, value, condition_str):
+        """Change the data in the database
+
+        Parameters
+        ----------
+        table_name : str
+            DVHs', 'Plans', 'Rxs', 'Beams', or 'DICOM_Files'
+        column : str
+            SQL column to be updated
+        value : str, float, int
+            value to be set
+        condition_str : str
+            a condition in SQL syntax
+
+        """
+
+        self.update_multicolumn(table_name, [column], [value], condition_str)
+
+    def update_multicolumn(self, table_name, columns, values, condition_str):
+        """Change the data in the database
+
+        Parameters
+        ----------
+        table_name : str
+            DVHs', 'Plans', 'Rxs', 'Beams', or 'DICOM_Files'
+        columns : list
+            list of SQL column to be updated
+        values : list
+            list value to be set
+        condition_str : str
+            a condition in SQL syntax
+
+        """
+
+        values = [self.process_value(v) for v in values]
+
+        set_str = [f"{columns[i]} = {value}" for i, value in enumerate(values)]
+        set_str = ','.join(set_str)
+        update = f"Update {table_name} SET {set_str} WHERE {condition_str}"
 
         try:
             self.cursor.execute(update)

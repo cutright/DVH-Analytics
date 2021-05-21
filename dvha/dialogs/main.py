@@ -137,7 +137,7 @@ class AddEndpointDialog(wx.Dialog):
         self.combo_box_output = wx.ComboBox(
             self,
             wx.ID_ANY,
-            choices=["Dose (Gy)", "Dose(%)", "Volume (cc)", "Volume (%)"],
+            choices=["Dose (Gy)", "Dose (%)", "Volume (cc)", "Volume (%)"],
             style=wx.CB_DROPDOWN | wx.CB_READONLY,
         )
         self.text_input = wx.TextCtrl(self, wx.ID_ANY, "")
@@ -149,6 +149,7 @@ class AddEndpointDialog(wx.Dialog):
             majorDimension=1,
             style=wx.RA_SPECIFY_ROWS,
         )
+        self.checkbox = wx.CheckBox(self, wx.ID_ANY, "Compliment")
         self.button_ok = wx.Button(self, wx.ID_OK, "OK")
         self.button_ok.Disable()
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
@@ -160,6 +161,10 @@ class AddEndpointDialog(wx.Dialog):
     def __set_properties(self):
         self.radio_box_units.SetSelection(0)
         self.combo_box_output.SetValue("Dose (Gy)")
+        self.checkbox.SetToolTip(
+            'Check for "compliment" value. Used for low dose endpoints '
+            "per TG-263 nomenclature"
+        )
 
     def __do_bind(self):
         self.Bind(
@@ -174,6 +179,9 @@ class AddEndpointDialog(wx.Dialog):
             wx.EVT_RADIOBOX,
             self.radio_box_ticker,
             id=self.radio_box_units.GetId(),
+        )
+        self.Bind(
+            wx.EVT_CHECKBOX, self.checkbox_ticker, id=self.checkbox.GetId()
         )
 
     def __do_layout(self):
@@ -207,14 +215,16 @@ class AddEndpointDialog(wx.Dialog):
         sizer_input.Add(sizer_input_units, 1, wx.ALL | wx.EXPAND, 5)
         sizer_wrapper.Add(sizer_input, 0, wx.ALL | wx.EXPAND, 10)
 
+        sizer_misc = wx.BoxSizer(wx.HORIZONTAL)
+
         self.text_short_hand = wx.StaticText(self, wx.ID_ANY, "Short-hand: ")
-        sizer_wrapper.Add(self.text_short_hand, 0, wx.ALL, 5)
-        sizer_buttons.Add(self.button_ok, 0, wx.ALL, 5)
-        sizer_buttons.Add(self.button_cancel, 0, wx.ALL | wx.EXPAND, 5)
+        sizer_misc.Add(self.text_short_hand, 1, wx.EXPAND, 0)
+        sizer_misc.Add(self.checkbox, 0, wx.EXPAND, 0)
+        sizer_wrapper.Add(sizer_misc, 0, wx.RIGHT | wx.LEFT | wx.EXPAND, 15)
+        sizer_buttons.Add(self.button_ok, 0, wx.RIGHT, 5)
+        sizer_buttons.Add(self.button_cancel, 0, wx.RIGHT | wx.EXPAND, 5)
         sizer_buttons_wrapper.Add(sizer_buttons, 0, wx.ALL | wx.EXPAND, 5)
-        sizer_wrapper.Add(
-            sizer_buttons_wrapper, 0, wx.ALIGN_CENTER | wx.ALL, 5
-        )
+        sizer_wrapper.Add(sizer_buttons_wrapper, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
         self.SetSizer(sizer_wrapper)
         sizer_wrapper.Fit(self)
@@ -227,6 +237,9 @@ class AddEndpointDialog(wx.Dialog):
         self.update_short_hand()
 
     def text_input_ticker(self, evt):
+        self.update_short_hand()
+
+    def checkbox_ticker(self, evt):
         self.update_short_hand()
 
     def radio_box_ticker(self, evt):
@@ -252,12 +265,20 @@ class AddEndpointDialog(wx.Dialog):
         short_hand = "Short-hand: "
         value = self.text_input.GetValue()
         if value:
-            prepend = ["V_", "D_"]["Dose" in self.combo_box_output.GetValue()]
-            units = self.radio_box_units.GetItemLabel(
+            output_units = self.combo_box_output.GetValue().split("(")[1][:-1]
+            is_dose = "Dose" in self.combo_box_output.GetValue()
+            if self.checkbox.GetValue():  # compliment
+                prepend = "DC" if is_dose else "CV"
+            else:
+                prepend = "D" if is_dose else "V"
+            input_units = self.radio_box_units.GetItemLabel(
                 self.radio_box_units.GetSelection()
             ).strip()
-            short_hand = short_hand + prepend + value + units
+            short_hand = (
+                f"{short_hand}{prepend}_{value}{input_units}[{output_units}]"
+            )
         self.text_short_hand.SetLabelText(short_hand)
+        self.Layout()
         self.set_button_ok_enable(value)
 
     def set_button_ok_enable(self, value):
@@ -868,11 +889,11 @@ class UserSettings(wx.Frame):
         self.text_ctrl_inbox = wx.TextCtrl(
             self, wx.ID_ANY, "", style=wx.TE_DONTWRAP
         )
-        self.button_inbox = wx.Button(self, wx.ID_ANY, u"…")
+        self.button_inbox = wx.Button(self, wx.ID_ANY, "…")
         self.text_ctrl_imported = wx.TextCtrl(
             self, wx.ID_ANY, "", style=wx.TE_DONTWRAP
         )
-        self.button_imported = wx.Button(self, wx.ID_ANY, u"…")
+        self.button_imported = wx.Button(self, wx.ID_ANY, "…")
 
         self.checkbox_dicom_dvh = wx.CheckBox(
             self, wx.ID_ANY, "Import DICOM DVH if available"
@@ -882,6 +903,9 @@ class UserSettings(wx.Frame):
         )
         self.ovh_resolution_input = wx.TextCtrl(
             self, wx.ID_ANY, str(self.options.OVH_RESOLUTION)
+        )
+        self.dth_resolution_input = wx.TextCtrl(
+            self, wx.ID_ANY, str(self.options.DTH_RESOLUTION)
         )
         self.dvh_bin_max_dose = wx.TextCtrl(self, wx.ID_ANY, "")
         self.dvh_bin_max_dose_units = wx.ComboBox(
@@ -1045,6 +1069,11 @@ class UserSettings(wx.Frame):
         self.combo_box_colors_category.SetMinSize(
             (250, self.combo_box_colors_category.GetSize()[1])
         )
+        self.dth_resolution_input.SetToolTip("Value must be numeric.")
+        self.dth_resolution_input.SetMinSize((50, 21))
+        self.combo_box_colors_category.SetMinSize(
+            (250, self.combo_box_colors_category.GetSize()[1])
+        )
         self.combo_box_colors_selection.SetMinSize(
             (145, self.combo_box_colors_selection.GetSize()[1])
         )
@@ -1104,6 +1133,7 @@ class UserSettings(wx.Frame):
         sizer_dvh_segments_between = wx.BoxSizer(wx.HORIZONTAL)
         sizer_dvh_high_resolution = wx.BoxSizer(wx.HORIZONTAL)
         sizer_ovh_resolution = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_dth_resolution = wx.BoxSizer(wx.HORIZONTAL)
         sizer_alpha = wx.BoxSizer(wx.VERTICAL)
         sizer_alpha_input = wx.BoxSizer(wx.HORIZONTAL)
         sizer_line_styles = wx.BoxSizer(wx.VERTICAL)
@@ -1224,6 +1254,14 @@ class UserSettings(wx.Frame):
         sizer_ovh_resolution.Add(self.ovh_resolution_input, 0, wx.ALL, 5)
         sizer_dvh_options.Add(sizer_ovh_resolution, 0, wx.EXPAND | wx.TOP, 5)
 
+        label_dth_res = wx.StaticText(self, wx.ID_ANY, "DTH Resolution (mm):")
+        label_dth_res.SetToolTip("Perimeter space resolution of ROI sampling.")
+        sizer_dth_resolution.Add(
+            label_dth_res, 1, wx.EXPAND | wx.TOP | wx.LEFT, 5
+        )
+        sizer_dth_resolution.Add(self.dth_resolution_input, 0, wx.ALL, 5)
+        sizer_dvh_options.Add(sizer_dth_resolution, 0, wx.EXPAND | wx.TOP, 5)
+
         sizer_wrapper.Add(sizer_dvh_options, 0, wx.ALL | wx.EXPAND, 10)
 
         label_colors = wx.StaticText(self, wx.ID_ANY, "Colors:")
@@ -1316,6 +1354,11 @@ class UserSettings(wx.Frame):
             wx.EVT_TEXT,
             self.update_ovh_resolution_val,
             id=self.ovh_resolution_input.GetId(),
+        )
+        self.Bind(
+            wx.EVT_TEXT,
+            self.update_dth_resolution_val,
+            id=self.dth_resolution_input.GetId(),
         )
         self.Bind(
             wx.EVT_TEXT,
@@ -1621,11 +1664,25 @@ class UserSettings(wx.Frame):
                     str(self.options.OVH_RESOLUTION)
                 )
 
+    def update_dth_resolution_val(self, *args):
+        new = self.dth_resolution_input.GetValue()
+        try:
+            val = abs(float(new))
+            self.options.set_option("DTH_RESOLUTION", val)
+        except ValueError:
+            if new != "":
+                self.dth_resolution_input.SetValue(
+                    str(self.options.DTH_RESOLUTION)
+                )
+
     def update_dvh_bin_width_var(self, *args):
         self.dvh_bin_width_input.SetValue("%0.1f" % self.options.dvh_bin_width)
 
     def update_ovh_resolution_var(self, *args):
         self.ovh_resolution_input.SetValue(str(self.options.OVH_RESOLUTION))
+
+    def update_dth_resolution_var(self, *args):
+        self.dth_resolution_input.SetValue(str(self.options.DTH_RESOLUTION))
 
     def update_dvh_bin_max_dose_val(self, *args):
         new_val = self.dvh_bin_max_dose.GetValue()
@@ -1687,6 +1744,7 @@ class UserSettings(wx.Frame):
     def refresh_options(self):
         self.update_dvh_bin_width_var()
         self.update_ovh_resolution_var()
+        self.update_dth_resolution_var()
         self.update_dvh_bin_max_dose_var()
         self.update_dvh_bin_max_dose_units_var()
         self.update_alpha_var()
