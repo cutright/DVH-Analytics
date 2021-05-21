@@ -73,3 +73,5 @@ ALTER TABLE DVHs ADD COLUMN IF NOT EXISTS ovh_25 real;
 ALTER TABLE DVHs ADD COLUMN IF NOT EXISTS ovh_75 real;
 ALTER TABLE DVHs ADD COLUMN IF NOT EXISTS dist_to_ptv_25 real;
 ALTER TABLE DVHs ADD COLUMN IF NOT EXISTS dist_to_ptv_75 real;
+-- The following columns have been added as of DVH Analytics 0.9.7
+ALTER TABLE DVHs ADD COLUMN IF NOT EXISTS integral_dose real;

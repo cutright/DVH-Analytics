@@ -771,6 +771,7 @@ class DICOM_Parser:
                 "centroid_dist_to_iso_min": [iso_dist["min"], "real"],
                 "centroid_dist_to_iso_max": [iso_dist["max"], "real"],
                 "toxicity_grade": [None, "smallint"],
+                "integral_dose": [dvh.mean * dvh.volume, "real"],
             }
 
     def get_roi_centroid_to_isocenter_dist(self, roi_centroid):

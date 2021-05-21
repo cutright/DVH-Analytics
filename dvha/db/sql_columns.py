@@ -383,6 +383,11 @@ numerical = {
         "table": "Plans",
         "units": "Gy",
     },
+    "Integral Dose": {
+        "var_name": "integral_dose",
+        "table": "DVHs",
+        "units": "Gy*cc",
+    },
 }
 
 # Removed these variables from UI as they may be overkill?
