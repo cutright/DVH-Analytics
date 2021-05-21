@@ -1,11 +1,11 @@
 # Change log of DVH Analytics
 
-v0.9.7
-------
+v0.9.7 (2021.05.21)
+-------------------
  - [ROI Map] Minor speed improvement on ROI Map updating [Issue 151](https://github.com/cutright/DVH-Analytics/issues/151)
  - [Import] PTV distance calculations can now be performed on ROIs with no RTROIInterpretedType [Issue 154](https://github.com/cutright/DVH-Analytics/issues/154) 
  - [Import] DTH calculations are equidistantly sampled in perimeter space [Issue 155](https://github.com/cutright/DVH-Analytics/issues/155)
- - [Import] Integral dose is now calculated per ROI
+ - [Import] Integral dose is now calculated and stored in DVHs SQL table
 
 v0.9.6 (2021.04.01)
 -------------------
