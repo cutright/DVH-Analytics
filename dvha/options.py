@@ -11,7 +11,7 @@ Class used to manage user options
 #    available at https://github.com/cutright/DVH-Analytics
 
 import pickle
-from os.path import isfile
+from os.path import isfile, isdir
 from os import unlink
 import hashlib
 from copy import deepcopy
@@ -335,7 +335,14 @@ class Options(DefaultOptions):
 
             for key, value in loaded_options.items():
                 if hasattr(self, key):
-                    setattr(self, key, value)
+                    # ignore directories that don't exist
+                    if key.endswith('_DIR') and not isdir(value):
+                        msg = f"Options.load: {value} is not a valid " \
+                              f"directory. {key} will use default value of " \
+                              f"{getattr(self, key)} instead"
+                        push_to_log(msg=msg)
+                    else:
+                        setattr(self, key, value)
 
     def save(self):
         self.is_edited = False
