@@ -1043,16 +1043,19 @@ def sample_roi(roi_coord, max_point_count=5000, iterative_reduction=0.1):
 
 
 def get_sorted_indices(some_list):
-    """
+    """Return sorted indices of a list of string or numerical data
 
     Parameters
     ----------
-    some_list :
+    some_list : any sortable list
 
 
     Returns
     -------
-
+    list
+        Indices of ``some_list`` sorted. If standard ``sorted`` fails, attempt
+        to sort by its float representation, then by string representation if
+        that fails.
     """
     try:
         return [i[0] for i in sorted(enumerate(some_list), key=lambda x: x[1])]
