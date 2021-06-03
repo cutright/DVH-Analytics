@@ -253,7 +253,7 @@ def get_shapely_from_sets_of_points(sets_of_points, tolerance=None, preserve_top
     roi_slices = {"z": [], "thickness": [], "polygon": []}
 
     sets_of_points_keys = list(sets_of_points)  # lock in for-loop order
-    z_values = list(map(float, sets_of_points_keys))
+    z_values = [float(key) for key in sets_of_points]
 
     # Get the thickness of each slice
     order = get_sorted_indices(z_values)
