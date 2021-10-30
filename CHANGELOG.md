@@ -1,5 +1,9 @@
 # Change log of DVH Analytics
 
+v0.9.8 (TBD)
+------------
+ - [Import] Fixed bug causing incorrect slice thickness for surface area calculation [Issue 164](https://github.com/cutright/DVH-Analytics/issues/164)
+
 v0.9.7 (2021.05.21)
 -------------------
  - [ROI Map] Minor speed improvement on ROI Map updating [Issue 151](https://github.com/cutright/DVH-Analytics/issues/151)

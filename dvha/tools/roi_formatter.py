@@ -9,8 +9,10 @@
 #    available at https://github.com/cutright/DVH-Analytics
 
 from shapely.geometry import Polygon, Point, MultiPolygon
+from shapely.geometry.base import BaseGeometry
 from shapely import speedups
 import numpy as np
+from dvha.tools.utilities import get_sorted_indices
 
 # "sets of points" objects
 #     dictionaries using str(z) as keys
@@ -81,7 +83,7 @@ def points_to_shapely_polygon(sets_of_points):
 
     Returns
     -------
-    type
+    BaseGeometry
         a composite polygon as a shapely object (either polygon or multipolygon)
 
     """
@@ -250,25 +252,25 @@ def get_shapely_from_sets_of_points(sets_of_points, tolerance=None, preserve_top
 
     roi_slices = {"z": [], "thickness": [], "polygon": []}
 
-    sets_of_points_keys = list(sets_of_points)
-    sets_of_points_keys.sort()
+    sets_of_points_keys = list(sets_of_points)  # lock in for-loop order
+    z_values = [float(key) for key in sets_of_points]
 
-    all_z_values = [round(float(z), 2) for z in sets_of_points_keys]
-    thicknesses = np.abs(np.diff(all_z_values))
-    if len(thicknesses):
-        thicknesses = np.append(thicknesses, np.min(thicknesses))
+    # Get the thickness of each slice
+    order = get_sorted_indices(z_values)
+    thickness = np.abs(np.diff([z_values[i] for i in order]))
+    if len(thickness):
+        thickness = np.append(thickness, np.min(thickness))
     else:
-        thicknesses = np.array([MIN_SLICE_THICKNESS])
+        thickness = np.array([MIN_SLICE_THICKNESS])
 
-    for z in sets_of_points:
-        thickness = thicknesses[all_z_values.index(round(float(z), 2))]
-        shapely_roi = points_to_shapely_polygon(sets_of_points[z])
-        if shapely_roi:
+    for i, z in enumerate(sets_of_points_keys):
+        polygon = points_to_shapely_polygon(sets_of_points[z])
+        if polygon:
             if tolerance is not None:
-                shapely_roi = shapely_roi.simplify(tolerance, preserve_topology)
+                polygon = polygon.simplify(tolerance, preserve_topology)
             roi_slices["z"].append(round(float(z), 2))
-            roi_slices["thickness"].append(thickness)
-            roi_slices["polygon"].append(shapely_roi)
+            roi_slices["thickness"].append(thickness[order[i]])
+            roi_slices["polygon"].append(polygon)
 
     return roi_slices
 

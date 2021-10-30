@@ -53,6 +53,8 @@ class DVH_SQL:
             )
             config = stored_options.SQL_LAST_CNX_GRPS[group][self.db_type]
 
+        self.config = config
+
         if self.db_type == "sqlite":
             db_file_path = config["host"]
             if not dirname(
@@ -979,7 +981,7 @@ class DVH_SQL:
         self.import_db(self, new_cnx, callback=callback, force=force)
 
     @staticmethod
-    def import_db(cnx_src, cnx_dst, callback=None, force=False):
+    def import_db(cnx_src, cnx_dst, callback=None, force=False, create_new_uids=False, append_to_uid=None):
         """
 
         Parameters
@@ -993,19 +995,28 @@ class DVH_SQL:
             table (str), current row (int), total_row_count (int) as parameters
         force : bool, optional
             ignore duplicate StudyInstanceUIDs if False
+        create_new_uids : bool, optional
+            If true, dbname of cnx_src will be appended to study_instance_uid
+            and mrn
+        append_to_uid : str
+            If create_new_uids is true, append this to mrn and
+            study_instance_uids instead of dbname
 
         """
         for table in cnx_src.tables:
             columns = cnx_src.get_column_names(table)
+            uid_index = columns.index('study_instance_uid')
+            mrn_index = columns.index('mrn')
             study_uids_1 = cnx_src.get_unique_values(
                 table, "study_instance_uid"
             )
 
             condition = None
-            if not force:
+            if not force or create_new_uids:
                 study_uids_2 = cnx_dst.get_unique_values(
                     table, "study_instance_uid"
                 )
+            if not force:
                 study_uids_1 = list(set(study_uids_1) - set(study_uids_2))
                 condition = "study_instance_uid IN ('%s')" % "','".join(
                     study_uids_1
@@ -1013,14 +1024,32 @@ class DVH_SQL:
 
             total_row_count = cnx_src.get_row_count(table, condition)
 
-            counter = 0
+            counter = 1
             for uid in study_uids_1:
                 study_data = cnx_src.query(
                     table, ",".join(columns), "study_instance_uid = '%s'" % uid
                 )
-                for row in study_data:
+                for r in range(len(study_data)):
+                    row = study_data[r]
+                    if create_new_uids:
+                        db_name = cnx_src.db_name if cnx_src.db_name else cnx_src.config["host"]
+                        append_with_me = append_to_uid if append_to_uid else db_name
+                        new_uid = f"{uid}_{append_with_me}"
+                        new_mrn = f"{row[mrn_index]}_{append_with_me}"
+                        uid_counter = 2
+                        while new_uid in study_uids_2:
+                            new_uid = f"{uid}_{append_with_me}_{uid_counter}"
+                            new_mrn = f"{row[mrn_index]}_{append_with_me}_{uid_counter}"
+                            uid_counter += 1
+                        row = [x for x in row]
+                        row[uid_index] = new_uid
+                        row[mrn_index] = new_mrn
+
                     if callback is not None:
-                        CallAfter(callback, table, counter, total_row_count)
+                        try:
+                            CallAfter(callback, table, counter, total_row_count)
+                        except AssertionError:
+                            callback(table, counter, total_row_count)
                         counter += 1
                     row_str = "'" + "','".join([str(v) for v in row]) + "'"
                     row_str = row_str.replace("'None'", "NULL")

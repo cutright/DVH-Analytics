@@ -9,6 +9,6 @@
 
 __author__ = "Dan Cutright"
 __email__ = "dan.cutright@gmail.com"
-__version__ = "0.9.7"
-__release__ = "0.9.7"
-__version_info__ = (0, 9, 7)
+__version__ = "0.9.8"
+__release__ = "0.9.8"
+__version_info__ = (0, 9, 8)

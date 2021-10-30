@@ -1043,16 +1043,19 @@ def sample_roi(roi_coord, max_point_count=5000, iterative_reduction=0.1):
 
 
 def get_sorted_indices(some_list):
-    """
+    """Return sorted indices of a list of string or numerical data
 
     Parameters
     ----------
-    some_list :
+    some_list : any sortable list
 
 
     Returns
     -------
-
+    list
+        Indices of ``some_list`` sorted. If standard ``sorted`` fails, attempt
+        to sort by its float representation, then by string representation if
+        that fails.
     """
     try:
         return [i[0] for i in sorted(enumerate(some_list), key=lambda x: x[1])]
@@ -1614,3 +1617,121 @@ def get_windows_webview_backend(include_edge=False):
         for id, name in backends:
             if webview.WebView.IsBackendAvailable(id):
                 return {"id": id, "name": name}
+
+
+def merge_db(cfgs, callback=None, force=False, create_new_uids=False, append_to_uid=None, verbose=False):
+    """ Each argument will be passed into DVH_SQL(), all databases will
+    be merged into the first connection
+
+    Parameters
+    ----------
+    cfgs : list of dict
+        List of DVH_SQL configuration dictionaries
+    callback : callable, optional
+        optional function to be called on each row insertion. Should accept
+        table (str), current row (int), total_row_count (int) as parameters
+    force : bool, optional
+        ignore duplicate StudyInstanceUIDs if False
+    verbose : bool, optional
+        print progress to console if true
+    create_new_uids : bool, optional
+        If true, dbname of cnx_src will be appended to study_instance_uid
+        and mrn
+    append_to_uid : list of str
+        If create_new_uids is true, append this to mrn and
+        study_instance_uids instead of dbname
+    verbose : bool, optional
+        print progress to console if true
+    """
+
+    if len(cfgs) < 2:
+        return
+
+    db_type = cfgs[0].get('db_type', 'pgsql')
+    with DVH_SQL(cfgs[0], db_type=db_type) as cnx_dst:
+        for i, alt_cnx in enumerate(cfgs[1:]):
+            if verbose:
+                print(f"Beginning import of database {i+1} of {len(cfgs) - 1}")
+            db_type = alt_cnx.get('db_type', 'pgsql')
+            with DVH_SQL(alt_cnx, db_type=db_type) as cnx_src:
+                append_with_me = append_to_uid[i+1] if append_to_uid else None
+                cnx_src.import_db(
+                    cnx_src,
+                    cnx_dst,
+                    callback,
+                    force,
+                    create_new_uids,
+                    append_with_me
+                )
+
+
+def merge_like_db(db_names, append_to_uid=None, cfg=None, db_type='pgsql', force=False, new_db_path=None, verbose=True):
+    """Merge a list of databases by dbname, all of which are the same dbtype
+
+    Parameters
+    ----------
+    db_names : list of str
+        a list of dbname values (if pgsql) or db file paths (if sqlite), these
+        databases will be merged into the first dbname in the list
+    append_to_uid : list of str
+        if a duplicate study_instance_uid or mrn is found across databases,
+        these values will be appended. Provide in the same order as dbnames
+    cfg : list, dict or None
+        Optionally specify DVH_SQL config (sans dbname). If None, assume defaults.
+        If cfg is a list, assume it is a list of dicts matching the order of dbnames.
+        If cfg is a dict, assume the same cfg applies to each db in dbnames.
+    db_type : str, optional
+        either 'pgsql' or 'sqlite', only needed if cfg is None
+    force : bool, optional
+        ignore duplicate StudyInstanceUIDs if False
+    new_db_path : str, optional
+        If db_type is 'sqlite', optionally create a new database here and merge
+        all provided databases into this new db.
+    verbose : bool, optional
+        print progress to console if true
+    """
+
+    if new_db_path and db_type == 'sqlite':
+        with DVH_SQL({'host': new_db_path}, db_type='sqlite') as cnx:
+            cnx.initialize_database()
+        db_names.insert(0, new_db_path)
+        if append_to_uid:
+            append_to_uid.insert(0, '')
+
+    merge_db_args = []
+    for i, db in enumerate(db_names):
+        if cfg is None:
+            if db_type == 'pqsql':
+                merge_db_args.append(
+                    {
+                        'host': 'localhost',
+                        'dbname': db,
+                        'port': 5432,
+                        'db_type': 'pgsql',
+                    }
+                )
+            elif db_type == 'sqlite':
+                merge_db_args.append({'host': db, 'db_type': 'sqlite'})
+        else:
+            if isinstance(cfg, dict):
+                new_cfg = {k: v for k, v in cfg.items()}
+            elif isinstance(cfg, list):
+                new_cfg = {k: v for k, v in cfg[i].items()}
+            else:
+                continue
+            new_cfg['dbname'] = db
+            merge_db_args.append(new_cfg)
+
+    def callback_func(table, counter, total_row_count):
+        print(f"{table}: row {counter} of {total_row_count}")
+    merge_db(
+        merge_db_args,
+        callback=callback_func if verbose else None,
+        force=force,
+        create_new_uids=True,
+        append_to_uid=append_to_uid,
+        verbose=verbose
+    )
+
+    if verbose:
+        print("Database merge complete")
