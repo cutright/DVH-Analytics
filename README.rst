@@ -1,7 +1,7 @@
 DVH Analytics
 =============
 
-**NOTE**: `DVHA will be archived soon! <https://github.com/cutright/DVH-Analytics/issues/172>`__ The devlopers of DVHA and dicompyler have teamed up to form `ONCurate <https://www.oncurate.com>`__.
+**NOTE**: `DVHA will be archived soon! <https://github.com/cutright/DVH-Analytics/issues/172>`__ The developers of DVHA and dicompyler have teamed up to form `ONCurate <https://www.oncurate.com>`__.
 
 |logo|
 
